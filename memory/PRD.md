@@ -34,6 +34,14 @@ Vitest · Playwright. Thin FastAPI proxy (port 8001 → Next 3000) is infra glue
 
 ## Backlog / next
 - P1: Live coupon preview in checkout; product CRUD forms in admin; inventory adjust UI.
+
+## Security audit (2026-09-22) — remediated & verified (iteration_2, 18/18)
+- SEC-001 (HIGH) FIXED: shipping cost is now recalculated server-side from the trusted rate table
+  in checkout.service.ts (resolveShippingCost) for both preview & order creation; client value ignored.
+- SEC-002 (MEDIUM) FIXED: payment-proof viewer takes a PaymentConfirmation id (not a raw storage path);
+  path traversal / arbitrary object read closed.
+- Hardening FIXED: open-redirect allowlist on login; JWT pinned to HS256 + iss/aud + fail-closed secret;
+  JSON-LD output escaped. Remaining P3s: auth rate limiting, session revocation on password reset.
 - P1: OTP + WhatsApp + Google auth once credentials provided.
 - P2: Notify-me persistence; recently-viewed on PDP; pagination controls on listings.
 - P2: Enable Midtrans/Tripay/J&T/KiriminAja adapters with real credentials + webhook signature verify.

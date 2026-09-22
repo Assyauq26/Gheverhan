@@ -1,0 +1,35 @@
+{
+  "summary": "Verified 2 security fixes (SEC-001 server-authoritative shipping, SEC-002 payment-proof by id) + open-redirect hardening + JWT hardening + full regression. Backend pytest: 18/18 passed (10 legacy + 8 new security tests). Frontend Playwright: open-redirect hardening confirmed on /login (?redirectTo=//evil.com lands on /account, ?redirectTo=/cart still works). Session persistence verified after JWT hardening (multiple /auth/me + admin approve succeeded). Admin approve of a submitted payment returned 200 success:true. All API sanity endpoints (health, products, product detail) return success:true.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_security_fixes.py",
+    "/app/backend/tests/test_gheverhan_api.py",
+    "/app/test_reports/pytest/all_results.xml",
+    "/app/test_reports/pytest/sec_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "SEC-001 fix is clean: resolveShippingCost() in checkout.service.ts is used in BOTH previewCheckout and createOrder; client shipping.cost is completely ignored. Rates come from getShippingProvider().getRates() so table stays server-side. Invalid courier/service → HttpError 400 'Metode pengiriman tidak valid'. Verified end-to-end with a manipulated cost:0 body — created order still shows shippingCost=20000 and total=subtotal+20000.",
+    "SEC-002 fix is clean: /api/v1/admin/payments/proof now takes ?id=<PaymentConfirmation.id>, looks up proofPath from DB, and requires PERMISSIONS.PAYMENT_READ. Old ?path=... returns 400 'id diperlukan'. Bogus id returns 404. Non-admin (customer session) returns 401/403. Verified valid id returns image/png bytes.",
+    "Open-redirect hardening in auth.actions.ts safeRedirect() correctly rejects '//evil.com' (protocol-relative) — verified UI redirects to /account. Normal /cart internal redirect still works.",
+    "JWT hardening (HS256 pin + iss/aud + fail-closed secret) does not break existing sessions — verified session persists across multiple /api/v1/auth/me calls and admin approve action succeeded.",
+    "Minor: /api/v1/admin/payments has no GET handler (returns HTML 404 from Next.js). Not a regression — admin UI uses server data fetch, not this API. Left as-is."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_security_fixes.py (new — 8 SEC tests)",
+    "/app/backend/tests/test_gheverhan_api.py (cart test: iterate variants to skip stock-depleted)"
+  ],
+  "success_rate": { "backend": "100% (18/18)", "frontend": "100% (open-redirect + normal redirect)" },
+  "test_credentials": "admin@gheverhan.com / Admin123!, budi@example.com / Customer123!",
+  "seed_data_creation": "Created 3 customer orders with proof uploads during SEC tests; approved 1 payment (id cmuctxkw200i1ryxsqvjl4946) as admin.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Active bank IDs from seed (Postgres): cmucsesiq006814ckijfxo28a (BCA), cmucsesiq006914ck86cgz5ue (Mandiri). Use them to POST /api/v1/orders. To fetch a PaymentConfirmation id, join Payment on orderId. Essential Tee has multiple variants; if one is out of stock (409), try the next. Trusted shipping rates: JNE/REG=20000, J&T/EZ=22000, SiCepat/BEST=25000.",
+  "rca of the issue": "N/A — both SEC-001 and SEC-002 fixes are correct and effective. Open-redirect hardening + JWT hardening effective and non-regressing."
+}

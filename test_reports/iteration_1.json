@@ -1,0 +1,35 @@
+{
+  "summary": "End-to-end testing of Gheverhan (Next.js full-stack). Backend API pytest (10/10 passed). Frontend UI: storefront, auth (login/logout), product detail, cart, checkout, manual bank-transfer payment (proof upload with image), order history + tracking timeline for GHV-DEMO-0001, and admin flows (payments approve, shipping submit, orders, bank-accounts, adminnav, access control). Discovered and fixed a CRITICAL config bug that was breaking every Server Action (login, add-to-cart, checkout, proof upload, admin approve/reject/shipping): Next.js Server Actions were rejected due to x-forwarded-host / origin mismatch because next.config.js allowedOrigins did not include the cluster-12.preview.emergentcf.cloud origin used by the k8s ingress.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_gheverhan_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Recommend making Server Actions allowedOrigins robust to preview host variants (already added wildcards *.preview.emergentagent.com and *.preview.emergentcf.cloud); consider deriving from env NEXT_PUBLIC_BASE_URL to avoid regressions in future preview URLs.",
+    "PurchasePanel triggers React 'Cannot update a component while rendering a different component' warning (router.push called inside useTransition). Not breaking, but should be wrapped in useEffect or moved out of the render/transition path.",
+    "LoginForm shows the same setState-in-render warning — likely useFormState/useRouter interaction. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "next.config.js allowedOrigins for Server Actions must include ALL preview host variants; hardcoding a single host is fragile. Fixed by adding wildcard preview domains.",
+    "Server Actions used across storefront and admin — this is fine, but errors weren't surfaced to users (users saw silent failure / '503' console). Consider adding a global error boundary / toast for Server Action errors.",
+    "PurchasePanel calls router.push inside useTransition -> triggers setState-during-render warning. Move navigation into useEffect on state change or after startTransition callback returns."
+  ],
+  "updated_files": [
+    "/app/frontend/next.config.js (added allowedOrigins for cluster preview domain + wildcards)",
+    "/app/backend/tests/test_gheverhan_api.py (new pytest file)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "test_credentials": "admin@gheverhan.com / Admin123!, budi@example.com / Customer123!, coupon GHEVER10, seeded order GHV-DEMO-0001",
+  "seed_data_creation": "During test, created a new customer order (Rp 149.000, Rp 536.000 earlier) and uploaded a proof image (1x1 PNG). Admin approved one of these payments successfully. Also submitted a shipment (resi TEST-RESI-001) via admin/shipping.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Server Actions require next.config.js -> experimental.serverActions.allowedOrigins to include both preview.emergentagent.com and cluster-12.preview.emergentcf.cloud hosts (or wildcards). Without them, ALL POSTs to page routes return 'Invalid Server Actions request' with digest, breaking login/cart/checkout/admin. Backend API (/api/v1/*) is unaffected and works via Bearer/cookie. Payment proof upload uses multipart via server action; file input testid is 'proof-file'.",
+  "rca of the issue": "Symptom: Login form did not authenticate the user; add-to-cart & checkout appeared to no-op; admin approve/shipping did not act. Root cause: Next.js 14 Server Actions enforce origin==x-forwarded-host unless allowedOrigins is configured. The k8s ingress fronts the app at preview.emergentagent.com but forwards origin as *.cluster-12.preview.emergentcf.cloud, causing 'Invalid Server Actions request' (frontend logs). Fix: added the cluster host and wildcard patterns to allowedOrigins in next.config.js. After fix, all mutation flows (auth, cart, checkout, payment proof, admin approve, shipping, bank accounts) pass end-to-end."
+}

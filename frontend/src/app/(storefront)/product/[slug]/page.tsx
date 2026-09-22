@@ -82,7 +82,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   return (
     <div className="space-y-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
 
       <div className="grid gap-8 md:grid-cols-2">
         <ProductGallery images={product.images} name={product.name} />

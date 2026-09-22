@@ -73,13 +73,13 @@ export default async function AdminPaymentsPage({
                 <div className="space-y-3">
                   {latest && (
                     latest.proofMime === "application/pdf" ? (
-                      <a href={`/api/v1/admin/payments/proof?path=${encodeURIComponent(latest.proofPath)}`} target="_blank" rel="noreferrer" className="flex h-32 flex-col items-center justify-center gap-2 rounded-xl border border-line text-sm text-ink-soft hover:bg-surface" data-testid="proof-link">
+                      <a href={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} target="_blank" rel="noreferrer" className="flex h-32 flex-col items-center justify-center gap-2 rounded-xl border border-line text-sm text-ink-soft hover:bg-surface" data-testid="proof-link">
                         <FileText size={28} /> Lihat PDF
                       </a>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <a href={`/api/v1/admin/payments/proof?path=${encodeURIComponent(latest.proofPath)}`} target="_blank" rel="noreferrer" data-testid="proof-link">
-                        <img src={`/api/v1/admin/payments/proof?path=${encodeURIComponent(latest.proofPath)}`} alt="Bukti transfer" className="h-32 w-full rounded-xl border border-line object-cover" />
+                      <a href={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} target="_blank" rel="noreferrer" data-testid="proof-link">
+                        <img src={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} alt="Bukti transfer" className="h-32 w-full rounded-xl border border-line object-cover" />
                       </a>
                     )
                   )}

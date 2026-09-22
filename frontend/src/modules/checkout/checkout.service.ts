@@ -4,6 +4,7 @@ import { getCartView } from "@/modules/cart/cart.service";
 import { reserveStock } from "@/modules/inventory/inventory.service";
 import { computeDiscount } from "@/modules/promotions/coupon.service";
 import { getPaymentProvider } from "@/infrastructure/payments";
+import { getShippingProvider } from "@/infrastructure/shipping";
 import { writeAudit } from "@/modules/audit/audit.service";
 
 export interface AddressInput {
@@ -27,6 +28,17 @@ function genOrderNumber(): string {
   return `GHV-${t}-${r}`;
 }
 
+/**
+ * Resolve a trusted shipping cost from the server-side rate table.
+ * The client-submitted cost is never trusted; only courier/service are used to look it up.
+ */
+async function resolveShippingCost(courier: string, service: string): Promise<number> {
+  const rates = (await getShippingProvider().getRates?.({ destinationCity: "", weightGram: 1000 })) ?? [];
+  const match = rates.find((r) => r.courier === courier && r.service === service);
+  if (!match) throw new HttpError("Metode pengiriman tidak valid", 400);
+  return match.cost;
+}
+
 /** Server-side recalculation only. Client-submitted totals are ignored. */
 export async function previewCheckout(
   userId: string,
@@ -35,7 +47,9 @@ export async function previewCheckout(
   const cart = await getCartView(userId);
   if (cart.lines.length === 0) throw new HttpError("Keranjang kosong", 400);
 
-  const shippingCost = input.shipping?.cost ?? 0;
+  const shippingCost = input.shipping
+    ? await resolveShippingCost(input.shipping.courier, input.shipping.service)
+    : 0;
   const { discount, code, reason } = await computeDiscount(input.couponCode, cart.subtotal);
   const total = cart.subtotal + shippingCost - discount;
   return {
@@ -68,7 +82,7 @@ export async function createOrder(
   if (!bank) throw new HttpError("Rekening bank tidak valid", 400);
 
   const { discount, code } = await computeDiscount(input.couponCode, cartView.subtotal);
-  const shippingCost = input.shipping.cost;
+  const shippingCost = await resolveShippingCost(input.shipping.courier, input.shipping.service);
   const total = cartView.subtotal + shippingCost - discount;
   const orderNumber = genOrderNumber();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);

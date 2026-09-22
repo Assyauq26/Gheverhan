@@ -37,6 +37,12 @@ const loginSchema = z.object({
   redirectTo: z.string().optional(),
 });
 
+/** Only allow same-site relative paths to prevent open-redirect phishing. */
+function safeRedirect(target: string | undefined, fallback = "/account"): string {
+  if (target && target.startsWith("/") && !target.startsWith("//")) return target;
+  return fallback;
+}
+
 export async function loginAction(_prev: unknown, formData: FormData) {
   const parsed = loginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: parsed.error.errors[0].message };
@@ -46,7 +52,7 @@ export async function loginAction(_prev: unknown, formData: FormData) {
     return user;
   });
   if (!res.ok) return res;
-  redirect(parsed.data.redirectTo || "/account");
+  redirect(safeRedirect(parsed.data.redirectTo));
 }
 
 export async function logoutAction() {

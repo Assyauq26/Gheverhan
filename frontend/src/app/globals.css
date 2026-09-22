@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+  ::selection {
+    @apply bg-black text-white;
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display), system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .stagger > * {
+    opacity: 0;
+    animation: fade-up 0.5s ease-out forwards;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0.02s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.06s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.1s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.14s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.18s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.22s; }
+}

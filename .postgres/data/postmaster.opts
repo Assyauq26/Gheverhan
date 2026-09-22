@@ -1,0 +1,1 @@
+/usr/lib/postgresql/15/bin/postgres "-D" "/app/.postgres/data" "-p" "5432" "-k" "/tmp"

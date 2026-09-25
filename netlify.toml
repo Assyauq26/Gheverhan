@@ -5,3 +5,8 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+# Explicitly enable the Next.js runtime so SSR, App Router pages,
+# Server Actions, and /api routes are deployed as Netlify Functions.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -19,7 +19,8 @@ export interface AuthUser {
 
 export async function createSession(userId: string, email: string) {
   const token = await signSession({ sub: userId, email });
-  cookies().set(COOKIE, token, {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE, token, {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
@@ -28,12 +29,14 @@ export async function createSession(userId: string, email: string) {
   });
 }
 
-export function destroySession() {
-  cookies().set(COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
+export async function destroySession() {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const token = cookies().get(COOKIE)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE)?.value;
   if (!token) return null;
   const payload = await verifySession(token);
   if (!payload) return null;

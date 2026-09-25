@@ -11,10 +11,15 @@ import { ProofForm } from "@/components/storefront/proof-form";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Instruksi Pembayaran", robots: { index: false } };
 
-export default async function PaymentPage({ params }: { params: { orderId: string } }) {
+type PaymentRouteProps = {
+  params: Promise<{ orderId: string }>;
+};
+
+export default async function PaymentPage({ params }: PaymentRouteProps) {
+  const { orderId } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?redirectTo=/checkout/payment/${params.orderId}`);
-  const order = await getOrderForUser(user.id, params.orderId);
+  if (!user) redirect(`/login?redirectTo=/checkout/payment/${orderId}`);
+  const order = await getOrderForUser(user.id, orderId);
   const payment = order.payment!;
   const bank = payment.bankAccount;
 

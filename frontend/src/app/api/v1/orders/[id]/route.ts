@@ -4,9 +4,12 @@ import { getOrderForUser } from "@/modules/orders/orders.service";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_req: Request, { params }: RouteContext) {
   return handle(async () => {
+    const { id } = await params;
     const user = await requireUser();
-    return ok(await getOrderForUser(user.id, params.id));
+    return ok(await getOrderForUser(user.id, id));
   });
 }

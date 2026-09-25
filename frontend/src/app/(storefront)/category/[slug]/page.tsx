@@ -7,32 +7,35 @@ import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export const dynamic = "force-dynamic";
 
+type CategoryRouteProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string }>;
+};
+
 export async function generateMetadata({
   params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  const cat = await getCategoryBySlug(params.slug);
+}: Pick<CategoryRouteProps, "params">): Promise<Metadata> {
+  const { slug } = await params;
+  const cat = await getCategoryBySlug(slug);
   return {
     title: cat ? `Kategori ${cat.name}` : "Kategori",
     description: cat ? `Belanja produk kategori ${cat.name} di Gheverhan.` : undefined,
-    alternates: { canonical: `/category/${params.slug}` },
+    alternates: { canonical: `/category/${slug}` },
   };
 }
 
 export default async function CategoryPage({
   params,
   searchParams,
-}: {
-  params: { slug: string };
-  searchParams: { sort?: string };
-}) {
-  const cat = await getCategoryBySlug(params.slug);
+}: CategoryRouteProps) {
+  const { slug } = await params;
+  const { sort: sortParam } = await searchParams;
+  const cat = await getCategoryBySlug(slug);
   if (!cat) notFound();
   const user = await getCurrentUser();
-  const sort = (searchParams.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
+  const sort = (sortParam as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
-    listProducts({ categorySlug: params.slug, sort, pageSize: 24 }),
+    listProducts({ categorySlug: slug, sort, pageSize: 24 }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
   ]);
 
@@ -42,7 +45,7 @@ export default async function CategoryPage({
       items={result.items}
       total={result.total}
       wishlisted={new Set(wishIds)}
-      basePath={`/category/${params.slug}`}
+      basePath={`/category/${slug}`}
       currentSort={sort}
     />
   );

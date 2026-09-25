@@ -6,19 +6,20 @@ import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Shop", description: "Jelajahi seluruh koleksi Gheverhan." };
 
-export default async function ShopPage({
-  searchParams,
-}: {
-  searchParams: { q?: string; flash?: string; sort?: string; page?: string };
-}) {
+type ShopPageProps = {
+  searchParams: Promise<{ q?: string; flash?: string; sort?: string; page?: string }>;
+};
+
+export default async function ShopPage({ searchParams }: ShopPageProps) {
+  const params = await searchParams;
   const user = await getCurrentUser();
-  const sort = (searchParams.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
+  const sort = (params.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
     listProducts({
-      search: searchParams.q,
-      flashSale: searchParams.flash === "1",
+      search: params.q,
+      flashSale: params.flash === "1",
       sort,
-      page: Number(searchParams.page) || 1,
+      page: Number(params.page) || 1,
       pageSize: 12,
     }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
@@ -26,13 +27,13 @@ export default async function ShopPage({
 
   return (
     <ProductListing
-      title={searchParams.flash === "1" ? "Flash Sale" : "Semua Produk"}
+      title={params.flash === "1" ? "Flash Sale" : "Semua Produk"}
       items={result.items}
       total={result.total}
       wishlisted={new Set(wishIds)}
       basePath="/shop"
       currentSort={sort}
-      query={{ ...(searchParams.q ? { q: searchParams.q } : {}), ...(searchParams.flash ? { flash: "1" } : {}) }}
+      query={{ ...(params.q ? { q: params.q } : {}), ...(params.flash ? { flash: "1" } : {}) }}
     />
   );
 }

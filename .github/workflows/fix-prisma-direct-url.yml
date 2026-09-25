@@ -1,0 +1,44 @@
+name: Fix Prisma Direct URL
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: contains(github.event.head_commit.message, 'fix: configure Prisma migration direct URL') == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add directUrl to Prisma schema
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/prisma/schema.prisma')
+          s = p.read_text()
+          old = '''datasource db {\n  provider = "postgresql"\n  url      = env("DATABASE_URL")\n}'''
+          new = '''datasource db {\n  provider  = "postgresql"\n  url       = env("DATABASE_URL")\n  directUrl = env("DIRECT_URL")\n}'''
+          if new in s:
+              print('directUrl already configured')
+          elif old in s:
+              p.write_text(s.replace(old, new, 1))
+              print('Updated datasource db with directUrl')
+          else:
+              raise SystemExit('Expected Prisma datasource block not found')
+          PY
+
+      - name: Commit Prisma fix and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/prisma/schema.prisma .github/workflows/fix-prisma-direct-url.yml
+          git commit -m "fix: configure Prisma migration direct URL"
+          git rm .github/workflows/fix-prisma-direct-url.yml
+          git commit -m "chore: remove temporary Prisma fix workflow"
+          git push

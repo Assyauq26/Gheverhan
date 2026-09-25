@@ -5,9 +5,12 @@ import { approvePayment } from "@/modules/payments/payments.service";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function POST(_req: Request, { params }: RouteContext) {
   return handle(async () => {
+    const { id } = await params;
     const admin = await requirePermission(PERMISSIONS.PAYMENT_VERIFY);
-    return ok(await approvePayment(params.id, admin.id));
+    return ok(await approvePayment(id, admin.id));
   });
 }

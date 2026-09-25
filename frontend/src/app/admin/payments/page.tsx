@@ -9,13 +9,14 @@ import { PaymentVerify } from "@/components/admin/payment-verify";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPaymentsPage({
-  searchParams,
-}: {
-  searchParams: { q?: string };
-}) {
+type AdminPaymentsPageProps = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsPageProps) {
   await requirePermission(PERMISSIONS.PAYMENT_READ);
-  const payments = await listPendingVerifications(searchParams.q);
+  const { q } = await searchParams;
+  const payments = await listPendingVerifications(q);
 
   return (
     <div className="space-y-6">

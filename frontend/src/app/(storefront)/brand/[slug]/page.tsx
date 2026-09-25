@@ -7,31 +7,34 @@ import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export const dynamic = "force-dynamic";
 
+type BrandRouteProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string }>;
+};
+
 export async function generateMetadata({
   params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  const brand = await getBrandBySlug(params.slug);
+}: Pick<BrandRouteProps, "params">): Promise<Metadata> {
+  const { slug } = await params;
+  const brand = await getBrandBySlug(slug);
   return {
     title: brand ? brand.name : "Brand",
-    alternates: { canonical: `/brand/${params.slug}` },
+    alternates: { canonical: `/brand/${slug}` },
   };
 }
 
 export default async function BrandPage({
   params,
   searchParams,
-}: {
-  params: { slug: string };
-  searchParams: { sort?: string };
-}) {
-  const brand = await getBrandBySlug(params.slug);
+}: BrandRouteProps) {
+  const { slug } = await params;
+  const { sort: sortParam } = await searchParams;
+  const brand = await getBrandBySlug(slug);
   if (!brand) notFound();
   const user = await getCurrentUser();
-  const sort = (searchParams.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
+  const sort = (sortParam as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
-    listProducts({ brandSlug: params.slug, sort, pageSize: 24 }),
+    listProducts({ brandSlug: slug, sort, pageSize: 24 }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
   ]);
 
@@ -41,7 +44,7 @@ export default async function BrandPage({
       items={result.items}
       total={result.total}
       wishlisted={new Set(wishIds)}
-      basePath={`/brand/${params.slug}`}
+      basePath={`/brand/${slug}`}
       currentSort={sort}
     />
   );

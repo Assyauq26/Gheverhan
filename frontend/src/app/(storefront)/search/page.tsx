@@ -5,14 +5,15 @@ import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export const dynamic = "force-dynamic";
 
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: { q?: string; sort?: string };
-}) {
-  const q = searchParams.q ?? "";
+type SearchPageProps = {
+  searchParams: Promise<{ q?: string; sort?: string }>;
+};
+
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const params = await searchParams;
+  const q = params.q ?? "";
   const user = await getCurrentUser();
-  const sort = (searchParams.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
+  const sort = (params.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
     listProducts({ search: q, sort, pageSize: 24 }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),

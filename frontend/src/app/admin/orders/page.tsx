@@ -9,9 +9,14 @@ import { OrderStatusControl } from "@/components/admin/order-status-control";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams: { q?: string } }) {
+type AdminOrdersPageProps = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
   await requirePermission(PERMISSIONS.ORDER_READ);
-  const orders = await listOrdersAdmin({ search: searchParams.q });
+  const { q } = await searchParams;
+  const orders = await listOrdersAdmin({ search: q });
 
   return (
     <div className="space-y-6">

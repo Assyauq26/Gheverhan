@@ -5,3 +5,13 @@ credentials.json
 *.pem
 *.key
 .credentials
+
+# Local / runtime PostgreSQL data
+.postgres/
+
+# Build / dependency artifacts
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/

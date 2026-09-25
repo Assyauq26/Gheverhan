@@ -12,10 +12,15 @@ import { ORDER_STATUS_LABEL, orderBadgeVariant } from "@/lib/order-status";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Detail Pesanan", robots: { index: false } };
 
-export default async function OrderDetailPage({ params }: { params: { id: string } }) {
+type OrderDetailRouteProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function OrderDetailPage({ params }: OrderDetailRouteProps) {
+  const { id } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?redirectTo=/orders/${params.id}`);
-  const order = await getOrderForUser(user.id, params.id);
+  if (!user) redirect(`/login?redirectTo=/orders/${id}`);
+  const order = await getOrderForUser(user.id, id);
   const needPayment = order.paymentStatus === "PENDING_PAYMENT" || order.payment?.status === "REJECTED";
 
   return (

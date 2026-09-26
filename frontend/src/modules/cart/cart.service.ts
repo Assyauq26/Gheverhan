@@ -4,11 +4,12 @@ import { available } from "@/modules/inventory/inventory.service";
 import { HttpError } from "@/lib/response";
 
 export async function getOrCreateCart(userId: string) {
-  return prisma.cart.upsert({
-    where: { userId },
-    create: { userId },
-    update: {},
-  });
+  // Reads must not perform an upsert. The previous implementation wrote to
+  // PostgreSQL every time the cart was rendered, which is especially costly
+  // on serverless/remote PostgreSQL connections.
+  const existing = await prisma.cart.findUnique({ where: { userId } });
+  if (existing) return existing;
+  return prisma.cart.create({ data: { userId } });
 }
 
 /** Server-authoritative unit price for a variant. */
@@ -27,11 +28,32 @@ export async function getCartView(userId: string) {
   const cart = await getOrCreateCart(userId);
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
-    include: {
+    select: {
+      id: true,
+      variantId: true,
+      quantity: true,
+      createdAt: true,
       variant: {
-        include: {
-          inventory: true,
-          product: { include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } } },
+        select: {
+          color: true,
+          size: true,
+          price: true,
+          salePrice: true,
+          inventory: { select: { onHand: true, reserved: true } },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              basePrice: true,
+              salePrice: true,
+              images: {
+                select: { url: true },
+                orderBy: { sortOrder: "asc" },
+                take: 1,
+              },
+            },
+          },
         },
       },
     },
@@ -119,7 +141,7 @@ export async function removeItem(userId: string, itemId: string) {
 export async function cartCount(userId: string): Promise<number> {
   const cart = await prisma.cart.findUnique({
     where: { userId },
-    include: { items: true },
+    select: { items: { select: { quantity: true } } },
   });
   return cart?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
 }

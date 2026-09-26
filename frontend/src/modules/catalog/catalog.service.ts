@@ -1,15 +1,66 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { Prisma, ProductStatus } from "@prisma/client";
 
-const productInclude = {
+// Listing cards only need one image and one variant id. Loading every image,
+// every variant and every inventory row for a 12/48 item grid made the RSC
+// payload and Prisma response much larger than necessary.
+const productCardInclude = {
+  images: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+  brand: { select: { name: true } },
+  variants: { select: { id: true }, take: 1 },
+} satisfies Prisma.ProductInclude;
+
+const productDetailInclude = {
   images: { orderBy: { sortOrder: "asc" } },
-  brand: true,
-  category: true,
-  variants: { include: { inventory: true } },
+  brand: { select: { name: true, slug: true } },
+  category: { select: { id: true, slug: true, name: true } },
+  variants: {
+    select: {
+      id: true,
+      color: true,
+      size: true,
+      price: true,
+      salePrice: true,
+      inventory: { select: { onHand: true, reserved: true } },
+    },
+  },
+  reviews: {
+    where: { status: "PUBLISHED" },
+    select: {
+      id: true,
+      rating: true,
+      title: true,
+      body: true,
+      createdAt: true,
+      user: { select: { name: true } },
+      images: { select: { id: true, url: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  },
+  questions: {
+    select: {
+      id: true,
+      body: true,
+      createdAt: true,
+      user: { select: { name: true } },
+      answers: {
+        select: {
+          id: true,
+          body: true,
+          isOfficial: true,
+          user: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  },
 } satisfies Prisma.ProductInclude;
 
 export type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: typeof productInclude;
+  include: typeof productCardInclude;
 }>;
 
 export async function listProducts(params: {
@@ -21,9 +72,11 @@ export async function listProducts(params: {
   sort?: "newest" | "price_asc" | "price_desc";
   page?: number;
   pageSize?: number;
+  includeTotal?: boolean;
 } = {}) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(48, params.pageSize ?? 12);
+  const includeTotal = params.includeTotal ?? true;
   const where: Prisma.ProductWhereInput = {
     status: ProductStatus.PUBLISHED,
     ...(params.categorySlug ? { category: { slug: params.categorySlug } } : {}),
@@ -51,39 +104,27 @@ export async function listProducts(params: {
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: productInclude,
+      include: productCardInclude,
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.product.count({ where }),
+    includeTotal ? prisma.product.count({ where }) : Promise.resolve(0),
   ]);
 
-  return { items, total, page, pageSize, pages: Math.ceil(total / pageSize) };
+  return { items, total, page, pageSize, pages: includeTotal ? Math.ceil(total / pageSize) : 0 };
 }
 
-export async function getProductBySlug(slug: string) {
+/**
+ * React request cache prevents generateMetadata() and the page itself from
+ * issuing the same expensive product query during one navigation.
+ */
+export const getProductBySlug = cache(async (slug: string) => {
   return prisma.product.findFirst({
     where: { slug, status: { not: ProductStatus.ARCHIVED } },
-    include: {
-      ...productInclude,
-      reviews: {
-        where: { status: "PUBLISHED" },
-        include: { user: { select: { name: true } }, images: true },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      },
-      questions: {
-        include: {
-          user: { select: { name: true } },
-          answers: { include: { user: { select: { name: true } } } },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      },
-    },
+    include: productDetailInclude,
   });
-}
+});
 
 export async function getRelatedProducts(product: {
   id: string;
@@ -95,14 +136,17 @@ export async function getRelatedProducts(product: {
       id: { not: product.id },
       ...(product.categoryId ? { categoryId: product.categoryId } : {}),
     },
-    include: productInclude,
+    include: productCardInclude,
     take: 8,
     orderBy: { createdAt: "desc" },
   });
 }
 
 export function listCategories() {
-  return prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
+  return prisma.category.findMany({
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, name: true, slug: true, imageUrl: true, iconKey: true },
+  });
 }
 
 export function getCategoryBySlug(slug: string) {

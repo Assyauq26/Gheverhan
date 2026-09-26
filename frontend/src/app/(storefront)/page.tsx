@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Percent, Users, Star, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, BadgePercent, Users, Star, ShieldCheck, Truck } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
@@ -29,6 +29,9 @@ export default async function HomePage() {
   ]);
 
   const wl = new Set(wishIds);
+  // Some seed/catalog data may not have isFeatured flags yet. Keep the section
+  // useful by falling back to the newest published products instead of rendering
+  // an empty section when the catalog itself is populated.
   const featuredItems = featured.items.length > 0 ? featured.items : latest.items.slice(0, 4);
   const featuredIds = new Set(featuredItems.map((p) => p.id));
   const recommendedItems = latest.items.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
@@ -61,42 +64,46 @@ export default async function HomePage() {
       </section>
 
       <section
-        className="relative overflow-hidden rounded-[28px] border border-black/[0.04] bg-[#f7f7f7] px-4 py-5 shadow-[0_10px_30px_rgba(0,0,0,0.05)] sm:px-7 sm:py-6"
+        className="relative overflow-hidden rounded-[20px] border border-black/[0.05] bg-[#f7f7f7] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.045)] sm:px-7 sm:py-6"
         data-testid="flash-sale"
       >
-        <div className="relative z-10 flex min-h-[154px] items-center gap-3 sm:min-h-[132px] sm:gap-5 md:gap-8">
+        <div className="relative z-10 flex min-h-[150px] items-center gap-3 sm:min-h-[132px] sm:gap-5 md:gap-8">
           <span
             aria-hidden="true"
-            className="flex h-[58px] w-[58px] shrink-0 items-center justify-center bg-white text-ink [clip-path:polygon(50%_0%,61%_10%,76%_6%,84%_20%,97%_26%,92%_41%,100%_55%,87%_66%,84%_81%,68%_79%,50%_100%,37%_88%,21%_94%,17%_78%,2%_70%,8%_55%,0%_42%,13%_31%,16%_16%,34%_20%)] sm:h-[78px] sm:w-[78px]"
+            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center text-ink sm:h-[72px] sm:w-[72px]"
           >
-            <Percent size={27} strokeWidth={2.4} className="sm:h-[30px] sm:w-[30px]" />
+            <BadgePercent size={54} strokeWidth={1.8} className="sm:h-[68px] sm:w-[68px]" />
           </span>
 
           <div className="min-w-0 flex-1 self-center">
-            <p className="text-xs font-medium text-ink-soft sm:text-base">Flash Sale</p>
-            <h2 className="font-display text-[23px] font-black leading-[1.05] tracking-[-0.03em] text-ink sm:text-[32px]">
-              Diskon 40%
+            <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale</p>
+            <h2 className="mt-1 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[34px]">
+              Diskon Up To 40%
             </h2>
             <p className="mt-1 text-xs text-ink-soft sm:text-base">Produk pilihan, stok terbatas!</p>
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-3 sm:gap-4 md:flex-row md:items-center md:gap-8">
-            <Button asChild className="h-10 rounded-full px-4 text-xs sm:h-12 sm:px-7 sm:text-sm" data-testid="shop-sale-btn">
+          <div className="flex shrink-0 flex-col items-end gap-3 sm:gap-4 md:flex-row md:items-center md:gap-7">
+            <Button
+              asChild
+              className="h-11 rounded-full px-5 text-sm font-medium sm:h-12 sm:min-w-[158px] sm:px-7 sm:text-base"
+              data-testid="shop-sale-btn"
+            >
               <Link href="/shop?flash=1">
                 Shop the Sale
-                <ArrowRight size={15} />
+                <ArrowRight size={18} />
               </Link>
             </Button>
             <FlashSaleTimer compact />
           </div>
         </div>
 
-        <div className="pointer-events-none absolute -right-8 bottom-0 hidden h-full w-[27%] min-w-[190px] md:block">
+        <div className="pointer-events-none absolute -right-8 bottom-0 hidden h-full w-[24%] min-w-[180px] md:block">
           <Image
             src={flashImage}
             alt=""
             fill
-            sizes="30vw"
+            sizes="28vw"
             className="object-contain object-right-bottom opacity-95"
           />
         </div>

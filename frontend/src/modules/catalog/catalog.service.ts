@@ -146,30 +146,45 @@ export async function listProducts(params: ProductListParams = {}) {
 }
 
 /**
- * React request cache prevents generateMetadata() and the page itself from
- * issuing the same expensive product query during one navigation.
+ * Product detail is public catalog data. Keep a short server-side cache so
+ * opening the same product from multiple sessions does not repeatedly hydrate
+ * the full images/variants/reviews/questions graph from PostgreSQL.
+ * React cache still deduplicates calls within the current render.
  */
 export const getProductBySlug = cache(async (slug: string) => {
-  return prisma.product.findFirst({
-    where: { slug, status: { not: ProductStatus.ARCHIVED } },
-    include: productDetailInclude,
-  });
+  const normalizedSlug = slug.trim();
+  return unstable_cache(
+    () =>
+      prisma.product.findFirst({
+        where: { slug: normalizedSlug, status: { not: ProductStatus.ARCHIVED } },
+        include: productDetailInclude,
+      }),
+    ["catalog-product-detail", normalizedSlug],
+    { revalidate: 30 },
+  )();
 });
 
+/** Public related-product cards are safe to cache briefly by product/category. */
 export async function getRelatedProducts(product: {
   id: string;
   categoryId: string | null;
 }) {
-  return prisma.product.findMany({
-    where: {
-      status: ProductStatus.PUBLISHED,
-      id: { not: product.id },
-      ...(product.categoryId ? { categoryId: product.categoryId } : {}),
-    },
-    include: productCardInclude,
-    take: 8,
-    orderBy: { createdAt: "desc" },
-  });
+  const categoryKey = product.categoryId ?? "none";
+  return unstable_cache(
+    () =>
+      prisma.product.findMany({
+        where: {
+          status: ProductStatus.PUBLISHED,
+          id: { not: product.id },
+          ...(product.categoryId ? { categoryId: product.categoryId } : {}),
+        },
+        include: productCardInclude,
+        take: 8,
+        orderBy: { createdAt: "desc" },
+      }),
+    ["catalog-related", product.id, categoryKey],
+    { revalidate: 30 },
+  )();
 }
 
 export const listCategories = unstable_cache(
@@ -204,24 +219,34 @@ export const getBrandBySlug = cache(async (slug: string) => {
   )();
 });
 
+/**
+ * Search suggestions are small, public and bursty while typing. A very short
+ * cache absorbs repeated queries without making the search UI feel stale.
+ */
 export async function searchSuggestions(q: string) {
-  if (!q.trim()) return { products: [], brands: [], categories: [] };
-  const [products, brands, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { status: ProductStatus.PUBLISHED, name: { contains: q, mode: "insensitive" } },
-      select: { id: true, name: true, slug: true },
-      take: 6,
-    }),
-    prisma.brand.findMany({
-      where: { name: { contains: q, mode: "insensitive" } },
-      select: { name: true, slug: true },
-      take: 4,
-    }),
-    prisma.category.findMany({
-      where: { name: { contains: q, mode: "insensitive" } },
-      select: { name: true, slug: true },
-      take: 4,
-    }),
-  ]);
-  return { products, brands, categories };
+  const query = q.trim();
+  if (!query) return { products: [], brands: [], categories: [] };
+
+  return unstable_cache(
+    () =>
+      Promise.all([
+        prisma.product.findMany({
+          where: { status: ProductStatus.PUBLISHED, name: { contains: query, mode: "insensitive" } },
+          select: { id: true, name: true, slug: true },
+          take: 6,
+        }),
+        prisma.brand.findMany({
+          where: { name: { contains: query, mode: "insensitive" } },
+          select: { name: true, slug: true },
+          take: 4,
+        }),
+        prisma.category.findMany({
+          where: { name: { contains: query, mode: "insensitive" } },
+          select: { name: true, slug: true },
+          take: 4,
+        }),
+      ]).then(([products, brands, categories]) => ({ products, brands, categories })),
+    ["catalog-search-suggestions", query.toLowerCase()],
+    { revalidate: 10 },
+  )();
 }

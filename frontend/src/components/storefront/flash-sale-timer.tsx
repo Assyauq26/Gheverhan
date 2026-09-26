@@ -31,13 +31,13 @@ export function FlashSaleTimer({ endsInSeconds = 8127, compact = false }: FlashS
   if (compact) {
     return (
       <div
-        className="grid w-full grid-cols-[1fr_auto_1fr_auto_1fr] items-start"
+        className="grid w-[124px] grid-cols-[36px_8px_36px_8px_36px] items-start justify-center"
         data-testid="flash-timer"
       >
         {cells.map((c, i) => (
           <div key={c.l} className="contents">
             <div className="flex min-w-0 flex-col items-center">
-              <span className="flex h-9 w-full max-w-[40px] items-center justify-center rounded-[7px] border border-black/[0.06] bg-white font-display text-sm font-bold text-ink shadow-[0_2px_8px_rgba(0,0,0,0.035)] sm:h-10 sm:max-w-[43px] sm:text-[15px]">
+              <span className="flex h-10 w-9 items-center justify-center rounded-[7px] border border-black/[0.06] bg-white font-display text-[15px] font-bold text-ink shadow-[0_2px_8px_rgba(0,0,0,0.035)] sm:h-10 sm:text-[15px]">
                 {c.v}
               </span>
               <span className="mt-1 text-[7px] font-semibold uppercase leading-none tracking-[0.02em] text-ink-muted sm:text-[8px]">
@@ -45,7 +45,7 @@ export function FlashSaleTimer({ endsInSeconds = 8127, compact = false }: FlashS
               </span>
             </div>
             {i < cells.length - 1 && (
-              <span className="flex h-9 items-center justify-center text-xs font-bold leading-none text-ink sm:h-10 sm:text-sm">
+              <span className="flex h-10 w-2 items-center justify-center text-xs font-bold leading-none text-ink sm:text-sm">
                 :
               </span>
             )}

@@ -10,12 +10,14 @@ export default async function StorefrontLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Fetch these once and pass them down. Previously the header repeated both
+  // queries, doubling the auth/cart work on every storefront navigation.
   const user = await getCurrentUser();
   const count = user ? await cartCount(user.id) : 0;
 
   return (
     <div className="min-h-screen bg-white pb-24 md:pb-0">
-      <StorefrontHeader />
+      <StorefrontHeader user={user} cartCount={count} />
       <main className="container py-6">{children}</main>
 
       <footer className="mt-10 border-t border-line bg-white">

@@ -15,11 +15,14 @@ export interface AuthUserBasic {
   phone: string | null;
 }
 
+export interface StorefrontUserContext extends AuthUserBasic {
+  cartCount: number;
+}
+
 export interface AuthUser extends AuthUserBasic {
   roles: string[];
   permissions: string[];
   isAdmin: boolean;
-  /** Quantity total used by the storefront header/bottom navigation. */
   cartCount: number;
 }
 
@@ -40,10 +43,6 @@ export async function destroySession() {
   cookieStore.set(COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
 }
 
-/**
- * Lightweight request-scoped storefront lookup. Storefront navigation only
- * needs identity, not the RBAC graph or cart line quantities.
- */
 export const getCurrentUserBasic = cache(async (): Promise<AuthUserBasic | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE)?.value;
@@ -74,10 +73,47 @@ export const getCurrentUserBasic = cache(async (): Promise<AuthUserBasic | null>
 });
 
 /**
- * Full authenticated user lookup for authorization-sensitive screens/actions.
- * Request-scoped cache prevents duplicate JWT verification and Prisma work
- * when multiple protected components call this during one render.
+ * Single-query context for the shared storefront layout.
+ * The layout needs both identity and the cart badge, so fetch them through
+ * the user -> cart relation in one Prisma round-trip.
  */
+export const getStorefrontUserContext = cache(
+  async (): Promise<StorefrontUserContext | null> => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(COOKIE)?.value;
+    if (!token) return null;
+
+    const payload = await verifySession(token);
+    if (!payload) return null;
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        isActive: true,
+        cart: {
+          select: {
+            items: { select: { quantity: true } },
+          },
+        },
+      },
+    });
+
+    if (!user || !user.isActive) return null;
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      cartCount: user.cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
+    };
+  },
+);
+
 export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE)?.value;

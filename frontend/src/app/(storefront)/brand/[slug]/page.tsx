@@ -5,8 +5,6 @@ import { listProducts, getBrandBySlug } from "@/modules/catalog/catalog.service"
 import { getCurrentUser } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
-export const dynamic = "force-dynamic";
-
 type BrandRouteProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ sort?: string }>;

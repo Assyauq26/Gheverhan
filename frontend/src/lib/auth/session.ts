@@ -16,6 +16,8 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   isAdmin: boolean;
+  /** Quantity total used by the storefront header/bottom navigation. */
+  cartCount: number;
 }
 
 export async function createSession(userId: string, email: string) {
@@ -38,8 +40,8 @@ export async function destroySession() {
 /**
  * Request-scoped memoization is important because the storefront layout and
  * individual pages/components can ask for the current user during the same
- * render. Without cache(), every call repeats the JWT verification + Prisma
- * user/role query.
+ * render. The cart quantity is selected with the user so the storefront does
+ * not need a second cartCount() query just to render its navigation badge.
  */
 export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const cookieStore = await cookies();
@@ -69,6 +71,11 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
           },
         },
       },
+      cart: {
+        select: {
+          items: { select: { quantity: true } },
+        },
+      },
     },
   });
 
@@ -91,6 +98,7 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
     roles,
     permissions,
     isAdmin: roles.some((r) => ADMIN_ROLES.includes(r)),
+    cartCount: user.cart?.items.reduce((s, i) => s + i.quantity, 0) ?? 0,
   };
 });
 

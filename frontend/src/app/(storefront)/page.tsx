@@ -11,8 +11,6 @@ import { getRecentlyViewed } from "@/modules/catalog/recently-viewed.service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
-export const dynamic = "force-dynamic";
-
 const HERO_IMG =
   "https://images.unsplash.com/photo-1603189343302-e603f7add05a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
 const HERO_IMG2 =

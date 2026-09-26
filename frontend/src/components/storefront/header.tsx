@@ -1,7 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, ShoppingCart, User } from "lucide-react";
 import type { AuthUserBasic } from "@/lib/auth/session";
 import { SearchBar } from "./search-bar";
+import { CART_COUNT_EVENT } from "@/modules/cart/cart-events";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,6 +22,25 @@ export function StorefrontHeader({
   user: AuthUserBasic | null;
   cartCount?: number;
 }) {
+  const [liveCount, setLiveCount] = useState(count);
+
+  useEffect(() => {
+    setLiveCount(count);
+  }, [count]);
+
+  useEffect(() => {
+    const onCartCount = (event: Event) => {
+      const detail = (event as CustomEvent<number | { delta: number }>).detail;
+      setLiveCount((current) =>
+        typeof detail === "number"
+          ? Math.max(0, detail)
+          : Math.max(0, current + detail.delta),
+      );
+    };
+    window.addEventListener(CART_COUNT_EVENT, onCartCount);
+    return () => window.removeEventListener(CART_COUNT_EVENT, onCartCount);
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="container flex items-center gap-4 py-3">
@@ -27,11 +50,7 @@ export function StorefrontHeader({
 
         <nav className="ml-4 hidden items-center gap-6 lg:flex">
           {navLinks.map((l, i) => (
-            <Link
-              key={i}
-              href={l.href}
-              className="text-sm font-semibold text-ink-soft transition-colors hover:text-ink"
-            >
+            <Link key={i} href={l.href} className="text-sm font-semibold text-ink-soft transition-colors hover:text-ink">
               {l.label}
             </Link>
           ))}
@@ -47,9 +66,9 @@ export function StorefrontHeader({
           </Link>
           <Link href="/cart" aria-label="Keranjang" data-testid="header-cart" className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface">
             <ShoppingCart size={20} />
-            {count > 0 && (
+            {liveCount > 0 && (
               <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                {count}
+                {liveCount}
               </span>
             )}
           </Link>
@@ -58,9 +77,7 @@ export function StorefrontHeader({
               <User size={18} />
             </span>
             <span className="hidden text-left leading-tight sm:block">
-              <span className="block text-sm font-semibold text-ink">
-                {user ? user.name.split(" ")[0] : "Masuk"}
-              </span>
+              <span className="block text-sm font-semibold text-ink">{user ? user.name.split(" ")[0] : "Masuk"}</span>
               <span className="block text-[11px] text-ink-muted">Akun Saya</span>
             </span>
           </Link>

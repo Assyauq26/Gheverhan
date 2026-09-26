@@ -94,7 +94,7 @@ export default async function HomePage() {
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
         <div className="stagger grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
           {featuredItems.map((p) => (
-            <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
+            <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} featured />
           ))}
         </div>
       </section>

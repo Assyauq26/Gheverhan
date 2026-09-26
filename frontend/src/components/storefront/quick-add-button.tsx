@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Check, Loader2 } from "lucide-react";
+import { ShoppingBag, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addToCartAction } from "@/modules/cart/cart.actions";
 
@@ -23,6 +23,7 @@ export function QuickAddButton({
     e.preventDefault();
     e.stopPropagation();
     if (!variantId) return;
+
     start(async () => {
       const res = await addToCartAction(variantId, 1);
       if (res.unauthorized) {
@@ -45,16 +46,16 @@ export function QuickAddButton({
       aria-label="Tambah ke keranjang"
       data-testid={`quick-add-${variantId ?? "none"}`}
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-full bg-black text-white shadow-md transition-transform hover:scale-105 active:scale-95 disabled:opacity-40",
+        "flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-ink shadow-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-40",
         className,
       )}
     >
       {pending ? (
-        <Loader2 size={18} className="animate-spin" />
+        <Loader2 size={21} className="animate-spin" />
       ) : done ? (
-        <Check size={18} />
+        <Check size={21} strokeWidth={2.2} />
       ) : (
-        <ShoppingCart size={18} />
+        <ShoppingBag size={21} strokeWidth={2} />
       )}
     </button>
   );

@@ -10,3 +10,5 @@
 # Server Actions, and /api routes are deployed as Netlify Functions.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Authentication runtime secrets are configured in Netlify environment variables.

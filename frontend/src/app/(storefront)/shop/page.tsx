@@ -3,7 +3,6 @@ import { listProducts } from "@/modules/catalog/catalog.service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
-export const dynamic = "force-dynamic";
 export const metadata = { title: "Shop", description: "Jelajahi seluruh koleksi Gheverhan." };
 
 type ShopPageProps = {

@@ -33,7 +33,7 @@ export function ProductCard({
 
   return (
     <article
-      className="group relative overflow-hidden rounded-xl border border-line/70 bg-white p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+      className="group relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
       <Link href={`/product/${product.slug}`} className="block">
@@ -51,13 +51,20 @@ export function ProductCard({
               No image
             </div>
           )}
-          <div className="absolute right-2 top-2">
+
+          {pct > 0 && !compact && (
+            <div className="absolute left-2 top-2 z-10">
+              <Badge variant="sale">{pct}%</Badge>
+            </div>
+          )}
+
+          <div className="absolute right-2 top-2 z-10">
             <WishlistButton productId={product.id} initialActive={wishlisted} />
           </div>
         </div>
       </Link>
 
-      <div className="px-0.5 pb-1 pt-2.5 pr-10">
+      <div className="px-0.5 pb-1 pt-2 pr-10">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
         <Link href={`/product/${product.slug}`}>
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
@@ -69,17 +76,14 @@ export function ProductCard({
             {formatIDR(price)}
           </span>
           {pct > 0 && (
-            <>
-              <span className="text-xs text-ink-muted line-through">
-                {formatIDR(product.basePrice)}
-              </span>
-              {!compact && <Badge variant="sale">{pct}%</Badge>}
-            </>
+            <span className="text-xs text-ink-muted line-through">
+              {formatIDR(product.basePrice)}
+            </span>
           )}
         </div>
       </div>
 
-      <div className="absolute bottom-3 right-2">
+      <div className="absolute bottom-2.5 right-1.5">
         <QuickAddButton variantId={product.variantId} />
       </div>
     </article>

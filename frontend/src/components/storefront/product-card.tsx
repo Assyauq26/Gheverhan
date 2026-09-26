@@ -28,7 +28,7 @@ export function ProductCard({
   product: ProductCardData;
   wishlisted?: boolean;
   compact?: boolean;
-  /** Product Pilihan uses the stacked original-price treatment. */
+  /** Product Pilihan uses a simplified card with no wishlist/add-to-cart actions. */
   featured?: boolean;
 }) {
   const price = effectivePrice(product.basePrice, product.salePrice);
@@ -61,9 +61,11 @@ export function ProductCard({
             </div>
           )}
 
-          <div className="absolute right-2 top-2 z-10">
-            <WishlistButton productId={product.id} initialActive={wishlisted} />
-          </div>
+          {!featured && (
+            <div className="absolute right-2 top-2 z-10">
+              <WishlistButton productId={product.id} initialActive={wishlisted} />
+            </div>
+          )}
         </div>
       </Link>
 
@@ -76,19 +78,13 @@ export function ProductCard({
         </Link>
 
         {featured && pct > 0 ? (
-          <div className="mt-1 flex items-center justify-between gap-1.5">
-            <div className="min-w-0">
-              <span className="block text-xs leading-tight text-ink-muted line-through">
-                {formatIDR(product.basePrice)}
-              </span>
-              <span className="block font-display text-base font-extrabold leading-tight text-ink">
-                {formatIDR(price)}
-              </span>
-            </div>
-            <QuickAddButton
-              variantId={product.variantId}
-              className="h-9 w-9 shrink-0"
-            />
+          <div className="mt-1 flex min-w-0 items-center gap-1 whitespace-nowrap">
+            <span className="font-display text-sm font-extrabold leading-tight text-ink">
+              {formatIDR(price)}
+            </span>
+            <span className="shrink-0 text-[10px] leading-tight text-ink-muted line-through">
+              {formatIDR(product.basePrice)}
+            </span>
           </div>
         ) : (
           <div className="mt-1 flex items-center justify-between gap-1.5">

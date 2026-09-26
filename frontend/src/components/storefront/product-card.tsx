@@ -23,10 +23,13 @@ export function ProductCard({
   product,
   wishlisted = false,
   compact = false,
+  featured = false,
 }: {
   product: ProductCardData;
   wishlisted?: boolean;
   compact?: boolean;
+  /** Product Pilihan uses the stacked original-price treatment. */
+  featured?: boolean;
 }) {
   const price = effectivePrice(product.basePrice, product.salePrice);
   const pct = discountPercent(product.basePrice, product.salePrice);
@@ -64,27 +67,47 @@ export function ProductCard({
         </div>
       </Link>
 
-      <div className="px-0.5 pb-1 pt-2 pr-10">
+      <div className="px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
         <Link href={`/product/${product.slug}`}>
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
             {product.name}
           </h3>
         </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="font-display text-base font-extrabold text-ink">
-            {formatIDR(price)}
-          </span>
-          {pct > 0 && (
-            <span className="text-xs text-ink-muted line-through">
-              {formatIDR(product.basePrice)}
-            </span>
-          )}
-        </div>
-      </div>
 
-      <div className="absolute bottom-2.5 right-1.5">
-        <QuickAddButton variantId={product.variantId} />
+        {featured && pct > 0 ? (
+          <div className="mt-1 flex items-center justify-between gap-1.5">
+            <div className="min-w-0">
+              <span className="block text-xs leading-tight text-ink-muted line-through">
+                {formatIDR(product.basePrice)}
+              </span>
+              <span className="block font-display text-base font-extrabold leading-tight text-ink">
+                {formatIDR(price)}
+              </span>
+            </div>
+            <QuickAddButton
+              variantId={product.variantId}
+              className="h-9 w-9 shrink-0"
+            />
+          </div>
+        ) : (
+          <div className="mt-1 flex items-center justify-between gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="font-display text-base font-extrabold leading-tight text-ink">
+                {formatIDR(price)}
+              </span>
+              {pct > 0 && (
+                <span className="text-xs leading-tight text-ink-muted line-through">
+                  {formatIDR(product.basePrice)}
+                </span>
+              )}
+            </div>
+            <QuickAddButton
+              variantId={product.variantId}
+              className="h-9 w-9 shrink-0"
+            />
+          </div>
+        )}
       </div>
     </article>
   );

@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma, ProductStatus } from "@prisma/client";
 
@@ -63,7 +64,7 @@ export type ProductWithRelations = Prisma.ProductGetPayload<{
   include: typeof productDetailInclude;
 }>;
 
-export async function listProducts(params: {
+export type ProductListParams = {
   categorySlug?: string;
   brandSlug?: string;
   search?: string;
@@ -73,7 +74,9 @@ export async function listProducts(params: {
   page?: number;
   pageSize?: number;
   includeTotal?: boolean;
-} = {}) {
+};
+
+async function listProductsUncached(params: ProductListParams) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(48, params.pageSize ?? 12);
   const includeTotal = params.includeTotal ?? true;
@@ -116,6 +119,33 @@ export async function listProducts(params: {
 }
 
 /**
+ * Public catalog data is identical for every user, so cache it briefly at the
+ * Next.js data layer. Wishlist/auth data remains request/user-specific.
+ * Thirty seconds keeps catalog navigation fast without making product changes
+ * appear stale for long.
+ */
+export async function listProducts(params: ProductListParams = {}) {
+  const normalized: ProductListParams = {
+    categorySlug: params.categorySlug,
+    brandSlug: params.brandSlug,
+    search: params.search?.trim() || undefined,
+    featured: params.featured ?? false,
+    flashSale: params.flashSale ?? false,
+    sort: params.sort ?? "newest",
+    page: Math.max(1, params.page ?? 1),
+    pageSize: Math.min(48, params.pageSize ?? 12),
+    includeTotal: params.includeTotal ?? true,
+  };
+  const cacheKey = JSON.stringify(normalized);
+
+  return unstable_cache(
+    () => listProductsUncached(normalized),
+    ["catalog-products", cacheKey],
+    { revalidate: 30 },
+  )();
+}
+
+/**
  * React request cache prevents generateMetadata() and the page itself from
  * issuing the same expensive product query during one navigation.
  */
@@ -142,24 +172,37 @@ export async function getRelatedProducts(product: {
   });
 }
 
-export function listCategories() {
-  return prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
-    select: { id: true, name: true, slug: true, imageUrl: true, iconKey: true },
-  });
-}
+export const listCategories = unstable_cache(
+  () =>
+    prisma.category.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true, imageUrl: true, iconKey: true },
+    }),
+  ["catalog-categories"],
+  { revalidate: 60 },
+);
 
-export function getCategoryBySlug(slug: string) {
-  return prisma.category.findUnique({ where: { slug } });
-}
+export const getCategoryBySlug = cache(async (slug: string) => {
+  return unstable_cache(
+    () => prisma.category.findUnique({ where: { slug } }),
+    ["catalog-category", slug],
+    { revalidate: 60 },
+  )();
+});
 
-export function listBrands() {
-  return prisma.brand.findMany({ orderBy: { name: "asc" } });
-}
+export const listBrands = unstable_cache(
+  () => prisma.brand.findMany({ orderBy: { name: "asc" } }),
+  ["catalog-brands"],
+  { revalidate: 60 },
+);
 
-export function getBrandBySlug(slug: string) {
-  return prisma.brand.findUnique({ where: { slug } });
-}
+export const getBrandBySlug = cache(async (slug: string) => {
+  return unstable_cache(
+    () => prisma.brand.findUnique({ where: { slug } }),
+    ["catalog-brand", slug],
+    { revalidate: 60 },
+  )();
+});
 
 export async function searchSuggestions(q: string) {
   if (!q.trim()) return { products: [], brands: [], categories: [] };

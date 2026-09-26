@@ -2,7 +2,7 @@ import { StorefrontHeader } from "@/components/storefront/header";
 import { BottomNav } from "@/components/storefront/bottom-nav";
 import { Truck, ShieldCheck, Headphones, Star } from "lucide-react";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { cartCount } from "@/modules/cart/cart.service";
 
 export default async function StorefrontLayout({
@@ -10,9 +10,10 @@ export default async function StorefrontLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch these once and pass them down. Previously the header repeated both
-  // queries, doubling the auth/cart work on every storefront navigation.
-  const user = await getCurrentUser();
+  // Storefront navigation only needs identity for the header. Avoid loading
+  // the full RBAC graph on every navigation; admin authorization still uses
+  // getCurrentUser()/requireAdmin in protected code paths.
+  const user = await getCurrentUserBasic();
   const count = user ? await cartCount(user.id) : 0;
 
   return (

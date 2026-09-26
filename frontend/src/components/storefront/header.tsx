@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Heart, ShoppingCart, User } from "lucide-react";
+import type { AuthUser } from "@/lib/auth/session";
 import { SearchBar } from "./search-bar";
-import { getCurrentUser } from "@/lib/auth/session";
-import { cartCount } from "@/modules/cart/cart.service";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -12,10 +11,13 @@ const navLinks = [
   { href: "/shop?flash=1", label: "Promo" },
 ];
 
-export async function StorefrontHeader() {
-  const user = await getCurrentUser();
-  const count = user ? await cartCount(user.id) : 0;
-
+export function StorefrontHeader({
+  user,
+  cartCount: count = 0,
+}: {
+  user: AuthUser | null;
+  cartCount?: number;
+}) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="container flex items-center gap-4 py-3">

@@ -16,6 +16,7 @@ export async function POST(req: Request) {
   return handle(async () => {
     const body = schema.parse(await req.json());
     const user = await registerCustomer(body);
+    // Session signing requires JWT_SECRET to be available in the Netlify function runtime.
     await createSession(user.id, user.email);
     return ok({ id: user.id, name: user.name, email: user.email }, 201);
   });

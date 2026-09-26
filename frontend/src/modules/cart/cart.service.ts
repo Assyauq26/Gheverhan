@@ -28,44 +28,50 @@ function unitPriceFor(variant: {
 export async function getCartView(userId: string) {
   // A read of an empty cart must stay read-only. Cart creation is deferred to
   // the first mutation (add-to-cart), avoiding a DB write on every cart visit.
-  const cart = await findCart(userId);
-  if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
-
-  const items = await prisma.cartItem.findMany({
-    where: { cartId: cart.id },
+  // Load the cart and its lines in one relational query; the previous version
+  // first loaded Cart and then issued a separate CartItem query.
+  const cart = await prisma.cart.findUnique({
+    where: { userId },
     select: {
       id: true,
-      variantId: true,
-      quantity: true,
-      createdAt: true,
-      variant: {
+      items: {
         select: {
-          color: true,
-          size: true,
-          price: true,
-          salePrice: true,
-          inventory: { select: { onHand: true, reserved: true } },
-          product: {
+          id: true,
+          variantId: true,
+          quantity: true,
+          createdAt: true,
+          variant: {
             select: {
-              id: true,
-              name: true,
-              slug: true,
-              basePrice: true,
+              color: true,
+              size: true,
+              price: true,
               salePrice: true,
-              images: {
-                select: { url: true },
-                orderBy: { sortOrder: "asc" },
-                take: 1,
+              inventory: { select: { onHand: true, reserved: true } },
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  basePrice: true,
+                  salePrice: true,
+                  images: {
+                    select: { url: true },
+                    orderBy: { sortOrder: "asc" },
+                    take: 1,
+                  },
+                },
               },
             },
           },
         },
+        orderBy: { createdAt: "asc" },
       },
     },
-    orderBy: { createdAt: "asc" },
   });
 
-  const lines = items.map((it) => {
+  if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
+
+  const lines = cart.items.map((it) => {
     const unitPrice = unitPriceFor(it.variant);
     const stock = it.variant.inventory
       ? available(it.variant.inventory.onHand, it.variant.inventory.reserved)

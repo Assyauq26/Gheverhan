@@ -3,11 +3,12 @@ import { effectivePrice } from "@/lib/money";
 import { available } from "@/modules/inventory/inventory.service";
 import { HttpError } from "@/lib/response";
 
+async function findCart(userId: string) {
+  return prisma.cart.findUnique({ where: { userId } });
+}
+
 export async function getOrCreateCart(userId: string) {
-  // Reads must not perform an upsert. The previous implementation wrote to
-  // PostgreSQL every time the cart was rendered, which is especially costly
-  // on serverless/remote PostgreSQL connections.
-  const existing = await prisma.cart.findUnique({ where: { userId } });
+  const existing = await findCart(userId);
   if (existing) return existing;
   return prisma.cart.create({ data: { userId } });
 }
@@ -25,7 +26,11 @@ function unitPriceFor(variant: {
 }
 
 export async function getCartView(userId: string) {
-  const cart = await getOrCreateCart(userId);
+  // A read of an empty cart must stay read-only. Cart creation is deferred to
+  // the first mutation (add-to-cart), avoiding a DB write on every cart visit.
+  const cart = await findCart(userId);
+  if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
+
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
     select: {
@@ -114,7 +119,9 @@ export async function addItem(userId: string, variantId: string, quantity = 1) {
 }
 
 export async function updateItem(userId: string, itemId: string, quantity: number) {
-  const cart = await getOrCreateCart(userId);
+  const cart = await findCart(userId);
+  if (!cart) throw new HttpError("Keranjang tidak ditemukan", 404);
+
   const item = await prisma.cartItem.findFirst({
     where: { id: itemId, cartId: cart.id },
     include: { variant: { include: { inventory: true } } },
@@ -133,7 +140,8 @@ export async function updateItem(userId: string, itemId: string, quantity: numbe
 }
 
 export async function removeItem(userId: string, itemId: string) {
-  const cart = await getOrCreateCart(userId);
+  const cart = await findCart(userId);
+  if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
   await prisma.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } });
   return getCartView(userId);
 }

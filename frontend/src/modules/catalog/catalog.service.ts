@@ -60,7 +60,7 @@ const productDetailInclude = {
 } satisfies Prisma.ProductInclude;
 
 export type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: typeof productCardInclude;
+  include: typeof productDetailInclude;
 }>;
 
 export async function listProducts(params: {

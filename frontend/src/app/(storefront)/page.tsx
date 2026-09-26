@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Users, Star, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, Users, Star, ShieldCheck, Truck, Zap } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
@@ -58,16 +58,24 @@ export default async function HomePage() {
         className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-3 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-3"
         data-testid="flash-sale"
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-7 top-1/2 z-0 -translate-y-1/2 text-ink/[0.045]"
+        >
+          <Zap size={150} strokeWidth={1.25} />
+        </div>
+
         <div className="relative z-10 flex min-h-[92px] items-center gap-3 sm:min-h-[96px] sm:gap-5 md:gap-7">
-          <div className="min-w-0 flex-1 self-center">
-            <p className="text-[15px] font-bold leading-tight text-ink sm:text-base">Flash Sale!</p>
-            <h2 className="mt-0.5 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[30px]">
+          <div className="relative min-w-0 flex-1 self-center">
+            <p className="text-[17px] font-bold leading-tight text-ink sm:text-lg">Flash Sale!</p>
+            <h2 className="mt-0.5 font-display text-[29px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[32px]">
               Diskon hingga 40%
             </h2>
-            <p className="mt-1 text-xs leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
+            <p className="mt-1 text-sm leading-tight text-ink-soft sm:text-base">Produk pilihan, stok terbatas!</p>
           </div>
 
           <div className="flex w-[145px] shrink-0 flex-col items-end gap-1.5 sm:w-[158px] sm:gap-2 md:w-[166px]">
+            <FlashSaleTimer compact />
             <Button
               asChild
               className="h-9 w-full rounded-[7px] px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
@@ -78,7 +86,6 @@ export default async function HomePage() {
                 <ArrowRight size={15} />
               </Link>
             </Button>
-            <FlashSaleTimer compact />
           </div>
         </div>
       </section>

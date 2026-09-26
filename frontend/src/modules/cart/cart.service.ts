@@ -149,7 +149,14 @@ export async function removeItem(userId: string, itemId: string) {
 export async function cartCount(userId: string): Promise<number> {
   const cart = await prisma.cart.findUnique({
     where: { userId },
-    select: { items: { select: { quantity: true } } },
+    select: { id: true },
   });
-  return cart?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
+  if (!cart) return 0;
+
+  const result = await prisma.cartItem.aggregate({
+    where: { cartId: cart.id },
+    _sum: { quantity: true },
+  });
+
+  return result._sum.quantity ?? 0;
 }

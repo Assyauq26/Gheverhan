@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, ShoppingBag, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CART_COUNT_EVENT } from "@/modules/cart/cart-events";
 
 const items = [
   { href: "/", label: "Home", icon: Home },
@@ -12,8 +14,27 @@ const items = [
   { href: "/account", label: "Account", icon: User },
 ];
 
-export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
+export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
   const pathname = usePathname();
+  const [liveCount, setLiveCount] = useState(count);
+
+  useEffect(() => {
+    setLiveCount(count);
+  }, [count]);
+
+  useEffect(() => {
+    const onCartCount = (event: Event) => {
+      const detail = (event as CustomEvent<number | { delta: number }>).detail;
+      setLiveCount((current) =>
+        typeof detail === "number"
+          ? Math.max(0, detail)
+          : Math.max(0, current + detail.delta),
+      );
+    };
+
+    window.addEventListener(CART_COUNT_EVENT, onCartCount);
+    return () => window.removeEventListener(CART_COUNT_EVENT, onCartCount);
+  }, []);
 
   return (
     <nav
@@ -40,9 +61,9 @@ export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
           >
             <span className="relative flex shrink-0 items-center justify-center">
               <Icon size={20} strokeWidth={active ? 2.2 : 2} />
-              {item.badgeKey && cartCount > 0 && (
+              {item.badgeKey && liveCount > 0 && (
                 <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-black ring-1 ring-black/10">
-                  {cartCount}
+                  {liveCount}
                 </span>
               )}
             </span>

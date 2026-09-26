@@ -33,11 +33,11 @@ export function ProductCard({
 
   return (
     <article
-      className="group relative overflow-hidden rounded-3xl border border-line/70 bg-white p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+      className="group relative overflow-hidden rounded-xl border border-line/70 bg-white p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
       <Link href={`/product/${product.slug}`} className="block">
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-surface">
+        <div className="relative aspect-square overflow-hidden rounded-xl bg-surface">
           {product.image ? (
             <Image
               src={product.image}

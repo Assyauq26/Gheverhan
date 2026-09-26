@@ -1,6 +1,6 @@
 import { ProductListing } from "@/components/storefront/product-listing";
 import { listProducts } from "@/modules/catalog/catalog.service";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ type ShopPageProps = {
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   const sort = (params.sort as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
     listProducts({

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgePercent, Users, Star, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, Users, Star, ShieldCheck, Truck } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
@@ -58,31 +58,24 @@ export default async function HomePage() {
         className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-3 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-3"
         data-testid="flash-sale"
       >
-        <div className="relative z-10 flex min-h-[96px] items-center gap-3 sm:min-h-[100px] sm:gap-5 md:gap-7">
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center text-ink sm:h-12 sm:w-12"
-          >
-            <BadgePercent size={40} strokeWidth={1.8} className="sm:h-12 sm:w-12" />
-          </span>
-
+        <div className="relative z-10 flex min-h-[92px] items-center gap-3 sm:min-h-[96px] sm:gap-5 md:gap-7">
           <div className="min-w-0 flex-1 self-center">
-            <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale</p>
+            <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale!</p>
             <h2 className="mt-0.5 font-display text-[21px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[29px]">
-              Diskon Up To 40%
+              Diskon hingga 40%
             </h2>
             <p className="mt-1 text-[10px] leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
           </div>
 
-          <div className="flex w-[180px] shrink-0 flex-col items-end gap-1.5 sm:w-[190px] sm:gap-2 md:flex-row md:items-center md:gap-4">
+          <div className="flex w-[145px] shrink-0 flex-col items-end gap-1.5 sm:w-[158px] sm:gap-2 md:w-[166px]">
             <Button
               asChild
-              className="h-9 w-full rounded-xl px-3 text-xs font-medium sm:h-10 sm:text-sm"
+              className="h-9 w-full rounded-lg px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
               data-testid="shop-sale-btn"
             >
               <Link href="/shop?flash=1">
                 Shop the Sale
-                <ArrowRight size={16} />
+                <ArrowRight size={15} />
               </Link>
             </Button>
             <FlashSaleTimer compact />

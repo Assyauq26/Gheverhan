@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Users, Star, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, Users, Star, ShieldCheck, Truck, Zap } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
@@ -55,22 +55,30 @@ export default async function HomePage() {
       </section>
 
       <section
-        className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-2.5 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-2.5"
+        className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-3 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-3"
         data-testid="flash-sale"
       >
-        <div className="relative z-10 flex min-h-[86px] items-center gap-3 sm:min-h-[90px] sm:gap-5 md:gap-7">
-          <div className="min-w-0 flex-1 self-center">
-            <p className="text-[15px] font-bold leading-tight text-ink sm:text-base">Flash Sale!</p>
-            <h2 className="mt-0.5 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[29px]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-7 top-1/2 z-0 -translate-y-1/2 text-ink/[0.045]"
+        >
+          <Zap size={150} strokeWidth={1.25} />
+        </div>
+
+        <div className="relative z-10 flex min-h-[92px] items-center gap-3 sm:min-h-[96px] sm:gap-5 md:gap-7">
+          <div className="relative min-w-0 flex-1 self-center">
+            <p className="text-[17px] font-bold leading-tight text-ink sm:text-lg">Flash Sale!</p>
+            <h2 className="mt-0.5 font-display text-[29px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[32px]">
               Diskon hingga 40%
             </h2>
-            <p className="mt-1 text-[11px] leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
+            <p className="mt-1 text-sm leading-tight text-ink-soft sm:text-base">Produk pilihan, stok terbatas!</p>
           </div>
 
-          <div className="flex w-[124px] shrink-0 flex-col items-end gap-1.5 sm:w-[132px] sm:gap-2">
+          <div className="flex w-[145px] shrink-0 flex-col items-end gap-1.5 sm:w-[158px] sm:gap-2 md:w-[166px]">
+            <FlashSaleTimer compact />
             <Button
               asChild
-              className="h-10 w-full rounded-[7px] px-2 text-[11px] font-medium sm:h-10 sm:text-xs"
+              className="h-9 w-full rounded-[7px] px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
               data-testid="shop-sale-btn"
             >
               <Link href="/shop?flash=1">
@@ -78,16 +86,23 @@ export default async function HomePage() {
                 <ArrowRight size={15} />
               </Link>
             </Button>
-            <FlashSaleTimer compact />
           </div>
         </div>
       </section>
 
       <section>
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
-        <div className="stagger grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
+        <div
+          className="stagger flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Produk pilihan"
+        >
           {featuredItems.map((p) => (
-            <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} featured />
+            <div
+              key={p.id}
+              className="w-[calc((100%-20px)/3)] min-w-[calc((100%-20px)/3)] shrink-0 snap-start"
+            >
+              <ProductCard product={toCardData(p)} wishlisted={wl.has(p.id)} featured />
+            </div>
           ))}
         </div>
       </section>

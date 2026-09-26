@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Percent, Users, Star, ShieldCheck, Truck, ArrowRight } from "lucide-react";
+import { ArrowRight, BadgePercent, Users, Star, ShieldCheck, Truck } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
@@ -18,14 +19,23 @@ const HERO_IMG2 =
 
 export default async function HomePage() {
   const user = await getCurrentUserBasic();
-  const [categories, featured, latest, recent, wishIds] = await Promise.all([
+  const [categories, featured, latest, recent, wishIds, flashSale] = await Promise.all([
     listCategories(),
     listProducts({ featured: true, pageSize: 4, includeTotal: false }),
-    listProducts({ pageSize: 8, includeTotal: false }),
+    listProducts({ pageSize: 12, includeTotal: false }),
     user ? getRecentlyViewed(user.id) : Promise.resolve([]),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
+    listProducts({ flashSale: true, pageSize: 1, includeTotal: false }),
   ]);
+
   const wl = new Set(wishIds);
+  // Some seed/catalog data may not have isFeatured flags yet. Keep the section
+  // useful by falling back to the newest published products instead of rendering
+  // an empty section when the catalog itself is populated.
+  const featuredItems = featured.items.length > 0 ? featured.items : latest.items.slice(0, 4);
+  const featuredIds = new Set(featuredItems.map((p) => p.id));
+  const recommendedItems = latest.items.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
+  const flashImage = flashSale.items[0]?.images?.[0]?.url ?? HERO_IMG2;
 
   const slides = [
     {
@@ -53,29 +63,56 @@ export default async function HomePage() {
         <CategoryNav categories={categories} />
       </section>
 
-      <section className="flex flex-col gap-4 rounded-3xl bg-surface p-5 md:flex-row md:items-center md:justify-between md:p-7" data-testid="flash-sale">
-        <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white">
-            <Percent size={24} />
+      <section
+        className="relative overflow-hidden rounded-[20px] border border-black/[0.05] bg-[#f7f7f7] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.045)] sm:px-7 sm:py-6"
+        data-testid="flash-sale"
+      >
+        <div className="relative z-10 flex min-h-[150px] items-center gap-3 sm:min-h-[132px] sm:gap-5 md:gap-8">
+          <span
+            aria-hidden="true"
+            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center text-ink sm:h-[72px] sm:w-[72px]"
+          >
+            <BadgePercent size={54} strokeWidth={1.8} className="sm:h-[68px] sm:w-[68px]" />
           </span>
-          <div>
-            <p className="text-sm font-semibold text-ink-soft">Flash Sale</p>
-            <h2 className="font-display text-2xl font-black text-ink">Diskon Hingga 40%</h2>
-            <p className="text-sm text-ink-soft">Produk pilihan, stok terbatas!</p>
+
+          <div className="min-w-0 flex-1 self-center">
+            <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale</p>
+            <h2 className="mt-1 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[34px]">
+              Diskon Up To 40%
+            </h2>
+            <p className="mt-1 text-xs text-ink-soft sm:text-base">Produk pilihan, stok terbatas!</p>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-end gap-3 sm:gap-4 md:flex-row md:items-center md:gap-7">
+            <Button
+              asChild
+              className="h-11 rounded-full px-5 text-sm font-medium sm:h-12 sm:min-w-[158px] sm:px-7 sm:text-base"
+              data-testid="shop-sale-btn"
+            >
+              <Link href="/shop?flash=1">
+                Shop the Sale
+                <ArrowRight size={18} />
+              </Link>
+            </Button>
+            <FlashSaleTimer compact />
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <FlashSaleTimer />
-          <Button asChild data-testid="shop-sale-btn">
-            <Link href="/shop?flash=1">Shop the Sale <ArrowRight size={16} /></Link>
-          </Button>
+
+        <div className="pointer-events-none absolute -right-8 bottom-0 hidden h-full w-[24%] min-w-[180px] md:block">
+          <Image
+            src={flashImage}
+            alt=""
+            fill
+            sizes="28vw"
+            className="object-contain object-right-bottom opacity-95"
+          />
         </div>
       </section>
 
       <section>
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
         <div className="stagger grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
-          {featured.items.map((p) => (
+          {featuredItems.map((p) => (
             <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
           ))}
         </div>
@@ -95,7 +132,7 @@ export default async function HomePage() {
       <section>
         <SectionHeader title="Rekomendasi untukmu" href="/shop" />
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
-          {latest.items.map((p) => (
+          {recommendedItems.map((p) => (
             <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
           ))}
         </div>

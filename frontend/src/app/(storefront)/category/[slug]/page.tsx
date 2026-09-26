@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ProductListing } from "@/components/storefront/product-listing";
 import { listProducts, getCategoryBySlug } from "@/modules/catalog/catalog.service";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function CategoryPage({
   const { sort: sortParam } = await searchParams;
   const cat = await getCategoryBySlug(slug);
   if (!cat) notFound();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   const sort = (sortParam as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
     listProducts({ categorySlug: slug, sort, pageSize: 24 }),

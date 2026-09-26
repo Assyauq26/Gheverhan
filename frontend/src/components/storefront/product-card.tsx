@@ -32,7 +32,10 @@ export function ProductCard({
   const pct = discountPercent(product.basePrice, product.salePrice);
 
   return (
-    <div className="group relative" data-testid={`product-card-${product.slug}`}>
+    <article
+      className="group relative overflow-hidden rounded-3xl border border-line/70 bg-white p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+      data-testid={`product-card-${product.slug}`}
+    >
       <Link href={`/product/${product.slug}`} className="block">
         <div className="relative aspect-square overflow-hidden rounded-2xl bg-surface">
           {product.image ? (
@@ -54,7 +57,7 @@ export function ProductCard({
         </div>
       </Link>
 
-      <div className="mt-3 pr-11">
+      <div className="px-0.5 pb-1 pt-2.5 pr-10">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
         <Link href={`/product/${product.slug}`}>
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
@@ -76,10 +79,10 @@ export function ProductCard({
         </div>
       </div>
 
-      <div className="absolute bottom-0 right-0">
+      <div className="absolute bottom-3 right-2">
         <QuickAddButton variantId={product.variantId} />
       </div>
-    </div>
+    </article>
   );
 }
 

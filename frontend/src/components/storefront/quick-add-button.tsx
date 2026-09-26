@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { addToCartAction } from "@/modules/cart/cart.actions";
+import { quickAddToCartAction } from "@/modules/cart/cart.actions";
 import { emitCartCountDelta } from "@/modules/cart/cart-events";
 
 const FEEDBACK_MS = 350;
@@ -27,31 +27,33 @@ export function QuickAddButton({
     e.stopPropagation();
     if (!variantId || disabled || inFlightRef.current) return;
 
-    // Keep the interaction independent from server latency:
+    // The UI is deliberately decoupled from server latency:
     // 1. show the loader immediately;
-    // 2. update the cart badges optimistically;
-    // 3. return the icon to the bag after a short visual acknowledgement;
-    // 4. keep the request protected in the background until it settles.
+    // 2. update both cart badges optimistically;
+    // 3. return to the bag after a short visual acknowledgement;
+    // 4. keep the lightweight server mutation protected in the background.
     inFlightRef.current = true;
     setShowLoading(true);
     emitCartCountDelta(1);
 
     window.setTimeout(() => setShowLoading(false), FEEDBACK_MS);
 
-    void addToCartAction(variantId, 1).then((res) => {
-      if (res.unauthorized) {
-        emitCartCountDelta(-1);
-        router.push("/login?redirectTo=/cart");
-        return;
-      }
+    void quickAddToCartAction(variantId, 1)
+      .then((res) => {
+        if (res.unauthorized) {
+          emitCartCountDelta(-1);
+          router.push("/login?redirectTo=/cart");
+          return;
+        }
 
-      if (!res.ok) {
-        emitCartCountDelta(-1);
-      }
-    }).finally(() => {
-      inFlightRef.current = false;
-      setShowLoading(false);
-    });
+        if (!res.ok) {
+          emitCartCountDelta(-1);
+        }
+      })
+      .finally(() => {
+        inFlightRef.current = false;
+        setShowLoading(false);
+      });
   }
 
   return (

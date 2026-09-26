@@ -22,6 +22,15 @@ export async function registerAction(_prev: unknown, formData: FormData) {
   if (!parsed.data.terms) {
     return { ok: false, error: "Anda harus menyetujui syarat & ketentuan" };
   }
+
+  // Registration uses this Server Action directly (not the REST route), so
+  // validate the production signing secret here before creating the user.
+  // This prevents a successful DB transaction from being followed by a
+  // session-signing failure that looks like a generic registration error.
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+    return { ok: false, error: "Layanan autentikasi belum dikonfigurasi" };
+  }
+
   const res = await runAction(async () => {
     const user = await registerCustomer(parsed.data);
     await createSession(user.id, user.email);

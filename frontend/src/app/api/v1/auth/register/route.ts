@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, handle } from "@/lib/response";
+import { ok, handle, HttpError } from "@/lib/response";
 import { registerCustomer } from "@/modules/auth/auth.service";
 import { createSession } from "@/lib/auth/session";
 
@@ -14,9 +14,15 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   return handle(async () => {
+    // Validate the signing secret before touching the database. Without this
+    // guard a successful registration could be committed and then fail while
+    // creating the session cookie, leaving the customer with a false error.
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+      throw new HttpError("Layanan autentikasi belum dikonfigurasi", 503);
+    }
+
     const body = schema.parse(await req.json());
     const user = await registerCustomer(body);
-    // Session signing requires JWT_SECRET to be available in the Netlify function runtime.
     await createSession(user.id, user.email);
     return ok({ id: user.id, name: user.name, email: user.email }, 201);
   });

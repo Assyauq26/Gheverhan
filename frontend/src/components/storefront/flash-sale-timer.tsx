@@ -30,7 +30,7 @@ export function FlashSaleTimer({ endsInSeconds = 8127, compact = false }: FlashS
 
   return (
     <div
-      className={`flex items-start ${compact ? "gap-1 sm:gap-1.5" : "gap-2"}`}
+      className={`flex items-start justify-between ${compact ? "w-[180px] gap-1 sm:w-[190px] sm:gap-1.5" : "gap-2"}`}
       data-testid="flash-timer"
     >
       {cells.map((c, i) => (

@@ -6,7 +6,6 @@ import { CartClient } from "@/components/storefront/cart-client";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = "force-dynamic";
 export const metadata = { title: "Keranjang" };
 
 export default async function CartPage() {

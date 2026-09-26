@@ -7,6 +7,20 @@
   --font-display: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* Keep the stagger animation self-contained. The class is defined in CSS,
+   so relying only on Tailwind's generated @keyframes can leave children at
+   opacity: 0 in production when the animation utility is tree-shaken. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -44,4 +58,12 @@
   .stagger > *:nth-child(4) { animation-delay: 0.14s; }
   .stagger > *:nth-child(5) { animation-delay: 0.18s; }
   .stagger > *:nth-child(6) { animation-delay: 0.22s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > * {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
 }

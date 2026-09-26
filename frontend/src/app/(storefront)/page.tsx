@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgePercent, Users, Star, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, Users, Star, ShieldCheck, Truck } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
@@ -46,43 +46,36 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <HeroCarousel slides={slides} />
 
       <section>
-        <SectionHeader title="Shop by Category" href="/shop" />
+        <SectionHeader title="Kategori" href="/shop" />
         <CategoryNav categories={categories} />
       </section>
 
       <section
-        className="relative overflow-hidden rounded-2xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-4 shadow-[0_6px_18px_rgba(0,0,0,0.035)] sm:px-6 sm:py-4"
+        className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-2.5 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-2.5"
         data-testid="flash-sale"
       >
-        <div className="relative z-10 flex min-h-[108px] items-center gap-3 sm:min-h-[112px] sm:gap-5 md:gap-7">
-          <span
-            aria-hidden="true"
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-ink sm:h-14 sm:w-14"
-          >
-            <BadgePercent size={44} strokeWidth={1.8} className="sm:h-14 sm:w-14" />
-          </span>
-
+        <div className="relative z-10 flex min-h-[86px] items-center gap-3 sm:min-h-[90px] sm:gap-5 md:gap-7">
           <div className="min-w-0 flex-1 self-center">
-            <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale</p>
-            <h2 className="mt-0.5 font-display text-[22px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[30px]">
-              Diskon Up To 40%
+            <p className="text-[15px] font-bold leading-tight text-ink sm:text-base">Flash Sale!</p>
+            <h2 className="mt-0.5 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[29px]">
+              Diskon hingga 40%
             </h2>
             <p className="mt-1 text-[11px] leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-2 sm:gap-2.5 md:flex-row md:items-center md:gap-5">
+          <div className="flex w-[124px] shrink-0 flex-col items-end gap-1.5 sm:w-[132px] sm:gap-2">
             <Button
               asChild
-              className="h-10 rounded-full px-4 text-xs font-medium sm:h-11 sm:min-w-[148px] sm:px-6 sm:text-sm"
+              className="h-10 w-full rounded-[7px] px-2 text-[11px] font-medium sm:h-10 sm:text-xs"
               data-testid="shop-sale-btn"
             >
               <Link href="/shop?flash=1">
-                Shop the Sale
-                <ArrowRight size={17} />
+                Beli Sekarang
+                <ArrowRight size={15} />
               </Link>
             </Button>
             <FlashSaleTimer compact />
@@ -92,7 +85,7 @@ export default async function HomePage() {
 
       <section>
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
-        <div className="stagger grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+        <div className="stagger grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
           {featuredItems.map((p) => (
             <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} featured />
           ))}
@@ -102,7 +95,7 @@ export default async function HomePage() {
       {recent.length > 0 && (
         <section>
           <SectionHeader title="Baru Dilihat" subtitle="Lanjutkan dari produk terakhir kamu lihat" href="/shop" />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
             {recent.map((r) => (
               <ProductCard key={r.id} product={toCardData(r.product)} wishlisted={wl.has(r.productId)} compact />
             ))}
@@ -112,7 +105,7 @@ export default async function HomePage() {
 
       <section>
         <SectionHeader title="Rekomendasi untukmu" href="/shop" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
           {recommendedItems.map((p) => (
             <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
           ))}

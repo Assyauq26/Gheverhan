@@ -17,7 +17,7 @@ export default async function StorefrontLayout({
   return (
     <div className="min-h-screen bg-white pb-24 md:pb-0">
       <StorefrontHeader user={user} cartCount={count} />
-      <main className="container py-6">{children}</main>
+      <main className="container py-2 md:py-6">{children}</main>
 
       <footer className="mt-10 border-t border-line bg-white">
         <div className="container grid grid-cols-2 gap-6 py-8 md:grid-cols-4">

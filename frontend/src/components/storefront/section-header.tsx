@@ -11,19 +11,19 @@ export function SectionHeader({
   href?: string;
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between">
+    <div className="mb-3 flex items-end justify-between">
       <div>
-        <h2 className="font-display text-xl font-extrabold text-ink md:text-2xl">
+        <h2 className="font-display text-lg font-extrabold leading-tight text-ink md:text-xl">
           {title}
         </h2>
-        {subtitle && <p className="mt-0.5 text-sm text-ink-soft">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-xs leading-tight text-ink-soft md:text-sm">{subtitle}</p>}
       </div>
       {href && (
         <Link
           href={href}
-          className="flex items-center gap-1 whitespace-nowrap text-sm font-semibold text-ink-soft hover:text-ink"
+          className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-ink-soft hover:text-ink md:text-sm"
         >
-          Lihat Semua <ArrowRight size={15} />
+          Lihat Semua <ArrowRight size={14} />
         </Link>
       )}
     </div>

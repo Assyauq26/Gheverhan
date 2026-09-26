@@ -17,7 +17,7 @@ export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-3 z-40 mx-auto flex w-[92%] max-w-md items-center justify-center gap-1.5 rounded-full border border-line bg-white/95 px-2 py-2 shadow-lg backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-3 z-40 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center justify-center gap-1 rounded-full border border-line bg-white/95 p-1.5 shadow-lg backdrop-blur md:hidden"
       data-testid="bottom-nav"
     >
       {items.map((item) => {

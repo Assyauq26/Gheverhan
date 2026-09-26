@@ -124,6 +124,50 @@ export async function addItem(userId: string, variantId: string, quantity = 1) {
   return getCartView(userId);
 }
 
+/**
+ * Latency-sensitive cart mutation used by the product-card quick-add button.
+ * It intentionally returns no cart view: the client updates its badge
+ * optimistically, while the server only performs the validation + mutation.
+ */
+export async function quickAddItem(userId: string, variantId: string, quantity = 1) {
+  const cart = await prisma.cart.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+    select: { id: true },
+  });
+
+  // These reads are independent and can share one network round-trip to the
+  // database from the application runtime.
+  const [variant, existing] = await Promise.all([
+    prisma.productVariant.findUnique({
+      where: { id: variantId },
+      select: {
+        id: true,
+        inventory: { select: { onHand: true, reserved: true } },
+      },
+    }),
+    prisma.cartItem.findUnique({
+      where: { cartId_variantId: { cartId: cart.id, variantId } },
+      select: { quantity: true },
+    }),
+  ]);
+
+  if (!variant) throw new HttpError("Varian tidak ditemukan", 404);
+
+  const desired = (existing?.quantity ?? 0) + quantity;
+  const stock = variant.inventory
+    ? available(variant.inventory.onHand, variant.inventory.reserved)
+    : 0;
+  if (desired > stock) throw new HttpError("Stok tidak mencukupi", 409);
+
+  await prisma.cartItem.upsert({
+    where: { cartId_variantId: { cartId: cart.id, variantId } },
+    create: { cartId: cart.id, variantId, quantity },
+    update: { quantity: desired },
+  });
+}
+
 export async function updateItem(userId: string, itemId: string, quantity: number) {
   const cart = await findCart(userId);
   if (!cart) throw new HttpError("Keranjang tidak ditemukan", 404);

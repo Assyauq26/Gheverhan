@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgePercent, Users, Star, ShieldCheck, Truck } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
@@ -19,13 +18,12 @@ const HERO_IMG2 =
 
 export default async function HomePage() {
   const user = await getCurrentUserBasic();
-  const [categories, featured, latest, recent, wishIds, flashSale] = await Promise.all([
+  const [categories, featured, latest, recent, wishIds] = await Promise.all([
     listCategories(),
     listProducts({ featured: true, pageSize: 4, includeTotal: false }),
     listProducts({ pageSize: 12, includeTotal: false }),
     user ? getRecentlyViewed(user.id) : Promise.resolve([]),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
-    listProducts({ flashSale: true, pageSize: 1, includeTotal: false }),
   ]);
 
   const wl = new Set(wishIds);
@@ -35,22 +33,15 @@ export default async function HomePage() {
   const featuredItems = featured.items.length > 0 ? featured.items : latest.items.slice(0, 4);
   const featuredIds = new Set(featuredItems.map((p) => p.id));
   const recommendedItems = latest.items.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
-  const flashImage = flashSale.items[0]?.images?.[0]?.url ?? HERO_IMG2;
 
   const slides = [
     {
-      eyebrow: "New Season",
-      title: "Better Outfits Brighter Days",
-      subtitle: "Temukan koleksi terbaru untuk gaya harianmu yang lebih percaya diri.",
       image: HERO_IMG,
-      href: "/shop",
+      alt: "Gheverhan New Season collection",
     },
     {
-      eyebrow: "Flash Sale",
-      title: "Diskon Hingga 40%",
-      subtitle: "Produk pilihan dengan harga terbaik, stok terbatas!",
       image: HERO_IMG2,
-      href: "/shop?flash=1",
+      alt: "Gheverhan fashion collection",
     },
   ];
 
@@ -64,48 +55,38 @@ export default async function HomePage() {
       </section>
 
       <section
-        className="relative overflow-hidden rounded-[20px] border border-black/[0.05] bg-[#f7f7f7] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.045)] sm:px-7 sm:py-6"
+        className="relative overflow-hidden rounded-2xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-4 shadow-[0_6px_18px_rgba(0,0,0,0.035)] sm:px-6 sm:py-4"
         data-testid="flash-sale"
       >
-        <div className="relative z-10 flex min-h-[150px] items-center gap-3 sm:min-h-[132px] sm:gap-5 md:gap-8">
+        <div className="relative z-10 flex min-h-[108px] items-center gap-3 sm:min-h-[112px] sm:gap-5 md:gap-7">
           <span
             aria-hidden="true"
-            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center text-ink sm:h-[72px] sm:w-[72px]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-ink sm:h-14 sm:w-14"
           >
-            <BadgePercent size={54} strokeWidth={1.8} className="sm:h-[68px] sm:w-[68px]" />
+            <BadgePercent size={44} strokeWidth={1.8} className="sm:h-14 sm:w-14" />
           </span>
 
           <div className="min-w-0 flex-1 self-center">
             <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale</p>
-            <h2 className="mt-1 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[34px]">
+            <h2 className="mt-0.5 font-display text-[22px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[30px]">
               Diskon Up To 40%
             </h2>
-            <p className="mt-1 text-xs text-ink-soft sm:text-base">Produk pilihan, stok terbatas!</p>
+            <p className="mt-1 text-[11px] leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-3 sm:gap-4 md:flex-row md:items-center md:gap-7">
+          <div className="flex shrink-0 flex-col items-end gap-2 sm:gap-2.5 md:flex-row md:items-center md:gap-5">
             <Button
               asChild
-              className="h-11 rounded-full px-5 text-sm font-medium sm:h-12 sm:min-w-[158px] sm:px-7 sm:text-base"
+              className="h-10 rounded-full px-4 text-xs font-medium sm:h-11 sm:min-w-[148px] sm:px-6 sm:text-sm"
               data-testid="shop-sale-btn"
             >
               <Link href="/shop?flash=1">
                 Shop the Sale
-                <ArrowRight size={18} />
+                <ArrowRight size={17} />
               </Link>
             </Button>
             <FlashSaleTimer compact />
           </div>
-        </div>
-
-        <div className="pointer-events-none absolute -right-8 bottom-0 hidden h-full w-[24%] min-w-[180px] md:block">
-          <Image
-            src={flashImage}
-            alt=""
-            fill
-            sizes="28vw"
-            className="object-contain object-right-bottom opacity-95"
-          />
         </div>
       </section>
 

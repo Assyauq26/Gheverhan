@@ -64,27 +64,32 @@ export function ProductCard({
         </div>
       </Link>
 
-      <div className="px-0.5 pb-1 pt-2 pr-10">
+      <div className="px-0.5 pb-1 pt-1.5">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
+
         <Link href={`/product/${product.slug}`}>
-          <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
+          <h3 className="mt-0.5 line-clamp-1 text-sm font-semibold leading-tight text-ink">
             {product.name}
           </h3>
         </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="font-display text-base font-extrabold text-ink">
-            {formatIDR(price)}
-          </span>
-          {pct > 0 && (
-            <span className="text-xs text-ink-muted line-through">
-              {formatIDR(product.basePrice)}
-            </span>
-          )}
-        </div>
-      </div>
 
-      <div className="absolute bottom-2.5 right-1.5">
-        <QuickAddButton variantId={product.variantId} />
+        <div className="mt-0.5 flex items-end justify-between gap-1">
+          <div className="min-w-0">
+            {pct > 0 && (
+              <div className="text-xs leading-none text-ink-muted line-through">
+                {formatIDR(product.basePrice)}
+              </div>
+            )}
+            <div className="mt-0.5 font-display text-base font-extrabold leading-tight text-ink">
+              {formatIDR(price)}
+            </div>
+          </div>
+
+          <QuickAddButton
+            variantId={product.variantId}
+            className="h-9 w-9 shrink-0 rounded-full"
+          />
+        </div>
       </div>
     </article>
   );

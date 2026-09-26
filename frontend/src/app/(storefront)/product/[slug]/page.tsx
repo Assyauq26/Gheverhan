@@ -50,9 +50,12 @@ export default async function ProductPage({ params }: ProductRouteProps) {
     getRelatedProducts({ id: product.id, categoryId: product.categoryId }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
   ]);
-  if (user) await trackView(user.id, product.id).catch(() => {});
-  const wl = new Set(wishIds);
 
+  // Analytics must never block the product response. The previous awaited
+  // write added a database round-trip to every product navigation.
+  if (user) void trackView(user.id, product.id).catch(() => {});
+
+  const wl = new Set(wishIds);
   const price = effectivePrice(product.basePrice, product.salePrice);
   const pct = discountPercent(product.basePrice, product.salePrice);
   const variantOptions = product.variants.map((v) => ({
@@ -136,7 +139,6 @@ export default async function ProductPage({ params }: ProductRouteProps) {
         </div>
       </div>
 
-      {/* Reviews */}
       <section id="reviews">
         <SectionHeader title={`Ulasan (${product.reviewCount})`} />
         <div className="grid gap-6 md:grid-cols-2">
@@ -162,7 +164,6 @@ export default async function ProductPage({ params }: ProductRouteProps) {
         </div>
       </section>
 
-      {/* Q&A */}
       <section>
         <SectionHeader title="Tanya Jawab Produk" />
         <div className="grid gap-6 md:grid-cols-2">
@@ -188,7 +189,6 @@ export default async function ProductPage({ params }: ProductRouteProps) {
         </div>
       </section>
 
-      {/* Related */}
       {related.length > 0 && (
         <section>
           <SectionHeader title="Kamu Mungkin Suka" href="/shop" />

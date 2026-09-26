@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Heart, ShoppingCart, User } from "lucide-react";
-import type { AuthUser } from "@/lib/auth/session";
+import type { AuthUserBasic } from "@/lib/auth/session";
 import { SearchBar } from "./search-bar";
 
 const navLinks = [
@@ -15,7 +15,7 @@ export function StorefrontHeader({
   user,
   cartCount: count = 0,
 }: {
-  user: AuthUser | null;
+  user: AuthUserBasic | null;
   cartCount?: number;
 }) {
   return (

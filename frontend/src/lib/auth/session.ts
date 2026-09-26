@@ -8,11 +8,14 @@ import { ADMIN_ROLES, type PermissionKey } from "@/lib/auth/permissions";
 
 const COOKIE = process.env.AUTH_COOKIE_NAME ?? "gh_session";
 
-export interface AuthUser {
+export interface AuthUserBasic {
   id: string;
   name: string;
   email: string;
   phone: string | null;
+}
+
+export interface AuthUser extends AuthUserBasic {
   roles: string[];
   permissions: string[];
   isAdmin: boolean;
@@ -38,10 +41,42 @@ export async function destroySession() {
 }
 
 /**
- * Request-scoped memoization is important because the storefront layout and
- * individual pages/components can ask for the current user during the same
- * render. The cart quantity is selected with the user so the storefront does
- * not need a second cartCount() query just to render its navigation badge.
+ * Lightweight request-scoped storefront lookup. Storefront navigation only
+ * needs identity, not the RBAC graph or cart line quantities.
+ */
+export const getCurrentUserBasic = cache(async (): Promise<AuthUserBasic | null> => {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE)?.value;
+  if (!token) return null;
+
+  const payload = await verifySession(token);
+  if (!payload) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.sub },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      isActive: true,
+    },
+  });
+
+  if (!user || !user.isActive) return null;
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+  };
+});
+
+/**
+ * Full authenticated user lookup for authorization-sensitive screens/actions.
+ * Request-scoped cache prevents duplicate JWT verification and Prisma work
+ * when multiple protected components call this during one render.
  */
 export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const cookieStore = await cookies();

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser, requireUserBasic } from "@/lib/auth/session";
 import { runAction } from "@/lib/action";
 import * as cart from "./cart.service";
 
@@ -14,6 +14,19 @@ export async function addToCartAction(variantId: string, quantity = 1) {
     // updates/removals below do not need another cache invalidation.
     revalidatePath("/(storefront)", "layout");
     return view;
+  });
+}
+
+/**
+ * Minimal mutation path for product-card quick add. It avoids the expensive
+ * full user/RBAC lookup, cart-view query, and route revalidation. The client
+ * owns the immediate optimistic badge update and only needs success/failure.
+ */
+export async function quickAddToCartAction(variantId: string, quantity = 1) {
+  return runAction(async () => {
+    const user = await requireUserBasic();
+    await cart.quickAddItem(user.id, variantId, quantity);
+    return { ok: true };
   });
 }
 

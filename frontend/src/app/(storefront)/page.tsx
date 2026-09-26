@@ -92,9 +92,17 @@ export default async function HomePage() {
 
       <section>
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
-        <div className="stagger grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
+        <div
+          className="stagger flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Produk pilihan"
+        >
           {featuredItems.map((p) => (
-            <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
+            <div
+              key={p.id}
+              className="w-[calc((100%-20px)/3)] min-w-[calc((100%-20px)/3)] shrink-0 snap-start"
+            >
+              <ProductCard product={toCardData(p)} wishlisted={wl.has(p.id)} />
+            </div>
           ))}
         </div>
       </section>

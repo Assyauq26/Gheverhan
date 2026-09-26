@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { getCartView } from "@/modules/cart/cart.service";
 import { CartClient } from "@/components/storefront/cart-client";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 export const metadata = { title: "Keranjang" };
 
 export default async function CartPage() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   if (!user) {
     return (
       <EmptyState

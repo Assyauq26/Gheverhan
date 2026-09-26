@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { getWishlistView } from "@/modules/wishlist/wishlist.service";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Wishlist" };
 
 export default async function WishlistPage() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   if (!user) {
     return (
       <EmptyState

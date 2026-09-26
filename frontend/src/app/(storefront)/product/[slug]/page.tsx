@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getProductBySlug, getRelatedProducts } from "@/modules/catalog/catalog.service";
 import { trackView } from "@/modules/catalog/recently-viewed.service";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 import { formatIDR, effectivePrice, discountPercent } from "@/lib/money";
 import { Rating } from "@/components/ui/rating";
@@ -45,7 +45,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   const [related, wishIds] = await Promise.all([
     getRelatedProducts({ id: product.id, categoryId: product.categoryId }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),

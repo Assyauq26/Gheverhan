@@ -50,7 +50,7 @@ export default async function HomePage() {
       <HeroCarousel slides={slides} />
 
       <section>
-        <SectionHeader title="Shop by Category" href="/shop" />
+        <SectionHeader title="Kategori" href="/shop" />
         <CategoryNav categories={categories} />
       </section>
 
@@ -60,21 +60,21 @@ export default async function HomePage() {
       >
         <div className="relative z-10 flex min-h-[92px] items-center gap-3 sm:min-h-[96px] sm:gap-5 md:gap-7">
           <div className="min-w-0 flex-1 self-center">
-            <p className="text-sm font-bold leading-tight text-ink sm:text-base">Flash Sale!</p>
-            <h2 className="mt-0.5 font-display text-[21px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[29px]">
+            <p className="text-[15px] font-bold leading-tight text-ink sm:text-base">Flash Sale!</p>
+            <h2 className="mt-0.5 font-display text-[25px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[30px]">
               Diskon hingga 40%
             </h2>
-            <p className="mt-1 text-[10px] leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
+            <p className="mt-1 text-xs leading-tight text-ink-soft sm:text-sm">Produk pilihan, stok terbatas!</p>
           </div>
 
           <div className="flex w-[145px] shrink-0 flex-col items-end gap-1.5 sm:w-[158px] sm:gap-2 md:w-[166px]">
             <Button
               asChild
-              className="h-9 w-full rounded-lg px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
+              className="h-9 w-full rounded-[7px] px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
               data-testid="shop-sale-btn"
             >
               <Link href="/shop?flash=1">
-                Shop the Sale
+                Beli Sekarang
                 <ArrowRight size={15} />
               </Link>
             </Button>

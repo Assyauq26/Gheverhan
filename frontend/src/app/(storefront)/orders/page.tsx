@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Package } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { listOrdersForUser } from "@/modules/orders/orders.service";
 import { formatIDR } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Pesanan Saya", robots: { index: false } };
 
 export default async function OrdersPage() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   if (!user) {
     return (
       <EmptyState

@@ -137,6 +137,12 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   };
 });
 
+export async function requireUserBasic(): Promise<AuthUserBasic> {
+  const user = await getCurrentUserBasic();
+  if (!user) throw new HttpError("Anda harus login terlebih dahulu", 401);
+  return user;
+}
+
 export async function requireUser(): Promise<AuthUser> {
   const user = await getCurrentUser();
   if (!user) throw new HttpError("Anda harus login terlebih dahulu", 401);

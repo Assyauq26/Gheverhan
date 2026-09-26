@@ -8,7 +8,7 @@ import { ProductCard, toCardData } from "@/components/storefront/product-card";
 import { Button } from "@/components/ui/button";
 import { listProducts, listCategories } from "@/modules/catalog/catalog.service";
 import { getRecentlyViewed } from "@/modules/catalog/recently-viewed.service";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUserBasic } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 const HERO_IMG =
@@ -17,7 +17,7 @@ const HERO_IMG2 =
   "https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
 
 export default async function HomePage() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserBasic();
   const [categories, featured, latest, recent, wishIds] = await Promise.all([
     listCategories(),
     listProducts({ featured: true, pageSize: 4, includeTotal: false }),

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Percent, Users, Star, ShieldCheck, Truck, ArrowRight } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
@@ -21,11 +20,10 @@ const HERO_IMG2 =
 
 export default async function HomePage() {
   const user = await getCurrentUser();
-  const [categories, featured, flash, latest, recent, wishIds] = await Promise.all([
+  const [categories, featured, latest, recent, wishIds] = await Promise.all([
     listCategories(),
-    listProducts({ featured: true, pageSize: 4 }),
-    listProducts({ flashSale: true, pageSize: 4 }),
-    listProducts({ pageSize: 8 }),
+    listProducts({ featured: true, pageSize: 4, includeTotal: false }),
+    listProducts({ pageSize: 8, includeTotal: false }),
     user ? getRecentlyViewed(user.id) : Promise.resolve([]),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
   ]);
@@ -57,7 +55,6 @@ export default async function HomePage() {
         <CategoryNav categories={categories} />
       </section>
 
-      {/* Flash sale */}
       <section className="flex flex-col gap-4 rounded-3xl bg-surface p-5 md:flex-row md:items-center md:justify-between md:p-7" data-testid="flash-sale">
         <div className="flex items-center gap-4">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white">
@@ -77,7 +74,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured */}
       <section>
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
         <div className="stagger grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
@@ -87,7 +83,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Recently viewed */}
       {recent.length > 0 && (
         <section>
           <SectionHeader title="Baru Dilihat" subtitle="Lanjutkan dari produk terakhir kamu lihat" href="/shop" />
@@ -99,7 +94,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Recommendation */}
       <section>
         <SectionHeader title="Rekomendasi untukmu" href="/shop" />
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
@@ -109,7 +103,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Social proof */}
       <section className="grid grid-cols-2 gap-4 rounded-3xl bg-surface p-5 md:grid-cols-4">
         {[
           { icon: Users, t: "100K+", s: "Pelanggan Puas" },

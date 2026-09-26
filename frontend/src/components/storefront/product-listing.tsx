@@ -2,7 +2,12 @@ import Link from "next/link";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageSearch } from "lucide-react";
-import type { ProductWithRelations } from "@/modules/catalog/catalog.service";
+
+// Product listings intentionally receive the lightweight card shape returned by
+// catalog.service. Do not type this as ProductWithRelations: that detail shape
+// includes reviews/questions/category relations that listing queries no longer
+// load, which causes both unnecessary payload and a TypeScript mismatch.
+type ProductListingItem = Parameters<typeof toCardData>[0];
 
 const SORTS = [
   { key: "newest", label: "Terbaru" },
@@ -22,7 +27,7 @@ export function ProductListing({
 }: {
   title: string;
   subtitle?: string;
-  items: ProductWithRelations[];
+  items: ProductListingItem[];
   total: number;
   wishlisted: Set<string>;
   basePath: string;

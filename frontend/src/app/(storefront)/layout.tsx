@@ -2,18 +2,17 @@ import { StorefrontHeader } from "@/components/storefront/header";
 import { BottomNav } from "@/components/storefront/bottom-nav";
 import { Truck, ShieldCheck, Headphones, Star } from "lucide-react";
 import Link from "next/link";
-import { getCurrentUserBasic } from "@/lib/auth/session";
-import { cartCount } from "@/modules/cart/cart.service";
+import { getStorefrontUserContext } from "@/lib/auth/session";
 
 export default async function StorefrontLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Storefront navigation only needs identity. Keep the full RBAC lookup out
-  // of the shared layout; authorization-sensitive paths use getCurrentUser().
-  const user = await getCurrentUserBasic();
-  const count = user ? await cartCount(user.id) : 0;
+  // The shared layout needs identity + cart badge only. Resolve both from
+  // one request-scoped database lookup instead of user query + cart query.
+  const user = await getStorefrontUserContext();
+  const count = user?.cartCount ?? 0;
 
   return (
     <div className="min-h-screen bg-white pb-24 md:pb-0">

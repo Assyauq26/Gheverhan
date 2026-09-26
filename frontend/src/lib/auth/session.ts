@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signSession, verifySession } from "@/lib/auth/jwt";
@@ -34,27 +35,54 @@ export async function destroySession() {
   cookieStore.set(COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+/**
+ * Request-scoped memoization is important because the storefront layout and
+ * individual pages/components can ask for the current user during the same
+ * render. Without cache(), every call repeats the JWT verification + Prisma
+ * user/role query.
+ */
+export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE)?.value;
   if (!token) return null;
+
   const payload = await verifySession(token);
   if (!payload) return null;
 
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
-    include: {
-      roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      isActive: true,
+      roles: {
+        select: {
+          role: {
+            select: {
+              name: true,
+              permissions: {
+                select: { permission: { select: { key: true } } },
+              },
+            },
+          },
+        },
+      },
     },
   });
+
   if (!user || !user.isActive) return null;
 
   const roles = user.roles.map((r) => r.role.name);
   const permissions = Array.from(
     new Set(
-      user.roles.flatMap((r) => r.role.permissions.map((p) => p.permission.key)),
+      user.roles.flatMap((r) =>
+        r.role.permissions.map((p) => p.permission.key),
+      ),
     ),
   );
+
   return {
     id: user.id,
     name: user.name,
@@ -64,7 +92,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     permissions,
     isAdmin: roles.some((r) => ADMIN_ROLES.includes(r)),
   };
-}
+});
 
 export async function requireUser(): Promise<AuthUser> {
   const user = await getCurrentUser();

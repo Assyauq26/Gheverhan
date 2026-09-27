@@ -1,3 +1,4 @@
+// Idempotent production bootstrap for the single-seller Admin / Seller account.
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 

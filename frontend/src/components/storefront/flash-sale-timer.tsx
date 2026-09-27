@@ -31,7 +31,7 @@ export function FlashSaleTimer({ endsInSeconds = 8127, compact = false }: FlashS
   if (compact) {
     return (
       <div
-        className="grid w-[124px] grid-cols-[36px_8px_36px_8px_36px] items-start justify-center"
+        className="grid w-full grid-cols-[1fr_8px_1fr_8px_1fr] items-start"
         data-testid="flash-timer"
       >
         {cells.map((c, i) => (

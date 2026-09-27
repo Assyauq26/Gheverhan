@@ -1,4 +1,4 @@
-// Idempotent production bootstrap for the single-seller Admin / Seller account.
+// Idempotent production bootstrap for the single-seller Super Admin account.
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -15,7 +15,7 @@ const PERMISSIONS = [
   "bank.manage", "audit.read",
 ] as const;
 
-const ADMIN_ROLE = "Admin";
+const ADMIN_ROLE = "Super Admin";
 
 async function main() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -46,8 +46,8 @@ async function main() {
 
   const role = await prisma.role.upsert({
     where: { name: ADMIN_ROLE },
-    update: { label: "Admin / Seller" },
-    create: { name: ADMIN_ROLE, label: "Admin / Seller" },
+    update: { label: "Super Admin" },
+    create: { name: ADMIN_ROLE, label: "Super Admin" },
   });
 
   for (const permissionId of permissionIds) {
@@ -81,7 +81,7 @@ async function main() {
         roles: { create: { roleId: role.id } },
       },
     });
-    console.log(`Admin bootstrap created: ${admin.email}`);
+    console.log(`Super Admin bootstrap created: ${admin.email}`);
   } else {
     const alreadyAdmin = await prisma.userRole.findUnique({
       where: {
@@ -100,7 +100,7 @@ async function main() {
       await prisma.user.update({ where: { id: existing.id }, data: { isActive: true } });
     }
 
-    console.log(`Admin bootstrap verified: ${existing.email}`);
+    console.log(`Super Admin bootstrap verified: ${existing.email}`);
   }
 }
 

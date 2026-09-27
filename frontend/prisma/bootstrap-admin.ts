@@ -18,10 +18,19 @@ const ADMIN_ROLE = "Admin";
 
 async function main() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD;
+  const configuredHash = process.env.ADMIN_PASSWORD_HASH?.trim();
+  const configuredPassword = process.env.ADMIN_PASSWORD;
 
-  if (!email || !password || password.length < 12) {
-    throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD (minimum 12 characters) are required for admin bootstrap");
+  if (!email) throw new Error("ADMIN_EMAIL is required for admin bootstrap");
+
+  const passwordHash = configuredHash
+    ? configuredHash
+    : configuredPassword && configuredPassword.length >= 12
+      ? await bcrypt.hash(configuredPassword, 10)
+      : null;
+
+  if (!passwordHash || !passwordHash.startsWith("$2")) {
+    throw new Error("ADMIN_PASSWORD_HASH is required for admin bootstrap (or ADMIN_PASSWORD with at least 12 characters for local use)");
   }
 
   const permissionIds: string[] = [];
@@ -62,7 +71,6 @@ async function main() {
   const existing = await prisma.user.findUnique({ where: { email } });
 
   if (!existing) {
-    const passwordHash = await bcrypt.hash(password, 10);
     const admin = await prisma.user.create({
       data: {
         name: "Admin Gheverhan",

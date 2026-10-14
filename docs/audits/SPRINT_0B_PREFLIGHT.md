@@ -4,6 +4,35 @@ Tanggal: 14 Oktober 2026 (UTC). Repository `Assyauq26/Gheverhan`, branch `chore/
 
 **Keputusan: BLOCKED sebelum perubahan dependency.** Instruksi Sprint 0B mewajibkan verifikasi keamanan approval workflow, secrets exposure, dan protected files sebelum patch. Observasi di bawah belum memenuhi gate tersebut. Tidak ada instalasi, upgrade, perubahan lockfile/kode/config, seed, migrasi, akses database/Supabase production, merge, atau deploy pada pemeriksaan ini. Perubahan hanya dokumentasi pre-flight.
 
+## Pemeriksaan ulang setelah bukti manual maintainer
+
+Baseline pemeriksaan ulang: `0aeaf86fa7f059d3eb4ddc29851557785399783c`, 14 Oktober 2026 (UTC). Working tree bersih, branch sesuai, PR #19 tetap Draft/open. Bagian di bawah ini memperbarui keputusan awal; tabel pemeriksaan pertama tetap riwayat, bukan status terbaru.
+
+**Status terbaru: BLOCKED khusus ketersediaan check pada jalur PR menuju main dan bukti approval fork.** Bukti manual maintainer diterima sebagai bukti manual; HTTP 403 tidak membatalkan bukti itu dan tidak otomatis berarti control gagal.
+
+| Kontrol | Bukti terbaru / keputusan |
+| --- | --- |
+| Environment | Revisi 21, observations_current=true, HTTP restricted/enforced. Tidak ada perubahan identitas atau bypass jaringan |
+| Token / izin membuat-menyetujui PR | **Terverifikasi manual:** default read contents/packages; Actions tidak boleh membuat/menyetujui PR. Workflow terkait mempersempit ke contents:read tanpa override pada job; permission yang tidak disebut tidak diberikan oleh deklarasi ini |
+| Repository/environment secrets | **Terverifikasi manual:** daftar terlihat kosong. Workflow tidak memakai secrets expression, environment, reusable workflow, external composite action selain checkout pinned, atau credential forwarding ke container. Checkout memakai token bawaan untuk fetch, persist-credentials:false; Docker build/run tidak menerima token melalui env/build args/secret mount |
+| Organization-level secrets | **Tidak berlaku**, bukan asumsi kosong: API repository menunjukkan owner `Assyauq26` bertipe **User**, repository public. Tidak ada organization owner yang memasok organization Actions secrets pada repository ini |
+| Containment | Workflow/config/wrapper/Dockerfile tetap baseline Sprint 0A; container tanpa network, read-only, non-root, capability dropped, no-new-privileges; tanpa host mount/port/secret forwarding |
+| Baseline CI | [Run 38614855389](https://github.com/Assyauq26/Gheverhan/actions/runs/38614855389) untuk SHA `0aeaf86fa7f059d3eb4ddc29851557785399783c`: completed/success. Check `unit-tests`, app github-actions, completed/success pada SHA tersebut |
+| Ruleset main | **Terverifikasi API**, ruleset [25111842](https://github.com/Assyauq26/Gheverhan/rules/25111842), enforcement active. `GET rules/branches/main` membuktikan berlaku pada main. Require PR; approvals 0; conversation resolution; deletion/force-push blocked; required `unit-tests` integration_id 15368; strict status checks=true; bypass_actors kosong |
+| Review protected files | require_code_owner_review=false, required_reviewers kosong, approvals=0. Tidak ada CODEOWNERS tracked. Ini batas kontrol yang nyata, bukan klaim maintainer telah menerapkan mandatory owner review. Tidak mengubah setting atau menentukan owner secara otomatis |
+| Check pada PR menuju main | **Belum memenuhi pemeriksaan yang diminta.** PR #19 base `fix/netlify-tailwindcss-animate-version`; PR #18 base main, SHA `d4a3d28d7d3141276cbaf3fdb1b8abe026abfdba`. API check-runs PR #18 hanya berisi tiga check Netlify, tanpa `unit-tests`. Check sukses pada PR #19 tidak membuktikan check tersedia pada head PR #18 |
+| Approval outside collaborators/fork | **Belum terverifikasi:** `GET actions/permissions/fork-pr-contributor-approval` HTTP 403 Resource not accessible by integration. Bukti manual terbaru belum menyebut policy ini. Tidak dianggap PASS |
+
+Pembacaan API default token policy dan secrets tetap HTTP 403; untuk dua kontrol tersebut bukti manual dan inspeksi workflow dipakai secara proporsional. Endpoint rulesets/rules/check-runs/repository berhasil dibaca melalui `api.github.com`; penolakan endpoint administratif bukan penolakan domain oleh policy jaringan. Tidak ada nilai secret, .env, credential, atau data DB diminta/dikirim.
+
+### Tindakan spesifik untuk membuka gate
+
+1. Maintainer verifikasi dan laporkan policy approval untuk workflow fork/outside collaborators serta review perubahan workflow sebelum menjalankan kode tidak tepercaya. Izin membuat/menyetujui PR oleh Actions berbeda dari approval untuk menjalankan workflow fork.
+2. Pastikan check `unit-tests` benar-benar dihasilkan dari GitHub Actions pada SHA PR yang menuju main. Dengan stack saat ini PR #18 belum membawa workflow Sprint 0A. Tentukan jalur integrasi stack atau PR validation menuju main tanpa merge/deploy otomatis. Jangan menambahkan check palsu, menonaktifkan required check, atau menganggap run PR #19 sebagai run PR #18. Perubahan base PR/branch lain atau pembuatan PR tambahan tidak dilakukan dalam tugas ini.
+3. Tinjau residual protected-file policy: ruleset main tidak mencakup dua branch stack dan approvals=0 tidak mewajibkan review independen. Jika diperlukan mandatory owner review untuk workflow/runner/manifests, maintainer perlu menetapkan reviewer dan kebijakannya. Ini bukan perubahan yang diklaim telah dilakukan oleh pemeriksaan ini.
+
+Dependency/lockfile tetap identik baseline. Tidak ada patch atau regression gate per patch dijalankan; tidak ada CVE dinyatakan tertutup dan tidak ada audit baru. Rekomendasi Sprint Vitest/Vite tetap ditunda sampai pre-flight terbuka dan hasil Sprint 0B dievaluasi. Commit pemeriksaan ulang ini hanya dokumentasi; PR #19 tetap Draft, tanpa merge/deploy.
+
 ## Bukti pre-flight
 
 | Pemeriksaan | Hasil dan batas bukti |

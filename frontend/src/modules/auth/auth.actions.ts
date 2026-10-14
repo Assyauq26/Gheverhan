@@ -48,7 +48,12 @@ const loginSchema = z.object({
 
 /** Only allow same-site relative paths to prevent open-redirect phishing. */
 function safeRedirect(target: string | undefined, fallback = "/account"): string {
-  if (target && target.startsWith("/") && !target.startsWith("//")) return target;
+  if (
+    target &&
+    target.startsWith("/") &&
+    !target.startsWith("//") &&
+    !/[\\\u0000-\u001f\u007f]/.test(target)
+  ) return target;
   return fallback;
 }
 
@@ -65,7 +70,7 @@ export async function loginAction(_prev: unknown, formData: FormData) {
 }
 
 export async function logoutAction() {
-  destroySession();
+  await destroySession();
   redirect("/");
 }
 

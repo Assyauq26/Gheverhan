@@ -3,6 +3,12 @@ import { effectivePrice } from "@/lib/money";
 import { available } from "@/modules/inventory/inventory.service";
 import { HttpError } from "@/lib/response";
 
+function validateQuantity(quantity: number, allowRemoval = false) {
+  if (!Number.isSafeInteger(quantity) || (!allowRemoval && quantity <= 0)) {
+    throw new HttpError("Jumlah produk tidak valid", 400);
+  }
+}
+
 async function findCart(userId: string) {
   return prisma.cart.findUnique({ where: { userId } });
 }
@@ -100,6 +106,7 @@ export async function getCartView(userId: string) {
 }
 
 export async function addItem(userId: string, variantId: string, quantity = 1) {
+  validateQuantity(quantity);
   const cart = await getOrCreateCart(userId);
   const variant = await prisma.productVariant.findUnique({
     where: { id: variantId },
@@ -130,6 +137,7 @@ export async function addItem(userId: string, variantId: string, quantity = 1) {
  * optimistically, while the server only performs the validation + mutation.
  */
 export async function quickAddItem(userId: string, variantId: string, quantity = 1) {
+  validateQuantity(quantity);
   const cart = await prisma.cart.upsert({
     where: { userId },
     create: { userId },
@@ -169,6 +177,7 @@ export async function quickAddItem(userId: string, variantId: string, quantity =
 }
 
 export async function updateItem(userId: string, itemId: string, quantity: number) {
+  validateQuantity(quantity, true);
   const cart = await findCart(userId);
   if (!cart) throw new HttpError("Keranjang tidak ditemukan", 404);
 

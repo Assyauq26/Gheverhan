@@ -78,8 +78,9 @@ export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsP
                         <FileText size={28} /> Lihat PDF
                       </a>
                     ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <a href={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} target="_blank" rel="noreferrer" data-testid="proof-link">
+                        {/* Keep the session cookie on this private proof request; an image optimizer cannot authenticate it. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} alt="Bukti transfer" className="h-32 w-full rounded-xl border border-line object-cover" />
                       </a>
                     )

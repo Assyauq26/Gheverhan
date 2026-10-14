@@ -1,5 +1,7 @@
 # Sprint 0B — Controlled Dependency Security Patching: BLOCKED
 
+**Pembaruan terbaru:** blocker operasional pada laporan historis ini telah ditangani melalui [backport CI dan bukti PR #18](PR18_CI_BACKPORT.md), commit backport `5024fc0`: unit-tests PR #18 success, Netlify Deploy Preview ready, checkout allowlist efektif, approval all external contributors terverifikasi manual. Status historis BLOCKED di bawah tidak lagi menggambarkan jalur maintainer yang diuji; batas bukti fork eksternal tetap dicatat pada laporan terbaru. Belum ada patch dependency.
+
 Tanggal: 14 Oktober 2026 (UTC). Repository `Assyauq26/Gheverhan`, branch `chore/sprint-0-codebase-audit-cleanup`, Draft PR [#19](https://github.com/Assyauq26/Gheverhan/pull/19). Baseline `5996d2a2817f722997795bf3995880ed6fcf1814`.
 
 **Keputusan: BLOCKED sebelum perubahan dependency.** Instruksi Sprint 0B mewajibkan verifikasi keamanan approval workflow, secrets exposure, dan protected files sebelum patch. Observasi di bawah belum memenuhi gate tersebut. Tidak ada instalasi, upgrade, perubahan lockfile/kode/config, seed, migrasi, akses database/Supabase production, merge, atau deploy pada pemeriksaan ini. Perubahan hanya dokumentasi pre-flight.

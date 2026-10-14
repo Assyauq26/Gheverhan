@@ -1,0 +1,45 @@
+import { z } from "zod";
+
+const money = z.number().int().min(1).max(2_147_483_647);
+const optionalMoney = money.nullable().optional();
+const slug = z.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug hanya huruf kecil, angka, dan tanda hubung");
+const variant = z.object({
+  id: z.string().min(1).max(64).optional(),
+  sku: z.string().trim().min(1, "SKU wajib diisi").max(80),
+  color: z.string().trim().max(80).optional().default(""),
+  size: z.string().trim().max(40).optional().default(""),
+  price: optionalMoney,
+  salePrice: optionalMoney,
+  onHand: z.number().int().min(0).max(2_147_483_647).optional(),
+  expectedOnHand: z.number().int().min(0).optional(),
+}).refine(v => v.salePrice == null || (v.price != null && v.salePrice < v.price), "Harga diskon varian harus lebih kecil dari harga varian");
+
+export const productInputSchema = z.object({
+  name: z.string().trim().min(2, "Nama produk minimal 2 karakter").max(160),
+  slug,
+  description: z.string().trim().max(10_000).default(""),
+  material: z.string().trim().max(2_000).default(""),
+  careInstruction: z.string().trim().max(2_000).default(""),
+  shippingReturn: z.string().trim().max(2_000).default(""),
+  basePrice: money,
+  salePrice: optionalMoney,
+  categoryId: z.string().max(64).nullable().optional(),
+  brandId: z.string().max(64).nullable().optional(),
+  isFeatured: z.boolean().default(false),
+  isFlashSale: z.boolean().default(false),
+  variants: z.array(variant).min(1, "Tambahkan minimal satu varian").max(50),
+  images: z.array(z.object({ id: z.string().min(1).max(64), alt: z.string().trim().max(200).default("") })).max(10).default([]),
+}).superRefine((v, ctx) => {
+  if (v.salePrice != null && v.salePrice >= v.basePrice) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Harga diskon harus lebih kecil dari harga normal" });
+  if (v.isFlashSale && v.salePrice == null) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Flash sale memerlukan harga diskon" });
+  for (const [key, values] of [["SKU", v.variants.map(x => x.sku)], ["ID varian", v.variants.flatMap(x => x.id ? [x.id] : [])], ["ID gambar", v.images.map(x => x.id)]] as const) {
+    if (new Set(values).size !== values.length) ctx.addIssue({ code: "custom", message: `${key} tidak boleh duplikat` });
+  }
+});
+export type ProductInput = z.infer<typeof productInputSchema>;
+export const categoryInputSchema = z.object({
+  name: z.string().trim().min(2).max(120), slug,
+  parentId: z.string().max(64).nullable().optional(),
+  sortOrder: z.number().int().min(0).max(100_000).default(0),
+});
+export type CatalogActor = { id: string; permissions: string[]; isAdmin: boolean };

@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma, ProductStatus } from "@prisma/client";
+import { CATALOG_CACHE_TAG } from "./catalog-cache";
 
 // Listing cards only need one image and one variant id. Loading every image,
 // every variant and every inventory row for a 12/48 item grid made the RSC
@@ -137,7 +138,7 @@ export async function listProducts(params: ProductListParams = {}) {
   return unstable_cache(
     () => listProductsUncached(normalized),
     ["catalog-products", cacheKey],
-    { revalidate: 30 },
+    { revalidate: 30, tags: [CATALOG_CACHE_TAG] },
   )();
 }
 
@@ -147,7 +148,7 @@ export async function listProducts(params: ProductListParams = {}) {
  */
 export const getProductBySlug = cache(async (slug: string) => {
   return prisma.product.findFirst({
-    where: { slug, status: { not: ProductStatus.ARCHIVED } },
+    where: { slug, status: ProductStatus.PUBLISHED },
     include: productDetailInclude,
   });
 });
@@ -175,28 +176,28 @@ export const listCategories = unstable_cache(
       select: { id: true, name: true, slug: true, imageUrl: true, iconKey: true },
     }),
   ["catalog-categories"],
-  { revalidate: 60 },
+  { revalidate: 60, tags: [CATALOG_CACHE_TAG] },
 );
 
 export const getCategoryBySlug = cache(async (slug: string) => {
   return unstable_cache(
     () => prisma.category.findUnique({ where: { slug } }),
     ["catalog-category", slug],
-    { revalidate: 60 },
+    { revalidate: 60, tags: [CATALOG_CACHE_TAG] },
   )();
 });
 
 export const listBrands = unstable_cache(
   () => prisma.brand.findMany({ orderBy: { name: "asc" } }),
   ["catalog-brands"],
-  { revalidate: 60 },
+  { revalidate: 60, tags: [CATALOG_CACHE_TAG] },
 );
 
 export const getBrandBySlug = cache(async (slug: string) => {
   return unstable_cache(
     () => prisma.brand.findUnique({ where: { slug } }),
     ["catalog-brand", slug],
-    { revalidate: 60 },
+    { revalidate: 60, tags: [CATALOG_CACHE_TAG] },
   )();
 });
 

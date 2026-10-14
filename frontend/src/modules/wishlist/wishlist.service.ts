@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { HttpError } from "@/lib/response";
 
 export async function getOrCreateWishlist(userId: string) {
   return prisma.wishlist.upsert({
@@ -17,6 +18,9 @@ export async function toggleWishlist(userId: string, productId: string) {
     await prisma.wishlistItem.delete({ where: { id: existing.id } });
     return { active: false };
   }
+  if (!await prisma.product.findFirst({ where: { id: productId, status: "PUBLISHED" }, select: { id: true } })) {
+    throw new HttpError("Produk tidak ditemukan", 404);
+  }
   await prisma.wishlistItem.create({ data: { wishlistId: wl.id, productId } });
   return { active: true };
 }
@@ -26,6 +30,7 @@ export async function getWishlistView(userId: string) {
     where: { userId },
     include: {
       items: {
+        where: { product: { status: "PUBLISHED" } },
         include: {
           product: {
             include: {

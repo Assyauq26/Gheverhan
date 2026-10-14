@@ -74,8 +74,12 @@ export async function forgotPasswordAction(_prev: unknown, formData: FormData) {
   if (!z.string().email().safeParse(email).success) {
     return { ok: false, error: "Email tidak valid" };
   }
-  await requestPasswordReset(email);
-  return { ok: true, message: "Jika email terdaftar, tautan reset telah dikirim." };
+  const result = await runAction(() => requestPasswordReset(email));
+  if (!result.ok) {
+    return { ok: false, error: "Permintaan reset password belum dapat diproses. Silakan coba lagi." };
+  }
+  // Email delivery is not implemented yet: never claim a message was sent.
+  return { ok: true, message: "Permintaan reset diproses. Pengiriman email reset belum tersedia; hubungi administrator untuk bantuan." };
 }
 
 export async function resetPasswordAction(_prev: unknown, formData: FormData) {

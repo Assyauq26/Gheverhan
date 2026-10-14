@@ -2,12 +2,12 @@ import { OrderStatus } from "@prisma/client";
 
 /** Server-authoritative order state machine. */
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_PAYMENT: ["PAID", "EXPIRED", "CANCELLED"],
-  PAID: ["PROCESSING", "CANCELLED", "REFUNDED"],
-  PROCESSING: ["PACKED", "CANCELLED", "REFUNDED"],
-  PACKED: ["SHIPPED", "CANCELLED"],
-  SHIPPED: ["DELIVERED", "REFUNDED"],
-  DELIVERED: ["COMPLETED", "REFUNDED"],
+  PENDING_PAYMENT: ["EXPIRED", "CANCELLED"],
+  PAID: ["PROCESSING"],
+  PROCESSING: ["PACKED"],
+  PACKED: ["SHIPPED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: ["COMPLETED"],
   COMPLETED: [],
   CANCELLED: [],
   EXPIRED: [],

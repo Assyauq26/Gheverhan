@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 import { canTransitionPayment } from "@/modules/payments/domain/state-machine";
 import { commitSale } from "@/modules/inventory/inventory.service";
+import { PERMISSIONS } from "@/lib/auth/permissions";
+import { assertStaffPermission, lockOrder, lockPaymentOrder } from "@/modules/orders/transaction-locks";
 import { writeAudit } from "@/modules/audit/audit.service";
 
 export function listActiveBankAccounts() {
@@ -22,15 +24,13 @@ export async function submitConfirmation(
     note?: string;
   },
 ) {
-  const order = await prisma.order.findFirst({
-    where: { id: orderId, userId },
-    include: { payment: true },
-  });
-  if (!order || !order.payment) throw new HttpError("Order tidak ditemukan", 404);
-  const payment = order.payment;
-  if (payment.status === "PAID") throw new HttpError("Pembayaran sudah lunas", 409);
-
   return prisma.$transaction(async (tx) => {
+    await lockOrder(tx, orderId);
+    const order = await tx.order.findFirst({ where: { id: orderId, userId }, include: { payment: true } });
+    if (!order?.payment) throw new HttpError("Order tidak ditemukan", 404);
+    const payment = order.payment;
+    if (order.status !== "PENDING_PAYMENT" || (order.expiresAt && order.expiresAt < new Date()) || (payment.status !== "WAITING_VERIFICATION" && !canTransitionPayment(payment.status, "WAITING_VERIFICATION"))) throw new HttpError("Order tidak menerima konfirmasi pembayaran", 409);
+    if (!Number.isSafeInteger(input.amount) || input.amount <= 0 || !Number.isFinite(input.transferDate.getTime())) throw new HttpError("Konfirmasi pembayaran tidak valid", 422);
     await tx.paymentConfirmation.create({
       data: {
         paymentId: payment.id,
@@ -88,20 +88,28 @@ export function getPaymentDetail(paymentId: string) {
   });
 }
 
-/** Admin approves -> PAID. Idempotent via state validation, inside a transaction. */
+/** Lock the order before reading payment state; successful replays have no side effects. */
 export async function approvePayment(paymentId: string, adminId: string) {
   return prisma.$transaction(async (tx) => {
+    await assertStaffPermission(tx, adminId, PERMISSIONS.PAYMENT_VERIFY);
+    await lockPaymentOrder(tx, paymentId);
     const payment = await tx.payment.findUnique({
       where: { id: paymentId },
-      include: { order: { include: { items: true } }, confirmations: { orderBy: { createdAt: "desc" } } },
+      include: { order: { include: { items: { orderBy: { variantId: "asc" } } } }, confirmations: { orderBy: { createdAt: "desc" } } },
     });
     if (!payment) throw new HttpError("Pembayaran tidak ditemukan", 404);
-    if (payment.status === "PAID") throw new HttpError("Pembayaran sudah disetujui", 409);
+    if (["CANCELLED", "EXPIRED", "REFUNDED"].includes(payment.order.status)) throw new HttpError("Order tidak menerima approval pembayaran", 409);
+    if (payment.status === "PAID") {
+      if (payment.order.paymentStatus !== "PAID" || payment.order.status === "PENDING_PAYMENT") throw new HttpError("Status order dan pembayaran tidak konsisten", 409);
+      return { ok: true };
+    }
+    if (payment.order.status !== "PENDING_PAYMENT" || (payment.order.expiresAt && payment.order.expiresAt < new Date())) throw new HttpError("Order tidak menerima approval pembayaran", 409);
     if (!canTransitionPayment(payment.status, "PAID")) {
       throw new HttpError("Pembayaran tidak dalam status menunggu verifikasi", 409);
     }
 
     const latest = payment.confirmations.find((c) => c.status === "SUBMITTED");
+    if (!latest) throw new HttpError("Bukti pembayaran belum tersedia", 409);
     if (latest) {
       await tx.paymentConfirmation.update({
         where: { id: latest.id },
@@ -148,25 +156,29 @@ export async function approvePayment(paymentId: string, adminId: string) {
 export async function rejectPayment(paymentId: string, adminId: string, reason: string) {
   if (!reason.trim()) throw new HttpError("Alasan penolakan wajib diisi", 400);
   return prisma.$transaction(async (tx) => {
+    await assertStaffPermission(tx, adminId, PERMISSIONS.PAYMENT_VERIFY);
+    await lockPaymentOrder(tx, paymentId);
     const payment = await tx.payment.findUnique({
       where: { id: paymentId },
       include: { order: true, confirmations: { orderBy: { createdAt: "desc" } } },
     });
     if (!payment) throw new HttpError("Pembayaran tidak ditemukan", 404);
-    if (payment.status !== "WAITING_VERIFICATION") {
+    if (payment.order.status !== "PENDING_PAYMENT" || (payment.order.expiresAt && payment.order.expiresAt < new Date())) throw new HttpError("Order tidak menerima verifikasi pembayaran", 409);
+    if (!canTransitionPayment(payment.status, "REJECTED")) {
       throw new HttpError("Pembayaran tidak dalam status menunggu verifikasi", 409);
     }
     const latest = payment.confirmations.find((c) => c.status === "SUBMITTED");
+    if (!latest) throw new HttpError("Bukti pembayaran belum tersedia", 409);
     if (latest) {
       await tx.paymentConfirmation.update({
         where: { id: latest.id },
         data: { status: "REJECTED", rejectionReason: reason, reviewedBy: adminId, reviewedAt: new Date() },
       });
     }
-    await tx.payment.update({ where: { id: paymentId }, data: { status: "PENDING_PAYMENT" } });
+    await tx.payment.update({ where: { id: paymentId }, data: { status: "REJECTED" } });
     await tx.order.update({
       where: { id: payment.orderId },
-      data: { paymentStatus: "PENDING_PAYMENT" },
+      data: { paymentStatus: "REJECTED" },
     });
     await tx.notification.create({
       data: {

@@ -7,6 +7,8 @@ describe("payment state machine", () => {
     expect(canTransitionPayment("WAITING_VERIFICATION", "PAID")).toBe(true);
     expect(canTransitionPayment("WAITING_VERIFICATION", "REJECTED")).toBe(true);
     expect(canTransitionPayment("REJECTED", "WAITING_VERIFICATION")).toBe(true);
+    expect(canTransitionPayment("WAITING_VERIFICATION", "EXPIRED")).toBe(true);
+    expect(canTransitionPayment("REJECTED", "EXPIRED")).toBe(true);
   });
 
   it("does not allow paying from pending directly", () => {

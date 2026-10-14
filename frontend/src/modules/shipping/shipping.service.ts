@@ -72,7 +72,7 @@ export async function upsertManualShipment(
           ? "PROCESSING"
           : null;
   if (desired) {
-    await transitionOrder(orderId, desired, adminId, `Shipment: ${input.status}`).catch(() => {});
+    await transitionOrder(orderId, desired, adminId, `Shipment: ${input.status}`, { source: "shipment" }).catch(() => {});
   }
 
   return shipment;

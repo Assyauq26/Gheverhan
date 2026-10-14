@@ -132,3 +132,50 @@ Tidak ada cleanup aplikasi sehingga tidak ada hasil sesudah-cleanup atau klaim b
 Rekomendasi awal, belum merupakan hasil audit aplikasi lengkap: keputusan penanganan data PostgreSQL tracked; instalasi dependensi yang dapat direproduksi; baseline coverage integrasi untuk checkout, RBAC, pembayaran dan shipping. Prioritas kerentanan aplikasi spesifik harus ditetapkan setelah audit sumber dilakukan, bukan diasumsikan dari pre-flight ini.
 
 Draft Pull Request: **belum dibuat**. Belum ada cleanup commit atau push remote. Laporan ini tidak menyatakan kriteria keberhasilan Sprint 0 sudah terpenuhi.
+
+## 15. Pembaruan pemulihan environment dan pre-flight
+
+Bagian 1–14 dipertahankan sebagai rekaman pemeriksaan sebelumnya pada commit `052c02ab06e3baade5111cd1a2465ca43a94b119`. Bagian ini mencatat tindak lanjut yang diotorisasi pengguna pada 14 Oktober 2026; hasil terbaru tidak menggantikan riwayat dengan klaim keberhasilan yang belum terjadi.
+
+### Status Git dan laporan
+
+Working tree awal tindak lanjut bersih dan branch tetap `chore/sprint-0-codebase-audit-cleanup`, dengan parent laporan tepat pada baseline PR #18. Setelah fetching seluruh branch dan tag yang diiklankan remote, tidak ada remote branch atau tag yang mengandung commit laporan `052c02a`; branch Sprint 0 juga belum diiklankan remote. Jadi laporan sebelumnya masih lokal pada saat pemeriksaan ini. Ini tidak menyimpulkan keberadaan objek orphan yang tidak diiklankan server.
+
+Native HTTPS Git read/fetch bekerja. GitHub API untuk metadata PR #18 tetap gagal dengan `Forbidden`. Branch target baseline yang terverifikasi melalui Git masih `fix/netlify-tailwindcss-animate-version`, SHA `d4a3d28d7d3141276cbaf3fdb1b8abe026abfdba`.
+
+### Package manager dan pemulihan lockfile
+
+Package manager yang didokumentasikan proyek adalah **npm**: `docs/NETLIFY_DEPLOYMENT.md` menggunakan `npm install`/`npm run build`, `netlify.toml` menjalankan `npm run build`, dan scripts manifest juga menggunakan npm. Manifest belum mendeklarasikan field `packageManager`, sehingga ini merupakan konvensi proyek yang terdokumentasi, bukan pin versi npm formal.
+
+Lockfile tidak ditemukan dalam baseline atau riwayat lokal yang tersedia untuk nama lockfile npm/Yarn/pnpm, dan `git check-ignore` menunjukkan `frontend/package-lock.json` tidak di-ignore. Penyebab langsung kegagalan `npm ci` sebelumnya adalah file yang tidak tersedia. Alasan historis file tersebut tidak pernah dibuat/di-commit belum dapat dipastikan dari bukti yang diperiksa.
+
+Pengguna secara eksplisit mengizinkan pembuatan lockfile pada tahap pemulihan. Ditambahkan `frontend/package-lock.json` format v3 dengan mempertahankan resolusi onboarding yang sudah terpasang. Sebelum menjadikannya lockfile proyek, root name/version, seluruh `dependencies`, `devDependencies`, dan `engines` dibandingkan dengan manifest PR #18 dan cocok persis. Tidak ada link lokal atau resolved URL selain registry npm HTTPS. Setelah itu `npm ci` dijalankan pada `frontend/`, menggantikan symlink dependency lama dengan instalasi proyek yang baru. Tidak ada perubahan `package.json` atau upgrade dependency yang diminta/dilakukan; lockfile mengunci resolusi transitif yang sebelumnya tersedia.
+
+Toolchain pemeriksaan: Node `22.22.0`, npm `11.9.0`. SHA-256 lockfile: `3eea0888c85f52b41599ec7042917051308f73431eb98a0c088732981d851b66`.
+
+### Hasil setelah clean install
+
+| Pemeriksaan | Hasil terbaru |
+| --- | --- |
+| Git HTTPS read/fetch | PASS |
+| GitHub API | BLOCKED: Forbidden |
+| Endpoint HTTPS resmi checksum Prisma | BLOCKED: CONNECT 403 |
+| Lockfile cocok manifest | PASS; tidak mengubah versi langsung |
+| `npm ci --no-audit --no-fund` | PASS; 537 paket terpasang pada dependency tree proyek |
+| `npm run prisma:generate` setelah clean install | FAIL: unduhan checksum schema-engine ditolak 403 |
+| TypeScript setelah clean install | Tidak dijalankan: prerequisite Prisma Client gagal |
+| `npm run lint` | PASS; satu warning `no-img-element`, nol error |
+| `npm test` | PASS: 10 test pada tiga file, tidak ada skip |
+| Production build setelah clean install | Tidak dijalankan: build mengulang prerequisite Prisma generate yang sudah diketahui gagal |
+| Audit menyeluruh / cleanup aplikasi | Ditunda sesuai gate pre-flight |
+| Draft PR | Terhalang akses GitHub API; tidak ada merge atau deployment |
+
+Hasil PASS TypeScript/build pada tahap sebelumnya menggunakan dependency tree onboarding dan tidak diklaim berlaku sebagai validasi setelah clean install sekarang. Verifikasi checksum, signature, dan TLS tidak dinonaktifkan; saran mengabaikan checksum dari pesan error Prisma tidak diterapkan. Tidak ada pengulangan request gagal setelah diagnosis tanpa perubahan konfigurasi.
+
+### Konfigurasi aktif dan tindakan minimum
+
+Konfigurasi tersimpan terbaru sudah mencantumkan `api.github.com`, `binaries.prisma.sh`, `cdn.playwright.dev`, dan `images.unsplash.com`. Namun `environment_status` untuk instance percakapan masih menunjukkan versi awal `cecfgver_6acf689389a481a39c4ab8089ca4167e`, observasi terkini dan enforced, tanpa custom allowed hosts. Versi konfigurasi tersimpan yang lebih baru bukan bukti aktivasi pada instance lama.
+
+Tidak perlu menambahkan domain yang sama lagi atau meminta token berdasarkan dugaan. Minimum tindakan eksternal: gunakan instance task yang memuat versi lingkungan terbaru atau fasilitas produk untuk menerapkan versi tersebut pada runtime. Setelah perubahan runtime dikonfirmasi, periksa kembali endpoint resmi Prisma dan GitHub API sekali, lalu lanjutkan Prisma generate, TypeScript, build, audit, dan Draft PR. Lockfile yang baru mengatasi penghambat instalasi, tetapi belum mengatasi kebijakan jaringan.
+
+Tidak ada pembacaan atau perubahan artefak PostgreSQL, akses Supabase produksi, seed/reset/migrasi database, perubahan aplikasi, atau cleanup pada tahap ini. Laporan lama dipertahankan, dan output pemeriksaan terbaru disimpan di `/workspace/.tools/gheverhan/sprint0-recovery/` tanpa dimasukkan ke commit.

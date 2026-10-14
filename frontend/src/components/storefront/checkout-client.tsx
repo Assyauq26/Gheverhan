@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { formatIDR } from "@/lib/money";
 import { createOrderAction } from "@/modules/checkout/checkout.actions";
+import type { CheckoutLines } from "@/modules/checkout/checkout.validation";
 import { cn } from "@/lib/utils";
 
 interface Rate { courier: string; service: string; cost: number; etd?: string }
@@ -24,11 +25,15 @@ function PlaceOrderBtn() {
 
 export function CheckoutClient({
   subtotal,
+  expectedLines,
+  requestId,
   rates,
   banks,
   address,
 }: {
   subtotal: number;
+  expectedLines: CheckoutLines;
+  requestId: string;
   rates: Rate[];
   banks: Bank[];
   address: Addr | null;
@@ -41,6 +46,8 @@ export function CheckoutClient({
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_360px]" data-testid="checkout-form">
+      <input type="hidden" name="requestId" value={requestId} />
+      <input type="hidden" name="expectedLines" value={JSON.stringify(expectedLines)} />
       <div className="space-y-8">
         {/* Address */}
         <section className="space-y-3">
@@ -112,7 +119,7 @@ export function CheckoutClient({
           <span className="font-semibold text-ink">Total</span>
           <span className="font-display text-xl font-black text-ink" data-testid="checkout-total">{formatIDR(total)}</span>
         </div>
-        {state?.ok === false && state?.error && <p className="text-sm text-destructive" data-testid="checkout-error">{state.error}</p>}
+        {state?.ok === false && state?.error && <p className="text-sm text-destructive" data-testid="checkout-error">{state.error} <a href="/checkout" className="underline">Muat ulang checkout untuk konfirmasi ulang</a></p>}
         <PlaceOrderBtn />
         <p className="text-center text-[11px] text-ink-muted">Total final & diskon dihitung ulang oleh server.</p>
       </div>

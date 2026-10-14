@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { effectivePrice } from "@/lib/money";
 import { available } from "@/modules/inventory/inventory.service";
@@ -31,12 +32,12 @@ function unitPriceFor(variant: {
   return effectivePrice(variant.product.basePrice, variant.product.salePrice);
 }
 
-export async function getCartView(userId: string) {
+export async function getCartView(userId: string, client: Prisma.TransactionClient = prisma) {
   // A read of an empty cart must stay read-only. Cart creation is deferred to
   // the first mutation (add-to-cart), avoiding a DB write on every cart visit.
   // Load the cart and its lines in one relational query; the previous version
   // first loaded Cart and then issued a separate CartItem query.
-  const cart = await prisma.cart.findUnique({
+  const cart = await client.cart.findUnique({
     where: { userId },
     select: {
       id: true,

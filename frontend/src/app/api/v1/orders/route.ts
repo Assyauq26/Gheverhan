@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ok, handle } from "@/lib/response";
 import { requireUser } from "@/lib/auth/session";
+import { checkoutLinesSchema } from "@/modules/checkout/checkout.validation";
 import { createOrder } from "@/modules/checkout/checkout.service";
 import { listOrdersForUser } from "@/modules/orders/orders.service";
 
@@ -15,6 +16,8 @@ const schema = z.object({
   bankAccountId: z.string().min(1),
   couponCode: z.string().optional(),
   note: z.string().optional(),
+  expectedLines: checkoutLinesSchema.optional(),
+  requestId: z.string().uuid().optional(),
 });
 
 export async function GET() {

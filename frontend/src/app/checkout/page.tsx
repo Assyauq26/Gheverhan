@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCartView } from "@/modules/cart/cart.service";
@@ -30,7 +31,9 @@ export default async function CheckoutPage() {
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-black text-ink md:text-3xl">Checkout</h1>
       <CheckoutClient
+        requestId={randomUUID()}
         subtotal={cart.subtotal}
+        expectedLines={cart.lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice }))}
         rates={rates}
         banks={banks}
         address={addr ? {

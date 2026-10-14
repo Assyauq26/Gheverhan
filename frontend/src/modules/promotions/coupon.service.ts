@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { DiscountType } from "@prisma/client";
+import { DiscountType, type Prisma } from "@prisma/client";
 
 /** Returns discount amount (integer Rupiah) for a coupon against a subtotal. */
 export async function computeDiscount(
   code: string | undefined | null,
   subtotal: number,
+  client: Prisma.TransactionClient = prisma,
 ): Promise<{ discount: number; code: string | null; reason?: string }> {
   if (!code) return { discount: 0, code: null };
-  const coupon = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
+  const coupon = await client.coupon.findUnique({ where: { code: code.toUpperCase() } });
   if (!coupon || !coupon.isActive) return { discount: 0, code: null, reason: "Kupon tidak valid" };
   if (coupon.expiresAt && coupon.expiresAt < new Date())
     return { discount: 0, code: null, reason: "Kupon kedaluwarsa" };

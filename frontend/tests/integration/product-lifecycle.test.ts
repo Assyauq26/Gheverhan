@@ -117,7 +117,7 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     const checkout = { address: { recipientName: "Fixture", phone: "0800000000", line: "Test address", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id };
     product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
     await addItem(actor.id, editor.variants[0].id!, 1);
-    const placed = await createOrder(actor.id, checkout);
+    const placed = await createOrder(actor.id, { ...checkout, expectedLines: (await getCartView(actor.id)).lines });
     assert.equal(placed.total, 140000);
     assert.equal(await prisma.payment.count({ where: { orderId: placed.id } }), 1);
     await addItem(actor.id, editor.variants[0].id!, 1);
@@ -130,6 +130,7 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
   });
   await t.test("archive during shipping calculation is rejected inside the checkout transaction", async () => {
     const { createOrder } = await import("../../src/modules/checkout/checkout.service");
+    const { getCartView } = await import("../../src/modules/cart/cart.service");
     const { getShippingProvider } = await import("../../src/infrastructure/shipping");
     const provider = getShippingProvider("manual");
     const original = provider.getRates!;
@@ -142,7 +143,7 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
       product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
       const bank = await prisma.bankAccount.findFirstOrThrow({ where: { accountHolder: "Fixture" } });
       const count = await prisma.order.count({ where: { userId: actor.id } });
-      const pending = createOrder(actor.id, { address: { recipientName: "Fixture", phone: "0800000000", line: "Test", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id });
+      const pending = createOrder(actor.id, { address: { recipientName: "Fixture", phone: "0800000000", line: "Test", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id, expectedLines: (await getCartView(actor.id)).lines });
       const rejected = assert.rejects(pending, { status: 409 });
       await ready;
       product = await service.changeProductStatus(actor, product.id, product.updatedAt, "ARCHIVED");

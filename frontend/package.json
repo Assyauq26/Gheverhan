@@ -20,9 +20,9 @@
     "seed": "tsx prisma/seed.ts",
     "test": "node scripts/run-tests.mjs run",
     "test:watch": "node scripts/run-tests.mjs watch",
+    "e2e": "playwright test",
     "test:containment": "node --test tests/security/containment.test.mjs",
-    "test:ci": "npm run test:containment && npm test",
-    "e2e": "playwright test"
+    "test:ci": "npm run test:containment && npm test"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -86,7 +86,7 @@ Ekspor tanpa pemanggil aplikasi yang ditemukan melalui pencarian referensi: `slu
 
 Import source langsung memakai Prisma, Radix Slot, bcryptjs, class-variance-authority, clsx, jose, lucide-react, Next/React, tailwind-merge, zod. Tidak ditemukan import aktif untuk Radix accordion/dialog/label/tabs; package tetap dipertahankan bersama testing-library/jsdom untuk menghindari pengurangan kemampuan/persiapan UI/testing dan perubahan lockfile dalam recovery ini. `tailwindcss-animate` dipakai di konfigurasi Tailwind; Prisma CLI, Netlify adapter, Vitest dan Playwright adalah tooling entrypoint sehingga tidak dinyatakan unused dari pencarian import runtime saja.
 
-`npm audit --json` **tidak dijalankan**: automatic approval review menolak upload metadata dependency proyek ke registry npm karena disclosure itu belum disetujui secara spesifik. Tidak dicoba ulang atau lewat jalur lain. Audit CVE online belum tersedia; daftar dependency/versi dan review penggunaan lokal bukan pengganti pemeriksaan advisory. Tidak ada klaim nol vulnerability.
+Pada tahap source audit awal, `npm audit --json` tidak dijalankan karena automatic approval review menolak pengiriman metadata dependency yang belum disetujui secara spesifik. Setelah pengguna memberi persetujuan eksplisit, audit resmi npm full dan production berhasil dijalankan. Hasil: 18 entri paket (2 Critical, 9 High, 7 Moderate); production tree memuat 9 entri (0 Critical, 6 High, 3 Moderate). Rincian 17 advisory unik/16 CVE, dependency path, applicability, dan mitigasi yang belum diterapkan tersedia pada [bagian 16 laporan pemulihan](CODEBASE_CLEANUP_REPORT.md#16-audit-cve-resmi-npm--tindak-lanjut-persetujuan-eksplisit). Dependency dan lockfile tetap tidak berubah.
 
 ## Validasi sebelum / sesudah
 
@@ -102,7 +102,7 @@ Import source langsung memakai Prisma, Radix Slot, bcryptjs, class-variance-auth
 | `git diff --check` | Clean baseline | PASS |
 | Schema/migration/database artifacts | Tidak diubah | Tidak diubah; metadata tree `.postgres` identik |
 | E2E/API dengan data / Netlify deploy | Tidak dijalankan | Tidak dijalankan |
-| Advisory CVE online | Tidak tersedia | Diblokir automatic approval review; butuh persetujuan disclosure metadata |
+| Advisory CVE online | Belum tersedia pada source audit awal | Tindak lanjut terotorisasi selesai; Critical/High masih terbuka, lihat bagian 16 laporan pemulihan |
 
 31 regression test baru mencakup redirect/login (8), completion logout (2), dan cart quantity/alur valid (21). Mock Prisma/session digunakan agar unit test tidak mengakses database/storage. Dua production build memakai dummy database loopback dan tidak membaca catalog production. Tidak ada klaim registration → checkout → upload → admin verify → shipment sudah lulus E2E.
 

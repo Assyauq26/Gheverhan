@@ -148,6 +148,17 @@ async function main() {
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
+    await check("customer confirms quoted prices and receives a price conflict without an order", async () => {
+      const customerPage = await buyer.newPage(); await customerPage.goto(`${base}/checkout`);
+      const quote = JSON.parse(await customerPage.locator('input[name="expectedLines"]').inputValue());
+      assert.equal(quote[0].unitPrice, 190000); assert.match(await customerPage.locator('input[name="requestId"]').inputValue(), /^[0-9a-f-]{36}$/);
+      await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("195000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      for (const [name, value] of Object.entries({ recipientName: "Fixture Buyer", phone: "0800000000", line: "Local test address", city: "Test", province: "Test", postalCode: "00000" })) await customerPage.locator(`input[name="${name}"]`).fill(value);
+      const before = await db.order.count({ where: { userId: customer.id } });
+      await customerPage.getByTestId("place-order-btn").click(); await expect(customerPage.getByTestId("checkout-error")).toContainText("konfirmasi ulang");
+      assert.equal(await db.order.count({ where: { userId: customer.id } }), before); assert.equal(await db.cartItem.count({ where: { cart: { userId: customer.id } } }), 1);
+      await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("190000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); await customerPage.close();
+    });
     const order = await db.order.create({ data: { orderNumber: `BROWSER-${prefix}`, userId: customer.id, subtotal: 190000, total: 190000, shippingCost: 0, discount: 0, items: { create: { variantId: product.variants[0].id, productName: product.name, variantLabel: "Default", imageUrl: product.images[0].url, unitPrice: 190000, quantity: 1, lineTotal: 190000 } } } });
     await check("archive hides cached catalog/detail and blocks new purchases", async () => {
       await page.getByTestId("archive-product").click(); await expect(page.getByTestId("product-status")).toHaveText("Arsip");

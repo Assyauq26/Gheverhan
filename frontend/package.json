@@ -24,7 +24,8 @@
     "test:containment": "node --test tests/security/containment.test.mjs",
     "test:ci": "npm run test:containment && npm test",
     "test:integration:products": "node --disable-proto=throw --import tsx --test tests/integration/product-lifecycle.test.ts",
-    "test:e2e:products": "node --import tsx tests/integration/product-browser.ts"
+    "test:e2e:products": "node --import tsx tests/integration/product-browser.ts",
+    "test:integration:transactions": "node --disable-proto=throw --import tsx --test tests/integration/transaction-correctness.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

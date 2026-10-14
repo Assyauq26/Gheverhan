@@ -22,7 +22,9 @@
     "test:watch": "node scripts/run-tests.mjs watch",
     "e2e": "playwright test",
     "test:containment": "node --test tests/security/containment.test.mjs",
-    "test:ci": "npm run test:containment && npm test"
+    "test:ci": "npm run test:containment && npm test",
+    "test:integration:products": "node --disable-proto=throw --import tsx --test tests/integration/product-lifecycle.test.ts",
+    "test:e2e:products": "node --import tsx tests/integration/product-browser.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

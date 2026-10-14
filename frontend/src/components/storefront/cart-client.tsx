@@ -113,7 +113,7 @@ export function CartClient({ initial }: { initial: View }) {
         {view.lines.map((l) => (
           <div key={l.id} className="flex gap-4 rounded-2xl border border-line p-3" data-testid={`cart-line-${l.id}`}>
             <Link href={`/product/${l.product.slug}`} className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface">
-              {l.product.image && <Image src={l.product.image} alt={l.product.name} fill className="object-cover" sizes="96px" />}
+              {l.product.image && <Image src={l.product.image} alt={l.product.name} fill className="object-cover" sizes="96px" unoptimized={l.product.image.startsWith("/api/v1/product-images/")} />}
             </Link>
             <div className="flex flex-1 flex-col justify-between">
               <div className="flex justify-between gap-2">

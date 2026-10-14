@@ -13,23 +13,25 @@ import {
   ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 
 const items = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/products", label: "Produk", icon: Package },
-  { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag },
-  { href: "/admin/payments", label: "Pembayaran", icon: CreditCard },
-  { href: "/admin/shipping", label: "Pengiriman", icon: Truck },
-  { href: "/admin/bank-accounts", label: "Rekening Bank", icon: Landmark },
-  { href: "/admin/customers", label: "Pelanggan", icon: Users },
-  { href: "/admin/audit", label: "Audit Log", icon: ScrollText },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: null },
+  { href: "/admin/products", label: "Produk", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
+  { href: "/admin/categories", label: "Kategori", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
+  { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag, permission: PERMISSIONS.ORDER_READ },
+  { href: "/admin/payments", label: "Pembayaran", icon: CreditCard, permission: PERMISSIONS.PAYMENT_READ },
+  { href: "/admin/shipping", label: "Pengiriman", icon: Truck, permission: PERMISSIONS.SHIPPING_READ },
+  { href: "/admin/bank-accounts", label: "Rekening Bank", icon: Landmark, permission: PERMISSIONS.BANK_MANAGE },
+  { href: "/admin/customers", label: "Pelanggan", icon: Users, permission: PERMISSIONS.CUSTOMER_READ },
+  { href: "/admin/audit", label: "Audit Log", icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
 ];
 
-export function AdminNav() {
+export function AdminNav({ permissions }: { permissions: string[] }) {
   const pathname = usePathname();
   return (
     <nav className="no-scrollbar flex gap-1 overflow-x-auto p-3 md:flex-col md:overflow-visible">
-      {items.map((it) => {
+      {items.filter(it => !it.permission || permissions.includes(it.permission)).map((it) => {
         const active = it.exact ? pathname === it.href : pathname.startsWith(it.href);
         return (
           <Link

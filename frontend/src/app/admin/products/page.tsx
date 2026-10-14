@@ -1,64 +1,31 @@
+import Link from "next/link";
 import Image from "next/image";
-import { requirePermission } from "@/lib/auth/session";
+import { Package, Plus } from "lucide-react";
+import { ProductStatus } from "@prisma/client";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { prisma } from "@/lib/prisma";
+import { listManagedProducts } from "@/modules/catalog/product-management.service";
 import { formatIDR, effectivePrice } from "@/lib/money";
-import { Badge } from "@/components/ui/badge";
-
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 export const dynamic = "force-dynamic";
-
-export default async function AdminProductsPage() {
-  await requirePermission(PERMISSIONS.PRODUCT_READ);
-  const products = await prisma.product.findMany({
-    include: {
-      brand: true,
-      category: true,
-      images: { orderBy: { sortOrder: "asc" }, take: 1 },
-      variants: { include: { inventory: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl font-black text-ink">Produk</h1>
-      <div className="overflow-hidden rounded-2xl border border-line bg-white">
-        <table className="w-full text-sm">
-          <thead className="border-b border-line bg-surface text-left text-xs uppercase text-ink-muted">
-            <tr>
-              <th className="p-3">Produk</th>
-              <th className="p-3">Kategori</th>
-              <th className="p-3">Harga</th>
-              <th className="p-3">Stok</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {products.map((p) => {
-              const stock = p.variants.reduce((s, v) => s + (v.inventory ? v.inventory.onHand - v.inventory.reserved : 0), 0);
-              return (
-                <tr key={p.id} data-testid={`admin-product-${p.slug}`}>
-                  <td className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-surface">
-                        {p.images[0] && <Image src={p.images[0].url} alt={p.name} fill className="object-cover" sizes="40px" />}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-ink">{p.name}</p>
-                        <p className="text-xs text-ink-muted">{p.brand?.name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3 text-ink-soft">{p.category?.name ?? "-"}</td>
-                  <td className="p-3 font-semibold">{formatIDR(effectivePrice(p.basePrice, p.salePrice))}</td>
-                  <td className="p-3">{stock}</td>
-                  <td className="p-3"><Badge variant={p.status === "PUBLISHED" ? "success" : "muted"}>{p.status}</Badge></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+const labels = { DRAFT: "Draft", PUBLISHED: "Terbit", ARCHIVED: "Arsip" };
+export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; page?: string }> }) {
+  const user = await requireBackofficeUser(PERMISSIONS.PRODUCT_READ);
+  const params = await searchParams;
+  const status = Object.values(ProductStatus).includes(params.status as ProductStatus) ? params.status as ProductStatus : undefined;
+  const result = await listManagedProducts(user, params.q, status, Number(params.page || 1));
+  const canCreate = user.permissions.includes(PERMISSIONS.PRODUCT_CREATE);
+  const href = (page: number) => `/admin/products?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(status ? { status } : {}), page: String(page) })}`;
+  return <div className="space-y-6">
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold text-ink">Produk</h1><p className="mt-1 text-sm text-ink-soft">{result.total} produk · kelola katalog toko Gheverhan.</p></div>{canCreate && <Button asChild><Link href="/admin/products/new"><Plus size={16} /> Tambah produk</Link></Button>}</header>
+    <form className="flex flex-wrap gap-3" role="search"><label className="min-w-0 flex-1"><span className="sr-only">Cari produk</span><Input name="q" defaultValue={params.q} placeholder="Cari nama atau slug produk" /></label><label><span className="sr-only">Filter status</span><select name="status" defaultValue={status || ""} className="h-11 rounded-xl border border-line bg-white px-3 text-sm"><option value="">Semua status</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><Button type="submit" variant="outline">Cari</Button><Button asChild variant="ghost"><Link href="/admin/categories">Kategori</Link></Button></form>
+    {!result.items.length ? <EmptyState icon={<Package size={32} />} title={params.q || status ? "Tidak ada produk yang sesuai" : "Katalog masih kosong"} description={params.q || status ? "Ubah kata kunci atau filter status." : "Mulai dengan draft pertama, tambahkan varian dan foto, lalu terbitkan."} action={canCreate ? <Button asChild><Link href="/admin/products/new">Tambah produk pertama</Link></Button> : undefined} /> : <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">{result.items.map(p => <li key={p.id} className="grid min-w-0 grid-cols-[56px_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[64px_minmax(0,2fr)_minmax(120px,1fr)] sm:items-center" data-testid={`admin-product-${p.slug}`}>
+      <div className="relative h-14 w-14 rounded-xl bg-surface sm:h-16 sm:w-16">{p.images[0] ? <Image src={p.images[0].url} alt={p.images[0].alt || p.name} fill sizes="64px" unoptimized={p.images[0].url.startsWith("/api/v1/product-images/")} className="rounded-xl object-cover" /> : <Package size={22} className="m-auto mt-4 text-ink-soft" />}</div>
+      <div className="min-w-0"><Link href={`/admin/products/${p.id}`} className="break-words font-semibold underline-offset-4 hover:underline">{p.name}</Link><p className="mt-1 text-xs text-ink-soft">{p.category?.name || "Tanpa kategori"} · {p._count.variants} varian</p><span className="mt-2 inline-block rounded-full border border-line px-2.5 py-1 text-xs font-medium">{labels[p.status]}</span></div>
+      <div className="col-start-2 text-sm font-semibold tabular-nums sm:col-auto sm:text-right">{formatIDR(effectivePrice(p.basePrice, p.salePrice))}<div className="mt-2"><Link href={`/admin/products/${p.id}`} className="text-xs font-normal underline underline-offset-4">Buka produk</Link></div></div>
+    </li>)}</ul>}
+    {result.pages > 1 && <nav aria-label="Halaman produk" className="flex flex-wrap items-center justify-between gap-3 text-sm"><span>Halaman {result.page} dari {result.pages}</span><div className="flex gap-3">{result.page > 1 && <Button asChild variant="outline" size="sm"><Link href={href(result.page - 1)}>Sebelumnya</Link></Button>}{result.page < result.pages && <Button asChild variant="outline" size="sm"><Link href={href(result.page + 1)}>Berikutnya</Link></Button>}</div></nav>}
+  </div>;
 }

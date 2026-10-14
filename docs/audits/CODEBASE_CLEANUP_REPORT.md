@@ -4,6 +4,8 @@ Tanggal: 14 Oktober 2026 (Asia/Jakarta). Status historis bagian 1–15: **BLOCKE
 
 **Status terbaru:** pre-flight dan cleanup aman lulus. Audit CVE resmi menemukan 2 entri Critical, 9 High, dan 7 Moderate; belum diperbaiki. Lihat bagian 16 untuk rincian dan rencana mitigasi yang memerlukan persetujuan sebelum approval final/merge. Lihat [laporan audit source terbaru](SPRINT_0_SOURCE_AUDIT.md) untuk perubahan, validasi, dan risiko yang masih terbuka. Bagian di bawah dipertahankan sebagai riwayat pemeriksaan sebelumnya, bukan status runtime saat ini.
 
+Sprint 0A containment telah diterapkan tanpa upgrade; lihat [bukti, risiko residual, dan manual controls](SPRINT_0A_CRITICAL_CONTAINMENT.md). Audit ulang tetap 2 Critical/9 High/7 Moderate. Containment tidak menyatakan CVE fixed atau memberi izin merge/deployment.
+
 ## 1. Ringkasan eksekutif
 
 Baseline PR #18 telah diverifikasi melalui referensi GitHub. Branch khusus sudah dibuat dari commit persis yang diminta. Pemeriksaan lokal menggunakan dependensi onboarding yang sudah terpasang berhasil, tetapi instalasi berbasis lockfile, akses HTTPS resmi Prisma, dan aktivasi konfigurasi terbaru pada instance ini belum memenuhi prasyarat.

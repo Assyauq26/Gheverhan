@@ -2,6 +2,8 @@
 
 Tanggal: **14 Oktober 2026 (Asia/Jakarta)**. Status: **PLANNING ONLY — belum ada upgrade atau perubahan konfigurasi/kode**.
 
+Pembaruan setelah baseline planning: pengguna telah mengotorisasi Sprint 0A containment. Implementasi/config/CI dan bukti pengujian tersedia pada [laporan Sprint 0A](SPRINT_0A_CRITICAL_CONTAINMENT.md); belum ada upgrade dependency. Status “planning only” dan kebutuhan approval di bawah mencatat snapshot rencana pada commit `3997430`, bukan membatalkan otorisasi containment terbaru. Perubahan dependency/major/override tetap belum diotorisasi.
+
 ## 1. Baseline, keputusan, dan batas izin
 
 Repository `Assyauq26/Gheverhan`, Draft PR [#19](https://github.com/Assyauq26/Gheverhan/pull/19), branch `chore/sprint-0-codebase-audit-cleanup`. Baseline persis: `ff4623b9258f2408cceee8c02be9a967f0ed3d56`. Seluruh bagian [CODEBASE_CLEANUP_REPORT.md](CODEBASE_CLEANUP_REPORT.md), termasuk 17 advisory pada bagian 16, telah dibaca; audit source dan dependency tree/manifest/lockfile dipakai untuk menilai reachability.

@@ -109,6 +109,48 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     const archivedVersion = (await service.getManagedProduct(actor, product.id)).updatedAt;
     assert.equal(archivedVersion, current.updatedAt);
   });
+  await t.test("published checkout works and archived carts cannot create orders", async () => {
+    process.env.SHIPPING_PROVIDER = "manual";
+    const { addItem, getCartView } = await import("../../src/modules/cart/cart.service");
+    const { createOrder } = await import("../../src/modules/checkout/checkout.service");
+    const bank = await prisma.bankAccount.create({ data: { bankName: "Test", accountNumber: "fixture-only", accountHolder: "Fixture", displayName: "Test" } });
+    const checkout = { address: { recipientName: "Fixture", phone: "0800000000", line: "Test address", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id };
+    product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
+    await addItem(actor.id, editor.variants[0].id!, 1);
+    const placed = await createOrder(actor.id, checkout);
+    assert.equal(placed.total, 140000);
+    assert.equal(await prisma.payment.count({ where: { orderId: placed.id } }), 1);
+    await addItem(actor.id, editor.variants[0].id!, 1);
+    product = await service.changeProductStatus(actor, product.id, product.updatedAt, "ARCHIVED");
+    assert.equal((await getCartView(actor.id)).lines[0].inStock, false);
+    const orders = await prisma.order.count({ where: { userId: actor.id } });
+    await assert.rejects(createOrder(actor.id, checkout), { status: 409 });
+    assert.equal(await prisma.order.count({ where: { userId: actor.id } }), orders);
+    assert.equal(await prisma.cartItem.count({ where: { cart: { userId: actor.id } } }), 1);
+  });
+  await t.test("archive during shipping calculation is rejected inside the checkout transaction", async () => {
+    const { createOrder } = await import("../../src/modules/checkout/checkout.service");
+    const { getShippingProvider } = await import("../../src/infrastructure/shipping");
+    const provider = getShippingProvider("manual");
+    const original = provider.getRates!;
+    let release!: () => void;
+    let reached!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const ready = new Promise<void>(resolve => { reached = resolve; });
+    provider.getRates = async params => { reached(); await gate; return original.call(provider, params); };
+    try {
+      product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
+      const bank = await prisma.bankAccount.findFirstOrThrow({ where: { accountHolder: "Fixture" } });
+      const count = await prisma.order.count({ where: { userId: actor.id } });
+      const pending = createOrder(actor.id, { address: { recipientName: "Fixture", phone: "0800000000", line: "Test", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id });
+      const rejected = assert.rejects(pending, { status: 409 });
+      await ready;
+      product = await service.changeProductStatus(actor, product.id, product.updatedAt, "ARCHIVED");
+      release(); await rejected;
+      assert.equal(await prisma.order.count({ where: { userId: actor.id } }), count);
+      assert.equal(await prisma.cartItem.count({ where: { cart: { userId: actor.id } } }), 1);
+    } finally { release(); provider.getRates = original; }
+  });
   await t.test("category cycle detection preserves the existing hierarchy", async () => {
     const parent = await service.saveCategory(actor, null, { name: "Parent", slug: `parent-${prefix}` });
     const child = await service.saveCategory(actor, null, { name: "Child", slug: `child-${prefix}`, parentId: parent.id });

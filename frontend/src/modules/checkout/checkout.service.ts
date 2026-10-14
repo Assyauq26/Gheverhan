@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { HttpError } from "@/lib/response";
 import { getCartView } from "@/modules/cart/cart.service";
 import { reserveStock } from "@/modules/inventory/inventory.service";
@@ -75,6 +76,7 @@ export async function createOrder(
 ) {
   const cartView = await getCartView(userId);
   if (cartView.lines.length === 0) throw new HttpError("Keranjang kosong", 400);
+  if (cartView.lines.some(line => !line.inStock)) throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
 
   const bank = await prisma.bankAccount.findFirst({
     where: { id: input.bankAccountId, isActive: true },
@@ -88,6 +90,14 @@ export async function createOrder(
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const order = await prisma.$transaction(async (tx) => {
+    // Hold catalog rows through order creation so archive/draft cannot race this checkout.
+    const productIds = [...new Set(cartView.lines.map(line => line.product.id))].sort();
+    const published = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id" FROM "Product"
+      WHERE "id" IN (${Prisma.join(productIds)}) AND "status" = 'PUBLISHED'
+      ORDER BY "id" FOR SHARE
+    `);
+    if (published.length !== productIds.length) throw new HttpError("Produk tidak lagi tersedia. Periksa keranjang Anda.", 409);
     const created = await tx.order.create({
       data: {
         orderNumber,

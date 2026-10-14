@@ -2,6 +2,8 @@
 
 Tanggal: 14 Oktober 2026 (Asia/Jakarta). Status: **pre-flight PASS; audit statis dan cleanup selesai; risiko Sprint 1 masih terbuka**.
 
+Pembaruan final: [dead code review dan handover MVP](FINAL_DEAD_CODE_REVIEW_AND_MVP_HANDOVER.md) menyelesaikan cleanup terfokus setelah baseline `aca835a`: dua helper/tiga ekspor total tanpa consumer dan tiga output JUnit dihapus, gates final lulus, backlog Seller Dashboard/Product Management diprioritaskan. Kandidat dan validasi pada bagian berikut adalah riwayat audit awal; laporan final menjadi acuan terbaru untuk perubahan tersebut.
+
 ## Baseline dan environment
 
 - Repository: `Assyauq26/Gheverhan`.

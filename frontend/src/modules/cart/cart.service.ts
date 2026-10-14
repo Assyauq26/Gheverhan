@@ -204,18 +204,3 @@ export async function removeItem(userId: string, itemId: string) {
   await prisma.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } });
   return getCartView(userId);
 }
-
-export async function cartCount(userId: string): Promise<number> {
-  const cart = await prisma.cart.findUnique({
-    where: { userId },
-    select: { id: true },
-  });
-  if (!cart) return 0;
-
-  const result = await prisma.cartItem.aggregate({
-    where: { cartId: cart.id },
-    _sum: { quantity: true },
-  });
-
-  return result._sum.quantity ?? 0;
-}

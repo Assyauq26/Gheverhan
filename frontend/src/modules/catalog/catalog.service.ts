@@ -60,10 +60,6 @@ const productDetailInclude = {
   },
 } satisfies Prisma.ProductInclude;
 
-export type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: typeof productDetailInclude;
-}>;
-
 export type ProductListParams = {
   categorySlug?: string;
   brandSlug?: string;

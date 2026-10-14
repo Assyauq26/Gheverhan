@@ -113,4 +113,4 @@ Import source langsung memakai Prisma, Radix Slot, bcryptjs, class-variance-auth
 3. Hardening ownership sebelum upload, file/date validation, draft-product policy, pagination, serta request/pending state UI.
 4. Pisahkan fixture/test-target eksplisit, lengkapi E2E dan advisory audit yang terotorisasi; rencanakan keputusan data PostgreSQL tracked terpisah.
 
-Draft PR dibuat menuju head branch PR #18; tidak ada auto-merge, push `main`, force-push, atau deployment. Riwayat hambatan sebelumnya tersedia di [laporan pemulihan](CODEBASE_CLEANUP_REPORT.md).
+Draft PR: [#19](https://github.com/Assyauq26/Gheverhan/pull/19), dari `chore/sprint-0-codebase-audit-cleanup` menuju `fix/netlify-tailwindcss-animate-version` (head branch PR #18). GitHub API mengonfirmasi state open dan draft true. Tidak ada auto-merge, push `main`, force-push, atau deployment. Riwayat hambatan sebelumnya tersedia di [laporan pemulihan](CODEBASE_CLEANUP_REPORT.md).

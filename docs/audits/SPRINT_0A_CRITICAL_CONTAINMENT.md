@@ -84,12 +84,14 @@ Image ini **khusus unit test**, bukan image deployment/DB integration. Prisma ge
 | Workflow syntax / pinned checkout source | YAML parse/security fields PASS; checkout SHA ada pada official actions/checkout |
 | Dependency / lockfile / protected artifacts | dependencies/devDependencies/engines/Prisma settings identik; lockfile SHA-256 `3eea0888c85f52b41599ec7042917051308f73431eb98a0c088732981d851b66`; `.postgres` diff kosong |
 | npm audit resmi ulang | Selesai exit1 karena 18 entri:2 Critical,9 High,7 Moderate; **tidak** diperlakukan sebagai clean audit |
-| GitHub-hosted workflow / external policy | Eksekusi image/command sama dibuktikan lokal. Status remote job dan setting fork/secrets/branch protection harus diverifikasi di GitHub; bukan klaim seluruh policy remote sudah diterapkan |
+| GitHub-hosted workflow / external policy | [Run 38596218911](https://github.com/Assyauq26/Gheverhan/actions/runs/38596218911) pada SHA `b60173c3797451821f82a8bb2e9e0b46210484f7` selesai **success**; checkout, build image, dan offline tests seluruhnya success menurut API jobs. Setting fork/secrets/branch protection tetap memerlukan pemeriksaan manual |
 | DB/storage E2E, deployment | Tidak dijalankan; tidak relevan sebagai izin mengakses production pada containment ini |
 
 Test worker baru awalnya gagal karena flag parent tidak diteruskan otomatis oleh Vitest2. `poolOptions.forks.execArgv` eksplisit memperbaiki propagation dan test tersebut kemudian lulus. Typecheck awal juga mendeteksi `browser.name` wajib pada API config Vitest2 meskipun browser disabled; diperbaiki sebelum final gates. Kegagalan subprocess pada sandbox executor awal (EPERM) diselesaikan melalui execution permission yang sesuai; tidak ada test yang di-skip atau assertion yang dilonggarkan untuk melewatinya.
 
 Tidak ada scan advisory suppression, audit fix, override dependency, downgrade, atau penghapusan test. Generated `next-env.d.ts` yang berubah akibat tooling dikembalikan ke byte baseline.
+
+Status run dan steps remote diverifikasi melalui `api.github.com`. Pengunduhan log mentah melalui redirect ke `results-receiver.actions.githubusercontent.com` ditolak HTTP 403 (Forbidden), sehingga jumlah assertion di tabel bersumber dari log eksekusi lokal dengan image/command yang sama; tidak diklaim dihitung ulang dari log remote. Domain tersebut tidak diakses melalui jalur alternatif. Bukti remote ini berlaku pada SHA di atas; perubahan setelahnya hanya menambahkan dokumentasi hasil run.
 
 ## 6. Pemakaian developer dan preview
 

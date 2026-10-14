@@ -179,3 +179,7 @@ Konfigurasi tersimpan terbaru sudah mencantumkan `api.github.com`, `binaries.pri
 Tidak perlu menambahkan domain yang sama lagi atau meminta token berdasarkan dugaan. Minimum tindakan eksternal: gunakan instance task yang memuat versi lingkungan terbaru atau fasilitas produk untuk menerapkan versi tersebut pada runtime. Setelah perubahan runtime dikonfirmasi, periksa kembali endpoint resmi Prisma dan GitHub API sekali, lalu lanjutkan Prisma generate, TypeScript, build, audit, dan Draft PR. Lockfile yang baru mengatasi penghambat instalasi, tetapi belum mengatasi kebijakan jaringan.
 
 Tidak ada pembacaan atau perubahan artefak PostgreSQL, akses Supabase produksi, seed/reset/migrasi database, perubahan aplikasi, atau cleanup pada tahap ini. Laporan lama dipertahankan, dan output pemeriksaan terbaru disimpan di `/workspace/.tools/gheverhan/sprint0-recovery/` tanpa dimasukkan ke commit.
+
+### Publikasi branch pemulihan
+
+Commit pemulihan `3dfe9ef` berhasil di-push ke `origin/chore/sprint-0-codebase-audit-cleanup` tanpa force-push. Dengan demikian commit laporan sebelumnya `052c02a` kini juga tersedia melalui riwayat branch remote tersebut. Push Git berhasil tidak menghilangkan penolakan GitHub API dan tidak berarti Draft PR sudah dibuat. Draft PR masih belum tersedia; base yang direncanakan tetap branch baseline PR #18, bukan main.

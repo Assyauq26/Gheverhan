@@ -1,6 +1,8 @@
-# Sprint 0 — Laporan pre-flight dan penghambat
+# Sprint 0 — Riwayat pre-flight dan pemulihan
 
-Tanggal: 14 Oktober 2026 (Asia/Jakarta). Status keseluruhan: **BLOCKED**.
+Tanggal: 14 Oktober 2026 (Asia/Jakarta). Status historis bagian 1–15: **BLOCKED**.
+
+**Status terbaru:** pre-flight pada instance revisi 2 lulus dan audit source/cleanup aman selesai. Lihat [laporan audit source terbaru](SPRINT_0_SOURCE_AUDIT.md) untuk perubahan, validasi, dan risiko yang masih terbuka. Bagian di bawah dipertahankan sebagai riwayat pemeriksaan sebelumnya, bukan status runtime saat ini.
 
 ## 1. Ringkasan eksekutif
 

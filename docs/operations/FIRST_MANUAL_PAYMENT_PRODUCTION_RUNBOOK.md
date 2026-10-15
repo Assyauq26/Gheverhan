@@ -63,12 +63,13 @@ WHERE NOT EXISTS (
 
 ```sql
 -- Rekonsiliasi: status PAID harus sinkron dengan Order & mempunyai approval.
+-- COMPLETED tetap sah untuk pembayaran PAID setelah order diterima dan ditutup.
 SELECT COUNT(*)::int AS paid_state_mismatches
 FROM public."Payment" p
 JOIN public."Order" o ON o.id=p."orderId"
 WHERE p.status='PAID'
   AND (
-    o.status NOT IN ('PAID','PROCESSING','PACKED','SHIPPED','DELIVERED')
+    o.status NOT IN ('PAID','PROCESSING','PACKED','SHIPPED','DELIVERED','COMPLETED')
     OR o."paymentStatus"<>'PAID'
     OR NOT EXISTS (
       SELECT 1 FROM public."PaymentConfirmation" c

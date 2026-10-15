@@ -22,6 +22,10 @@ describe("payment proof magic validation", () => {
   it("blocks unsupported extension, empty and oversized content", () => {
     expect(() => validatePaymentProof(png,"image/svg+xml")).toThrow();
     expect(() => validatePaymentProof(new Uint8Array(),"image/png")).toThrow();
+    expect(MAX_PROOF_BYTES).toBe(4 * 1024 * 1024);
     expect(() => validatePaymentProof(new Uint8Array(MAX_PROOF_BYTES + 1),"image/jpeg")).toThrow();
+    const atLimit = new Uint8Array(MAX_PROOF_BYTES);
+    atLimit.set([255,216,255,224]);
+    expect(validatePaymentProof(atLimit, "image/jpeg")).toBe("jpg");
   });
 });

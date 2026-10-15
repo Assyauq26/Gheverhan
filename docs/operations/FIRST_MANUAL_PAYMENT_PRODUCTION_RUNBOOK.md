@@ -1,6 +1,6 @@
 # Sprint 2G — Runbook verifikasi pembayaran transfer manual pertama (Production)
 
-**Status:** operasional / pemeriksaan baca-saja; bukan bukti bahwa dana diterima.  
+**Status:** runbook operasional + snapshot transaksi pertama (16 Oktober 2026); bukan bukti bahwa dana diterima.  
 **Hosting tunggal:** Vercel (`https://gheverhan.vercel.app`)  
 **Database & Storage:** Supabase project `bztprltkevacidcpjaam`  
 **Basis release:** Sprint 2E/2F pada `main`; Sprint 2F merge commit `678ad97b2f5dae12d608add1637c653a2d62c4d2`.
@@ -113,6 +113,79 @@ WHERE p.status='WAITING_VERIFICATION'
 - **Order expired tetapi ada laporan dana masuk**: jangan langsung menyetujui order yang tertutup. Verifikasi dana melalui bank dan jalankan proses pemulihan/refund sesuai kebijakan perusahaan.
 - **Kegagalan besar pada release**: deployment stabil terakhir sebelum Sprint 2F adalah **`dpl_2CHHL3aN4hui42jREwzKWGCiPrCR`** (commit `1dc4362`). Rollback lewat Vercel setelah konfirmasi insiden; rollback deployment **tidak otomatis menghapus/membatalkan transaksi** di database.
 
-## 6. Definisi selesai
+## 6. Observasi production pertama (16 Oktober 2026, anonim)
 
-Tandai validasi operasional **PASS** hanya setelah ada satu bukti pembayaran **asli** yang memenuhi aturan akses/rekonsiliasi dan keputusan verifikasi bank yang sah. Jika pelanggan belum mengirim bukti, gunakan status **Waiting for first real proof**—bukan FAIL dan bukan PASS.
+Pemeriksaan **baca-saja** dari Supabase production setelah ada transaksi pertama menemukan data agregat berikut. Ini adalah **snapshot**, bukan hasil pemeriksaan bank dan bukan dasar untuk mengubah status pesanan.
+
+| Pemeriksaan | Hasil snapshot |
+| --- | --- |
+| Jumlah pesanan | 2 |
+| Pembayaran `PAID` | 1 |
+| Konfirmasi bukti `APPROVED` | 1 |
+| Pesanan dengan pembayaran `PAID` | 1 pesanan dalam status `PACKED` |
+| Pesanan menunggu pembayaran | 1, tenggat belum lewat |
+| Bukti `APPROVED` yang cocok dengan objek Storage privat | 1 |
+| Bukti DB tanpa objek | 0 |
+| Objek bukti privat tanpa referensi DB | 0 |
+| Nominal bukti cocok dengan jumlah tagihan | 1 dari 1 |
+| Catatan audit `payment.confirm` / `payment.approve` | masing-masing 1 |
+| Item/kuantitas penjualan yang disetujui | 1 item / 1 unit |
+| Mutasi inventori `SALE` untuk pesanan yang disetujui | 1 mutasi / 1 unit |
+| Selisih kuantitas antara item pesanan dan mutasi `SALE` | 0 |
+| Pengiriman untuk pesanan tersebut | Status `PROCESSING`, data nomor resi dan tanggal kirim tersedia; order masih `PACKED` |
+
+**Kesimpulan terbatas:** database, bukti privat, audit aplikasi, dan inventori menunjukkan alur **konsisten** untuk satu konfirmasi yang berstatus APPROVED. Pemeriksa AI **tidak mempunyai akses mutasi bank** dan belum melakukan uji ulang GET bukti melalui sesi Admin production yang sah. Maka hasil ini bukan bukti bahwa penerimaan uang telah diverifikasi secara independen.
+
+Tindak lanjut Admin:
+1. Finance memastikan bahwa approval yang tercatat memang didahului pencocokan **mutasi rekening bank asli**. Jangan approve ulang atau memodifikasi payment via SQL hanya untuk tes.
+2. Tim operasional memastikan status fisik paket, kurir dan nomor resi secara internal. Adanya nomor resi/tanggal kirim pada record tidak membuktikan serah-terima; transisi dari `PACKED` dilakukan setelah handover aktual dan sesuai aturan aplikasi.
+3. Pesanan kedua yang masih menunggu pembayaran tidak boleh diberi status `PAID` tanpa bukti uang masuk.
+4. Dokumentasikan hasil internal secara terbatas tanpa menyalin rekening, identitas pelanggan, ataupun berkas bukti ke GitHub.
+
+SQL tambahan untuk pemeriksaan agregat berkala (tetap SELECT-only):
+
+```sql
+-- Temukan objek pembayaran privat yang tidak direferensikan.
+SELECT COUNT(*)::int AS orphan_private_proofs
+FROM storage.objects o
+WHERE o.bucket_id='payment-proofs'
+  AND o.name<>'.emptyFolderPlaceholder'
+  AND NOT EXISTS (
+    SELECT 1 FROM public."PaymentConfirmation" pc
+    WHERE pc."proofPath"=o.name
+  );
+```
+
+```sql
+-- Pastikan jumlah unit SALE per varian sesuai dengan setiap pesanan PAID.
+WITH paid_orders AS (
+  SELECT o.id, o."orderNumber"
+  FROM public."Order" o
+  JOIN public."Payment" p ON p."orderId"=o.id
+  WHERE p.status='PAID'
+),
+order_units AS (
+  SELECT po.id AS order_id, oi."variantId" AS variant_id,
+         SUM(oi.quantity)::int AS units
+  FROM paid_orders po
+  JOIN public."OrderItem" oi ON oi."orderId"=po.id
+  GROUP BY po.id, oi."variantId"
+),
+sale_units AS (
+  SELECT po.id AS order_id, m."variantId" AS variant_id,
+         SUM(m.quantity)::int AS units
+  FROM paid_orders po
+  JOIN public."InventoryMovement" m
+    ON m.reference=po."orderNumber" AND m.type='SALE'
+  GROUP BY po.id, m."variantId"
+)
+SELECT COUNT(*)::int AS sale_quantity_mismatches
+FROM order_units oi
+FULL JOIN sale_units sm
+  ON oi.order_id=sm.order_id AND oi.variant_id=sm.variant_id
+WHERE COALESCE(oi.units,0)<>COALESCE(sm.units,0);
+```
+
+## 7. Definisi selesai
+
+Tandai validasi operasional **PASS penuh** hanya bila bukti asli telah diterima, otorisasi/rekonsiliasi terpenuhi, **penerimaan dana telah diverifikasi lewat mutasi bank resmi**, dan aksi Finance sah. Saat ini telah teramati satu konfirmasi `APPROVED` dan order `PACKED` yang konsisten secara database, tetapi verifikasi bank independen oleh pemeriksa ini masih **belum diketahui**. Jangan menyatakan *PASS penuh* hanya berdasarkan database.

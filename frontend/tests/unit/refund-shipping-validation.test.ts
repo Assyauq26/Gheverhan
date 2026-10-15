@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { refundRequestSchema, refundVerificationSchema, refundReturnSchema } from "@/modules/payments/refund.validation";
 import { manualShipmentSchema, canTransitionShipment } from "@/modules/shipping/shipment.validation";
 import { canTransitionPayment } from "@/modules/payments/domain/state-machine";
+import { statusAfterTrackingEntry } from "@/modules/shipping/shipping-policy";
 const requestId = "11111111-1111-4111-8111-111111111111";
 describe("refund and shipment backend policy", () => {
   it("accepts bounded full-refund intent and rejects malformed money/key/reason", () => {
@@ -32,6 +33,16 @@ describe("refund and shipment backend policy", () => {
     expect(canTransitionShipment("SHIPPED", "IN_TRANSIT")).toBe(true);
     expect(canTransitionShipment("IN_TRANSIT", "DELIVERED")).toBe(true);
     expect(canTransitionShipment("DELIVERED", "SHIPPED")).toBe(false);
+  });
+  it("turns seller-entered AWB into SHIPPED and preserves progress on retries", () => {
+    expect(statusAfterTrackingEntry(null, "PROCESSING", "JNT-12345")).toBe("SHIPPED");
+    expect(statusAfterTrackingEntry("PENDING", "PENDING", " JNT-12345 ")).toBe("SHIPPED");
+    expect(statusAfterTrackingEntry("PROCESSING", "PROCESSING", "JNT-12345")).toBe("SHIPPED");
+    expect(statusAfterTrackingEntry("SHIPPED", "PROCESSING", "JNT-12345")).toBe("SHIPPED");
+    expect(statusAfterTrackingEntry("PROCESSING", "PROCESSING", "")).toBe("PROCESSING");
+    expect(statusAfterTrackingEntry(null, "PENDING", "   ")).toBe("PENDING");
+    expect(statusAfterTrackingEntry("IN_TRANSIT", "IN_TRANSIT", "JNT-12345")).toBe("IN_TRANSIT");
+    expect(statusAfterTrackingEntry("DELIVERED", "PROCESSING", "JNT-12345")).toBe("PROCESSING");
   });
   it("rejects invalid shipment dates and cost", () => {
     const value = { courier: "Test", service: "REG", cost: 20000, status: "PENDING" };

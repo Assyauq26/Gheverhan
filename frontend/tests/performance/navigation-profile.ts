@@ -32,6 +32,8 @@ async function main() {
     await db.product.upsert({ where: { id: `perf2d-product-${i}` }, create: { id: `perf2d-product-${i}`, name: `Profiling Product ${i}`, slug: `perf2d-product-${i}`, description: 'Synthetic performance fixture. '.repeat(100), basePrice: 100000 + i, status: 'PUBLISHED', isFeatured: i < 4, images: { create: { url: '/perf-fixture.svg' } }, variants: { create: { id: `perf2d-variant-${i}`, sku: `PERF2D-${i}`, inventory: { create: { onHand: 10, reserved: 1 } } } } }, update: {} });
     await db.order.upsert({ where: { id: `perf2d-order-${i}` }, create: { id: `perf2d-order-${i}`, orderNumber: `PERF2D-${String(i).padStart(4, '0')}`, userId: user.id, subtotal: 100000, total: 100000, note: 'Synthetic fixture. '.repeat(100), items: { create: { variantId: `perf2d-variant-${i}`, productName: `Profiling Product ${i}`, variantLabel: 'Default', unitPrice: 100000, quantity: 1, lineTotal: 100000 } } }, update: {} });
   }
+  const databaseTotals = { products: await db.product.count(), variants: await db.productVariant.count(), orders: await db.order.count() };
+  assert.deepEqual(databaseTotals, { products: 45, variants: 45, orders: 45 }, 'Use a fresh dedicated profiling database; regression suites retain historical fixtures');
   const token = await signSession({ sub: user.id, email: user.email });
   const routes = ['/', '/shop', '/product/perf2d-product-0', '/admin', '/admin/products', '/admin/inventory', '/admin/orders'];
   const results: Record<string, { firstProcessRequest: Sample; warm: Sample[] }> = {};
@@ -70,6 +72,6 @@ async function main() {
     }
   }
   const manifest = JSON.parse(await readFile('.next/server/app-paths-manifest.json', 'utf8'));
-  await writeFile(path.join(output!, 'results.json'), JSON.stringify({ node: process.version, samples, fixture: { products: 45, variants: 45, orders: 45 }, method: 'Sequential HTTP GET; new Next production process per route, first process request + 7 warm requests; anonymous storefront/authenticated Admin; full streamed response consumed. Query durations from test-only Prisma preload, integer ms; summed SQL time is not wall-time or isolated render CPU. Local process startup is not a Vercel cold start.', results, appRoutes: Object.keys(manifest) }, null, 2));
+  await writeFile(path.join(output!, 'results.json'), JSON.stringify({ node: process.version, samples, fixture: databaseTotals, method: 'Sequential HTTP GET; new Next production process per route, first process request + 7 warm requests; anonymous storefront/authenticated Admin; full streamed response consumed. Query durations from test-only Prisma preload, integer ms; summed SQL time is not wall-time or isolated render CPU. Local process startup is not a Vercel cold start.', results, appRoutes: Object.keys(manifest) }, null, 2));
 }
 main().finally(() => db.$disconnect()).catch(error => { console.error(error); process.exitCode = 1; });

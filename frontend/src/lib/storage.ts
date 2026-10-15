@@ -6,7 +6,9 @@ export const STORAGE_APP = process.env.STORAGE_APP_NAME || "gheverhan";
 function config() {
   const origin = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-  if (!/^https:\/\/[^/?#]+$/.test(origin) || !key) {
+  const url = new URL(origin || "http://invalid");
+  const loopback = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+  if ((!((url.protocol === "https:") || (loopback && url.protocol === "http:"))) || url.username || url.password || url.search || url.hash || !key) {
     throw new Error("Supabase Storage is not configured (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)");
   }
   return { origin, key };

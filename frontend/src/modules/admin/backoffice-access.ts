@@ -5,7 +5,7 @@ import type { PermissionKey } from "@/lib/auth/permissions";
 
 /** Reuse the existing session and DB permissions; no separate seller identity. */
 export async function requireBackofficeUser(permission?: PermissionKey) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(false);
   if (!user) redirect("/login?redirectTo=/admin");
   if (!user.isAdmin || (permission && !user.permissions.includes(permission))) notFound();
   return user;

@@ -224,6 +224,58 @@ async function main() {
       for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }
       assert.deepEqual(errors, []);
     });
+    await check("private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval", async () => {
+      const smokeProduct = await db.product.create({
+        data: {
+          name: `Storage Smoke ${prefix}`, slug: `storage-smoke-${prefix}`, basePrice: 100000, status: "PUBLISHED",
+          images: { create: { url: "https://example.test/isolated-proof.png", alt: "Synthetic fixture" } },
+          variants: { create: { sku: `STORAGE-SMOKE-${prefix}`, inventory: { create: { onHand: 3 } } } },
+        },
+        include: { variants: true },
+      });
+      const buyer = await user("storage-smoke-buyer", customerRole.id);
+      const stranger = await user("storage-smoke-stranger", customerRole.id);
+      await db.cart.create({ data: { userId: buyer.id, items: { create: { variantId: smokeProduct.variants[0].id, quantity: 1 } } } });
+      const expectedLines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice }));
+      const order = await createOrder(buyer.id, {
+        requestId: randomUUID(),
+        expectedLines,
+        address: { recipientName: "Smoke Buyer", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
+        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        bankAccountId: bank.id,
+      });
+      const buyerCtx = await context(buyer);
+      const strangerCtx = await context(stranger);
+      try {
+        const multipart = {
+          orderId: order.id, senderBank: "Fixture", senderName: "Smoke Buyer",
+          amount: String(order.total), transferDate: new Date().toISOString().slice(0, 10),
+          proof: { name: "synthetic.png", mimeType: "image/png", buffer: png },
+        };
+        const url = `${base}/api/v1/payments/confirm`;
+        const originalCount = objects.size;
+        assert.equal((await anonymous.request.post(url, { headers: { Origin: base }, multipart })).status(), 401);
+        assert.equal((await strangerCtx.request.post(url, { headers: { Origin: base }, multipart })).status(), 404);
+        assert.equal(objects.size, originalCount, "unauthorized attempts may not create objects");
+        const response = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart });
+        assert.equal(response.status(), 201, await response.text());
+        const confirmation = await db.paymentConfirmation.findFirstOrThrow({
+          where: { payment: { orderId: order.id } },
+          orderBy: { createdAt: "desc" },
+        });
+        assert.ok(confirmation.proofPath.startsWith(`gheverhan-sprint1-tests/payment-proofs/${buyer.id}/`));
+        assert.equal(objects.get(confirmation.proofPath)?.bytes.equals(png), true, "file uploaded to isolated private bucket double");
+        const ownerProof = await buyerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`);
+        assert.equal(ownerProof.status(), 200);
+        assert.match(ownerProof.headers()["cache-control"] || "", /no-store/);
+        assert.equal((await strangerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`)).status(), 404);
+        assert.equal((await anonymous.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`)).status(), 401);
+        assert.equal((await fin.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 200);
+      } finally {
+        await buyerCtx.close();
+        await strangerCtx.close();
+      }
+    });
     const captures = [{ width: 1360, height: 900, route: "/admin/inventory", file: "desktop-inventory.png" }, { width: 390, height: 844, route: `/admin/inventory/${variant.id}`, file: "mobile-inventory.png" }, { width: 1360, height: 900, route: `/admin/orders/${sale.order.id}`, file: "desktop-order.png" }, { width: 390, height: 844, route: `/admin/orders/${sale.order.id}`, file: "mobile-order.png" }];
     for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, orderId: sale.order.id, variantId: variant.id, database: "isolated local PostgreSQL", storage: "local proof contract double", synthetic: true }, null, 2));

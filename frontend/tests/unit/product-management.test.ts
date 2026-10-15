@@ -93,7 +93,11 @@ describe("image validation and storage paths", () => {
   it("rejects forged MIME, empty and oversized files", () => {
     expect(() => validateProductImage(new Uint8Array([255, 216, 255, 217]), "image/png")).toThrow();
     expect(() => validateProductImage(new Uint8Array(), "image/jpeg")).toThrow();
+    expect(MAX_IMAGE_BYTES).toBe(4 * 1024 * 1024);
     expect(() => validateProductImage(new Uint8Array(MAX_IMAGE_BYTES + 1), "image/jpeg")).toThrow();
+    const atLimit = new Uint8Array(MAX_IMAGE_BYTES);
+    atLimit.set([255, 216, 255, 217]);
+    expect(validateProductImage(atLimit, "image/jpeg")).toBe("jpg");
   });
   it("accepts a JPEG header with matching type", () => expect(validateProductImage(new Uint8Array([255, 216, 255, 217]), "image/jpeg")).toBe("jpg"));
   it("never reads a caller-chosen traversal or mismatched product path", async () => {

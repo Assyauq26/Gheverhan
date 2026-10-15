@@ -76,6 +76,13 @@ jobs:
           npm run lint
           npm run build
 
+      - name: Prepare CI-only server-only marker for direct Node service imports
+        # Next.js resolves this import during app build. Direct tsx tests need a no-op
+        # local module marker; do not add it to package.json or production artifacts.
+        run: |
+          mkdir -p node_modules/server-only
+          printf 'module.exports = {};\\n' > node_modules/server-only/index.js
+
       - name: Real PostgreSQL product lifecycle and concurrency
         run: npm run test:integration:products
 

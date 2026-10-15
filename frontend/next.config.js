@@ -10,6 +10,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
+      bodySizeLimit: "6mb",
       allowedOrigins: [
         "gheverhan.netlify.app",
         "*.gheverhan.netlify.app",

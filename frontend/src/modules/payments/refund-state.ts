@@ -9,3 +9,5 @@ export async function activeRefund(tx: Prisma.TransactionClient, paymentId: stri
 export async function assertNoActiveRefund(tx: Prisma.TransactionClient, paymentId: string) {
   if (await activeRefund(tx, paymentId)) throw new HttpError("Refund sedang ditinjau; fulfillment dibekukan", 409);
 }
+
+export const REFUNDABLE_ORDER_STATUSES = ["PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"] as const;

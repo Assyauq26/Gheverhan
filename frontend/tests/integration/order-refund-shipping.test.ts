@@ -123,6 +123,27 @@ async function status(orderId: string) {
 }
 
 test("real PostgreSQL refund and shipment correctness", async t => {
+  await t.test("managed adjustment requires real permissions and expected stock, with movement and audit", async () => {
+    const { adjustManagedInventory } = await import("../../src/modules/inventory/inventory-management.service");
+    const p = await product(3); const id = p.variants[0].id;
+    await assert.rejects(adjustManagedInventory(id, verifierId, { expectedOnHand: 3, newOnHand: 4, reason: "Count verified" }), { status: 403 });
+    await assert.rejects(adjustManagedInventory(id, warehouseId, { newOnHand: 4, reason: "Count verified" }));
+    const result = await adjustManagedInventory(id, warehouseId, { expectedOnHand: 3, newOnHand: 4, reason: "Count verified" });
+    assert.equal(result.onHand, 4); assert.equal(result.reserved, 0);
+    assert.equal(await db.inventoryMovement.count({ where: { variantId: id, type: "ADJUSTMENT" } }), 1);
+    assert.equal(await db.auditLog.count({ where: { action: "inventory.adjust", entityId: result.id, userId: warehouseId } }), 1);
+    await assert.rejects(adjustManagedInventory(id, warehouseId, { expectedOnHand: 3, newOnHand: 9, reason: "Stale count" }), { status: 409 });
+  });
+  await t.test("parallel expected-stock adjustments commit one effect and rollback audit failures", async () => {
+    const { adjustManagedInventory } = await import("../../src/modules/inventory/inventory-management.service");
+    const p = await product(3); const id = p.variants[0].id; const inventory = await db.inventory.findUniqueOrThrow({ where: { variantId: id } });
+    const outcomes = await parallelOrder(inventory.id, [() => adjustManagedInventory(id, warehouseId, { expectedOnHand: 3, newOnHand: 5, reason: "Count A" }), () => adjustManagedInventory(id, warehouseId, { expectedOnHand: 3, newOnHand: 6, reason: "Count B" })], "Inventory");
+    assert.equal(outcomes.filter(r => r.status === "fulfilled").length, 1);
+    const current = await db.inventory.findUniqueOrThrow({ where: { variantId: id } });
+    await auditFailure(() => adjustManagedInventory(id, warehouseId, { expectedOnHand: current.onHand, newOnHand: 10, reason: "Rollback" }));
+    assert.equal((await db.inventory.findUniqueOrThrow({ where: { variantId: id } })).onHand, current.onHand);
+    assert.equal(await db.inventoryMovement.count({ where: { variantId: id, type: "ADJUSTMENT" } }), 1);
+  });
   await t.test("additive enum supports both legacy PAID and verified REFUNDED states", async () => {
     const rows = await db.$queryRaw<Array<{ enumlabel: string }>>`SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_type.oid = pg_enum.enumtypid WHERE typname = 'PaymentStatus'`;
     assert.ok(rows.some(r => r.enumlabel === "REFUNDED")); assert.ok(rows.some(r => r.enumlabel === "PAID"));

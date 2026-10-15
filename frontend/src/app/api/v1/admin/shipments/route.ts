@@ -1,6 +1,7 @@
+import { operationOk } from "@/modules/admin/operations-cache";
 import { assertMutationOrigin } from "@/lib/mutation-origin";
 import { z } from "zod";
-import { ok, handle } from "@/lib/response";
+import { handle } from "@/lib/response";
 import { requirePermission } from "@/lib/auth/session";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { upsertManualShipment } from "@/modules/shipping/shipping.service";
@@ -32,6 +33,6 @@ export async function POST(req: Request) {
       estimatedDelivery: b.estimatedDelivery === undefined ? undefined : b.estimatedDelivery ? new Date(b.estimatedDelivery) : null,
       status: b.status, notes: b.notes, requestId: b.requestId,
     });
-    return ok(shipment);
+    return operationOk(shipment);
   });
 }

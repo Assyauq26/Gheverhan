@@ -1,3 +1,4 @@
+import { shipmentOrderTarget } from "./shipping-policy";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { ShipmentStatus } from "@prisma/client";
@@ -7,7 +8,7 @@ import { writeAudit } from "@/modules/audit/audit.service";
 import { transitionOrderInTransaction } from "@/modules/orders/orders.service";
 import { assertStaffPermission, lockOrder } from "@/modules/orders/transaction-locks";
 import { assertNoActiveRefund } from "@/modules/payments/refund-state";
-import { canTransitionShipment, manualShipmentSchema } from "./shipment.validation";
+import { manualShipmentSchema } from "./shipment.validation";
 
 /** Manual recording only: no external carrier API or remote dispatch inside this transaction. */
 export async function upsertManualShipment(orderId: string, adminId: string, value: {
@@ -32,30 +33,11 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
       }
     }
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { payment: true, shipment: true } });
-    const refundedTracking = order.status === "REFUNDED" && order.paymentStatus === "REFUNDED" && order.payment?.status === "REFUNDED" && order.shipment && ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(order.shipment.status) && ["IN_TRANSIT", "DELIVERED"].includes(input.status);
-    if (!refundedTracking && (order.paymentStatus !== "PAID" || order.payment?.status !== "PAID" || !["PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"].includes(order.status))) throw new HttpError("Shipment hanya untuk order lunas yang aktif", 409);
+    const target = shipmentOrderTarget({ status: order.status, paymentStatus: order.paymentStatus, paymentStatusActual: order.payment?.status, shipmentStatus: order.shipment?.status ?? null }, input.status);
     if (!order.payment) throw new HttpError("Pembayaran tidak ditemukan", 409);
     await assertNoActiveRefund(tx, order.payment.id);
-    if (!canTransitionShipment(order.shipment?.status ?? null, input.status)) throw new HttpError("Transisi shipment tidak valid", 409);
     const merged = { ...order.shipment, ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) };
     if (["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(input.status) && !merged.trackingNumber) throw new HttpError("Nomor resi diperlukan sebelum pengiriman", 422);
-    let target: "PROCESSING" | "SHIPPED" | "DELIVERED" | null = null;
-    if (!refundedTracking) {
-    if (input.status === "PENDING" && !["PAID", "PROCESSING", "PACKED"].includes(order.status)) throw new HttpError("Shipment pending tidak sesuai status order", 409);
-    if (input.status === "PROCESSING") {
-      if (!["PAID", "PROCESSING", "PACKED"].includes(order.status)) throw new HttpError("Shipment processing tidak sesuai status order", 409);
-      if (order.status === "PAID") target = "PROCESSING";
-    }
-    if (input.status === "SHIPPED" || input.status === "IN_TRANSIT") {
-      if (!["PACKED", "SHIPPED"].includes(order.status)) throw new HttpError("Order harus packed sebelum dikirim", 409);
-      if (input.status === "IN_TRANSIT" && order.status !== "SHIPPED") throw new HttpError("Order belum dikirim", 409);
-      target = "SHIPPED";
-    }
-    if (input.status === "DELIVERED") {
-      if (!["SHIPPED", "DELIVERED", "COMPLETED"].includes(order.status)) throw new HttpError("Order belum dikirim", 409);
-      if (order.status !== "COMPLETED") target = "DELIVERED";
-    }
-    }
     const changed = !order.shipment || ["courier", "service", "cost", "status", "trackingNumber", "shippedDate", "estimatedDelivery", "notes"].some(key => {
       const before = (order.shipment as unknown as Record<string, unknown>)[key]; const after = (merged as Record<string, unknown>)[key];
       return (before instanceof Date ? before.toISOString() : before ?? null) !== (after instanceof Date ? after.toISOString() : after ?? null);

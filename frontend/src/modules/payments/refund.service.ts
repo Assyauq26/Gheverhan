@@ -5,7 +5,7 @@ import { HttpError } from "@/lib/response";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { lockOrder, lockPaymentOrder, assertStaffPermission } from "@/modules/orders/transaction-locks";
 import { writeAudit } from "@/modules/audit/audit.service";
-import { activeRefund, refundResolutionKey } from "./refund-state";
+import { activeRefund, refundResolutionKey, REFUNDABLE_ORDER_STATUSES } from "./refund-state";
 import { refundRequestSchema, refundVerificationSchema, refundReturnSchema } from "./refund.validation";
 
 function object(value: Prisma.JsonValue | null) {
@@ -43,7 +43,7 @@ export async function requestRefund(orderId: string, actorId: string, value: unk
       return previous;
     }
     if (payment.provider !== "manual") throw new HttpError("Provider memerlukan refund/reconciliation khusus; manual workflow tidak diizinkan", 409);
-    if (payment.status !== "PAID" || payment.order.paymentStatus !== "PAID" || !["PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"].includes(payment.order.status)) throw new HttpError("Refund hanya untuk order dengan pembayaran terverifikasi", 409);
+    if (payment.status !== "PAID" || payment.order.paymentStatus !== "PAID" || !(REFUNDABLE_ORDER_STATUSES as readonly string[]).includes(payment.order.status)) throw new HttpError("Refund hanya untuk order dengan pembayaran terverifikasi", 409);
     if (input.amount !== payment.amount || input.amount !== payment.order.total) throw new HttpError("Hanya refund penuh sesuai payment/order yang didukung", 422);
     if (await activeRefund(tx, payment.id)) throw new HttpError("Sudah ada request refund aktif", 409);
     const event = await tx.paymentEvent.create({ data: { paymentId: payment.id, type: "REFUND_REQUESTED", externalId: key, payload: { ...input, actorId, fingerprint: digest(input), orderStatus: payment.order.status } } });
@@ -65,7 +65,7 @@ export async function confirmManualRefund(requestId: string, actorId: string, va
       if (resolution.type !== "REFUND_CONFIRMED" || object(resolution.payload).fingerprint !== digest(input)) throw new HttpError("Refund sudah diselesaikan dengan keputusan/payload berbeda", 409);
       return resolution;
     }
-    if (payment.provider !== "manual" || payment.status !== "PAID" || payment.order.paymentStatus !== "PAID" || !["PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"].includes(payment.order.status)) throw new HttpError("Order/payment tidak menerima refund", 409);
+    if (payment.provider !== "manual" || payment.status !== "PAID" || payment.order.paymentStatus !== "PAID" || !(REFUNDABLE_ORDER_STATUSES as readonly string[]).includes(payment.order.status)) throw new HttpError("Order/payment tidak menerima refund", 409);
     if (input.amount !== payment.amount || input.amount !== payload.amount || input.settledAt < payment.createdAt) throw new HttpError("Nominal atau waktu settlement tidak sesuai payment", 422);
     if (!await tx.bankAccount.findUnique({ where: { id: input.sourceAccountId } })) throw new HttpError("Rekening settlement tidak ditemukan", 422);
     const settlementId = `refund_money_${digest([input.sourceAccountId, input.evidenceReference]).slice(0, 40)}`;

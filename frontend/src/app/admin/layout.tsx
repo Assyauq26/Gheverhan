@@ -1,3 +1,4 @@
+import { OperationNotice } from "@/components/admin/operation-notice";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -36,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
           <div className="bg-black"><AdminNav permissions={user.permissions} /></div>
         </header>
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8"><OperationNotice />{children}</main>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CreditCard, FileText } from "lucide-react";
 import { requirePermission } from "@/lib/auth/session";
 import { PERMISSIONS } from "@/lib/auth/permissions";
@@ -14,7 +15,7 @@ type AdminPaymentsPageProps = {
 };
 
 export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsPageProps) {
-  await requirePermission(PERMISSIONS.PAYMENT_READ);
+  const actor = await requirePermission(PERMISSIONS.PAYMENT_READ);
   const { q } = await searchParams;
   const payments = await listPendingVerifications(q);
 
@@ -37,7 +38,7 @@ export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsP
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-display font-bold text-ink">{p.order.orderNumber}</p>
+                      <Link className="break-all font-display font-bold text-ink underline" href={`/admin/orders/${p.orderId}`}>{p.order.orderNumber}</Link>
                       <p className="text-xs text-ink-muted">{p.order.user.name} · {p.order.user.email}</p>
                     </div>
                     <Badge variant="warning">Menunggu Verifikasi</Badge>
@@ -85,7 +86,7 @@ export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsP
                       </a>
                     )
                   )}
-                  <PaymentVerify paymentId={p.id} />
+                  {actor.permissions.includes(PERMISSIONS.PAYMENT_VERIFY) && <PaymentVerify paymentId={p.id} />}
                 </div>
               </div>
             );

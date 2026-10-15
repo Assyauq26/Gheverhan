@@ -5,7 +5,7 @@ import { formatIDR } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Truck } from "lucide-react";
-import { ShipmentForm } from "@/components/admin/shipment-form";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,7 @@ export default async function AdminShippingPage() {
                 </div>
               </summary>
               <div className="mt-4 border-t border-line pt-4">
-                <ShipmentForm orderId={o.id} initial={o.shipment} />
+                <Link className="text-sm font-semibold underline" href={`/admin/orders/${o.id}`}>Kelola pengiriman dan riwayat order</Link>
               </div>
             </details>
           ))}

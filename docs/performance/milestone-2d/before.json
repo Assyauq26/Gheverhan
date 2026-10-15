@@ -1,0 +1,434 @@
+{
+  "node": "v22.22.0",
+  "samples": 7,
+  "fixture": {
+    "products": 45,
+    "variants": 45,
+    "orders": 45
+  },
+  "method": "Sequential HTTP GET; new Next production process per route, first process request + 7 warm requests; anonymous storefront/authenticated Admin; full streamed response consumed. Query durations from test-only Prisma preload, integer ms; summed SQL time is not wall-time or isolated render CPU. Local process startup is not a Vercel cold start.",
+  "results": {
+    "/": {
+      "firstProcessRequest": {
+        "ttfbMs": 187.29779599999995,
+        "responseMs": 273.695612,
+        "queryCount": 7,
+        "sqlDurationMs": 31,
+        "bytes": 121101
+      },
+      "warm": [
+        {
+          "ttfbMs": 23.044189000000074,
+          "responseMs": 30.63034300000004,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        },
+        {
+          "ttfbMs": 15.796358999999939,
+          "responseMs": 21.997371000000157,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        },
+        {
+          "ttfbMs": 14.303024999999934,
+          "responseMs": 22.326739999999972,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        },
+        {
+          "ttfbMs": 24.244938000000047,
+          "responseMs": 28.72825200000011,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        },
+        {
+          "ttfbMs": 10.052817000000005,
+          "responseMs": 16.186287999999877,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        },
+        {
+          "ttfbMs": 17.288348000000042,
+          "responseMs": 26.18155999999999,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        },
+        {
+          "ttfbMs": 11.583315000000084,
+          "responseMs": 16.356982000000016,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 119785
+        }
+      ]
+    },
+    "/shop": {
+      "firstProcessRequest": {
+        "ttfbMs": 262.81346800000006,
+        "responseMs": 338.45093799999995,
+        "queryCount": 4,
+        "sqlDurationMs": 7,
+        "bytes": 106953
+      },
+      "warm": [
+        {
+          "ttfbMs": 20.757663999999977,
+          "responseMs": 30.711302999999816,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        },
+        {
+          "ttfbMs": 14.61272500000041,
+          "responseMs": 21.841527000000042,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        },
+        {
+          "ttfbMs": 14.186079999999947,
+          "responseMs": 20.295936999999867,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        },
+        {
+          "ttfbMs": 14.737071000000014,
+          "responseMs": 19.46139499999981,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        },
+        {
+          "ttfbMs": 10.446112000000085,
+          "responseMs": 14.544444000000112,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        },
+        {
+          "ttfbMs": 9.565081000000191,
+          "responseMs": 15.750800000000254,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        },
+        {
+          "ttfbMs": 17.652440999999726,
+          "responseMs": 27.687610999999833,
+          "queryCount": 0,
+          "sqlDurationMs": 0,
+          "bytes": 106670
+        }
+      ]
+    },
+    "/product/perf2d-product-0": {
+      "firstProcessRequest": {
+        "ttfbMs": 168.745089,
+        "responseMs": 228.29508399999986,
+        "queryCount": 9,
+        "sqlDurationMs": 5,
+        "bytes": 95765
+      },
+      "warm": [
+        {
+          "ttfbMs": 11.167829999999867,
+          "responseMs": 31.339254999999866,
+          "queryCount": 9,
+          "sqlDurationMs": 9,
+          "bytes": 95765
+        },
+        {
+          "ttfbMs": 8.044643000000178,
+          "responseMs": 23.960238000000118,
+          "queryCount": 9,
+          "sqlDurationMs": 4,
+          "bytes": 95765
+        },
+        {
+          "ttfbMs": 7.666016000000127,
+          "responseMs": 23.896442000000206,
+          "queryCount": 9,
+          "sqlDurationMs": 2,
+          "bytes": 95765
+        },
+        {
+          "ttfbMs": 12.64890400000013,
+          "responseMs": 28.25162599999976,
+          "queryCount": 9,
+          "sqlDurationMs": 5,
+          "bytes": 95765
+        },
+        {
+          "ttfbMs": 8.261465999999928,
+          "responseMs": 17.437689999999748,
+          "queryCount": 9,
+          "sqlDurationMs": 0,
+          "bytes": 95765
+        },
+        {
+          "ttfbMs": 7.934627999999975,
+          "responseMs": 18.217384999999922,
+          "queryCount": 9,
+          "sqlDurationMs": 0,
+          "bytes": 95765
+        },
+        {
+          "ttfbMs": 8.267665999999736,
+          "responseMs": 20.718151999999918,
+          "queryCount": 9,
+          "sqlDurationMs": 0,
+          "bytes": 95765
+        }
+      ]
+    },
+    "/admin": {
+      "firstProcessRequest": {
+        "ttfbMs": 225.63254499999994,
+        "responseMs": 234.96747499999992,
+        "queryCount": 12,
+        "sqlDurationMs": 12,
+        "bytes": 35312
+      },
+      "warm": [
+        {
+          "ttfbMs": 20.122853000000305,
+          "responseMs": 24.50964900000008,
+          "queryCount": 12,
+          "sqlDurationMs": 7,
+          "bytes": 35312
+        },
+        {
+          "ttfbMs": 19.41883000000007,
+          "responseMs": 22.105525999999827,
+          "queryCount": 12,
+          "sqlDurationMs": 6,
+          "bytes": 35312
+        },
+        {
+          "ttfbMs": 16.327772000000095,
+          "responseMs": 18.76106800000025,
+          "queryCount": 12,
+          "sqlDurationMs": 11,
+          "bytes": 35312
+        },
+        {
+          "ttfbMs": 20.92756499999996,
+          "responseMs": 24.175369000000046,
+          "queryCount": 12,
+          "sqlDurationMs": 20,
+          "bytes": 35312
+        },
+        {
+          "ttfbMs": 11.968717000000652,
+          "responseMs": 15.521406000000752,
+          "queryCount": 12,
+          "sqlDurationMs": 6,
+          "bytes": 35312
+        },
+        {
+          "ttfbMs": 10.345400999999583,
+          "responseMs": 13.530169999999998,
+          "queryCount": 12,
+          "sqlDurationMs": 3,
+          "bytes": 35312
+        },
+        {
+          "ttfbMs": 20.361163999999917,
+          "responseMs": 25.087437000000136,
+          "queryCount": 12,
+          "sqlDurationMs": 22,
+          "bytes": 35312
+        }
+      ]
+    },
+    "/admin/products": {
+      "firstProcessRequest": {
+        "ttfbMs": 229.3575660000006,
+        "responseMs": 242.35885599999983,
+        "queryCount": 9,
+        "sqlDurationMs": 4,
+        "bytes": 85013
+      },
+      "warm": [
+        {
+          "ttfbMs": 21.34801299999981,
+          "responseMs": 26.94079099999999,
+          "queryCount": 9,
+          "sqlDurationMs": 1,
+          "bytes": 85013
+        },
+        {
+          "ttfbMs": 21.522054000000026,
+          "responseMs": 28.21729899999991,
+          "queryCount": 9,
+          "sqlDurationMs": 6,
+          "bytes": 85013
+        },
+        {
+          "ttfbMs": 18.98496199999954,
+          "responseMs": 31.70890699999927,
+          "queryCount": 9,
+          "sqlDurationMs": 4,
+          "bytes": 85013
+        },
+        {
+          "ttfbMs": 15.315177999999833,
+          "responseMs": 21.667531000000054,
+          "queryCount": 9,
+          "sqlDurationMs": 4,
+          "bytes": 85013
+        },
+        {
+          "ttfbMs": 13.409139000000323,
+          "responseMs": 18.99382500000047,
+          "queryCount": 9,
+          "sqlDurationMs": 2,
+          "bytes": 85013
+        },
+        {
+          "ttfbMs": 13.850349000000278,
+          "responseMs": 18.57906600000024,
+          "queryCount": 9,
+          "sqlDurationMs": 0,
+          "bytes": 85013
+        },
+        {
+          "ttfbMs": 16.154812999999194,
+          "responseMs": 20.731661999999233,
+          "queryCount": 9,
+          "sqlDurationMs": 1,
+          "bytes": 85013
+        }
+      ]
+    },
+    "/admin/inventory": {
+      "firstProcessRequest": {
+        "ttfbMs": 214.0987380000006,
+        "responseMs": 234.63377600000058,
+        "queryCount": 10,
+        "sqlDurationMs": 1,
+        "bytes": 78401
+      },
+      "warm": [
+        {
+          "ttfbMs": 14.135785999999825,
+          "responseMs": 27.727625999999873,
+          "queryCount": 10,
+          "sqlDurationMs": 0,
+          "bytes": 78401
+        },
+        {
+          "ttfbMs": 9.339167000000089,
+          "responseMs": 26.523415999999997,
+          "queryCount": 10,
+          "sqlDurationMs": 2,
+          "bytes": 78401
+        },
+        {
+          "ttfbMs": 9.295431999999892,
+          "responseMs": 24.544128999999884,
+          "queryCount": 10,
+          "sqlDurationMs": 2,
+          "bytes": 78401
+        },
+        {
+          "ttfbMs": 9.163125000000036,
+          "responseMs": 23.45745100000022,
+          "queryCount": 10,
+          "sqlDurationMs": 0,
+          "bytes": 78401
+        },
+        {
+          "ttfbMs": 8.827534999999443,
+          "responseMs": 20.732522999999674,
+          "queryCount": 10,
+          "sqlDurationMs": 0,
+          "bytes": 78401
+        },
+        {
+          "ttfbMs": 9.097106000000167,
+          "responseMs": 26.517823000000135,
+          "queryCount": 10,
+          "sqlDurationMs": 0,
+          "bytes": 78401
+        },
+        {
+          "ttfbMs": 8.226028999999471,
+          "responseMs": 24.12073700000019,
+          "queryCount": 10,
+          "sqlDurationMs": 3,
+          "bytes": 78401
+        }
+      ]
+    },
+    "/admin/orders": {
+      "firstProcessRequest": {
+        "ttfbMs": 229.3756199999998,
+        "responseMs": 261.38104399999975,
+        "queryCount": 9,
+        "sqlDurationMs": 2,
+        "bytes": 80423
+      },
+      "warm": [
+        {
+          "ttfbMs": 13.043623999999909,
+          "responseMs": 30.91574800000035,
+          "queryCount": 9,
+          "sqlDurationMs": 0,
+          "bytes": 80423
+        },
+        {
+          "ttfbMs": 11.130763999999544,
+          "responseMs": 27.9461339999998,
+          "queryCount": 9,
+          "sqlDurationMs": 2,
+          "bytes": 80423
+        },
+        {
+          "ttfbMs": 10.199928999999429,
+          "responseMs": 25.151222999999845,
+          "queryCount": 9,
+          "sqlDurationMs": 2,
+          "bytes": 80423
+        },
+        {
+          "ttfbMs": 12.104405000000042,
+          "responseMs": 26.04622500000005,
+          "queryCount": 9,
+          "sqlDurationMs": 4,
+          "bytes": 80423
+        },
+        {
+          "ttfbMs": 14.44537500000024,
+          "responseMs": 27.198896000000786,
+          "queryCount": 9,
+          "sqlDurationMs": 4,
+          "bytes": 80423
+        },
+        {
+          "ttfbMs": 8.449754000000212,
+          "responseMs": 21.594207000000097,
+          "queryCount": 9,
+          "sqlDurationMs": 0,
+          "bytes": 80423
+        },
+        {
+          "ttfbMs": 10.670849999999518,
+          "responseMs": 34.93680399999994,
+          "queryCount": 9,
+          "sqlDurationMs": 2,
+          "bytes": 80423
+        }
+      ]
+    }
+  },
+  "sourceCommit": "f452ab5b45214e7724cad4aadac33c035a1c5bc2",
+  "database": "Dedicated disposable loopback PostgreSQL 16.15; no regression fixtures"
+}

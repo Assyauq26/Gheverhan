@@ -1,5 +1,5 @@
 import { OperationNotice } from "@/components/admin/operation-notice";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AdminNav } from "@/components/admin/admin-nav";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin", robots: { index: false } };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(false);
   if (!user) redirect("/login?redirectTo=/admin");
   if (!user.isAdmin) redirect("/");
 

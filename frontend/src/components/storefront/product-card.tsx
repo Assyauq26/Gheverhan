@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import Image from "next/image";
 import { formatIDR, effectivePrice, discountPercent } from "@/lib/money";
 import { Rating } from "@/components/ui/rating";

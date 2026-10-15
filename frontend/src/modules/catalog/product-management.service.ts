@@ -147,7 +147,7 @@ export async function listManagedProducts(actor: CatalogActor, q = "", status?: 
   assertCatalogPermission(actor, PERMISSIONS.PRODUCT_READ);
   const where: Prisma.ProductWhereInput = { ...(q.trim() ? { OR: [{ name: { contains: q.trim().slice(0, 100), mode: "insensitive" } }, { slug: { contains: q.trim().slice(0, 100), mode: "insensitive" } }] } : {}), ...(status ? { status } : {}) };
   page = Number.isSafeInteger(page) && page > 0 ? Math.min(page, 100_000) : 1;
-  const [items, total] = await Promise.all([prisma.product.findMany({ where, include: { category: true, images: { orderBy: { sortOrder: "asc" }, take: 1 }, _count: { select: { variants: true } } }, orderBy: { createdAt: "desc" }, skip: (page - 1) * 20, take: 20 }), prisma.product.count({ where })]);
+  const [items, total] = await Promise.all([prisma.product.findMany({ where, select: { id: true, name: true, slug: true, status: true, basePrice: true, salePrice: true, category: { select: { name: true } }, images: { select: { url: true, alt: true }, orderBy: { sortOrder: "asc" }, take: 1 }, _count: { select: { variants: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (page - 1) * 20, take: 20 }), prisma.product.count({ where })]);
   return { items, total, page, pages: Math.ceil(total / 20) };
 }
 

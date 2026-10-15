@@ -1,7 +1,7 @@
 import { StorefrontHeader } from "@/components/storefront/header";
 import { BottomNav } from "@/components/storefront/bottom-nav";
 import { Truck, ShieldCheck, Headphones, Star } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { getStorefrontUserContext } from "@/lib/auth/session";
 
 export default async function StorefrontLayout({

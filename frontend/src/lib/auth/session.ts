@@ -114,7 +114,10 @@ export const getStorefrontUserContext = cache(
   },
 );
 
-export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
+// Layout and page guards share the same request cache key. Backoffice renders
+// pass false: cart contents are not needed to authorize or render admin pages.
+// This is React request memoization, never a cross-user/persistent auth cache.
+export const getCurrentUser = cache(async (includeCart = true): Promise<AuthUser | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE)?.value;
   if (!token) return null;
@@ -142,16 +145,15 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
           },
         },
       },
-      cart: {
-        select: {
-          items: { select: { quantity: true } },
-        },
-      },
     },
   });
 
   if (!user || !user.isActive) return null;
 
+  const cart = includeCart ? await prisma.cart.findUnique({
+    where: { userId: user.id },
+    select: { items: { select: { quantity: true } } },
+  }) : null;
   const roles = user.roles.map((r) => r.role.name);
   const permissions = Array.from(
     new Set(
@@ -169,7 +171,7 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
     roles,
     permissions,
     isAdmin: roles.some((r) => ADMIN_ROLES.includes(r)),
-    cartCount: user.cart?.items.reduce((s, i) => s + i.quantity, 0) ?? 0,
+    cartCount: cart?.items.reduce((s, i) => s + i.quantity, 0) ?? 0,
   };
 });
 

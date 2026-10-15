@@ -30,6 +30,8 @@ let checks = 0;
 async function check(name: string, fn: () => Promise<void>) { await fn(); checks++; console.log(`PASS ${name}`); }
 async function fixtureRole(name: string, permissions: string[]) {
   const role = await db.role.upsert({ where: { name }, create: { name, label: name }, update: {} });
+  // Keep each isolated test role exact when another local suite ran first.
+  await db.rolePermission.deleteMany({ where: { roleId: role.id, permission: { key: { notIn: permissions } } } });
   for (const key of permissions) {
     const permission = await db.permission.upsert({ where: { key }, create: { key, label: key }, update: {} });
     await db.rolePermission.upsert({ where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } }, create: { roleId: role.id, permissionId: permission.id }, update: {} });
@@ -178,14 +180,15 @@ async function main() {
     await check("independent finance verifies a settled refund without automatic stock return", async () => {
       const before = await db.inventory.findUniqueOrThrow({ where: { variantId: variant.id } }); await fp.goto(orderUrl);
       const f = fp.getByRole("form", { name: "Verifikasi settlement refund", exact: true }); await f.getByLabel("Nominal settlement penuh (Rp) *").fill(String(sale.order.total)); await f.getByLabel("Rekening sumber refund *").selectOption(bank.id); await f.getByLabel("Referensi transaksi bank *").fill(`BANK-${prefix}-SETTLED`); const local = new Date(); local.setMinutes(local.getMinutes() - local.getTimezoneOffset()); await f.getByLabel("Waktu settlement *").fill(local.toISOString().slice(0, 16)); await f.getByRole("checkbox").check();
-      // Use seconds so a newly created test payment cannot appear newer than its minute-rounded settlement.
-      await f.getByLabel("Waktu settlement *").fill(local.toISOString().slice(0, 19));
+      // Preserve nonzero seconds; Chromium canonicalizes zero seconds away in datetime-local.
+      // Avoid Playwright rejecting an equivalent but non-canonical :00 value at minute boundaries.
+      await f.getByLabel("Waktu settlement *").fill(local.toISOString().slice(0, 19).replace(/:00$/, ""));
       await submit(fp, "Verifikasi settlement refund", `/api/v1/admin/refunds/${refundId}/confirm`);
       assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "REFUNDED"); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: sale.payment.id } })).status, "REFUNDED"); assert.equal((await db.inventory.findUniqueOrThrow({ where: { variantId: variant.id } })).onHand, before.onHand);
     });
     await check("warehouse receives physical return once without financial evidence exposure", async () => {
       const before = await db.inventory.findUniqueOrThrow({ where: { variantId: variant.id } }); await wp.goto(orderUrl); await expect(wp.getByText(`BANK-${prefix}-SETTLED`, { exact: false })).toHaveCount(0);
-      const f = wp.getByRole("form", { name: "Catat penerimaan retur", exact: true }); await f.getByRole("spinbutton").fill("1"); await f.getByLabel("Referensi penerimaan gudang *").fill(`RECEIPT-${prefix}`); const local = new Date(); local.setMinutes(local.getMinutes() - local.getTimezoneOffset()); await f.getByLabel("Waktu barang diterima *").fill(local.toISOString().slice(0, 19)); await f.getByLabel("Catatan kondisi / alasan retur *").fill("Barang diterima dan layak jual"); await f.getByRole("checkbox").check(); await submit(wp, "Catat penerimaan retur", `/api/v1/admin/refunds/${refundId}/returns`);
+      const f = wp.getByRole("form", { name: "Catat penerimaan retur", exact: true }); await f.getByRole("spinbutton").fill("1"); await f.getByLabel("Referensi penerimaan gudang *").fill(`RECEIPT-${prefix}`); const local = new Date(); local.setMinutes(local.getMinutes() - local.getTimezoneOffset()); await f.getByLabel("Waktu barang diterima *").fill(local.toISOString().slice(0, 19).replace(/:00$/, "")); await f.getByLabel("Catatan kondisi / alasan retur *").fill("Barang diterima dan layak jual"); await f.getByRole("checkbox").check(); await submit(wp, "Catat penerimaan retur", `/api/v1/admin/refunds/${refundId}/returns`);
       assert.equal((await db.inventory.findUniqueOrThrow({ where: { variantId: variant.id } })).onHand, before.onHand + 1); assert.equal(await db.inventoryMovement.count({ where: { variantId: variant.id, type: "RETURN" } }), 1); await expect(wp.getByRole("form", { name: "Catat penerimaan retur", exact: true })).toHaveCount(0);
     });
     await check("post-refund shipment tracking preserves financial terminal state", async () => {

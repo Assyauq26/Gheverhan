@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageSearch } from "lucide-react";
@@ -53,7 +53,7 @@ export function ProductListing({
             <Link
               key={s.key}
               href={sortHref(s.key)}
-              className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+              className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
                 (currentSort ?? "newest") === s.key
                   ? "border-black bg-black text-white"
                   : "border-line text-ink-soft hover:bg-surface"

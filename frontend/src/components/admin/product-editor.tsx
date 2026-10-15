@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, ArrowLeft, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
   canEdit: boolean; canStock: boolean; canArchive: boolean;
 }) {
   const router = useRouter();
+  const busy = useRef(false);
   const [values, setValues] = useState<Values>(() => valuesFor(initial));
   const [version, setVersion] = useState(initial?.updatedAt || "");
   const [status, setStatus] = useState<ProductStatus>(initial?.status || "DRAFT");
@@ -39,26 +40,27 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
   function change<K extends keyof Values>(key: K, value: Values[K]) { setValues(v => ({ ...v, [key]: value })); setDirty(true); setNotice(""); }
   function accept(p: ProductEditorData) { setValues(valuesFor(p)); setVersion(p.updatedAt); setStatus(p.status); setDirty(false); }
   async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setPending("save"); setError(""); setNotice("");
+    event.preventDefault(); if (busy.current) return; busy.current = true; setPending("save"); setError(""); setNotice("");
     try {
       const form = new FormData(); form.set("id", initial?.id || ""); form.set("updatedAt", version); form.set("product", JSON.stringify(values));
       const result = await saveProductAction(form);
       if (!result.ok || !result.data) { setError(result.error || "Produk gagal disimpan"); return; }
       accept(result.data); setNotice("Produk berhasil disimpan.");
       if (!initial) router.push(`/admin/products/${result.data.id}`); else router.refresh();
-    } catch { setError("Tidak dapat menyimpan produk. Coba lagi."); } finally { setPending(null); }
+    } catch { setError("Tidak dapat menyimpan produk. Coba lagi."); } finally { busy.current = false; setPending(null); }
   }
   async function changeStatus(target: ProductStatus) {
-    if (!initial || dirty) return;
-    setPending(target); setError(""); setNotice("");
+    if (!initial || dirty || busy.current) return;
+    busy.current = true; setPending(target); setError(""); setNotice("");
     try {
       const result = await setProductStatusAction(initial.id, version, target);
       if (!result.ok || !result.data) { setError(result.error || "Status gagal diperbarui"); return; }
       accept(result.data); setNotice(`Status produk: ${statusLabels[target]}.`); router.refresh();
-    } catch { setError("Status gagal diperbarui. Coba lagi."); } finally { setPending(null); }
+    } catch { setError("Status gagal diperbarui. Coba lagi."); } finally { busy.current = false; setPending(null); }
   }
   async function upload(file?: File) {
     if (!file || !initial) return;
+    if (busy.current) return; busy.current = true;
     setPending("upload"); setError(""); setNotice("");
     try {
       if (file.size > 5 * 1024 * 1024) { setError("Ukuran gambar maksimal 5 MB."); return; }
@@ -67,7 +69,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
       const result = await response.json();
       if (!response.ok || !result.success) { setError(result.error?.message || "Gambar gagal diunggah"); return; }
       setValues(v => ({ ...v, images: [...v.images, result.data.image] })); setVersion(result.data.updatedAt); setDirty(true); setNotice("Gambar diunggah. Simpan perubahan sebelum menerbitkan.");
-    } catch { setError("Upload gagal. Periksa koneksi dan coba lagi."); } finally { setPending(null); }
+    } catch { setError("Upload gagal. Periksa koneksi dan coba lagi."); } finally { busy.current = false; setPending(null); }
   }
   function variantChange(index: number, patch: Partial<Values["variants"][number]>) { change("variants", values.variants.map((v, i) => i === index ? { ...v, ...patch } : v)); }
   return <div className="mx-auto max-w-5xl space-y-6">

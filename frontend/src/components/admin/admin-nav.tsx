@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -30,14 +31,23 @@ const items = [
 
 export function AdminNav({ permissions }: { permissions: string[] }) {
   const pathname = usePathname();
+  const nav = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = nav.current;
+    const active = element?.querySelector<HTMLElement>('[aria-current="page"]');
+    // Scroll only the horizontal menu, never the document or the user's form.
+    if (element && active && element.scrollWidth > element.clientWidth) element.scrollLeft = active.offsetLeft - element.clientWidth / 2 + active.clientWidth / 2;
+  }, [pathname]);
   return (
-    <nav className="no-scrollbar flex gap-1 overflow-x-auto p-3 md:flex-col md:overflow-visible">
+    <nav ref={nav} aria-label="Navigasi admin" className="no-scrollbar relative flex gap-1 overflow-x-auto overscroll-x-contain p-3 md:flex-col md:overflow-visible">
       {items.filter(it => !it.permission || permissions.includes(it.permission)).map((it) => {
         const active = it.exact ? pathname === it.href : pathname.startsWith(it.href);
         return (
           <Link
             key={it.href}
             href={it.href}
+            prefetch={false}
+            aria-current={active ? "page" : undefined}
             data-testid={`adminnav-${it.label.toLowerCase()}`}
             className={cn(
               "flex items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",

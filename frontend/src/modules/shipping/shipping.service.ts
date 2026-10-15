@@ -1,4 +1,4 @@
-import { shipmentOrderTarget } from "./shipping-policy";
+import { shipmentOrderTarget, statusAfterTrackingEntry } from "./shipping-policy";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { ShipmentStatus } from "@prisma/client";
@@ -33,11 +33,22 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
       }
     }
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { payment: true, shipment: true } });
-    const target = shipmentOrderTarget({ status: order.status, paymentStatus: order.paymentStatus, paymentStatusActual: order.payment?.status, shipmentStatus: order.shipment?.status ?? null }, input.status);
     if (!order.payment) throw new HttpError("Pembayaran tidak ditemukan", 409);
     await assertNoActiveRefund(tx, order.payment.id);
     const merged = { ...order.shipment, ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) };
-    if (["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(input.status) && !merged.trackingNumber) throw new HttpError("Nomor resi diperlukan sebelum pengiriman", 422);
+    const context = { status: order.status, paymentStatus: order.paymentStatus, paymentStatusActual: order.payment.status, shipmentStatus: order.shipment?.status ?? null };
+    const effectiveStatus = statusAfterTrackingEntry(context.shipmentStatus, input.status, merged.trackingNumber);
+    // Entering an AWB is an explicit seller handover to the courier. An
+    // unpaid/unpacked order may never skip fulfillment stages.
+    if (effectiveStatus === "SHIPPED" && !["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(context.shipmentStatus ?? "") && order.status !== "PACKED") {
+      throw new HttpError("Tandai pesanan PACKED sebelum memasukkan nomor resi dan menyerahkannya ke kurir", 409);
+    }
+    data.status = effectiveStatus;
+    if (effectiveStatus === "SHIPPED" && !["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(context.shipmentStatus ?? "") && !merged.shippedDate) {
+      data.shippedDate = new Date();
+    }
+    const target = shipmentOrderTarget(context, effectiveStatus);
+    if (["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(effectiveStatus) && !merged.trackingNumber?.trim()) throw new HttpError("Nomor resi diperlukan sebelum pengiriman", 422);
     const changed = !order.shipment || ["courier", "service", "cost", "status", "trackingNumber", "shippedDate", "estimatedDelivery", "notes"].some(key => {
       const before = (order.shipment as unknown as Record<string, unknown>)[key]; const after = (merged as Record<string, unknown>)[key];
       return (before instanceof Date ? before.toISOString() : before ?? null) !== (after instanceof Date ? after.toISOString() : after ?? null);
@@ -45,8 +56,8 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${input.status}`, { source: "shipment" });
     const shipment = changed ? await tx.shipment.upsert({ where: { orderId }, create: { orderId, provider: "manual", ...data }, update: data }) : order.shipment!;
     if (changed) {
-      await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: input.status, description: `Manual shipment: ${input.status}${input.trackingNumber ? ` (${input.trackingNumber})` : ""}` } });
-      await writeAudit({ userId: adminId, action: "shipping.update", entity: "Shipment", entityId: shipment.id, meta: { orderId, status: input.status } }, tx);
+      await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: effectiveStatus, description: `Manual shipment: ${effectiveStatus}${merged.trackingNumber ? ` (${merged.trackingNumber})` : ""}` } });
+      await writeAudit({ userId: adminId, action: "shipping.update", entity: "Shipment", entityId: shipment.id, meta: { orderId, status: effectiveStatus } }, tx);
     }
     if (auditId) await tx.auditLog.create({ data: { id: auditId, userId: adminId, action: "shipping.request", entity: "Shipment", entityId: shipment.id, meta: { orderId, fingerprint } } });
     return shipment;

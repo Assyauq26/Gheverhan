@@ -26,7 +26,7 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
   const isRefunded = payment.status === "REFUNDED";
   const isPaid = payment.status === "PAID";
   const isWaiting = payment.status === "WAITING_VERIFICATION";
-  const canUpload = payment.status === "PENDING_PAYMENT" || payment.status === "REJECTED";
+  const canUpload = order.status === "PENDING_PAYMENT" && (!order.expiresAt || order.expiresAt > new Date()) && (payment.status === "PENDING_PAYMENT" || payment.status === "REJECTED");
   const lastRejected = order.payment?.confirmations.find((c) => c.status === "REJECTED");
 
   return (

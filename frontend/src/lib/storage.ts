@@ -72,8 +72,8 @@ export async function getObject(path: string): Promise<{ data: Uint8Array; conte
 export async function removeObject(path: string): Promise<void> {
   const object = resolveStorageObject(path, STORAGE_APP);
   const { origin } = config();
-  const response = await fetch(`${origin}/storage/v1/object/remove/${encodeURIComponent(bucketName(object.bucket))}`, {
-    method: "POST",
+  const response = await fetch(`${origin}/storage/v1/object/${encodeURIComponent(bucketName(object.bucket))}`, {
+    method: "DELETE",
     headers: headers("application/json"),
     body: JSON.stringify({ prefixes: [object.key] }),
     cache: "no-store",

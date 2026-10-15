@@ -271,6 +271,78 @@ async function main() {
         assert.equal((await strangerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`)).status(), 404);
         assert.equal((await anonymous.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`)).status(), 401);
         assert.equal((await fin.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 200);
+        assert.equal((await wh.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 403);
+        assert.equal((await anonymous.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 401);
+        assert.equal((await db.payment.findUniqueOrThrow({ where: { orderId: order.id } })).status, "WAITING_VERIFICATION");
+
+        // The UI hides its upload form during verification. Direct API clients must
+        // also be denied, without creating duplicate private objects or DB records.
+        const countWaiting = objects.size;
+        const duplicate = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart });
+        assert.equal(duplicate.status(), 409, await duplicate.text());
+        assert.equal(objects.size, countWaiting);
+        assert.equal(await db.paymentConfirmation.count({ where: { payment: { orderId: order.id } } }), 1);
+        const waitingPage = await buyerCtx.newPage();
+        await waitingPage.goto(`${base}/checkout/payment/${order.id}`);
+        await expect(waitingPage.getByTestId("payment-waiting")).toBeVisible();
+        await expect(waitingPage.getByTestId("proof-form")).toHaveCount(0);
+        await waitingPage.close();
+
+        // A staff rejection permits precisely one NEW submission; the rejected
+        // object's evidence remains private for audit, while the new PDF is owned
+        // by the same buyer. All transitions use real HTTP handlers + PostgreSQL.
+        const payment = await db.payment.findUniqueOrThrow({ where: { orderId: order.id } });
+        const rejection = await fin.request.post(`${base}/api/v1/admin/payments/${payment.id}/reject`, {
+          headers: { Origin: base }, data: { reason: "Pengujian sintetis: bukti ditolak" },
+        });
+        assert.equal(rejection.status(), 200, await rejection.text());
+        assert.equal((await db.payment.findUniqueOrThrow({ where: { id: payment.id } })).status, "REJECTED");
+        assert.equal((await db.paymentConfirmation.findUniqueOrThrow({ where: { id: confirmation.id } })).status, "REJECTED");
+
+        const pdf = Buffer.alloc(4 * 1024 * 1024 - 8192);
+        Buffer.from("%PDF-1.7\\n% synthetic proof - NOT A TRANSFER\\n").copy(pdf);
+        const revisedMultipart = {
+          ...multipart, proof: { name: "synthetic-near-4MiB.pdf", mimeType: "application/pdf", buffer: pdf },
+        };
+        const resubmitted = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart: revisedMultipart });
+        assert.equal(resubmitted.status(), 201, await resubmitted.text());
+        const confirmations = await db.paymentConfirmation.findMany({
+          where: { paymentId: payment.id }, orderBy: { createdAt: "desc" },
+        });
+        assert.equal(confirmations.length, 2);
+        assert.equal(confirmations[0].status, "SUBMITTED");
+        assert.equal(confirmations[0].proofMime, "application/pdf");
+        assert.equal(confirmations[1].id, confirmation.id);
+        assert.equal(objects.get(confirmations[0].proofPath)?.bytes.equals(pdf), true);
+
+        const pdfResponse = await buyerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmations[0].id}`);
+        assert.equal(pdfResponse.status(), 200);
+        assert.match(pdfResponse.headers()["content-type"] || "", /application\\/pdf/);
+        assert.match(pdfResponse.headers()["cache-control"] || "", /no-store/);
+        assert.equal(Buffer.from(await pdfResponse.body()).equals(pdf), true);
+        assert.equal((await strangerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmations[0].id}`)).status(), 404);
+        assert.equal((await fin.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmations[0].id}`)).status(), 200);
+
+        const afterSecond = objects.size;
+        const duplicateAgain = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart: revisedMultipart });
+        assert.equal(duplicateAgain.status(), 409);
+        assert.equal(objects.size, afterSecond);
+
+        // Synthetic approval is isolated: it does not move any real money.
+        const approval = await fin.request.post(`${base}/api/v1/admin/payments/${payment.id}/approve`, {
+          headers: { Origin: base }, data: {},
+        });
+        assert.equal(approval.status(), 200, await approval.text());
+        assert.equal((await db.payment.findUniqueOrThrow({ where: { id: payment.id } })).status, "PAID");
+        assert.equal((await db.order.findUniqueOrThrow({ where: { id: order.id } })).status, "PAID");
+        assert.equal(await db.inventoryMovement.count({ where: { variantId: smokeProduct.variants[0].id, type: "SALE" } }), 1);
+        const replay = await fin.request.post(`${base}/api/v1/admin/payments/${payment.id}/approve`, {
+          headers: { Origin: base }, data: {},
+        });
+        assert.equal(replay.status(), 200);
+        assert.equal(await db.inventoryMovement.count({ where: { variantId: smokeProduct.variants[0].id, type: "SALE" } }), 1);
+        assert.equal((await buyerCtx.request.post(url, { headers: { Origin: base }, multipart })).status(), 409);
+        assert.equal(objects.size, afterSecond);
       } finally {
         await buyerCtx.close();
         await strangerCtx.close();

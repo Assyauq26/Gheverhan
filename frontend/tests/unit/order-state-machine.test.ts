@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { canTransitionOrder, ORDER_TRANSITIONS } from "@/modules/orders/domain/state-machine";
 
 describe("order state machine", () => {
-  it("allows the happy path", () => {
-    expect(canTransitionOrder("PENDING_PAYMENT", "PAID")).toBe(true);
+  it("allows verified fulfillment and keeps payment verification separate", () => {
+    expect(canTransitionOrder("PENDING_PAYMENT", "PAID")).toBe(false);
     expect(canTransitionOrder("PAID", "PROCESSING")).toBe(true);
     expect(canTransitionOrder("PROCESSING", "PACKED")).toBe(true);
     expect(canTransitionOrder("PACKED", "SHIPPED")).toBe(true);
@@ -17,10 +17,11 @@ describe("order state machine", () => {
     expect(canTransitionOrder("PAID", "DELIVERED")).toBe(false);
   });
 
-  it("supports exception states", () => {
+  it("limits generic exception transitions to unpaid cancellation and expiry", () => {
     expect(canTransitionOrder("PENDING_PAYMENT", "EXPIRED")).toBe(true);
-    expect(canTransitionOrder("PROCESSING", "CANCELLED")).toBe(true);
-    expect(canTransitionOrder("SHIPPED", "REFUNDED")).toBe(true);
+    expect(canTransitionOrder("PENDING_PAYMENT", "CANCELLED")).toBe(true);
+    expect(canTransitionOrder("PROCESSING", "CANCELLED")).toBe(false);
+    expect(canTransitionOrder("SHIPPED", "REFUNDED")).toBe(false);
   });
 
   it("keeps terminal states terminal", () => {

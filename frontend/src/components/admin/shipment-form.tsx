@@ -1,47 +1,16 @@
-"use client";
-
-import { useFormState, useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea, Label } from "@/components/ui/input";
-import { upsertShipmentAction } from "@/modules/admin/admin.actions";
-
-const STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "IN_TRANSIT", "DELIVERED"];
-
-function Submit() {
-  const { pending } = useFormStatus();
-  return <Button type="submit" size="sm" disabled={pending} data-testid="shipment-submit">{pending ? "Menyimpan..." : "Simpan Pengiriman"}</Button>;
-}
-
-export function ShipmentForm({
-  orderId,
-  initial,
-}: {
-  orderId: string;
-  initial?: {
-    courier?: string | null; service?: string | null; cost?: number;
-    trackingNumber?: string | null; status?: string; notes?: string | null;
-  } | null;
-}) {
-  const [state, action] = useFormState(upsertShipmentAction, { ok: false } as any);
-  return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2" data-testid={`shipment-form-${orderId}`}>
-      <input type="hidden" name="orderId" value={orderId} />
-      <div><Label>Kurir</Label><Input name="courier" defaultValue={initial?.courier ?? "J&T"} required data-testid="ship-courier" /></div>
-      <div><Label>Layanan</Label><Input name="service" defaultValue={initial?.service ?? "EZ"} required data-testid="ship-service" /></div>
-      <div><Label>Ongkir</Label><Input name="cost" type="number" defaultValue={initial?.cost ?? 20000} required /></div>
-      <div><Label>No. Resi</Label><Input name="trackingNumber" defaultValue={initial?.trackingNumber ?? ""} data-testid="ship-resi" /></div>
-      <div><Label>Tgl Kirim</Label><Input name="shippedDate" type="date" /></div>
-      <div><Label>Estimasi Tiba</Label><Input name="estimatedDelivery" type="date" /></div>
-      <div>
-        <Label>Status</Label>
-        <select name="status" defaultValue={initial?.status ?? "PROCESSING"} className="h-11 w-full rounded-xl border border-line px-3 text-sm" data-testid="ship-status">
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-      <div className="sm:col-span-2"><Label>Catatan</Label><Textarea name="notes" defaultValue={initial?.notes ?? ""} /></div>
-      {state?.ok === false && state?.error && <p className="text-sm text-destructive sm:col-span-2">{state.error}</p>}
-      {state?.ok && <p className="text-sm text-success sm:col-span-2">Pengiriman tersimpan.</p>}
-      <div className="sm:col-span-2"><Submit /></div>
-    </form>
-  );
+import type { ShipmentStatus } from "@prisma/client";
+import { OperationForm } from "./operation-form";
+export function ShipmentForm({ orderId, allowed, initial }: { orderId: string; allowed: ShipmentStatus[]; initial?: { courier: string | null; service: string | null; cost: number; trackingNumber: string | null; status: ShipmentStatus; notes: string | null; shippedDate: Date | null; estimatedDelivery: Date | null } | null }) {
+  if (!allowed.length) return <p className="text-sm text-ink-soft">Tidak ada tindakan pengiriman yang tersedia pada status ini.</p>;
+  return <OperationForm url="/api/v1/admin/shipments" label="Simpan pengiriman" confirmation="Catat pengiriman manual dan perubahan status pesanan terkait? Ini tidak memanggil API kurir." requestId fields={[
+    { name: "orderId", label: "Order", type: "hidden", value: orderId },
+    { name: "courier", label: "Kurir", required: true, value: initial?.courier || "", maxLength: 100 },
+    { name: "service", label: "Layanan", required: true, value: initial?.service || "", maxLength: 100 },
+    { name: "cost", label: "Ongkir tercatat (Rp)", type: "number", required: true, value: initial?.cost || 0, min: 0, max: 2147483647, hint: "Tidak mengubah tagihan atau total order." },
+    { name: "trackingNumber", label: "Nomor resi", value: initial?.trackingNumber || "", maxLength: 160, hint: "Wajib untuk SHIPPED, IN_TRANSIT, atau DELIVERED." },
+    { name: "status", label: "Status pengiriman", type: "select", value: allowed.includes(initial?.status as ShipmentStatus) ? initial!.status : allowed[0], required: true, options: allowed.map(s => ({ value: s, label: s })) },
+    { name: "shippedDate", label: "Tanggal kirim", type: "date", value: initial?.shippedDate?.toISOString().slice(0, 10), hint: "Kosongkan untuk mempertahankan tanggal tersimpan." },
+    { name: "estimatedDelivery", label: "Estimasi tiba", type: "date", value: initial?.estimatedDelivery?.toISOString().slice(0, 10) },
+    { name: "notes", label: "Catatan pengiriman", type: "textarea", value: initial?.notes || "" },
+  ]} />;
 }

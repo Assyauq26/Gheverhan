@@ -1,43 +1,31 @@
-import { requirePermission } from "@/lib/auth/session";
+import { Suspense } from "react";
+import { OperationsSkeleton } from "@/components/admin/operations-skeleton";
+import Link from "next/link";
+import { OrderStatus, Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { listOrdersAdmin } from "@/modules/orders/orders.service";
-import { ORDER_TRANSITIONS } from "@/modules/orders/domain/state-machine";
+import { pageNumber } from "@/modules/inventory/inventory.validation";
 import { formatIDR } from "@/lib/money";
-import { Badge } from "@/components/ui/badge";
-import { ORDER_STATUS_LABEL, orderBadgeVariant } from "@/lib/order-status";
-import { OrderStatusControl } from "@/components/admin/order-status-control";
-
+import { ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageLinks } from "@/components/admin/operations-layout";
 export const dynamic = "force-dynamic";
-
-type AdminOrdersPageProps = {
-  searchParams: Promise<{ q?: string }>;
-};
-
-export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
-  await requirePermission(PERMISSIONS.ORDER_READ);
-  const { q } = await searchParams;
-  const orders = await listOrdersAdmin({ search: q });
-
-  return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl font-black text-ink">Pesanan</h1>
-      <div className="space-y-3">
-        {orders.map((o) => (
-          <div key={o.id} className="grid gap-3 rounded-2xl border border-line bg-white p-4 md:grid-cols-[1fr_auto]" data-testid={`admin-order-${o.orderNumber}`}>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-ink">{o.orderNumber}</span>
-                <Badge variant={orderBadgeVariant(o.status)}>{ORDER_STATUS_LABEL[o.status]}</Badge>
-                <Badge variant={o.paymentStatus === "PAID" ? "success" : "warning"}>Bayar: {o.paymentStatus}</Badge>
-              </div>
-              <p className="mt-1 text-xs text-ink-muted">{o.user.name} · {o.items.length} item · {formatIDR(o.total)}</p>
-            </div>
-            <div className="flex items-center">
-              <OrderStatusControl orderId={o.id} allowed={ORDER_TRANSITIONS[o.status]} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+export default async function AdminOrdersPage(props: { searchParams: Promise<{ q?: string; status?: string; page?: string }> }) {
+  await requireBackofficeUser(PERMISSIONS.ORDER_READ);
+  return <Suspense fallback={<OperationsSkeleton />}><AdminOrdersPageContent {...props} /></Suspense>;
+}
+async function AdminOrdersPageContent({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; page?: string }> }) {
+  const params = await searchParams;
+  const q = (params.q || "").slice(0, 200); const status = Object.values(OrderStatus).includes(params.status as OrderStatus) ? params.status as OrderStatus : undefined;
+  const where: Prisma.OrderWhereInput = { ...(q ? { orderNumber: { contains: q, mode: "insensitive" } } : {}), ...(status ? { status } : {}) };
+  const total = await prisma.order.count({ where }); const pages = Math.max(1, Math.ceil(total / 20)); const page = Math.min(pageNumber(params.page), pages);
+  const rows = await prisma.order.findMany({ where, include: { user: { select: { name: true } }, _count: { select: { items: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 20, skip: (page - 1) * 20 });
+  return <div className="space-y-6"><header><h1 className="text-2xl font-bold">Pesanan</h1><p className="mt-1 text-sm text-ink-soft">{total} pesanan · pantau pembayaran dan pemenuhan pesanan.</p></header>
+    <form role="search" className="flex flex-wrap gap-3"><label className="min-w-0 flex-1"><span className="sr-only">Cari nomor pesanan</span><Input className="placeholder:text-ink-soft" name="q" defaultValue={q} placeholder="Cari nomor pesanan" maxLength={200} /></label><label><span className="sr-only">Status pesanan</span><select name="status" defaultValue={status || ""} className="h-11 rounded-xl border border-line bg-white px-3 text-sm"><option value="">Semua status</option>{Object.values(OrderStatus).map(s => <option key={s} value={s}>{ORDER_STATUS_LABEL[s]}</option>)}</select></label><Button variant="outline">Cari</Button><Link href="/admin/orders" className="self-center text-sm underline">Reset</Link></form>
+    {!rows.length ? <EmptyState title="Tidak ada pesanan yang sesuai" description="Ubah pencarian atau filter. Pesanan baru akan tampil di sini setelah checkout." /> : <table className="block w-full rounded-2xl border border-line bg-white text-sm xl:table"><caption className="sr-only">Daftar pesanan</caption><thead className="hidden text-left text-xs text-ink-soft xl:table-header-group"><tr>{["Pesanan / pelanggan", "Tanggal", "Status", "Pembayaran", "Total"].map(t => <th key={t} scope="col" className="p-4 font-medium">{t}</th>)}</tr></thead><tbody className="block divide-y divide-line xl:table-row-group">{rows.map(o => <tr key={o.id} data-testid={`admin-order-${o.orderNumber}`} className="grid min-w-0 grid-cols-2 gap-3 p-4 xl:table-row xl:p-0"><td className="col-span-2 min-w-0 xl:p-4"><Link className="break-all font-semibold underline underline-offset-4" href={`/admin/orders/${o.id}`}>{o.orderNumber}</Link><p className="mt-1 break-words text-xs text-ink-soft">{o.user.name} · {o._count.items} item</p></td><td className="text-xs text-ink-soft xl:p-4"><span className="mb-1 block xl:hidden">Tanggal</span>{o.createdAt.toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta" })}</td><td className="xl:p-4"><span className="mb-1 block text-xs text-ink-soft xl:hidden">Status</span>{ORDER_STATUS_LABEL[o.status]}</td><td className="break-words text-xs xl:p-4"><span className="mb-1 block text-ink-soft xl:hidden">Pembayaran</span>{o.paymentStatus}</td><td className="font-semibold tabular-nums xl:p-4"><span className="mb-1 block text-xs font-normal text-ink-soft xl:hidden">Total</span>{formatIDR(o.total)}</td></tr>)}</tbody></table>}
+    <PageLinks path="/admin/orders" params={{ q, status }} page={page} pages={pages} />
+  </div>;
 }

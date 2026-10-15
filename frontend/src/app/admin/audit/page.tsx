@@ -1,11 +1,11 @@
-import { requirePermission } from "@/lib/auth/session";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAuditPage() {
-  await requirePermission(PERMISSIONS.AUDIT_READ);
+  await requireBackofficeUser(PERMISSIONS.AUDIT_READ);
   const logs = await prisma.auditLog.findMany({
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: "desc" },

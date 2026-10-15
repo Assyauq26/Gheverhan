@@ -1,16 +1,16 @@
-import { requirePermission } from "@/lib/auth/session";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatIDR } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Truck } from "lucide-react";
-import { ShipmentForm } from "@/components/admin/shipment-form";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminShippingPage() {
-  await requirePermission(PERMISSIONS.SHIPPING_READ);
+  await requireBackofficeUser(PERMISSIONS.SHIPPING_READ);
   // Orders that are paid or beyond and need shipping management.
   const orders = await prisma.order.findMany({
     where: { status: { in: ["PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED"] } },
@@ -39,7 +39,7 @@ export default async function AdminShippingPage() {
                 </div>
               </summary>
               <div className="mt-4 border-t border-line pt-4">
-                <ShipmentForm orderId={o.id} initial={o.shipment} />
+                <Link className="text-sm font-semibold underline" href={`/admin/orders/${o.id}`}>Kelola pengiriman dan riwayat order</Link>
               </div>
             </details>
           ))}

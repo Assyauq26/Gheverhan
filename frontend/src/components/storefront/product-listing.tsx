@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PackageSearch } from "lucide-react";
 
 // Product listings intentionally receive the lightweight card shape returned by
-// catalog.service. Do not type this as ProductWithRelations: that detail shape
+// catalog.service. Do not use the product detail shape here: it
 // includes reviews/questions/category relations that listing queries no longer
 // load, which causes both unnecessary payload and a TypeScript mismatch.
 type ProductListingItem = Parameters<typeof toCardData>[0];

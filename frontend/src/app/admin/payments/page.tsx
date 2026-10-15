@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { CreditCard, FileText } from "lucide-react";
-import { requirePermission } from "@/lib/auth/session";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { listPendingVerifications } from "@/modules/payments/payments.service";
 import { formatIDR } from "@/lib/money";
@@ -14,7 +15,7 @@ type AdminPaymentsPageProps = {
 };
 
 export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsPageProps) {
-  await requirePermission(PERMISSIONS.PAYMENT_READ);
+  const actor = await requireBackofficeUser(PERMISSIONS.PAYMENT_READ);
   const { q } = await searchParams;
   const payments = await listPendingVerifications(q);
 
@@ -37,7 +38,7 @@ export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsP
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-display font-bold text-ink">{p.order.orderNumber}</p>
+                      <Link className="break-all font-display font-bold text-ink underline" href={`/admin/orders/${p.orderId}`}>{p.order.orderNumber}</Link>
                       <p className="text-xs text-ink-muted">{p.order.user.name} · {p.order.user.email}</p>
                     </div>
                     <Badge variant="warning">Menunggu Verifikasi</Badge>
@@ -78,13 +79,14 @@ export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsP
                         <FileText size={28} /> Lihat PDF
                       </a>
                     ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <a href={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} target="_blank" rel="noreferrer" data-testid="proof-link">
+                        {/* Keep the session cookie on this private proof request; an image optimizer cannot authenticate it. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`/api/v1/admin/payments/proof?id=${encodeURIComponent(latest.id)}`} alt="Bukti transfer" className="h-32 w-full rounded-xl border border-line object-cover" />
                       </a>
                     )
                   )}
-                  <PaymentVerify paymentId={p.id} />
+                  {actor.permissions.includes(PERMISSIONS.PAYMENT_VERIFY) && <PaymentVerify paymentId={p.id} />}
                 </div>
               </div>
             );

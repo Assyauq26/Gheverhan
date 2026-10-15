@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+FROM node:22.22.0-bookworm-slim@sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94
+
+RUN mkdir /opt/deps /app && chown node:node /opt/deps /app
+USER node
+WORKDIR /opt/deps
+COPY --chown=node:node package.json package-lock.json ./
+# No application/test/config source or CI credentials are present online.
+# Install hooks are disabled; only the pinned Prisma engine downloader runs.
+RUN --mount=type=secret,id=proxy_ca,required=false,uid=1000 \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
+    npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org && \
+    node node_modules/@prisma/engines/scripts/postinstall.js
+COPY --chown=node:node prisma/schema.prisma ./prisma/schema.prisma
+RUN --network=none \
+    DATABASE_URL=postgresql://unused:unused@127.0.0.1:1/unused \
+    DIRECT_URL=postgresql://unused:unused@127.0.0.1:1/unused \
+    node node_modules/prisma/build/index.js generate
+
+WORKDIR /app
+COPY --chown=node:node . .
+RUN ln -s /opt/deps/node_modules node_modules
+ENV CI=true GHEVERHAN_ISOLATED_TESTS=1 npm_config_cache=/tmp/npm-cache XDG_CACHE_HOME=/tmp/cache
+# Writable source/cache stay in tmpfs; dependencies and image remain read-only.
+CMD ["sh", "-c", "cp -R /app /tmp/project && cd /tmp/project && npm run test:ci"]

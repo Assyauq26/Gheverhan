@@ -4,6 +4,6 @@ import { destroySession } from "@/lib/auth/session";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  destroySession();
+  await destroySession();
   return ok({ loggedOut: true });
 }

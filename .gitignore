@@ -15,3 +15,7 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+*.tsbuildinfo
+
+# Regenerable pytest JUnit reports (keep historical JSON summaries).
+/test_reports/pytest/

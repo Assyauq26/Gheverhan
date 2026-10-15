@@ -51,7 +51,7 @@ export default async function OrderDetailPage({ params }: OrderDetailRouteProps)
           {order.items.map((it) => (
             <div key={it.id} className="flex gap-3">
               <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-surface">
-                {it.imageUrl && <Image src={it.imageUrl} alt={it.productName} fill className="object-cover" sizes="64px" />}
+                {it.imageUrl && <Image src={it.imageUrl} alt={it.productName} fill className="object-cover" sizes="64px" unoptimized={it.imageUrl.startsWith("/api/v1/product-images/")} />}
               </div>
               <div className="flex flex-1 justify-between">
                 <div>

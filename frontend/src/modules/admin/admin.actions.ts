@@ -42,6 +42,7 @@ const shipmentSchema = z.object({
   estimatedDelivery: z.string().optional(),
   status: z.nativeEnum(ShipmentStatus),
   notes: z.string().optional(),
+  requestId: z.string().uuid().optional(),
 });
 
 export async function upsertShipmentAction(_prev: unknown, formData: FormData) {
@@ -59,6 +60,7 @@ export async function upsertShipmentAction(_prev: unknown, formData: FormData) {
       estimatedDelivery: d.estimatedDelivery ? new Date(d.estimatedDelivery) : null,
       status: d.status,
       notes: d.notes,
+      requestId: d.requestId,
     });
     return { ok: true };
   });

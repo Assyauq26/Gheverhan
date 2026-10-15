@@ -6,6 +6,7 @@ import { releaseStock } from "@/modules/inventory/inventory.service";
 import { canTransitionPayment } from "@/modules/payments/domain/state-machine";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { lockOrder, assertStaffPermission } from "./transaction-locks";
+import { assertNoActiveRefund } from "@/modules/payments/refund-state";
 import { writeAudit } from "@/modules/audit/audit.service";
 
 const orderInclude = {
@@ -65,9 +66,17 @@ export async function transitionOrder(
   note?: string,
   options: { source?: "shipment" } = {},
 ) {
+  return prisma.$transaction(tx => transitionOrderInTransaction(tx, orderId, to, actorId, note, options));
+}
+
+/** Reuse the exact lifecycle logic within shipment's transaction, never a nested transaction. */
+export async function transitionOrderInTransaction(
+  tx: Prisma.TransactionClient, orderId: string, to: OrderStatus, actorId: string,
+  note?: string, options: { source?: "shipment" } = {},
+) {
   if (!Object.values(OrderStatus).includes(to)) throw new HttpError("Status order tidak valid", 422);
   if (to === "PAID" || to === "REFUNDED") throw new HttpError("Status pembayaran hanya boleh diubah melalui workflow finansial khusus", 409);
-  return prisma.$transaction(async (tx) => {
+    if (options.source !== "shipment" && ["SHIPPED", "DELIVERED"].includes(to)) throw new HttpError("Status pengiriman harus diubah melalui workflow shipment", 409);
     if (!(actorId === "system" && to === "EXPIRED")) {
       if (options.source === "shipment" && !["PROCESSING", "SHIPPED", "DELIVERED"].includes(to)) throw new HttpError("Transisi shipment tidak valid", 409);
       await assertStaffPermission(tx, actorId, options.source === "shipment" ? PERMISSIONS.SHIPPING_UPDATE : PERMISSIONS.ORDER_UPDATE);
@@ -80,6 +89,7 @@ export async function transitionOrder(
     if (!order) throw new HttpError("Order tidak ditemukan", 404);
     if (order.status === to) return order;
     if (["PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"].includes(to) && (order.paymentStatus !== "PAID" || order.payment?.status !== "PAID")) throw new HttpError("Pembayaran belum terverifikasi", 409);
+    if (order.payment) await assertNoActiveRefund(tx, order.payment.id);
     if (!canTransitionOrder(order.status, to)) {
       throw new HttpError(`Transisi ${order.status} -> ${to} tidak diizinkan`, 409);
     }
@@ -112,7 +122,6 @@ export async function transitionOrder(
       tx,
     );
     return updated;
-  });
 }
 
 /** Expire pending orders past their deadline (used by checkout guard / cron). */

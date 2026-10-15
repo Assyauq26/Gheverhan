@@ -33,7 +33,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
               <p className="mt-1 text-xs text-ink-muted">{o.user.name} · {o.items.length} item · {formatIDR(o.total)}</p>
             </div>
             <div className="flex items-center">
-              <OrderStatusControl orderId={o.id} allowed={ORDER_TRANSITIONS[o.status]} />
+              <OrderStatusControl orderId={o.id} allowed={ORDER_TRANSITIONS[o.status].filter(status => !["SHIPPED", "DELIVERED"].includes(status))} />
             </div>
           </div>
         ))}

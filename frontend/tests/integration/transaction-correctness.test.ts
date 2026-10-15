@@ -207,7 +207,11 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await db.payment.findUniqueOrThrow({ where: { id: f.payment.id } })).status, "REJECTED");
     await payments.submitConfirmation(f.b.id, f.order.id, proof); await payments.approvePayment(f.payment.id, adminId);
     await assert.rejects(payments.submitConfirmation(f.b.id, f.order.id, proof), { status: 409 });
-    for (const state of ["PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"] as const) await orders.transitionOrder(f.order.id, state, adminId);
+    for (const state of ["PROCESSING", "PACKED"] as const) await orders.transitionOrder(f.order.id, state, adminId);
+    const { upsertManualShipment } = await import("../../src/modules/shipping/shipping.service");
+    await upsertManualShipment(f.order.id, adminId, { courier: "Fixture", service: "REG", cost: 20000, status: "SHIPPED", trackingNumber: "M2A-REGRESSION" });
+    await upsertManualShipment(f.order.id, adminId, { courier: "Fixture", service: "REG", cost: 20000, status: "DELIVERED" });
+    await orders.transitionOrder(f.order.id, "COMPLETED", adminId);
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "COMPLETED"); assert.equal(await movements(f.p.variants[0].id, "SALE"), 1); await invariant();
   });
   await t.test("system expiry releases once and uses a valid nullable audit actor", async () => {

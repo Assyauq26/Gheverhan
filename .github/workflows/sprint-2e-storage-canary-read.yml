@@ -1,0 +1,52 @@
+name: Sprint 2E production Storage canary HTTP read-only
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/sprint-2e-storage-canary-read.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-and-private-read:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm published canary assets, checksums, and proof privacy without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="https://bztprltkevacidcpjaam.supabase.co/storage/v1/object/public"
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+
+          small="$origin/product-images/gheverhan-canary-small.png"
+          large="$origin/product-images/gheverhan-canary-near-4MiB.png"
+          private="$origin/payment-proofs/gheverhan-canary-small.png"
+
+          for source in small large; do
+            url="$small"
+            expected_type='image/png'
+            if [[ "$source" == "large" ]]; then url="$large"; fi
+            code="$(curl --location --silent --show-error --retry 2 --connect-timeout 10 --max-time 40 --output "$dir/$source.png" --write-out '%{http_code}' "$url")"
+            [[ "$code" == "200" ]] || { echo "FAIL public $source HTTP $code"; exit 1; }
+            echo "PASS unauthenticated public GET: $source"
+          done
+
+          echo '35071b5fc6c8d903f755b6cb9af3fb261b26c8e67d27900cf4b73e151a5075d6  '"$dir/small.png" > "$dir/small.sha256"
+          echo '94ca921b72bea70c3c61ec6996e6650cfeace45ffdfebeeac1338e84b57b3b33  '"$dir/large.png" > "$dir/large.sha256"
+          sha256sum --check "$dir/small.sha256"
+          sha256sum --check "$dir/large.sha256"
+          echo "PASS exact byte-for-byte integrity against synthetic source fixtures"
+
+          code="$(curl --location --silent --show-error --retry 2 --connect-timeout 10 --max-time 30 --output "$dir/private-response" --write-out '%{http_code}' "$private")"
+          if [[ "$code" == "200" ]]; then
+            echo "::error::CRITICAL: public read of payment-proofs succeeded"
+            exit 1
+          fi
+          case "$code" in
+            400|401|403|404) echo "PASS private payment proof denies public access: HTTP $code" ;;
+            *) echo "::error::Private proof returned unexpected HTTP $code"; exit 1 ;;
+          esac

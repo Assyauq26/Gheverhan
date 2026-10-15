@@ -49,15 +49,11 @@
     scrollbar-width: none;
   }
   .stagger > * {
-    opacity: 0;
-    animation: fade-up 0.5s ease-out forwards;
+    opacity: 1;
+    animation: fade-up 0.18s ease-out both;
   }
-  .stagger > *:nth-child(1) { animation-delay: 0.02s; }
-  .stagger > *:nth-child(2) { animation-delay: 0.06s; }
-  .stagger > *:nth-child(3) { animation-delay: 0.1s; }
-  .stagger > *:nth-child(4) { animation-delay: 0.14s; }
-  .stagger > *:nth-child(5) { animation-delay: 0.18s; }
-  .stagger > *:nth-child(6) { animation-delay: 0.22s; }
+  a[data-pending="true"] { opacity: 0.6; }
+  a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

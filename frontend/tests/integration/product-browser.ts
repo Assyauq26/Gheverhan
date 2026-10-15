@@ -30,6 +30,9 @@ let checks = 0;
 async function check(name: string, fn: () => Promise<void>) { await fn(); checks++; console.log(`PASS ${name}`); }
 async function fixtureRole(name: string, permissions: string[]) {
   const role = await db.role.upsert({ where: { name }, create: { name, label: name }, update: {} });
+  // These guarded local fixtures may be reused after the operations suite.
+  // Do not accidentally inherit extra permissions from a previous fixture run.
+  await db.rolePermission.deleteMany({ where: { roleId: role.id, permission: { key: { notIn: permissions } } } });
   for (const key of permissions) {
     const permission = await db.permission.upsert({ where: { key }, create: { key, label: key }, update: {} });
     await db.rolePermission.upsert({ where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } }, create: { roleId: role.id, permissionId: permission.id }, update: {} });

@@ -1,4 +1,7 @@
-import Link from "next/link";
+import { Suspense } from "react";
+import { OperationsSkeleton } from "@/components/admin/operations-skeleton";
+import type { AuthUser } from "@/lib/auth/session";
+import Link from "@/components/ui/navigation";
 import { Package, Plus, ShoppingBag } from "lucide-react";
 import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { getSellerDashboard } from "@/modules/admin/dashboard.service";
@@ -10,6 +13,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 export const dynamic = "force-dynamic";
 export default async function AdminDashboard() {
   const user = await requireBackofficeUser();
+  return <Suspense fallback={<OperationsSkeleton />}><DashboardContent user={user} /></Suspense>;
+}
+async function DashboardContent({ user }: { user: AuthUser }) {
   const data = await getSellerDashboard(user);
   const canCreate = user.permissions.includes(PERMISSIONS.PRODUCT_CREATE) && user.permissions.includes(PERMISSIONS.PRODUCT_READ);
   return <div className="space-y-8">
@@ -22,6 +28,6 @@ export default async function AdminDashboard() {
     </dl>
     {!data.products && !data.inventory && !data.orders && !data.sales && <EmptyState title="Akses dashboard terbatas" description="Role Anda belum memiliki izin untuk melihat ringkasan toko." />}
     {data.products?.total === 0 && <EmptyState icon={<Package size={32} />} title="Mulai isi katalog toko" description="Belum ada produk. Buat draft, lengkapi varian dan gambar, lalu terbitkan." action={canCreate ? <Button asChild><Link href="/admin/products/new">Buat produk pertama</Link></Button> : undefined} />}
-    {data.recent && <section className="space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">Pesanan terbaru</h2><Link href="/admin/orders" className="text-sm underline underline-offset-4">Semua pesanan</Link></div>{!data.recent.length ? <EmptyState icon={<ShoppingBag size={32} />} title="Belum ada pesanan" description="Pesanan pembeli akan tampil di sini setelah checkout." /> : <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{data.recent.map(order => <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><Link href="/admin/orders" className="text-sm font-semibold hover:underline">{order.orderNumber}</Link><p className="mt-1 text-xs text-ink-soft">{order.user.name} · {ORDER_STATUS_LABEL[order.status]}</p></div><p className="text-sm font-semibold tabular-nums">{formatIDR(order.total)}</p></li>)}</ul>}</section>}
+    {data.recent && <section className="space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">Pesanan terbaru</h2><Link href="/admin/orders" className="text-sm underline underline-offset-4">Semua pesanan</Link></div>{!data.recent.length ? <EmptyState icon={<ShoppingBag size={32} />} title="Belum ada pesanan" description="Pesanan pembeli akan tampil di sini setelah checkout." /> : <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{data.recent.map(order => <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><Link href={`/admin/orders/${order.id}`} className="text-sm font-semibold hover:underline">{order.orderNumber}</Link><p className="mt-1 text-xs text-ink-soft">{order.user.name} · {ORDER_STATUS_LABEL[order.status]}</p></div><p className="text-sm font-semibold tabular-nums">{formatIDR(order.total)}</p></li>)}</ul>}</section>}
   </div>;
 }

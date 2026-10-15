@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { OperationsSkeleton } from "@/components/admin/operations-skeleton";
 import type { AuthUser } from "@/lib/auth/session";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PERMISSIONS } from "@/lib/auth/permissions";

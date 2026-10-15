@@ -1,5 +1,5 @@
 import { OperationNotice } from "@/components/admin/operation-notice";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AdminNav } from "@/components/admin/admin-nav";

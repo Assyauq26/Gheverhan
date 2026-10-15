@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/modules/catalog/catalog.service";
 import { trackView } from "@/modules/catalog/recently-viewed.service";
-import { getCurrentUserBasic } from "@/lib/auth/session";
+import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 import { formatIDR, effectivePrice, discountPercent } from "@/lib/money";
 import { Rating } from "@/components/ui/rating";
@@ -42,10 +42,8 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: ProductRouteProps) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, user] = await Promise.all([getProductBySlug(slug), getStorefrontUserContext()]);
   if (!product) notFound();
-
-  const user = await getCurrentUserBasic();
   const [related, wishIds] = await Promise.all([
     getRelatedProducts({ id: product.id, categoryId: product.categoryId }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),

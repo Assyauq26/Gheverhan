@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { Heart, ShoppingCart, User } from "lucide-react";
 import type { AuthUserBasic } from "@/lib/auth/session";
 import { SearchBar } from "./search-bar";
@@ -61,10 +61,10 @@ export function StorefrontHeader({
         </div>
 
         <div className="ml-auto flex items-center gap-1">
-          <Link href="/wishlist" aria-label="Wishlist" data-testid="header-wishlist" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface">
+          <Link href="/wishlist" aria-label="Wishlist" data-testid="header-wishlist" className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-surface">
             <Heart size={20} />
           </Link>
-          <Link href="/cart" aria-label="Keranjang" data-testid="header-cart" className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface">
+          <Link href="/cart" aria-label="Keranjang" data-testid="header-cart" className="relative flex h-11 w-11 items-center justify-center rounded-full hover:bg-surface">
             <ShoppingCart size={20} />
             {liveCount > 0 && (
               <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[10px] font-bold text-white ring-2 ring-white">
@@ -72,7 +72,7 @@ export function StorefrontHeader({
               </span>
             )}
           </Link>
-          <Link href={user ? "/account" : "/login"} data-testid="header-account" className="flex items-center gap-2 rounded-full px-2 py-1.5 hover:bg-surface">
+          <Link href={user ? "/account" : "/login"} data-testid="header-account" className="flex min-h-11 items-center gap-2 rounded-full px-2 py-1.5 hover:bg-surface">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface">
               <User size={18} />
             </span>

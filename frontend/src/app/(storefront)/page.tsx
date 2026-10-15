@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/navigation";
 import { ArrowRight, Zap } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
@@ -7,7 +7,7 @@ import { SectionHeader } from "@/components/storefront/section-header";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
 import { Button } from "@/components/ui/button";
 import { listProducts, listCategories } from "@/modules/catalog/catalog.service";
-import { getCurrentUserBasic } from "@/lib/auth/session";
+import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 const HERO_IMG =
@@ -16,12 +16,12 @@ const HERO_IMG2 =
   "https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
 
 export default async function HomePage() {
-  const user = await getCurrentUserBasic();
+  const wishIdsPromise = getStorefrontUserContext().then(user => user ? wishlistProductIds(user.id) : []);
   const [categories, featured, latest, wishIds] = await Promise.all([
     listCategories(),
     listProducts({ featured: true, pageSize: 4, includeTotal: false }),
     listProducts({ pageSize: 12, includeTotal: false }),
-    user ? wishlistProductIds(user.id) : Promise.resolve([]),
+    wishIdsPromise,
   ]);
 
   const wl = new Set(wishIds);

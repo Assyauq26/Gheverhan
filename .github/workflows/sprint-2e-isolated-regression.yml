@@ -81,7 +81,7 @@ jobs:
         # local module marker; do not add it to package.json or production artifacts.
         run: |
           mkdir -p node_modules/server-only
-          printf 'module.exports = {};\\n' > node_modules/server-only/index.js
+          echo 'module.exports = {};' > node_modules/server-only/index.js
 
       - name: Real PostgreSQL product lifecycle and concurrency
         run: npm run test:integration:products

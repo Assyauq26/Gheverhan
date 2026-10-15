@@ -9,7 +9,7 @@ import { categoryInputSchema, productInputSchema, type CatalogActor } from "./pr
 export function assertCatalogPermission(actor: CatalogActor, permission: PermissionKey) {
   if (!actor.isAdmin || !actor.permissions.includes(permission)) throw new HttpError("Anda tidak memiliki izin untuk operasi ini", 403);
 }
-const include = { images: { orderBy: { sortOrder: "asc" as const } }, variants: { include: { inventory: true, _count: { select: { orderItems: true, cartItems: true, movements: true } } } } } satisfies Prisma.ProductInclude;
+const include = { images: { orderBy: { sortOrder: "asc" as const } }, variants: { orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }], include: { inventory: true, _count: { select: { orderItems: true, cartItems: true, movements: true } } } } } satisfies Prisma.ProductInclude;
 type ManagedProduct = Prisma.ProductGetPayload<{ include: typeof include }>;
 
 async function transaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {

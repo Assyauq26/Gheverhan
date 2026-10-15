@@ -28,6 +28,15 @@ after(async () => { await prisma?.$disconnect(); });
 const input = (suffix: string) => ({ name: "Integration product", slug: `integration-${prefix}-${suffix}`, basePrice: 100000, salePrice: null, variants: [{ sku: `GH-${prefix}-${suffix}`, color: "Black", size: "M", onHand: 5 }], images: [] });
 
 test("real PostgreSQL product lifecycle and transactional guards", async t => {
+  await t.test("editing and adding a variant preserves deterministic editor ordering", async () => {
+    const created = await service.createManagedProduct(actor, input("variant-order"));
+    const initial = await service.getManagedProduct(actor, created.id); const originalId = initial.variants[0].id;
+    await service.updateManagedProduct(actor, created.id, initial.updatedAt, { ...initial, variants: [{ ...initial.variants[0], sku: `ORDER-${prefix}` }, { sku: `NEW-${prefix}`, onHand: 0 }] });
+    const updated = await service.getManagedProduct(actor, created.id);
+    assert.equal(updated.variants[0].id, originalId); assert.equal(updated.variants[1].onHand, 0);
+    await service.updateManagedProduct(actor, created.id, updated.updatedAt, { ...updated, variants: [updated.variants[0]] });
+    assert.equal((await service.getManagedProduct(actor, created.id)).variants[0].id, originalId);
+  });
   let product = await service.createManagedProduct(actor, input("main"));
   let editor = await service.getManagedProduct(actor, product.id);
   await t.test("create is always draft with variant, inventory and audit", async () => {

@@ -29,7 +29,7 @@ export async function submitConfirmation(
     const order = await tx.order.findFirst({ where: { id: orderId, userId }, include: { payment: true } });
     if (!order?.payment) throw new HttpError("Order tidak ditemukan", 404);
     const payment = order.payment;
-    if (order.status !== "PENDING_PAYMENT" || (order.expiresAt && order.expiresAt < new Date()) || (payment.status !== "WAITING_VERIFICATION" && !canTransitionPayment(payment.status, "WAITING_VERIFICATION"))) throw new HttpError("Order tidak menerima konfirmasi pembayaran", 409);
+    if (order.status !== "PENDING_PAYMENT" || (order.expiresAt && order.expiresAt < new Date()) || !canTransitionPayment(payment.status, "WAITING_VERIFICATION")) throw new HttpError("Order tidak menerima konfirmasi pembayaran", 409);
     if (!Number.isSafeInteger(input.amount) || input.amount <= 0 || !Number.isFinite(input.transferDate.getTime())) throw new HttpError("Konfirmasi pembayaran tidak valid", 422);
     await tx.paymentConfirmation.create({
       data: {

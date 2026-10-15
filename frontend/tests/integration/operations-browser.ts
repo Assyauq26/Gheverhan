@@ -300,7 +300,7 @@ async function main() {
         assert.equal((await db.paymentConfirmation.findUniqueOrThrow({ where: { id: confirmation.id } })).status, "REJECTED");
 
         const pdf = Buffer.alloc(4 * 1024 * 1024 - 8192);
-        Buffer.from("%PDF-1.7\\n% synthetic proof - NOT A TRANSFER\\n").copy(pdf);
+        Buffer.from("%PDF-1.7\n% synthetic proof - NOT A TRANSFER\n").copy(pdf);
         const revisedMultipart = {
           ...multipart, proof: { name: "synthetic-near-4MiB.pdf", mimeType: "application/pdf", buffer: pdf },
         };
@@ -317,7 +317,7 @@ async function main() {
 
         const pdfResponse = await buyerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmations[0].id}`);
         assert.equal(pdfResponse.status(), 200);
-        assert.match(pdfResponse.headers()["content-type"] || "", /application\\/pdf/);
+        assert.equal((pdfResponse.headers()["content-type"] || "").split(";")[0], "application/pdf");
         assert.match(pdfResponse.headers()["cache-control"] || "", /no-store/);
         assert.equal(Buffer.from(await pdfResponse.body()).equals(pdf), true);
         assert.equal((await strangerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmations[0].id}`)).status(), 404);

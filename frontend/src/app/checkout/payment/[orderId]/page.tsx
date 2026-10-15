@@ -23,6 +23,7 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
   const payment = order.payment!;
   const bank = payment.bankAccount;
 
+  const isRefunded = payment.status === "REFUNDED";
   const isPaid = payment.status === "PAID";
   const isWaiting = payment.status === "WAITING_VERIFICATION";
   const canUpload = payment.status === "PENDING_PAYMENT" || payment.status === "REJECTED";
@@ -37,7 +38,19 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
         </p>
       </div>
 
-      {isPaid ? (
+      {isRefunded ? (
+        <div className="rounded-2xl border border-line p-5 text-center" data-testid="payment-refunded">
+          <h2 className="font-semibold">Refund terverifikasi</h2>
+          <p className="mt-2 text-sm text-ink-soft">Refund penuh telah dicatat melalui verifikasi manual staf finansial.</p>
+          <Link href={`/orders/${order.id}`} className="mt-3 inline-block underline">Lihat pesanan</Link>
+        </div>
+      ) : payment.status === "EXPIRED" ? (
+        <div className="rounded-2xl border border-line p-5 text-center" data-testid="payment-closed">
+          <h2 className="font-semibold">Pembayaran ditutup</h2>
+          <p className="mt-2 text-sm text-ink-soft">Pesanan dibatalkan atau kedaluwarsa. Jangan melakukan transfer untuk pesanan ini.</p>
+          <Link href={`/orders/${order.id}`} className="mt-3 inline-block underline">Lihat pesanan</Link>
+        </div>
+      ) : isPaid ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-success/40 bg-green-50 p-8 text-center" data-testid="payment-paid">
           <CheckCircle2 size={44} className="text-success" />
           <h2 className="font-display text-lg font-bold text-ink">Pembayaran Berhasil</h2>

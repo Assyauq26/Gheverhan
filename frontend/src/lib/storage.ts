@@ -44,7 +44,7 @@ export async function putObject(
 ): Promise<{ path: string; size: number }> {
   const object = resolveStorageObject(path, STORAGE_APP);
   const mimeByExtension: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" };
-  if (mimeByExtension[object.extension] !== contentType || data.length === 0 || data.length > 5 * 1024 * 1024) {
+  if (mimeByExtension[object.extension] !== contentType || data.length === 0 || data.length > 4 * 1024 * 1024) {
     throw new Error("Invalid storage upload");
   }
   const response = await fetch(objectUrl(object.bucket, object.key), {

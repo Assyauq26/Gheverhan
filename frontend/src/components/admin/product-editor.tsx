@@ -63,7 +63,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
     if (busy.current) return; busy.current = true;
     setPending("upload"); setError(""); setNotice("");
     try {
-      if (file.size > 5 * 1024 * 1024) { setError("Ukuran gambar maksimal 5 MB."); return; }
+      if (file.size > 4 * 1024 * 1024) { setError("Ukuran gambar maksimal 4 MB."); return; }
       const form = new FormData(); form.set("image", file); form.set("updatedAt", version); form.set("alt", values.name);
       const response = await fetch(`/api/v1/admin/products/${initial.id}/images`, { method: "POST", body: form });
       const result = await response.json();
@@ -114,7 +114,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
       </section>
       <section className="space-y-4 rounded-2xl border border-line bg-white p-4 sm:p-6">
         <h2 className="text-lg font-semibold">Gambar produk</h2>
-        {!initial ? <p className="text-sm text-ink-soft">Simpan draft terlebih dahulu untuk mengunggah gambar.</p> : <div><Label htmlFor="product-image-upload"><span className="inline-flex items-center gap-2"><Upload size={16} /> Unggah JPG, PNG, atau WebP</span></Label><input id="product-image-upload" type="file" accept="image/jpeg,image/png,image/webp" disabled={!canEdit || !!pending || values.images.length >= 10} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} className="block w-full text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-white file:px-4 file:py-2 file:font-semibold" aria-describedby="product-image-help" /><p id="product-image-help" className="mt-2 text-xs text-ink-soft">Maksimal 5 MB per file dan 10 gambar. Gambar pertama menjadi foto utama.</p></div>}
+        {!initial ? <p className="text-sm text-ink-soft">Simpan draft terlebih dahulu untuk mengunggah gambar.</p> : <div><Label htmlFor="product-image-upload"><span className="inline-flex items-center gap-2"><Upload size={16} /> Unggah JPG, PNG, atau WebP</span></Label><input id="product-image-upload" type="file" accept="image/jpeg,image/png,image/webp" disabled={!canEdit || !!pending || values.images.length >= 10} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} className="block w-full text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-white file:px-4 file:py-2 file:font-semibold" aria-describedby="product-image-help" /><p id="product-image-help" className="mt-2 text-xs text-ink-soft">Maksimal 4 MB per file dan 10 gambar. Gambar pertama menjadi foto utama.</p></div>}
         {!values.images.length && <p className="py-4 text-sm text-ink-soft">Belum ada gambar. Tambahkan minimal satu sebelum menerbitkan.</p>}
         <div className="grid gap-4 sm:grid-cols-2">{values.images.map((image, index) => <div key={image.id} className="flex min-w-0 gap-3 border-t border-line pt-4">
           {/* Draft photos require the browser session; image optimization does not forward it. */}

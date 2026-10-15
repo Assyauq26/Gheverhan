@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 import { PERMISSIONS, type PermissionKey } from "@/lib/auth/permissions";
 import { writeAudit } from "@/modules/audit/audit.service";
+import { removeObject, STORAGE_APP } from "@/lib/storage";
 import { adjustStock } from "@/modules/inventory/inventory.service";
 import { categoryInputSchema, productInputSchema, type CatalogActor } from "./product-management.validation";
 
@@ -72,7 +73,7 @@ export async function createManagedProduct(actor: CatalogActor, value: unknown) 
 export async function updateManagedProduct(actor: CatalogActor, id: string, expected: string, value: unknown) {
   assertCatalogPermission(actor, PERMISSIONS.PRODUCT_UPDATE);
   const input = parseProduct(value);
-  return transaction(async tx => {
+  const result = await transaction(async tx => {
     const { p, updatedAt } = await lockProduct(tx, id, expected);
     await validateRelations(tx, input.categoryId, input.brandId);
     for (const v of input.variants) if (v.id && !p.variants.some(row => row.id === v.id)) throw new HttpError("Varian bukan milik produk ini", 422);
@@ -105,8 +106,28 @@ export async function updateManagedProduct(actor: CatalogActor, id: string, expe
     for (const [index, image] of input.images.entries()) await tx.productImage.update({ where: { id: image.id }, data: { alt: image.alt, sortOrder: index } });
     await tx.product.update({ where: { id }, data: { ...fields(input), updatedAt } });
     await writeAudit({ userId: actor.id, action: "product.update", entity: "Product", entityId: id }, tx);
-    return { id, updatedAt: updatedAt.toISOString(), status: p.status, previousSlug: p.slug };
+    return {
+      id,
+      updatedAt: updatedAt.toISOString(),
+      status: p.status,
+      previousSlug: p.slug,
+      removedImages: p.images.filter(image => !input.images.some(row => row.id === image.id)).map(image => ({ id: image.id, url: image.url })),
+    };
   });
+  // Delete objects only after the DB transaction commits. Never delete order-history images.
+  // Legacy external URLs remain untouched. A failed cleanup is reported but never undoes the valid edit.
+  for (const image of result.removedImages) {
+    try {
+      const url = new URL(image.url, "http://localhost");
+      if (url.origin !== "http://localhost" || url.pathname !== `/api/v1/product-images/${image.id}`) continue;
+      const objectPath = url.searchParams.get("object") || "";
+      if (!objectPath.startsWith(`${STORAGE_APP}/product-images/${id}/${image.id}.`)) continue;
+      await removeObject(objectPath);
+    } catch {
+      console.error("[storage] Detached product image cleanup failed");
+    }
+  }
+  return result;
 }
 
 export async function changeProductStatus(actor: CatalogActor, id: string, expected: string, status: ProductStatus) {

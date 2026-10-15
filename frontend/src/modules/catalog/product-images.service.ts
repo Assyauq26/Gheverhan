@@ -1,14 +1,14 @@
 import { randomUUID } from "crypto";
-import { getObject, putObject, STORAGE_APP } from "@/lib/storage";
+import { getObject, putObject, removeObject, STORAGE_APP } from "@/lib/storage";
 import { HttpError } from "@/lib/response";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { attachProductImage, assertCatalogPermission, getManagedProduct } from "./product-management.service";
 import type { CatalogActor } from "./product-management.validation";
 
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const formats = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
 export function validateProductImage(bytes: Uint8Array, mime: string) {
-  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError("Gambar harus berukuran 1 byte–5 MB", 422);
+  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError("Gambar harus berukuran 1 byte–4 MB", 422);
   const png = bytes.length >= 24 && [137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b);
   const jpeg = bytes.length >= 4 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
   const webp = bytes.length >= 12 && Buffer.from(bytes.subarray(0, 4)).toString() === "RIFF" && Buffer.from(bytes.subarray(8, 12)).toString() === "WEBP";
@@ -26,7 +26,13 @@ export async function uploadProductImage(actor: CatalogActor, productId: string,
   const path = `${STORAGE_APP}/product-images/${productId}/${id}.${extension}`;
   const stored = await putObject(path, bytes, mime);
   if (stored.path !== path) throw new Error("Storage returned an unexpected object path");
-  return attachProductImage(actor, productId, updatedAt, { id, url: `/api/v1/product-images/${id}?object=${encodeURIComponent(path)}`, alt: alt.trim() });
+  try {
+    return await attachProductImage(actor, productId, updatedAt, { id, url: `/api/v1/product-images/${id}?object=${encodeURIComponent(path)}`, alt: alt.trim() });
+  } catch (error) {
+    try { await removeObject(stored.path); }
+    catch { console.error("[storage] Product image compensation failed"); }
+    throw error;
+  }
 }
 export async function readManagedProductImage(image: { id: string; productId: string; url: string }) {
   const url = new URL(image.url, "http://localhost");

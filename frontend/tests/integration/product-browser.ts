@@ -21,7 +21,6 @@ const base = "http://localhost:3101";
 const secret = randomBytes(32).toString("hex");
 process.env.JWT_SECRET = secret;
 const storageToken = randomUUID();
-const storageCredential = `isolated-contract-${randomUUID()}`;
 const objects = new Map<string, { bytes: Buffer; mime: string }>();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
 const db = new PrismaClient({ datasources: { db: { url: target } } });
@@ -49,19 +48,30 @@ async function main() {
   const portProbe = createServer();
   await new Promise<void>((resolve, reject) => { portProbe.once("error", reject); portProbe.listen(3101, "127.0.0.1", resolve); });
   await new Promise<void>(resolve => portProbe.close(() => resolve()));
-  // Test double for the existing putObject/getObject HTTP contract, not production storage.
+  // Loopback-only Supabase Storage REST contract double. Never connects to production.
   const storage = createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
+      if (req.headers.authorization !== `Bearer ${storageToken}` || req.headers.apikey !== storageToken) {
+        res.writeHead(403).end(); return;
+      }
       const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
       const bytes = Buffer.concat(chunks);
-      if (url.pathname === "/objstore/api/v1/storage/init" && req.method === "POST") {
-        if (JSON.parse(bytes.toString()).emergent_key !== storageCredential) { res.writeHead(403).end(); return; }
-        res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ storage_key: storageToken })); return;
+      if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs"].includes(url.pathname) && req.method === "DELETE") {
+        const prefixes = JSON.parse(bytes.toString()).prefixes as string[];
+        for (const key of prefixes) objects.delete(key);
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify([])); return;
       }
-      if (req.headers["x-storage-key"] !== storageToken) { res.writeHead(403).end(); return; }
-      const objectPath = decodeURIComponent(url.pathname.replace("/objstore/api/v1/storage/objects/", ""));
-      if (req.method === "PUT") { objects.set(objectPath, { bytes, mime: String(req.headers["content-type"]) }); res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ path: objectPath, size: bytes.length })); return; }
+      const parts = url.pathname.split("/");
+      if (parts[1] !== "storage" || parts[2] !== "v1" || parts[3] !== "object" || !["product-images", "payment-proofs"].includes(parts[4] || "")) {
+        res.writeHead(404).end(); return;
+      }
+      const objectPath = decodeURIComponent(parts.slice(5).join("/"));
+      if (req.method === "POST") {
+        if (objects.has(objectPath)) { res.writeHead(409).end(); return; }
+        objects.set(objectPath, { bytes, mime: String(req.headers["content-type"]) });
+        res.writeHead(201, { "Content-Type": "application/json" }).end(JSON.stringify({ Key: objectPath })); return;
+      }
       const object = objects.get(objectPath);
       if (!object) { res.writeHead(404).end(); return; }
       res.setHeader("Content-Type", object.mime); res.end(object.bytes);
@@ -69,7 +79,7 @@ async function main() {
   });
   await new Promise<void>((resolve, reject) => { storage.once("error", reject); storage.listen(3102, "127.0.0.1", resolve); });
   const log = createWriteStream(path.join(artifactDir, "server.log"));
-  const server = spawn(process.execPath, [path.join(root, "node_modules/next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", "3101"], { cwd: root, env: { ...process.env, NODE_ENV: "production", DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret, AUTH_COOKIE_NAME: "gh_session", PAYMENT_PROVIDER: "manual", SHIPPING_PROVIDER: "manual", EMERGENT_LLM_KEY: storageCredential, INTEGRATION_PROXY_URL: "http://127.0.0.1:3102", STORAGE_APP_NAME: "gheverhan-sprint1-tests" }, stdio: ["ignore", "pipe", "pipe"] });
+  const server = spawn(process.execPath, [path.join(root, "node_modules/next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", "3101"], { cwd: root, env: { ...process.env, NODE_ENV: "production", DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret, AUTH_COOKIE_NAME: "gh_session", PAYMENT_PROVIDER: "manual", SHIPPING_PROVIDER: "manual", SUPABASE_URL: "http://127.0.0.1:3102", SUPABASE_SERVICE_ROLE_KEY: storageToken, STORAGE_APP_NAME: "gheverhan-sprint1-tests" }, stdio: ["ignore", "pipe", "pipe"] });
   server.stdout?.pipe(log); server.stderr?.pipe(log);
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {

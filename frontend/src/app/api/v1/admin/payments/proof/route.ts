@@ -28,6 +28,8 @@ export async function GET(req: Request) {
       headers: {
         "Content-Type": confirmation.proofMime || contentType,
         "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox",
       },
     });
   });

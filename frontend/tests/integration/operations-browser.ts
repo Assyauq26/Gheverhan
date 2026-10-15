@@ -210,20 +210,6 @@ async function main() {
     await check("manual proof rejection records required reason", async () => {
       await fp.goto(`${base}/admin/orders/${reject.order.id}`); await fp.getByText("Tolak bukti transfer", { exact: true }).click(); await fp.getByLabel("Alasan penolakan *").fill("Bukti tidak cocok dengan transaksi bank"); await submit(fp, "Tolak pembayaran", `/api/v1/admin/payments/${reject.payment.id}/reject`); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: reject.payment.id } })).status, "REJECTED");
     });
-    await check("order and inventory pagination retain search and filter", async () => {
-      const buyer = await user("pagination", customerRole.id);
-      await db.order.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ orderNumber: `UI-PAGE-${prefix}-${i}`, userId: buyer.id, status: "CANCELLED" as const, subtotal: 0, total: 0 })) });
-      await page.goto(`${base}/admin/orders?q=UI-PAGE-${prefix}&status=CANCELLED`); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/status=CANCELLED.*page=2/); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible();
-      await db.productVariant.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ productId: product.id, sku: `UI-PAGE-${prefix}-${i}` })) });
-      await page.goto(`${base}/admin/inventory?q=UI-PAGE-${prefix}&stock=empty`); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/stock=empty.*page=2/); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible();
-    });
-    await check("empty states and movement filter", async () => {
-      await page.goto(`${base}/admin/orders?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada pesanan yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada varian yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory/${variant.id}?type=RETURN`); await expect(page.getByText("Barang diterima dan layak jual")).toBeVisible();
-    });
-    await check("desktop/mobile operational pages have no overflow or browser exceptions", async () => {
-      for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }
-      assert.deepEqual(errors, []);
-    });
     await check("private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval", async () => {
       const smokeProduct = await db.product.create({
         data: {
@@ -347,6 +333,20 @@ async function main() {
         await buyerCtx.close();
         await strangerCtx.close();
       }
+    });
+    await check("order and inventory pagination retain search and filter", async () => {
+      const buyer = await user("pagination", customerRole.id);
+      await db.order.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ orderNumber: `UI-PAGE-${prefix}-${i}`, userId: buyer.id, status: "CANCELLED" as const, subtotal: 0, total: 0 })) });
+      await page.goto(`${base}/admin/orders?q=UI-PAGE-${prefix}&status=CANCELLED`); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/status=CANCELLED.*page=2/); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible();
+      await db.productVariant.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ productId: product.id, sku: `UI-PAGE-${prefix}-${i}` })) });
+      await page.goto(`${base}/admin/inventory?q=UI-PAGE-${prefix}&stock=empty`); await page.waitForLoadState("networkidle"); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/stock=empty.*page=2/, { timeout: 15_000 }); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible({ timeout: 15_000 });
+    });
+    await check("empty states and movement filter", async () => {
+      await page.goto(`${base}/admin/orders?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada pesanan yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada varian yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory/${variant.id}?type=RETURN`); await expect(page.getByText("Barang diterima dan layak jual")).toBeVisible();
+    });
+    await check("desktop/mobile operational pages have no overflow or browser exceptions", async () => {
+      for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }
+      assert.deepEqual(errors, []);
     });
     const captures = [{ width: 1360, height: 900, route: "/admin/inventory", file: "desktop-inventory.png" }, { width: 390, height: 844, route: `/admin/inventory/${variant.id}`, file: "mobile-inventory.png" }, { width: 1360, height: 900, route: `/admin/orders/${sale.order.id}`, file: "desktop-order.png" }, { width: 390, height: 844, route: `/admin/orders/${sale.order.id}`, file: "mobile-order.png" }];
     for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }

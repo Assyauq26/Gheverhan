@@ -35,18 +35,21 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { payment: true, shipment: true } });
     if (!order.payment) throw new HttpError("Pembayaran tidak ditemukan", 409);
     await assertNoActiveRefund(tx, order.payment.id);
-    const merged = { ...order.shipment, ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) };
+    const candidate = { ...order.shipment, ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) };
     const context = { status: order.status, paymentStatus: order.paymentStatus, paymentStatusActual: order.payment.status, shipmentStatus: order.shipment?.status ?? null };
-    const effectiveStatus = statusAfterTrackingEntry(context.shipmentStatus, input.status, merged.trackingNumber);
+    const effectiveStatus = statusAfterTrackingEntry(context.shipmentStatus, input.status, candidate.trackingNumber);
     // Entering an AWB is an explicit seller handover to the courier. An
     // unpaid/unpacked order may never skip fulfillment stages.
     if (effectiveStatus === "SHIPPED" && !["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(context.shipmentStatus ?? "") && order.status !== "PACKED") {
       throw new HttpError("Tandai pesanan PACKED sebelum memasukkan nomor resi dan menyerahkannya ke kurir", 409);
     }
     data.status = effectiveStatus;
-    if (effectiveStatus === "SHIPPED" && !["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(context.shipmentStatus ?? "") && !merged.shippedDate) {
+    if (effectiveStatus === "SHIPPED" && !["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(context.shipmentStatus ?? "") && !candidate.shippedDate) {
       data.shippedDate = new Date();
     }
+    // Build the final comparison after status/date normalization: legacy records
+    // with an already-recorded AWB must still transition on the next save.
+    const merged = { ...order.shipment, ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) };
     const target = shipmentOrderTarget(context, effectiveStatus);
     if (["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(effectiveStatus) && !merged.trackingNumber?.trim()) throw new HttpError("Nomor resi diperlukan sebelum pengiriman", 422);
     const changed = !order.shipment || ["courier", "service", "cost", "status", "trackingNumber", "shippedDate", "estimatedDelivery", "notes"].some(key => {

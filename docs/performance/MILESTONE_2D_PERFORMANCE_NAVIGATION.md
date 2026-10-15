@@ -2,6 +2,8 @@
 
 Measured 15 October 2026 (WIB). Base: `f452ab5` (merged PR #24). Measured implementation: `7e7b5d9`. No hosting configuration, dependency, schema, migration or transaction lifecycle changes.
 
+> Follow-up: [Milestone 2D.1 controlled Products/Inventory comparison](MILESTONE_2D1_ADMIN_PERFORMANCE.md) supersedes the seven-sample latency interpretation below with 60 warm samples per mode/route/revision and balanced A/B/C ordering. Application behavior is retained.
+
 ## Implemented
 
 - Backoffice layout and page guards share `getCurrentUser(false)` through React request memoization. Active-user and DB-backed RBAC validation remain; customer cart reads are omitted for admin renders. Existing full-session callers retain cart context. No persistent/shared identity cache.

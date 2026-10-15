@@ -210,6 +210,46 @@ async function main() {
     await check("manual proof rejection records required reason", async () => {
       await fp.goto(`${base}/admin/orders/${reject.order.id}`); await fp.getByText("Tolak bukti transfer", { exact: true }).click(); await fp.getByLabel("Alasan penolakan *").fill("Bukti tidak cocok dengan transaksi bank"); await submit(fp, "Tolak pembayaran", `/api/v1/admin/payments/${reject.payment.id}/reject`); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: reject.payment.id } })).status, "REJECTED");
     });
+    await check("expired unpaid order closes instructions even before expiry cron transition", async () => {
+      const buyer = await user("expired-payment", customerRole.id);
+      await db.cart.create({
+        data: { userId: buyer.id, items: { create: { variantId: variant.id, quantity: 1 } } },
+      });
+      const lines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) =>
+        ({ variantId, quantity, unitPrice }));
+      const order = await createOrder(buyer.id, {
+        requestId: randomUUID(), expectedLines: lines,
+        address: { recipientName: "Expired Fixture", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
+        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        bankAccountId: bank.id,
+      });
+      const oldDeadline = new Date(Date.now() - 10 * 60_000);
+      await db.order.update({ where: { id: order.id }, data: { expiresAt: oldDeadline } });
+      assert.equal((await db.payment.findUniqueOrThrow({ where: { orderId: order.id } })).status, "PENDING_PAYMENT",
+        "Fixture must remain awaiting payment in DB to verify stale-expiry UI");
+      const buyerCtx = await context(buyer);
+      try {
+        const expiredPage = await buyerCtx.newPage();
+        await expiredPage.goto(`${base}/checkout/payment/${order.id}`);
+        await expect(expiredPage.getByTestId("payment-closed")).toBeVisible();
+        await expect(expiredPage.getByTestId("proof-form")).toHaveCount(0);
+        await expect(expiredPage.getByText(bank.accountNumber, { exact: true })).toHaveCount(0);
+        await expect(expiredPage.getByText("Menunggu Pembayaran", { exact: true })).toHaveCount(0);
+        await expiredPage.close();
+        const objectCount = objects.size;
+        const denied = await buyerCtx.request.post(`${base}/api/v1/payments/confirm`, {
+          headers: { Origin: base },
+          multipart: {
+            orderId: order.id, senderBank: "Fixture", senderName: "Expired Fixture",
+            amount: String(order.total), transferDate: new Date().toISOString().slice(0, 10),
+            proof: { name: "no-transfer.png", mimeType: "image/png", buffer: png },
+          },
+        });
+        assert.equal(denied.status(), 409, await denied.text());
+        assert.equal(await db.paymentConfirmation.count({ where: { payment: { orderId: order.id } } }), 0);
+        assert.equal(objects.size, objectCount);
+      } finally { await buyerCtx.close(); }
+    });
     await check("private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval", async () => {
       const smokeProduct = await db.product.create({
         data: {

@@ -8,8 +8,8 @@ Create in **Supabase Dashboard → Storage** (first on an isolated staging proje
 
 | Bucket name | Visibility | Suggested limits |
 | --- | --- | --- |
-| `product-images` | Public read; private server write | 5 MB, image/jpeg, image/png, image/webp |
-| `payment-proofs` | Private, no public URLs | 5 MB, image/jpeg, image/png, image/webp, application/pdf |
+| `product-images` | Public read; private server write | 4 MiB application limit; bucket currently permits 5 MiB, image/jpeg, image/png, image/webp |
+| `payment-proofs` | Private, no public URLs | 4 MiB application limit; bucket currently permits 5 MiB, image/jpeg, image/png, image/webp, application/pdf |
 
 The application writes and reads only via protected Next.js API/Server Action routes using the service-role key. Do not allow anonymous/authenticated clients to insert, update or delete `storage.objects` for these buckets. Never add browser-facing policies that grant access to `payment-proofs`. A public product image URL can be fetched without a login if someone obtains the object path, even for draft products: never upload confidential imagery to the public bucket.
 
@@ -39,7 +39,7 @@ The adapter fails closed if essential credentials are missing. Legacy `EMERGENT_
 1. Run `npm ci && npm run prisma:generate && npm run typecheck && npm run lint && npm run build` from `frontend`.
 2. Run `npm test`, `npm run test:containment`, the three `test:integration:*` commands, `npm run test:e2e:products`, `npm run test:e2e:operations`, and the navigation browser test, with isolated loopback PostgreSQL `gheverhan_sprint1_test`. Browser tests use a loopback-only Supabase REST contract double.
 3. When an isolated Supabase Storage staging project is connected, upload a real PNG image, read it on a published product, remove a draft image, upload a synthetic transfer proof, check admin/customer ownership denial, verify storage path isolation and confirm that the private bucket cannot be opened anonymously. Do not make a real money transfer or mutate live order data.
-4. **Deployment body size**: Vercel Functions can reject requests larger than their ingress payload limit (often ~4.5 MB). The application validates `≤5 MB`, but that does **not** guarantee a 5 MB multipart request reaches a Vercel function. Full-size 5 MB support requires an authorized direct-to-Supabase signed-upload flow with server-side verification after upload, not increasing the Next.js Server Action size alone.
+4. **Deployment body size**: Vercel Functions have a 4.5 MB request/response payload limit. The application now enforces **4 MiB (4,194,304 bytes)** per file on server and UI, with 128 KiB multipart overhead headroom; the Server Action body limit is 4.25 MB. Buckets currently allow 5 MiB, but the app is stricter, so no production bucket mutation is needed for this sprint. Test a real **4 MiB upload** and multipart response on Vercel before claiming the exact maximum is reliable. Larger files need a separately approved direct-to-Supabase signed upload flow.
 5. The REST contract mocks and CI passes do not establish actual Supabase bucket policies, storage quotas, operator recovery for orphan cleanup, or live serverless latency. Complete a staging smoke test before calling Sprint 2E live-ready.
 
 ## Rollout gates
@@ -50,7 +50,7 @@ The adapter fails closed if essential credentials are missing. Legacy `EMERGENT_
 - [ ] Real staging object PUT/GET/DELETE smoke test passes.
 - [ ] Unauthorized access to payment proof and image writes denied.
 - [ ] Manual bank account present to test checkout (fake account on staging only).
-- [ ] Review 5 MB Vercel ingress limitation and decide on signed direct upload.
+- [ ] Check the 4 MiB application cap with full multipart overhead and Vercel request/response limitations.
 - [ ] Maintainer approves production bucket/secret configuration and merge.
 
 **No data/schema changes or production bucket mutations are performed by this PR.**

@@ -29,3 +29,23 @@ export function shipmentOrderTarget(order: ShipmentContext, status: ShipmentStat
 export function manualShipmentOptions(order: ShipmentContext) {
   return Object.values(ShipmentStatus).filter(status => { try { shipmentOrderTarget(order, status); return true; } catch { return false; } });
 }
+
+/**
+ * Gheverhan seller policy: recording a non-empty AWB is a declaration that the
+ * PACKED parcel has already been handed to the courier. The writer validates
+ * the PACKED precondition transactionally before changing either record.
+ *
+ * Keep SHIPPED for an identical retry, but never regress IN_TRANSIT/DELIVERED.
+ */
+export function statusAfterTrackingEntry(
+  current: ShipmentStatus | null,
+  requested: ShipmentStatus,
+  trackingNumber: string | null | undefined,
+): ShipmentStatus {
+  if (
+    trackingNumber?.trim() &&
+    (requested === "PENDING" || requested === "PROCESSING") &&
+    (current === null || current === "PENDING" || current === "PROCESSING" || current === "SHIPPED")
+  ) return "SHIPPED";
+  return requested;
+}

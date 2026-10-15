@@ -26,7 +26,13 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
   const isRefunded = payment.status === "REFUNDED";
   const isPaid = payment.status === "PAID";
   const isWaiting = payment.status === "WAITING_VERIFICATION";
-  const canUpload = payment.status === "PENDING_PAYMENT" || payment.status === "REJECTED";
+  // The expiry transition may not have run yet. Apply the same deadline guard
+  // to the entire payment panel, not only to the upload form.
+  const isDeadlinePassed = Boolean(order.expiresAt && order.expiresAt <= new Date());
+  const isOrderClosed = order.status === "CANCELLED" || order.status === "EXPIRED" ||
+    (order.status === "PENDING_PAYMENT" && isDeadlinePassed);
+  const canUpload = !isOrderClosed && order.status === "PENDING_PAYMENT" &&
+    (payment.status === "PENDING_PAYMENT" || payment.status === "REJECTED");
   const lastRejected = order.payment?.confirmations.find((c) => c.status === "REJECTED");
 
   return (
@@ -44,10 +50,10 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
           <p className="mt-2 text-sm text-ink-soft">Refund penuh telah dicatat melalui verifikasi manual staf finansial.</p>
           <Link href={`/orders/${order.id}`} className="mt-3 inline-block underline">Lihat pesanan</Link>
         </div>
-      ) : payment.status === "EXPIRED" ? (
+      ) : isOrderClosed || payment.status === "EXPIRED" ? (
         <div className="rounded-2xl border border-line p-5 text-center" data-testid="payment-closed">
           <h2 className="font-semibold">Pembayaran ditutup</h2>
-          <p className="mt-2 text-sm text-ink-soft">Pesanan dibatalkan atau kedaluwarsa. Jangan melakukan transfer untuk pesanan ini.</p>
+          <p className="mt-2 text-sm text-ink-soft">Batas waktu pembayaran sudah lewat atau pesanan ditutup. Jangan melakukan transfer untuk pesanan ini.</p>
           <Link href={`/orders/${order.id}`} className="mt-3 inline-block underline">Lihat pesanan</Link>
         </div>
       ) : isPaid ? (

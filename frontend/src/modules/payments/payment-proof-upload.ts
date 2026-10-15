@@ -24,7 +24,7 @@ async function assertUploadAllowed(userId: string, orderId: string) {
   if (!order?.payment) throw new HttpError("Pesanan tidak ditemukan", 404);
   if (order.status !== "PENDING_PAYMENT" ||
       (order.expiresAt && order.expiresAt < new Date()) ||
-      !["PENDING_PAYMENT", "REJECTED", "WAITING_VERIFICATION"].includes(order.payment.status)) {
+      !["PENDING_PAYMENT", "REJECTED"].includes(order.payment.status)) {
     throw new HttpError("Pesanan tidak menerima bukti pembayaran", 409);
   }
 }

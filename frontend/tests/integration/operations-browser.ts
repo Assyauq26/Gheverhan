@@ -210,19 +210,45 @@ async function main() {
     await check("manual proof rejection records required reason", async () => {
       await fp.goto(`${base}/admin/orders/${reject.order.id}`); await fp.getByText("Tolak bukti transfer", { exact: true }).click(); await fp.getByLabel("Alasan penolakan *").fill("Bukti tidak cocok dengan transaksi bank"); await submit(fp, "Tolak pembayaran", `/api/v1/admin/payments/${reject.payment.id}/reject`); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: reject.payment.id } })).status, "REJECTED");
     });
-    await check("order and inventory pagination retain search and filter", async () => {
-      const buyer = await user("pagination", customerRole.id);
-      await db.order.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ orderNumber: `UI-PAGE-${prefix}-${i}`, userId: buyer.id, status: "CANCELLED" as const, subtotal: 0, total: 0 })) });
-      await page.goto(`${base}/admin/orders?q=UI-PAGE-${prefix}&status=CANCELLED`); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/status=CANCELLED.*page=2/); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible();
-      await db.productVariant.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ productId: product.id, sku: `UI-PAGE-${prefix}-${i}` })) });
-      await page.goto(`${base}/admin/inventory?q=UI-PAGE-${prefix}&stock=empty`); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/stock=empty.*page=2/); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible();
-    });
-    await check("empty states and movement filter", async () => {
-      await page.goto(`${base}/admin/orders?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada pesanan yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada varian yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory/${variant.id}?type=RETURN`); await expect(page.getByText("Barang diterima dan layak jual")).toBeVisible();
-    });
-    await check("desktop/mobile operational pages have no overflow or browser exceptions", async () => {
-      for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }
-      assert.deepEqual(errors, []);
+    await check("expired unpaid order closes instructions even before expiry cron transition", async () => {
+      const buyer = await user("expired-payment", customerRole.id);
+      await db.cart.create({
+        data: { userId: buyer.id, items: { create: { variantId: variant.id, quantity: 1 } } },
+      });
+      const lines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) =>
+        ({ variantId, quantity, unitPrice }));
+      const order = await createOrder(buyer.id, {
+        requestId: randomUUID(), expectedLines: lines,
+        address: { recipientName: "Expired Fixture", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
+        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        bankAccountId: bank.id,
+      });
+      const oldDeadline = new Date(Date.now() - 10 * 60_000);
+      await db.order.update({ where: { id: order.id }, data: { expiresAt: oldDeadline } });
+      assert.equal((await db.payment.findUniqueOrThrow({ where: { orderId: order.id } })).status, "PENDING_PAYMENT",
+        "Fixture must remain awaiting payment in DB to verify stale-expiry UI");
+      const buyerCtx = await context(buyer);
+      try {
+        const expiredPage = await buyerCtx.newPage();
+        await expiredPage.goto(`${base}/checkout/payment/${order.id}`);
+        await expect(expiredPage.getByTestId("payment-closed")).toBeVisible();
+        await expect(expiredPage.getByTestId("proof-form")).toHaveCount(0);
+        await expect(expiredPage.getByText(bank.accountNumber, { exact: true })).toHaveCount(0);
+        await expect(expiredPage.getByText("Menunggu Pembayaran", { exact: true })).toHaveCount(0);
+        await expiredPage.close();
+        const objectCount = objects.size;
+        const denied = await buyerCtx.request.post(`${base}/api/v1/payments/confirm`, {
+          headers: { Origin: base },
+          multipart: {
+            orderId: order.id, senderBank: "Fixture", senderName: "Expired Fixture",
+            amount: String(order.total), transferDate: new Date().toISOString().slice(0, 10),
+            proof: { name: "no-transfer.png", mimeType: "image/png", buffer: png },
+          },
+        });
+        assert.equal(denied.status(), 409, await denied.text());
+        assert.equal(await db.paymentConfirmation.count({ where: { payment: { orderId: order.id } } }), 0);
+        assert.equal(objects.size, objectCount);
+      } finally { await buyerCtx.close(); }
     });
     await check("private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval", async () => {
       const smokeProduct = await db.product.create({
@@ -271,10 +297,96 @@ async function main() {
         assert.equal((await strangerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`)).status(), 404);
         assert.equal((await anonymous.request.get(`${base}/api/v1/payments/proof?id=${confirmation.id}`)).status(), 401);
         assert.equal((await fin.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 200);
+        assert.equal((await wh.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 403);
+        assert.equal((await anonymous.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmation.id}`)).status(), 401);
+        assert.equal((await db.payment.findUniqueOrThrow({ where: { orderId: order.id } })).status, "WAITING_VERIFICATION");
+
+        // The UI hides its upload form during verification. Direct API clients must
+        // also be denied, without creating duplicate private objects or DB records.
+        const countWaiting = objects.size;
+        const duplicate = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart });
+        assert.equal(duplicate.status(), 409, await duplicate.text());
+        assert.equal(objects.size, countWaiting);
+        assert.equal(await db.paymentConfirmation.count({ where: { payment: { orderId: order.id } } }), 1);
+        const waitingPage = await buyerCtx.newPage();
+        await waitingPage.goto(`${base}/checkout/payment/${order.id}`);
+        await expect(waitingPage.getByTestId("payment-waiting")).toBeVisible();
+        await expect(waitingPage.getByTestId("proof-form")).toHaveCount(0);
+        await waitingPage.close();
+
+        // A staff rejection permits precisely one NEW submission; the rejected
+        // object's evidence remains private for audit, while the new PDF is owned
+        // by the same buyer. All transitions use real HTTP handlers + PostgreSQL.
+        const payment = await db.payment.findUniqueOrThrow({ where: { orderId: order.id } });
+        const rejection = await fin.request.post(`${base}/api/v1/admin/payments/${payment.id}/reject`, {
+          headers: { Origin: base }, data: { reason: "Pengujian sintetis: bukti ditolak" },
+        });
+        assert.equal(rejection.status(), 200, await rejection.text());
+        assert.equal((await db.payment.findUniqueOrThrow({ where: { id: payment.id } })).status, "REJECTED");
+        assert.equal((await db.paymentConfirmation.findUniqueOrThrow({ where: { id: confirmation.id } })).status, "REJECTED");
+
+        const pdf = Buffer.alloc(4 * 1024 * 1024 - 8192);
+        Buffer.from("%PDF-1.7\n% synthetic proof - NOT A TRANSFER\n").copy(pdf);
+        const revisedMultipart = {
+          ...multipart, proof: { name: "synthetic-near-4MiB.pdf", mimeType: "application/pdf", buffer: pdf },
+        };
+        const resubmitted = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart: revisedMultipart });
+        assert.equal(resubmitted.status(), 201, await resubmitted.text());
+        const confirmations = await db.paymentConfirmation.findMany({
+          where: { paymentId: payment.id }, orderBy: { createdAt: "desc" },
+        });
+        assert.equal(confirmations.length, 2);
+        assert.equal(confirmations[0].status, "SUBMITTED");
+        assert.equal(confirmations[0].proofMime, "application/pdf");
+        assert.equal(confirmations[1].id, confirmation.id);
+        assert.equal(objects.get(confirmations[0].proofPath)?.bytes.equals(pdf), true);
+
+        const pdfResponse = await buyerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmations[0].id}`);
+        assert.equal(pdfResponse.status(), 200);
+        assert.equal((pdfResponse.headers()["content-type"] || "").split(";")[0], "application/pdf");
+        assert.match(pdfResponse.headers()["cache-control"] || "", /no-store/);
+        assert.equal(Buffer.from(await pdfResponse.body()).equals(pdf), true);
+        assert.equal((await strangerCtx.request.get(`${base}/api/v1/payments/proof?id=${confirmations[0].id}`)).status(), 404);
+        assert.equal((await fin.request.get(`${base}/api/v1/admin/payments/proof?id=${confirmations[0].id}`)).status(), 200);
+
+        const afterSecond = objects.size;
+        const duplicateAgain = await buyerCtx.request.post(url, { headers: { Origin: base }, multipart: revisedMultipart });
+        assert.equal(duplicateAgain.status(), 409);
+        assert.equal(objects.size, afterSecond);
+
+        // Synthetic approval is isolated: it does not move any real money.
+        const approval = await fin.request.post(`${base}/api/v1/admin/payments/${payment.id}/approve`, {
+          headers: { Origin: base }, data: {},
+        });
+        assert.equal(approval.status(), 200, await approval.text());
+        assert.equal((await db.payment.findUniqueOrThrow({ where: { id: payment.id } })).status, "PAID");
+        assert.equal((await db.order.findUniqueOrThrow({ where: { id: order.id } })).status, "PAID");
+        assert.equal(await db.inventoryMovement.count({ where: { variantId: smokeProduct.variants[0].id, type: "SALE" } }), 1);
+        const replay = await fin.request.post(`${base}/api/v1/admin/payments/${payment.id}/approve`, {
+          headers: { Origin: base }, data: {},
+        });
+        assert.equal(replay.status(), 200);
+        assert.equal(await db.inventoryMovement.count({ where: { variantId: smokeProduct.variants[0].id, type: "SALE" } }), 1);
+        assert.equal((await buyerCtx.request.post(url, { headers: { Origin: base }, multipart })).status(), 409);
+        assert.equal(objects.size, afterSecond);
       } finally {
         await buyerCtx.close();
         await strangerCtx.close();
       }
+    });
+    await check("order and inventory pagination retain search and filter", async () => {
+      const buyer = await user("pagination", customerRole.id);
+      await db.order.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ orderNumber: `UI-PAGE-${prefix}-${i}`, userId: buyer.id, status: "CANCELLED" as const, subtotal: 0, total: 0 })) });
+      await page.goto(`${base}/admin/orders?q=UI-PAGE-${prefix}&status=CANCELLED`); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/status=CANCELLED.*page=2/); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible();
+      await db.productVariant.createMany({ data: Array.from({ length: 21 }, (_, i) => ({ productId: product.id, sku: `UI-PAGE-${prefix}-${i}` })) });
+      await page.goto(`${base}/admin/inventory?q=UI-PAGE-${prefix}&stock=empty`); await page.waitForLoadState("networkidle"); await expect(page.getByText("Halaman 1 dari 2")).toBeVisible(); await page.getByRole("link", { name: "Berikutnya", exact: true }).click(); await expect(page).toHaveURL(/stock=empty.*page=2/, { timeout: 15_000 }); await expect(page.getByText("Halaman 2 dari 2")).toBeVisible({ timeout: 15_000 });
+    });
+    await check("empty states and movement filter", async () => {
+      await page.goto(`${base}/admin/orders?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada pesanan yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada varian yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory/${variant.id}?type=RETURN`); await expect(page.getByText("Barang diterima dan layak jual")).toBeVisible();
+    });
+    await check("desktop/mobile operational pages have no overflow or browser exceptions", async () => {
+      for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }
+      assert.deepEqual(errors, []);
     });
     const captures = [{ width: 1360, height: 900, route: "/admin/inventory", file: "desktop-inventory.png" }, { width: 390, height: 844, route: `/admin/inventory/${variant.id}`, file: "mobile-inventory.png" }, { width: 1360, height: 900, route: `/admin/orders/${sale.order.id}`, file: "desktop-order.png" }, { width: 390, height: 844, route: `/admin/orders/${sale.order.id}`, file: "mobile-order.png" }];
     for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }

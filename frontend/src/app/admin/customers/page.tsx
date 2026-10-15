@@ -1,4 +1,4 @@
-import { requirePermission } from "@/lib/auth/session";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 export default async function AdminCustomersPage() {
-  await requirePermission(PERMISSIONS.CUSTOMER_READ);
+  await requireBackofficeUser(PERMISSIONS.CUSTOMER_READ);
   const users = await prisma.user.findMany({
     include: { roles: { include: { role: true } }, _count: { select: { orders: true } } },
     orderBy: { createdAt: "desc" },

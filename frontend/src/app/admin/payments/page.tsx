@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CreditCard, FileText } from "lucide-react";
-import { requirePermission } from "@/lib/auth/session";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { listPendingVerifications } from "@/modules/payments/payments.service";
 import { formatIDR } from "@/lib/money";
@@ -15,7 +15,7 @@ type AdminPaymentsPageProps = {
 };
 
 export default async function AdminPaymentsPage({ searchParams }: AdminPaymentsPageProps) {
-  const actor = await requirePermission(PERMISSIONS.PAYMENT_READ);
+  const actor = await requireBackofficeUser(PERMISSIONS.PAYMENT_READ);
   const { q } = await searchParams;
   const payments = await listPendingVerifications(q);
 

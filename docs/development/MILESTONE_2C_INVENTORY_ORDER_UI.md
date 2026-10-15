@@ -44,3 +44,11 @@ Browser fixtures are synthetic. A loopback storage contract double serves transf
 ## Limits and handover
 
 Full manual refunds and physical-return policy remain PR #22's scope; partial monetary refunds and automated bank/carrier effects are not introduced. Financial settlement/receipt truth still depends on authorized human verification. No real payment/carrier integration or external storage clearance is implied. Rollout still inherits PR #22's enum/client migration coordination and legacy-data reconciliation requirements. Review the stacked Draft PR before merging any baseline or deploying.
+
+## Main integration follow-up — legacy page authorization
+
+Five legacy server-rendered pages (payments, shipping, bank accounts, customers and audit) previously propagated a permission HttpError into a generic HTTP 500 page. They now use the existing requireBackofficeUser guard, matching other backoffice pages: anonymous users redirect to login; unauthorized staff receive HTTP 404 before page data is read. API authorization continues returning 401/403. No permission grants, financial lifecycle, schema or dependency changes.
+
+Before-fix evidence: the 112-cell local admin/RBAC smoke recorded 16 permission denials as HTTP 500 and 18 as 404. After-fix: all 34 denied staff/page combinations return 404; all 112 checks pass, including customer and anonymous access behavior. A permanent operational browser regression now explicitly asserts all sixteen formerly failing role/page combinations. The operational suite increases from 17 to 18 checks; product browser remains 14. Unit110, containment20, native PostgreSQL67, typecheck, lint, Prisma generate and production build pass on the updated candidate.
+
+Main merges, remote development migration and the live website smoke remain separately gated on identifying the database configured in Netlify and establishing its authorized migration path. Netlify's technical production context is the maintainer-authorized development website; the context name itself is not evidence of real customer data. No main merge or remote migration was performed by this follow-up.

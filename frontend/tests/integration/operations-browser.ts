@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
-import { PERMISSIONS } from "../../src/lib/auth/permissions";
+import { PERMISSIONS, ROLE_PERMISSIONS } from "../../src/lib/auth/permissions";
 
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("SPRINT1_TEST_DATABASE_URL is required; use a disposable local database");
@@ -129,6 +129,13 @@ async function main() {
       ] as const;
       for (const [url, data] of denied) { assert.equal((await readOnly.request.post(`${base}/api/v1/admin${url}`, { data })).status(), 403, url); assert.equal((await anonymous.request.post(`${base}/api/v1/admin${url}`, { data })).status(), 401, url); }
       assert.equal((await admin.request.post(`${base}/api/v1/admin/inventory/${variant.id}`, { headers: { Origin: "https://untrusted.example" }, data: {} })).status(), 403);
+    });
+    await check("all sixteen legacy role/page denials return HTTP 404 instead of 500", async () => {
+      const mgrRole = await fixtureRole("Manager", ROLE_PERMISSIONS.Manager); const mktRole = await fixtureRole("Marketing", ROLE_PERMISSIONS.Marketing);
+      const manager = await context(await user("manager-denial", mgrRole.id)); const marketing = await context(await user("marketing-denial", mktRole.id));
+      const matrix: Array<[typeof admin, string[]]> = [[manager, ["bank-accounts", "audit"]], [readOnly, ["bank-accounts", "audit"]], [wh, ["payments", "bank-accounts", "customers", "audit"]], [marketing, ["payments", "shipping", "bank-accounts", "customers", "audit"]], [fin, ["shipping", "customers", "audit"]]];
+      for (const [ctx, paths] of matrix) for (const route of paths) assert.equal((await ctx.request.get(`${base}/admin/${route}`)).status(), 404, `Forbidden page ${route}`);
+      await manager.close(); await marketing.close();
     });
     await check("inventory search, actual stock counters and adjustment audit", async () => {
       await page.goto(`${base}/admin/inventory`); await page.getByLabel("Cari produk atau SKU").fill(variant.sku); await page.getByRole("button", { name: "Cari", exact: true }).click(); await page.getByRole("link", { name: `Kelola stok ${variant.sku}` }).click();

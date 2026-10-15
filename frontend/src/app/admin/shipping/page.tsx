@@ -1,4 +1,4 @@
-import { requirePermission } from "@/lib/auth/session";
+import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatIDR } from "@/lib/money";
@@ -10,7 +10,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AdminShippingPage() {
-  await requirePermission(PERMISSIONS.SHIPPING_READ);
+  await requireBackofficeUser(PERMISSIONS.SHIPPING_READ);
   // Orders that are paid or beyond and need shipping management.
   const orders = await prisma.order.findMany({
     where: { status: { in: ["PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED"] } },

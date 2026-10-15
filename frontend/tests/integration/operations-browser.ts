@@ -177,8 +177,15 @@ async function main() {
       assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "PACKED");
     });
     await check("manual shipment dispatch is atomically reflected in order and history", async () => {
-      await wp.goto(orderUrl); const f = wp.getByRole("form", { name: "Simpan pengiriman" }); await f.getByLabel("Kurir *").fill("JNE"); await f.getByLabel("Layanan *").fill("REG"); await f.getByLabel("Nomor resi").fill(`RESI-${prefix}`); await f.getByLabel("Status pengiriman *").selectOption("SHIPPED"); await submit(wp, "Simpan pengiriman", "/api/v1/admin/shipments");
-      assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "SHIPPED"); assert.equal(await db.shipmentEvent.count({ where: { shipment: { orderId: sale.order.id }, status: "SHIPPED" } }), 1);
+      await wp.goto(orderUrl); const f = wp.getByRole("form", { name: "Simpan pengiriman" }); await f.getByLabel("Kurir *").fill("JNE"); await f.getByLabel("Layanan *").fill("REG"); await f.getByLabel("Nomor resi").fill(`RESI-${prefix}`); await f.getByLabel("Status pengiriman *").selectOption("PROCESSING");
+      await expect(f.getByText("Menyimpan resi otomatis menetapkan status SHIPPED.", { exact: false })).toBeVisible();
+      await submit(wp, "Simpan pengiriman", "/api/v1/admin/shipments");
+      assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "SHIPPED");
+      const dispatched = await db.shipment.findUniqueOrThrow({ where: { orderId: sale.order.id } });
+      assert.equal(dispatched.status, "SHIPPED");
+      assert.equal(dispatched.trackingNumber, `RESI-${prefix}`);
+      assert.ok(dispatched.shippedDate instanceof Date);
+      assert.equal(await db.shipmentEvent.count({ where: { shipmentId: dispatched.id, status: "SHIPPED" } }), 1);
     });
     let refundId = "";
     await check("refund request freezes fulfillment and requester cannot verify settlement", async () => {

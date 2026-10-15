@@ -35,7 +35,7 @@ export function ProofForm({ orderId, amount }: { orderId: string; amount: number
         <div><Label>Tanggal Transfer</Label><Input name="transferDate" type="date" required data-testid="proof-date" /></div>
       </div>
       <div>
-        <Label>Bukti Transfer (JPG/PNG/WebP/PDF, maks 5MB)</Label>
+        <Label>Bukti Transfer (JPG/PNG/WebP/PDF, maks 4 MB)</Label>
         <Input name="proof" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required data-testid="proof-file" className="pt-2.5" />
       </div>
       <div><Label>Catatan (opsional)</Label><Textarea name="note" /></div>

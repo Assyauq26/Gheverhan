@@ -245,6 +245,8 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     assert.equal((await status(f.order.id)).status, "SHIPPED");
     assert.equal(await db.shipmentEvent.count({ where: { shipmentId: dispatched.id, status: "SHIPPED" } }), 1);
     assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
+    const handoverHistory = await db.orderStatusHistory.findFirstOrThrow({ where: { orderId: f.order.id, toStatus: "SHIPPED" } });
+    assert.equal(handoverHistory.note, "Shipment: SHIPPED");
     const initialAudit = await db.auditLog.count({ where: { action: "shipping.update", entityId: dispatched.id } });
     const repeatKey = await shipments.upsertManualShipment(f.order.id, warehouseId, request);
     assert.equal(repeatKey.id, dispatched.id);

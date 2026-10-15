@@ -56,7 +56,7 @@ async function main() {
       }
       const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
       const bytes = Buffer.concat(chunks);
-      if (url.pathname.startsWith("/storage/v1/object/remove/") && req.method === "POST") {
+      if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs"].includes(url.pathname) && req.method === "DELETE") {
         const prefixes = JSON.parse(bytes.toString()).prefixes as string[];
         for (const key of prefixes) objects.delete(key);
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify([])); return;

@@ -22,7 +22,7 @@ export async function submitProofAction(_prev: unknown, formData: FormData) {
   if (formData.getAll("proof").length !== 1) return { ok: false as const, error: "Unggah satu bukti transfer" };
   const file = formData.get("proof");
   if (!(file instanceof File) || !file.size) return { ok: false as const, error: "Bukti transfer wajib diunggah" };
-  if (file.size > MAX_PROOF_BYTES) return { ok: false as const, error: "Ukuran file maksimal 5MB" };
+  if (file.size > MAX_PROOF_BYTES) return { ok: false as const, error: "Ukuran file maksimal 4MB" };
   return runAction(async () => {
     const user = await requireUser();
     await uploadPaymentProof(user.id, parsed.data, new Uint8Array(await file.arrayBuffer()), file.type);

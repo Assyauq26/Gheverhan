@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     if (form.getAll("proof").length !== 1) return fail("Unggah satu bukti transfer", 422);
     const file = form.get("proof");
     if (!(file instanceof File) || !file.size) return fail("Bukti transfer wajib", 400);
-    if (file.size > MAX_PROOF_BYTES) return fail("Ukuran maksimal 5MB", 413);
+    if (file.size > MAX_PROOF_BYTES) return fail("Ukuran maksimal 4MB", 413);
     const order = await uploadPaymentProof(user.id, parsed, new Uint8Array(await file.arrayBuffer()), file.type);
     return ok(order, 201);
   });

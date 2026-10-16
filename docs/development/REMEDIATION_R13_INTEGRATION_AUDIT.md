@@ -51,8 +51,9 @@ has been eliminated.** A green run must be repeated before release.
    PASSWORD_RESET_BASE_URL; cron requires CRON_SECRET and production cron registration.
    Do not enable either service without an operational smoke test and proof review.
    R4 artifact clean-up (#39) is on HOLD for incident review.
-9. Align Node.js engines: repo/CI Node 22, Vercel project Node 24.x.
-   This requires a reviewed project setting change, not a side effect of PR.
+9. Node.js engines aligned: Vercel project setting changed from 24.x to 22.x
+   and re-read for verification on 2026-10-16. Repo and CI already require
+   Node 22. This does not retroactively change the existing production build.
 10. No main merge, production promotion, database migrations, wipes or secret
     rotations should occur from this Draft integration PR.
 

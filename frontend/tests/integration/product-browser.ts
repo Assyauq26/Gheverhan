@@ -189,6 +189,17 @@ async function main() {
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await page.getByTestId("ship-option-1").click();
         await expect(page.getByTestId("checkout-total")).toHaveText("Rp 193.000");
+        // Coupon becomes invalid AFTER the customer has seen the discounted total.
+        // The createOrder transaction must fail instead of charging a higher amount.
+        await db.coupon.update({ where: { code: couponCode }, data: { isActive: false } });
+        for (const [name, value] of Object.entries({
+          recipientName: "Fixture Buyer", phone: "0800000000", line: "Local test address",
+          city: "Bandung", province: "Jawa Barat", postalCode: "40100",
+        })) await page.locator(`input[name="${name}"]`).fill(value);
+        await page.getByTestId("place-order-btn").click();
+        await expect(page.getByTestId("checkout-error")).toContainText("konfirmasi ulang");
+        assert.equal(await db.order.count({ where: { userId: customer.id } }), before);
+        await db.coupon.update({ where: { code: couponCode }, data: { isActive: true } });
         await page.getByTestId("input-coupon").fill(`INVALID-${prefix}`);
         await expect(page.getByTestId("coupon-feedback")).toContainText("Kupon tidak valid");
         await expect(page.getByTestId("checkout-discount")).toHaveCount(0);

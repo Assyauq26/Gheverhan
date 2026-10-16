@@ -57,7 +57,7 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${input.status}`, { source: "shipment" });
     const shipment = changed ? await tx.shipment.upsert({ where: { orderId }, create: { orderId, provider: "manual", ...normalizedData }, update: normalizedData }) : order.shipment!;
     if (changed) {
-      await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: input.status, description: `Manual shipment: ${status}${input.trackingNumber ? ` (${input.trackingNumber})` : ""}` } });
+      await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status, description: `Manual shipment: ${status}${input.trackingNumber ? ` (${input.trackingNumber})` : ""}` } });
       await writeAudit({ userId: adminId, action: "shipping.update", entity: "Shipment", entityId: shipment.id, meta: { orderId, status, ...(status !== input.status ? { automaticDispatchOnNewTracking: true } : {}) } }, tx);
     }
     if (auditId) await tx.auditLog.create({ data: { id: auditId, userId: adminId, action: "shipping.request", entity: "Shipment", entityId: shipment.id, meta: { orderId, fingerprint } } });

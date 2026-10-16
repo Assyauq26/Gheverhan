@@ -12,6 +12,7 @@ import {
   Landmark,
   Users,
   ScrollText,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PERMISSIONS } from "@/lib/auth/permissions";
@@ -21,6 +22,7 @@ const items = [
   { href: "/admin/products", label: "Produk", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/categories", label: "Kategori", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/inventory", label: "Inventori", icon: Package, permission: PERMISSIONS.INVENTORY_READ },
+  { href: "/admin/marketing", label: "Marketing", icon: Megaphone, permission: PERMISSIONS.PROMOTION_UPDATE },
   { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag, permission: PERMISSIONS.ORDER_READ },
   { href: "/admin/payments", label: "Pembayaran", icon: CreditCard, permission: PERMISSIONS.PAYMENT_READ },
   { href: "/admin/shipping", label: "Pengiriman", icon: Truck, permission: PERMISSIONS.SHIPPING_READ },

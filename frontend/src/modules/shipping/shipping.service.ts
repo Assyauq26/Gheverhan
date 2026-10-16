@@ -35,13 +35,13 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { payment: true, shipment: true } });
     // The request fingerprint above remains based on the ORIGINAL payload so
     // idempotent retries still resolve to the first physical handover event.
-    const status = statusOnTrackingSubmission(data.status, data.trackingNumber, order.shipment?.trackingNumber);
+    const status = statusOnTrackingSubmission(data.status, data.trackingNumber, order.shipment?.trackingNumber, order.shipment?.status);
     const normalizedData = {
       ...data,
       status,
       // An AWB entered for the first time is the handover event. Use the
       // server clock if neither the operator nor an existing record supplied a date.
-      ...(status === "SHIPPED" && !data.shippedDate && !order.shipment?.shippedDate
+      ...(status === "SHIPPED" && order.shipment?.status !== "SHIPPED" && !data.shippedDate && !order.shipment?.shippedDate
         ? { shippedDate: new Date() }
         : {}),
     };

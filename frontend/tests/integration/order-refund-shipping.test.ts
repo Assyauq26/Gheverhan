@@ -239,7 +239,9 @@ test("real PostgreSQL refund and shipment correctness", async t => {
   });
   await t.test("identical keyless AWB retry retains SHIPPED without duplicate event or date", async () => {
     const f = await paid(); await pack(f.order.id);
-    const body = { ...shippingInput("PROCESSING"), requestId: undefined, trackingNumber: `KEYLESS-${prefix}-${++seq}` };
+    // Blank date from the Admin form is serialized as null on both submissions.
+    // Saving a second time must not clear the server-stamped handover date.
+    const body = { ...shippingInput("PROCESSING"), requestId: undefined, shippedDate: null, trackingNumber: `KEYLESS-${prefix}-${++seq}` };
     const first = await shipments.upsertManualShipment(f.order.id, warehouseId, body);
     const sentDate = first.shippedDate?.toISOString();
     assert.ok(sentDate, "First AWB entry must create a shipped timestamp");

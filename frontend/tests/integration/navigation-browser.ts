@@ -46,7 +46,16 @@ async function main() {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       await context.route('**/*', async route => {
         if (new URL(route.request().url()).hostname !== 'localhost') return route.abort();
-        if (route.request().headers()['rsc'] === '1' && !route.request().headers()['next-router-prefetch']) await new Promise(resolve => setTimeout(resolve, 600));
+        if (route.request().headers()['rsc'] === '1' && !route.request().headers()['next-router-prefetch']) {
+          // Playwright delaying route.continue() before the upstream fetch can
+          // produce ERR_ABORTED on concurrent Next.js RSC transitions. Fetch
+          // upstream first, then delay the delivered response by the SAME 600ms.
+          // Keep all original page-content and no-hydration-error assertions.
+          const upstream = await route.fetch();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await route.fulfill({ response: upstream });
+          return;
+        }
         await route.continue();
       });
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
@@ -117,6 +126,7 @@ async function main() {
             viewport: width, pathname: new URL(page.url()).pathname,
             currentPage: new URL(page.url()).searchParams.get('page') || '1',
             directStatus: direct?.status() ?? 'timeout',
+            directPathname: direct ? new URL(direct.url()).pathname : 'timeout',
             directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 2') : false,
             inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
             recentRscEvents: rscEvents.slice(-20),

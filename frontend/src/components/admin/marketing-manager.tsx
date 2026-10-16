@@ -195,7 +195,7 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
 
     <section id="flash-sale" className="space-y-4 scroll-mt-24">
       <div className="flex items-center gap-2"><Bolt size={20}/><h2 className="text-xl font-bold">Flash sale produk</h2></div>
-      <p className="text-sm text-ink-soft">Aktifkan harga khusus dan tampilkan produk di halaman Flash Sale. Versi ini diaktifkan/dinonaktifkan manual, belum memiliki jadwal otomatis atau batas kuota.</p>
+      <p className="text-sm text-ink-soft">Gunakan kontrol ini untuk flash sale manual. Untuk harga promo yang aktif dan berakhir otomatis, gunakan bagian Flash Sale terjadwal di bawah.</p>
       {canUpdate && canReadProducts && <div className="grid gap-3 rounded-2xl border border-line bg-white p-5 md:grid-cols-[1fr_180px_auto] md:items-end">
         <div className="min-w-0"><Label htmlFor="flash-product">Pilih produk terbit</Label><select id="flash-product" value={productId} onChange={e => { setProductId(e.target.value); setPrice(""); }}
           className="h-11 w-full min-w-0 rounded-xl border border-line bg-white px-3 text-sm">

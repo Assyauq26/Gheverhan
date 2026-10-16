@@ -15,6 +15,7 @@ vi.mock("next/image", () => ({
   },
 }));
 vi.mock("next/link", () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ children, href, onNavigate: _onNavigate, prefetch: _prefetch, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
     React.createElement("a", { ...props, href }, children),
 }));

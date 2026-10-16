@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, forwardRef, useContext, useState, useTransition, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import NextLink from "next/link";
+import NextLink, { useLinkStatus } from "next/link";
 import { useRouter } from "next/navigation";
 
 const NavigationContext = createContext<{
@@ -26,16 +26,28 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
 export function useNavigation() { return useContext(NavigationContext); }
 
-/** Keep Next prefetch and native modified-click behavior; add transition feedback. */
-const NavigationLink = forwardRef<HTMLAnchorElement, ComponentPropsWithoutRef<typeof NextLink>>(function NavigationLink({ children, onNavigate, ...props }, ref) {
-  const navigation = useNavigation();
-  const pending = navigation?.pending && navigation.destination === props.href;
-  return <NextLink {...props} ref={ref} aria-busy={pending || undefined} data-pending={pending || undefined} onNavigate={event => {
-    // Existing custom navigation handlers retain control of their own event.
-    if (onNavigate) { onNavigate(event); return; }
-    if (!navigation || typeof props.href !== "string" || props.replace) return;
-    event.preventDefault();
-    if (!pending) navigation.navigate(props.href, props.scroll);
-  }}>{children}</NextLink>;
+/**
+ * Let next/link own link transitions. Previously onNavigate.preventDefault()
+ * cancelled its native transition and re-issued router.push inside a second
+ * React transition; this introduces duplicate routing ownership and can stall
+ * streamed RSC navigation, especially after multiple back/forward actions.
+ *
+ * useLinkStatus (available in Next 15.3+) reports the actual link pending
+ * state, without overriding native click/scroll/history behavior.
+ */
+function LinkPendingFeedback() {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <span role="status" aria-live="polite" data-testid="navigation-pending" className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 bg-black">
+      <span className="sr-only">Memuat halaman…</span>
+    </span>
+  ) : null;
+}
+
+const NavigationLink = forwardRef<HTMLAnchorElement, ComponentPropsWithoutRef<typeof NextLink>>(function NavigationLink({ children, ...props }, ref) {
+  return <NextLink {...props} ref={ref}>
+    {children}
+    <LinkPendingFeedback />
+  </NextLink>;
 });
 export default NavigationLink;

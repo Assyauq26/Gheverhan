@@ -21,6 +21,7 @@ export function ShipmentForm({ orderId, orderStatus, allowed, initial }: {
       Paket sudah dikemas. Masukkan nomor resi <strong>hanya setelah paket diserahkan ke kurir</strong>.
       Saat disimpan, status pesanan dan pengiriman otomatis menjadi <strong>Dikirim</strong>.
     </p>}
+    {initial?.shippedDate && <p className="text-sm text-ink-soft">Waktu pengiriman tercatat: {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(initial.shippedDate)} (WIB). Waktu ini tidak dapat diubah lewat form.</p>}
     <OperationForm url="/api/v1/admin/shipments" label="Simpan pengiriman"
       confirmation={isPacked
         ? "Pastikan paket benar-benar telah diserahkan ke kurir. Menyimpan nomor resi otomatis mengubah status menjadi Dikirim; aplikasi tidak memanggil API kurir."
@@ -36,8 +37,6 @@ export function ShipmentForm({ orderId, orderStatus, allowed, initial }: {
         }] : []),
         { name: "status", label: "Status pengiriman", type: isPacked ? "hidden" as const : "select" as const,
           value: initialStatus, required: true, options: allowed.map(status => ({ value: status, label: status })) },
-        { name: "shippedDate", label: "Tanggal kirim", type: "date", value: initial?.shippedDate?.toISOString().slice(0, 10),
-          hint: "Saat resi pertama disimpan, waktu kirim otomatis dicatat jika masih kosong." },
         { name: "estimatedDelivery", label: "Estimasi tiba", type: "date", value: initial?.estimatedDelivery?.toISOString().slice(0, 10) },
         { name: "notes", label: "Catatan pengiriman", type: "textarea", value: initial?.notes || "" },
       ]} />

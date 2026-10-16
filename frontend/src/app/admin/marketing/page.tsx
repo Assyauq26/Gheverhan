@@ -31,7 +31,8 @@ export default async function MarketingPage() {
       vouchers={vouchers.map(v => ({ ...v, expiresAt: v.expiresAt?.toISOString() || null, startsAt: v.startsAt?.toISOString() || null, createdAt: v.createdAt.toISOString() }))}
       products={products.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString(),
         flashSaleStartsAt: p.flashSaleStartsAt?.toISOString() || null, flashSaleEndsAt: p.flashSaleEndsAt?.toISOString() || null,
-        eligible: p.variants.length > 0 && p.salePrice == null && !p.isFlashSale && p.variants.every(v => v.price == null && v.salePrice == null),
+        eligible: p.variants.length > 0 && p.salePrice == null && !p.isFlashSale && p.flashSalePrice == null && p.variants.every(v => v.price == null && v.salePrice == null),
+        scheduleEligible: p.variants.length > 0 && p.salePrice == null && !p.isFlashSale && p.variants.every(v => v.price == null && v.salePrice == null),
         variants: undefined }))}
       canCreate={actor.permissions.includes(PERMISSIONS.PROMOTION_CREATE)}
       canUpdate={actor.permissions.includes(PERMISSIONS.PROMOTION_UPDATE)}

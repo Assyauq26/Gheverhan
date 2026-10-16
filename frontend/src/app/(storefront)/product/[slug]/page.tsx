@@ -5,7 +5,8 @@ import { getProductBySlug, getRelatedProducts } from "@/modules/catalog/catalog.
 import { trackView } from "@/modules/catalog/recently-viewed.service";
 import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
-import { formatIDR, effectivePrice, discountPercent } from "@/lib/money";
+import { formatIDR, discountPercent } from "@/lib/money";
+import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
 import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { ProductGallery } from "@/components/storefront/product-gallery";
@@ -54,8 +55,8 @@ export default async function ProductPage({ params }: ProductRouteProps) {
   if (user) void trackView(user.id, product.id).catch(() => {});
 
   const wl = new Set(wishIds);
-  const price = effectivePrice(product.basePrice, product.salePrice);
-  const pct = discountPercent(product.basePrice, product.salePrice);
+  const price = effectiveProductPrice(product);
+  const pct = discountPercent(product.basePrice, price);
   const variantOptions = product.variants.map((v) => ({
     id: v.id,
     color: v.color,

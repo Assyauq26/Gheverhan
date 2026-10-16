@@ -32,3 +32,22 @@ export const flashSaleInputSchema = z.object({
   if (v.enabled && v.salePrice == null)
     ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Harga flash sale wajib diisi" });
 });
+
+export const scheduledFlashSaleSchema = z.object({
+  productId: z.string().min(1).max(64),
+  expectedUpdatedAt: z.string().datetime({ offset: true }),
+  enabled: z.boolean(),
+  price: z.number().int().min(1).max(2_147_483_647).nullable(),
+  startsAt: z.string().datetime({ offset: true }).nullable(),
+  endsAt: z.string().datetime({ offset: true }).nullable(),
+}).superRefine((v, ctx) => {
+  if (!v.enabled) return;
+  if (v.price == null || !v.startsAt || !v.endsAt) {
+    ctx.addIssue({ code: "custom", message: "Harga dan tanggal mulai/berakhir flash sale wajib diisi." });
+    return;
+  }
+  if (Date.parse(v.startsAt) >= Date.parse(v.endsAt))
+    ctx.addIssue({ code: "custom", path: ["endsAt"], message: "Tanggal berakhir harus setelah mulai." });
+  if (Date.parse(v.endsAt) <= Date.now())
+    ctx.addIssue({ code: "custom", path: ["endsAt"], message: "Flash sale harus berakhir di masa depan." });
+});

@@ -210,6 +210,9 @@ model Product {
   status          ProductStatus @default(PUBLISHED)
   isFeatured      Boolean       @default(false)
   isFlashSale     Boolean       @default(false)
+  flashSalePrice  Int?
+  flashSaleStartsAt DateTime?
+  flashSaleEndsAt DateTime?
   ratingAvg       Float         @default(0)
   reviewCount     Int           @default(0)
   categoryId      String?

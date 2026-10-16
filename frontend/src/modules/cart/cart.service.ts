@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { effectivePrice } from "@/lib/money";
+import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
 import { available } from "@/modules/inventory/inventory.service";
 import { HttpError } from "@/lib/response";
 
@@ -24,12 +25,15 @@ export async function getOrCreateCart(userId: string) {
 function unitPriceFor(variant: {
   price: number | null;
   salePrice: number | null;
-  product: { basePrice: number; salePrice: number | null };
+  product: {
+    basePrice: number; salePrice: number | null;
+    flashSalePrice: number | null; flashSaleStartsAt: Date | null; flashSaleEndsAt: Date | null;
+  };
 }): number {
   if (variant.price != null) {
     return effectivePrice(variant.price, variant.salePrice);
   }
-  return effectivePrice(variant.product.basePrice, variant.product.salePrice);
+  return effectiveProductPrice(variant.product);
 }
 
 export async function getCartView(userId: string, client: Prisma.TransactionClient = prisma) {
@@ -62,6 +66,9 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
                   status: true,
                   basePrice: true,
                   salePrice: true,
+                  flashSalePrice: true,
+                  flashSaleStartsAt: true,
+                  flashSaleEndsAt: true,
                   images: {
                     select: { url: true },
                     orderBy: { sortOrder: "asc" },

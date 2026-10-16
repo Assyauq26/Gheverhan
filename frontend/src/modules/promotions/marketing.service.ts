@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { writeAudit } from "@/modules/audit/audit.service";
-import { flashSaleInputSchema, voucherInputSchema } from "./marketing.validation";
+import { flashSaleInputSchema, scheduledFlashSaleSchema, voucherInputSchema } from "./marketing.validation";
 
 type Actor = { id: string; isAdmin: boolean; permissions: string[] };
 function permit(actor: Actor, permission: string) {
@@ -24,13 +24,13 @@ export async function listMarketing(actor: Actor) {
     actor.permissions.includes(PERMISSIONS.PRODUCT_READ)
       ? prisma.product.findMany({
           where: { status: "PUBLISHED" },
-          orderBy: [{ isFlashSale: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+          orderBy: [{ flashSaleStartsAt: { sort: "desc", nulls: "last" } }, { isFlashSale: "desc" }, { createdAt: "desc" }, { id: "desc" }],
           take: 60,
-          select: { id: true, name: true, slug: true, basePrice: true, salePrice: true, isFlashSale: true, updatedAt: true, variants: { select: { price: true, salePrice: true }, take: 50 } },
+          select: { id: true, name: true, slug: true, basePrice: true, salePrice: true, isFlashSale: true, flashSalePrice: true, flashSaleStartsAt: true, flashSaleEndsAt: true, updatedAt: true, variants: { select: { price: true, salePrice: true }, take: 50 } },
         })
       : Promise.resolve([]),
     prisma.coupon.count({ where: { isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] } }),
-    actor.permissions.includes(PERMISSIONS.PRODUCT_READ) ? prisma.product.count({ where: { isFlashSale: true, status: "PUBLISHED" } }) : Promise.resolve(0),
+    actor.permissions.includes(PERMISSIONS.PRODUCT_READ) ? prisma.product.count({ where: { status: "PUBLISHED", OR: [{ isFlashSale: true }, { flashSalePrice: { not: null }, flashSaleStartsAt: { lte: now }, flashSaleEndsAt: { gt: now } }] } }) : Promise.resolve(0),
   ]);
   const codes = vouchers.map(v => v.code);
   const usage = codes.length ? await prisma.order.groupBy({
@@ -115,11 +115,12 @@ export async function setFlashSale(actor: Actor, value: unknown) {
     if (!rows.length) throw new HttpError("Produk tidak ditemukan", 404);
     const product = await tx.product.findUniqueOrThrow({
       where: { id: input.productId },
-      select: { status: true, basePrice: true, salePrice: true, isFlashSale: true, updatedAt: true, variants: { select: { price: true, salePrice: true } } },
+      select: { status: true, basePrice: true, salePrice: true, isFlashSale: true, flashSalePrice: true, flashSaleStartsAt: true, flashSaleEndsAt: true, updatedAt: true, variants: { select: { price: true, salePrice: true } } },
     });
     if (product.updatedAt.toISOString() !== input.expectedUpdatedAt)
       throw new HttpError("Data produk telah berubah. Muat ulang sebelum mengubah flash sale.", 409);
     if (input.enabled) {
+      if (product.flashSalePrice != null) throw new HttpError("Produk memiliki flash sale terjadwal. Hapus jadwalnya terlebih dahulu.", 409);
       if (product.status !== "PUBLISHED" || product.variants.length === 0)
         throw new HttpError("Hanya produk terbit dengan varian yang bisa flash sale", 422);
       if (!product.isFlashSale && product.salePrice != null)
@@ -137,5 +138,52 @@ export async function setFlashSale(actor: Actor, value: unknown) {
     });
     await writeAudit({ userId: actor.id, entity: "Product", entityId: result.id, action: input.enabled ? "flash-sale.activate" : "flash-sale.deactivate", meta: { previousPrice: product.basePrice, salePrice: result.salePrice } }, tx);
     return { id: result.id };
+  }, { isolationLevel: "Serializable" });
+}
+
+/** Scheduled campaigns store an overlay price; they never overwrite salePrice. */
+export async function setScheduledFlashSale(actor: Actor, value: unknown) {
+  permit(actor, PERMISSIONS.PROMOTION_UPDATE);
+  if (!actor.permissions.includes(PERMISSIONS.PRODUCT_READ))
+    throw new HttpError("Izin melihat produk diperlukan", 403);
+  const parsed = scheduledFlashSaleSchema.safeParse(value);
+  if (!parsed.success) throw new HttpError(parsed.error.issues[0].message, 422);
+  const input = parsed.data;
+  return prisma.$transaction(async tx => {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT "id" FROM "Product" WHERE "id" = ${input.productId} FOR UPDATE`);
+    if (!rows.length) throw new HttpError("Produk tidak ditemukan", 404);
+    const p = await tx.product.findUniqueOrThrow({
+      where: { id: input.productId },
+      select: { status: true, basePrice: true, salePrice: true, isFlashSale: true, flashSalePrice: true,
+        updatedAt: true, variants: { select: { price: true, salePrice: true } } },
+    });
+    if (p.updatedAt.toISOString() !== input.expectedUpdatedAt)
+      throw new HttpError("Data produk berubah. Muat ulang sebelum menyimpan jadwal.", 409);
+    if (input.enabled) {
+      if (p.status !== "PUBLISHED" || !p.variants.length)
+        throw new HttpError("Produk harus diterbitkan dan memiliki varian.", 422);
+      if (p.salePrice != null || p.isFlashSale)
+        throw new HttpError("Akhiri flash sale manual atau diskon reguler sebelum menjadwalkan flash sale.", 422);
+      if (p.variants.some(v => v.price != null || v.salePrice != null))
+        throw new HttpError("Harga per varian tidak mendukung flash sale terjadwal.", 422);
+      if (input.price! >= p.basePrice)
+        throw new HttpError("Harga flash sale harus lebih murah dari harga normal.", 422);
+    } else if (p.flashSalePrice == null) {
+      throw new HttpError("Tidak ada jadwal flash sale untuk dihapus.", 409);
+    }
+    const row = await tx.product.update({
+      where: { id: input.productId },
+      data: {
+        flashSalePrice: input.enabled ? input.price : null,
+        flashSaleStartsAt: input.enabled ? new Date(input.startsAt!) : null,
+        flashSaleEndsAt: input.enabled ? new Date(input.endsAt!) : null,
+      },
+    });
+    await writeAudit({
+      userId: actor.id, action: input.enabled ? "flash-sale.schedule" : "flash-sale.schedule.remove",
+      entity: "Product", entityId: row.id,
+      meta: { price: row.flashSalePrice, startsAt: row.flashSaleStartsAt?.toISOString() || null, endsAt: row.flashSaleEndsAt?.toISOString() || null },
+    }, tx);
+    return { id: row.id };
   }, { isolationLevel: "Serializable" });
 }

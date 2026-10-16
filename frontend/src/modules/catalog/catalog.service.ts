@@ -77,21 +77,27 @@ async function listProductsUncached(params: ProductListParams) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(48, params.pageSize ?? 12);
   const includeTotal = params.includeTotal ?? true;
+  const now = new Date();
+  const filters: Prisma.ProductWhereInput[] = [];
+  if (params.flashSale) filters.push({
+    OR: [
+      { isFlashSale: true },
+      { flashSalePrice: { not: null }, flashSaleStartsAt: { lte: now }, flashSaleEndsAt: { gt: now } },
+    ],
+  });
+  if (params.search) filters.push({
+    OR: [
+      { name: { contains: params.search, mode: "insensitive" } },
+      { description: { contains: params.search, mode: "insensitive" } },
+      { brand: { name: { contains: params.search, mode: "insensitive" } } },
+    ],
+  });
   const where: Prisma.ProductWhereInput = {
     status: ProductStatus.PUBLISHED,
     ...(params.categorySlug ? { category: { slug: params.categorySlug } } : {}),
     ...(params.brandSlug ? { brand: { slug: params.brandSlug } } : {}),
     ...(params.featured ? { isFeatured: true } : {}),
-    ...(params.flashSale ? { isFlashSale: true } : {}),
-    ...(params.search
-      ? {
-          OR: [
-            { name: { contains: params.search, mode: "insensitive" } },
-            { description: { contains: params.search, mode: "insensitive" } },
-            { brand: { name: { contains: params.search, mode: "insensitive" } } },
-          ],
-        }
-      : {}),
+    ...(filters.length ? { AND: filters } : {}),
   };
 
   const orderBy: Prisma.ProductOrderByWithRelationInput =
@@ -138,7 +144,7 @@ export async function listProducts(params: ProductListParams = {}) {
   return unstable_cache(
     () => listProductsUncached(normalized),
     ["catalog-products", cacheKey],
-    { revalidate: 30, tags: [CATALOG_CACHE_TAG] },
+    { revalidate: normalized.flashSale ? 5 : 30, tags: [CATALOG_CACHE_TAG] },
   )();
 }
 

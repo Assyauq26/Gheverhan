@@ -75,6 +75,10 @@ export async function updateManagedProduct(actor: CatalogActor, id: string, expe
   const input = parseProduct(value);
   const result = await transaction(async tx => {
     const { p, updatedAt } = await lockProduct(tx, id, expected);
+    if (p.flashSalePrice != null && (
+      input.isFlashSale || input.salePrice != null || input.basePrice <= p.flashSalePrice ||
+      input.variants.some(v => v.price != null || v.salePrice != null)
+    )) throw new HttpError("Produk memiliki jadwal flash sale. Hapus jadwal melalui Marketing sebelum mengubah harga.", 409);
     await validateRelations(tx, input.categoryId, input.brandId);
     for (const v of input.variants) if (v.id && !p.variants.some(row => row.id === v.id)) throw new HttpError("Varian bukan milik produk ini", 422);
     for (const image of input.images) if (!p.images.some(row => row.id === image.id)) throw new HttpError("Gambar bukan milik produk ini", 422);

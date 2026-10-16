@@ -191,6 +191,17 @@ async function main() {
         await expect(page.getByTestId("marketing-feedback")).toContainText("harga normal dipulihkan");
         const ended = await db.product.findUniqueOrThrow({ where: { id: product.id } });
         assert.equal(ended.salePrice, null); assert.equal(ended.isFlashSale, false);
+        await page.getByLabel("Produk flash sale terjadwal").selectOption(product.id);
+        await page.getByLabel("Harga promo (Rp)").fill("159000");
+        await page.getByLabel("Mulai", { exact: true }).fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
+        await page.getByLabel("Berakhir", { exact: true }).fill(new Date(Date.now() + 3_600_000).toISOString().slice(0, 16));
+        await page.getByRole("button", { name: "Jadwalkan flash sale" }).click();
+        await expect(page.getByTestId("marketing-feedback")).toContainText("terjadwal berhasil disimpan");
+        await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBe(159000);
+        await expect(page.getByText("Berlangsung", { exact: true })).toBeVisible();
+        await page.getByRole("button", { name: `Hapus jadwal ${product.name}`, exact: true }).click();
+        await expect(page.getByTestId("marketing-feedback")).toContainText("Jadwal flash sale berhasil dihapus");
+        await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBeNull();
         // Restore the admin product editor for the subsequent pre-existing checkout regression.
         await page.goto(`${base}/admin/products/${product.id}`);
         await expect(page.getByLabel("Harga normal (Rp)", { exact: true })).toBeVisible();

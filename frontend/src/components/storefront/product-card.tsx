@@ -1,6 +1,7 @@
 import Link from "@/components/ui/navigation";
 import Image from "next/image";
 import { formatIDR, effectivePrice, discountPercent } from "@/lib/money";
+import { activeScheduledFlashPrice } from "@/modules/promotions/scheduled-flash-sale";
 import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { WishlistButton } from "./wishlist-button";
@@ -115,6 +116,9 @@ export function toCardData(p: {
   name: string;
   basePrice: number;
   salePrice: number | null;
+  flashSalePrice?: number | null;
+  flashSaleStartsAt?: Date | null;
+  flashSaleEndsAt?: Date | null;
   ratingAvg: number;
   reviewCount: number;
   brand?: { name: string } | null;
@@ -128,7 +132,7 @@ export function toCardData(p: {
     brandName: p.brand?.name ?? null,
     image: p.images[0]?.url ?? null,
     basePrice: p.basePrice,
-    salePrice: p.salePrice,
+    salePrice: activeScheduledFlashPrice(p) ?? p.salePrice,
     ratingAvg: p.ratingAvg,
     reviewCount: p.reviewCount,
     variantId: p.variants[0]?.id ?? null,

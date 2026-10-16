@@ -25,11 +25,15 @@ export default async function MarketingPage() {
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Voucher aktif</p><p className="mt-1 text-2xl font-bold tabular-nums">{activeVouchers}</p></div>
       <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Flash sale aktif</p><p className="mt-1 text-2xl font-bold tabular-nums">{activeFlashSales}</p></div>
-      <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Model promosi</p><p className="mt-1 text-sm font-semibold">Manual — tanpa auto-jadwal</p></div>
+      <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Model promosi</p><p className="mt-1 text-sm font-semibold">Manual + terjadwal</p></div>
     </div>
     <MarketingManager
       vouchers={vouchers.map(v => ({ ...v, expiresAt: v.expiresAt?.toISOString() || null, startsAt: v.startsAt?.toISOString() || null, createdAt: v.createdAt.toISOString() }))}
-      products={products.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString(), eligible: p.variants.length > 0 && p.salePrice == null && p.variants.every(v => v.price == null && v.salePrice == null), variants: undefined }))}
+      products={products.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString(),
+        flashSaleStartsAt: p.flashSaleStartsAt?.toISOString() || null, flashSaleEndsAt: p.flashSaleEndsAt?.toISOString() || null,
+        eligible: p.variants.length > 0 && p.salePrice == null && !p.isFlashSale && p.flashSalePrice == null && p.variants.every(v => v.price == null && v.salePrice == null),
+        scheduleEligible: p.variants.length > 0 && p.salePrice == null && !p.isFlashSale && p.variants.every(v => v.price == null && v.salePrice == null),
+        variants: undefined }))}
       canCreate={actor.permissions.includes(PERMISSIONS.PROMOTION_CREATE)}
       canUpdate={actor.permissions.includes(PERMISSIONS.PROMOTION_UPDATE)}
       canReadProducts={actor.permissions.includes(PERMISSIONS.PRODUCT_READ)}

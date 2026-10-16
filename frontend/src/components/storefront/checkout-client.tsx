@@ -171,7 +171,7 @@ export function CheckoutClient({
           <Label htmlFor="checkout-coupon">Kode Kupon (opsional)</Label>
           <Input id="checkout-coupon" name="couponCode" value={couponCode} maxLength={64}
             autoComplete="off" placeholder="GHEVER10" data-testid="input-coupon"
-            onChange={event => setCouponCode(event.target.value.toUpperCase().replace(/\\s/g, ""))} />
+            onChange={event => setCouponCode(event.target.value.toUpperCase().replace(/\s/g, ""))} />
           {currentQuote && couponCode && (
             <p className={cn("mt-2 text-sm", currentQuote.couponCode ? "text-ink" : "text-destructive")}
               role="status" data-testid="coupon-feedback">

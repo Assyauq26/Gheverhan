@@ -19,6 +19,9 @@ vi.mock("@/components/storefront/quick-add-button", () => ({
 
 import { ProductCard } from "@/components/storefront/product-card";
 
+// Isolated Vitest runner transpiles TSX with the classic React JSX runtime.
+vi.stubGlobal("React", React);
+
 describe("ProductCard interactive HTML invariants", () => {
   it("renders wishlist control next to the image link, never nested in an anchor", () => {
     const view = render(React.createElement(ProductCard, {

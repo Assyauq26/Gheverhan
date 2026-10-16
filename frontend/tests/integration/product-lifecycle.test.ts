@@ -76,10 +76,15 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
       name: `Regular fixture ${i}`, slug: `regular-priority-${prefix}-${i}`,
       basePrice: 120000, status: "PUBLISHED" as const,
     })) });
-    const listing = await marketing.listMarketing(actor);
-    assert.equal(listing.products.length, 60);
-    assert.ok(listing.products.some(p => p.id === scheduled.id),
-      "Seller must be able to edit/remove the scheduled campaign despite the 60-row cap");
+    try {
+      const listing = await marketing.listMarketing(actor);
+      assert.equal(listing.products.length, 60);
+      assert.ok(listing.products.some(p => p.id === scheduled.id),
+        "Seller must be able to edit/remove the scheduled campaign despite the 60-row cap");
+    } finally {
+      await prisma.product.deleteMany({ where: { slug: { startsWith: `regular-priority-${prefix}-` } } });
+      await prisma.product.delete({ where: { id: scheduled.id } });
+    }
   });
   await t.test("Marketing flash sale controls real buyer price and rejects stale and variant-priced products", async () => {
     const marketing = await import("../../src/modules/promotions/marketing.service");

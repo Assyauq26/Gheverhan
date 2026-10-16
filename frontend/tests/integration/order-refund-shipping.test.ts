@@ -249,6 +249,11 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     assert.equal(again.id, first.id);
     assert.equal(again.status, "SHIPPED");
     assert.equal(again.shippedDate?.toISOString(), sentDate);
+    // Reopening the form submits the shown date as midnight UTC, not the
+    // exact timestamp. It must not overwrite the actual handover time.
+    const dateOnly = new Date(sentDate!.slice(0, 10));
+    const afterDateEdit = await shipments.upsertManualShipment(f.order.id, warehouseId, { ...body, shippedDate: dateOnly });
+    assert.equal(afterDateEdit.shippedDate?.toISOString(), sentDate);
     assert.equal((await status(f.order.id)).status, "SHIPPED");
     assert.equal(await db.shipmentEvent.count({ where: { shipmentId: first.id, status: "SHIPPED" } }), 1);
     assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);

@@ -29,6 +29,15 @@ async function main() {
   }
   const user = await db.user.create({ data: { id: prefix, name: 'Navigation Fixture', email: `${prefix}@example.test`, passwordHash: 'isolated-fixture', roles: { create: { roleId: role.id } } } });
   for (let i = 0; i < 25; i++) await db.product.create({ data: { id: `${prefix}-${i}`, name: `${prefix} Product ${i}`, slug: `${prefix}-${i}`, status: 'PUBLISHED', basePrice: 100000, variants: { create: { id: `${prefix}-variant-${i}`, sku: `${prefix}-sku-${i}`, inventory: { create: { onHand: 10 } } } } } });
+  // Explicit Marketing SSR fixture to exercise voucher status/date hydration,
+  // not just the empty-state component. All data stays in disposable CI Postgres.
+  const marketingCouponCode = `NAV-${prefix.toUpperCase()}`;
+  await db.coupon.create({ data: {
+    code: marketingCouponCode, discountType: 'PERCENT', discountValue: 10,
+    minSpend: 0, isActive: true,
+    startsAt: new Date('2030-01-01T17:00:00.000Z'),
+    expiresAt: new Date('2030-01-03T17:00:00.000Z'),
+  } });
   const log = createWriteStream(path.join(artifacts, 'server.log'));
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '3116'], { cwd: root, env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.pipe(log); server.stderr.pipe(log);
@@ -187,6 +196,14 @@ async function main() {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({ path: path.join(artifacts, `${width}-shop.png`), fullPage: true });
       });
+      await check(`${width}px: Marketing SSR status and WIB date hydrate without browser exceptions`, async () => {
+        await page.goto(`${base}/admin/marketing`);
+        await expect(page.getByRole('heading', { name: 'Marketing', exact: true })).toBeVisible();
+        const voucher = page.locator('li').filter({ has: page.getByText(marketingCouponCode, { exact: true }) }).first();
+        await expect(voucher.getByText('Terjadwal', { exact: true })).toBeVisible();
+        await expect(voucher).toContainText('02/01/2030 00:00 WIB');
+        await page.waitForLoadState('networkidle');
+      });
       await context.close();
     }
     assert.deepEqual(errors, []);
@@ -198,6 +215,7 @@ async function main() {
     await db.inventory.deleteMany({ where: { variant: { productId: { startsWith: prefix } } } });
     await db.productVariant.deleteMany({ where: { productId: { startsWith: prefix } } });
     await db.product.deleteMany({ where: { id: { startsWith: prefix } } });
+    await db.coupon.deleteMany({ where: { code: marketingCouponCode } });
     await db.user.delete({ where: { id: user.id } });
   }
 }

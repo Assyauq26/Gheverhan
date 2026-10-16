@@ -2,6 +2,25 @@ import { OrderStatus, PaymentStatus, ShipmentStatus } from "@prisma/client";
 import { HttpError } from "@/lib/response";
 import { canTransitionShipment } from "./shipment.validation";
 export type ShipmentContext = { status: OrderStatus; paymentStatus: PaymentStatus; paymentStatusActual?: PaymentStatus; shipmentStatus: ShipmentStatus | null };
+
+/**
+ * Gheverhan fulfillment rule: entering a NEW AWB confirms handover to the courier.
+ * Existing AWBs are deliberately not reinterpreted during unrelated edits; old
+ * records must be reviewed explicitly rather than being retroactively shipped.
+ */
+export function statusOnTrackingSubmission(
+  requestedStatus: ShipmentStatus,
+  trackingNumber: string | null | undefined,
+  previousTrackingNumber: string | null | undefined,
+): ShipmentStatus {
+  const next = trackingNumber?.trim();
+  const previous = previousTrackingNumber?.trim();
+  if (next && next !== previous && (requestedStatus === "PENDING" || requestedStatus === "PROCESSING")) {
+    return "SHIPPED";
+  }
+  return requestedStatus;
+}
+
 /** Shared by the writer and server-rendered action options; no client lifecycle engine. */
 export function shipmentOrderTarget(order: ShipmentContext, status: ShipmentStatus) {
     const refundedTracking = order.status === "REFUNDED" && order.paymentStatus === "REFUNDED" && order.paymentStatusActual === "REFUNDED" && order.shipmentStatus && ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(order.shipmentStatus) && ["IN_TRANSIT", "DELIVERED"].includes(status);

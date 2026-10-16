@@ -183,6 +183,9 @@ async function main() {
         await expect(page.getByTestId("marketing-feedback")).toContainText("harga normal dipulihkan");
         const ended = await db.product.findUniqueOrThrow({ where: { id: product.id } });
         assert.equal(ended.salePrice, null); assert.equal(ended.isFlashSale, false);
+        // Restore the admin product editor for the subsequent pre-existing checkout regression.
+        await page.goto(`${base}/admin/products/${product.id}`);
+        await expect(page.getByLabel("Harga normal (Rp)", { exact: true })).toBeVisible();
       } finally {
         await db.coupon.deleteMany({ where: { code: voucherCode } });
       }

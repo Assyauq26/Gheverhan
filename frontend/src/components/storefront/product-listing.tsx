@@ -23,6 +23,8 @@ export function ProductListing({
   wishlisted,
   basePath,
   currentSort,
+  currentPage = 1,
+  pageSize = 12,
   query = {},
 }: {
   title: string;
@@ -32,8 +34,16 @@ export function ProductListing({
   wishlisted: Set<string>;
   basePath: string;
   currentSort?: string;
+  currentPage?: number;
+  pageSize?: number;
   query?: Record<string, string>;
 }) {
+  const pages = Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
+  const page = Math.min(Math.max(1, currentPage), pages);
+  function pageHref(target: number) {
+    const p = new URLSearchParams({ ...query, ...(currentSort && currentSort !== "newest" ? { sort: currentSort } : {}), page: String(target) });
+    return `${basePath}?${p.toString()}`;
+  }
   function sortHref(sort: string) {
     const p = new URLSearchParams({ ...query, sort });
     return `${basePath}?${p.toString()}`;
@@ -77,6 +87,13 @@ export function ProductListing({
             <ProductCard key={p.id} product={toCardData(p)} wishlisted={wishlisted.has(p.id)} />
           ))}
         </div>
+      )}
+      {pages > 1 && (
+        <nav aria-label="Halaman produk" className="flex items-center justify-center gap-4 pt-2 text-sm" data-testid="product-pagination">
+          {page > 1 ? <Link href={pageHref(page - 1)} className="min-h-11 rounded-lg border border-line px-4 py-3 font-semibold hover:bg-surface">Sebelumnya</Link> : <span className="px-4 text-ink-muted">Sebelumnya</span>}
+          <span aria-live="polite">Halaman {page} dari {pages}</span>
+          {page < pages ? <Link href={pageHref(page + 1)} className="min-h-11 rounded-lg border border-line px-4 py-3 font-semibold hover:bg-surface">Berikutnya</Link> : <span className="px-4 text-ink-muted">Berikutnya</span>}
+        </nav>
       )}
     </div>
   );

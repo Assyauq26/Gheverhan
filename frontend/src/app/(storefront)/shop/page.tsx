@@ -32,6 +32,8 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       wishlisted={new Set(wishIds)}
       basePath="/shop"
       currentSort={sort}
+      currentPage={result.page}
+      pageSize={result.pageSize}
       query={{ ...(params.q ? { q: params.q } : {}), ...(params.flash ? { flash: "1" } : {}) }}
     />
   );

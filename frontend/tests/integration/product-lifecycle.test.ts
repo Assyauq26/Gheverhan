@@ -91,6 +91,39 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     await prisma.productVariant.update({ where: { id: p.variants[0].id }, data: { price: 120000 } });
     await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: restored.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
   });
+  await t.test("scheduled flash sale changes buyer cart price automatically, protects product edits, and can be removed", async () => {
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const cart = await import("../../src/modules/cart/cart.service");
+    const p = await prisma.product.create({ data: {
+      name: "Scheduled flash fixture", slug: `scheduled-flash-${prefix}`, basePrice: 100000, status: "PUBLISHED",
+      variants: { create: { sku: `SCHEDULED-FLASH-${prefix}`, inventory: { create: { onHand: 4 } } } },
+    }, include: { variants: true } });
+    const buyer = await prisma.user.create({ data: { name: "Schedule buyer", email: `scheduled-buyer-${prefix}@integration.example.test`, passwordHash: "not-for-login" } });
+    await cart.addItem(buyer.id, p.variants[0].id, 1);
+    const marketer = { ...actor, permissions: [PERMISSIONS.PRODUCT_READ, PERMISSIONS.PROMOTION_UPDATE] };
+    const original = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    const first = { productId: p.id, expectedUpdatedAt: original.updatedAt.toISOString(), enabled: true, price: 70000,
+      startsAt: new Date(Date.now() - 60000).toISOString(), endsAt: new Date(Date.now() + 60000).toISOString() };
+    await assert.rejects(marketing.setScheduledFlashSale({ ...marketer, permissions: [] }, first), { status: 403 });
+    await assert.rejects(marketing.setScheduledFlashSale(marketer, { ...first, price: 100000 }), { status: 422 });
+    await marketing.setScheduledFlashSale(marketer, first);
+    assert.equal((await cart.getCartView(buyer.id)).subtotal, 70000);
+    const live = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: live.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 409 });
+    await assert.rejects(service.updateManagedProduct(actor, p.id, live.updatedAt.toISOString(), { ...input("schedule-guard"), salePrice: 80000 }), { status: 409 });
+    await assert.rejects(marketing.setScheduledFlashSale(marketer, first), { status: 409 });
+    const future = { ...first, expectedUpdatedAt: live.updatedAt.toISOString(),
+      startsAt: new Date(Date.now() + 60000).toISOString(), endsAt: new Date(Date.now() + 120000).toISOString() };
+    await marketing.setScheduledFlashSale(marketer, future);
+    assert.equal((await cart.getCartView(buyer.id)).subtotal, 100000, "future-start sale must not charge discount early");
+    const futureSaved = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    await marketing.setScheduledFlashSale(marketer, { productId: p.id, expectedUpdatedAt: futureSaved.updatedAt.toISOString(),
+      enabled: false, price: null, startsAt: null, endsAt: null });
+    const after = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    assert.equal(after.flashSalePrice, null); assert.equal(after.salePrice, null);
+    assert.equal((await cart.getCartView(buyer.id)).subtotal, 100000);
+    assert.equal(await prisma.auditLog.count({ where: { entity: "Product", entityId: p.id, action: { startsWith: "flash-sale.schedule" } } }), 3);
+  });
   await t.test("editing and adding a variant preserves deterministic editor ordering", async () => {
     const created = await service.createManagedProduct(actor, input("variant-order"));
     const initial = await service.getManagedProduct(actor, created.id); const originalId = initial.variants[0].id;

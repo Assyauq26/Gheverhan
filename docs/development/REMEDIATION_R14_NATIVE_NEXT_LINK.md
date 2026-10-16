@@ -31,3 +31,20 @@ and do not disappear simply because a single attempt passes.
 
 The shared dummy-data Supabase project is NOT used by CI and no production
 configurations or records are touched.
+
+## Experimental finding and next controlled comparison
+First native NextLink + useLinkStatus CI **FAILED** with the same 1360px
+admin pagination timeout. The RSC browser trace showed HTTP 200 headers after
+~609 ms and `net::ERR_ABORTED` without any request left in flight. Therefore
+link interception is **not sufficient** to explain or fix the symptom.
+
+The Playwright test had delayed `route.continue()` BEFORE the upstream RSC
+fetch. It now fetches the real upstream response first, then delays delivery
+using `route.fulfill({ response })` by the same 600 ms. Page 2 assertions,
+URL preservation, browser exception checks and the test timeouts remain
+unchanged. This is an A/B experiment of the **test network shim**, not a
+workaround that removes the simulated latency or declares the app safe.
+
+If the new test passes consistently, retest the actual app without Playwright
+interception, and retain a second independent true slow-network browser scenario
+before claiming real production navigation reliability.

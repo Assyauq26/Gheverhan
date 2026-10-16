@@ -132,6 +132,37 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await cart.getCartView(loser.id)).count, 1);
     await invariant();
   });
+  await t.test("cancelled and expired coupon orders release quota while live checkouts still reserve it", async () => {
+    const p = await product(6);
+    const [a, b] = await Promise.all([buyer(p.variants[0].id), buyer(p.variants[0].id)]);
+    const code = `RELEASE-CAP-${prefix}-${++seq}`.toUpperCase();
+    await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, usageLimit: 1, perUserLimit: 1 } });
+    const ai = await input(a.id);
+    const first = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
+    const orderA = await checkout.createOrder(a.id, { ...ai, couponCode: code,
+      expectedQuote: { subtotal: first.subtotal, shippingCost: first.shippingCost, discount: first.discount, total: first.total } });
+    const bInput = await input(b.id);
+    const held = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bInput.shipping });
+    assert.equal(held.discount, 0, "Active pending checkout must reserve the only slot");
+    await cart.addItem(a.id, p.variants[0].id, 1);
+    await orders.transitionOrder(orderA.id, "CANCELLED", adminId);
+    const availableForA = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
+    const availableForB = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bInput.shipping });
+    assert.equal(availableForA.discount, 10000, "Cancellation restores per-user eligibility");
+    assert.equal(availableForB.discount, 10000, "Cancellation restores global quota");
+    const orderB = await checkout.createOrder(b.id, { ...bInput, couponCode: code,
+      expectedQuote: { subtotal: availableForB.subtotal, shippingCost: availableForB.shippingCost, discount: availableForB.discount, total: availableForB.total } });
+    assert.equal(orderB.discount, 10000);
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const actor = { id: adminId, isAdmin: true, permissions: Object.values(PERMISSIONS) };
+    const listed = await marketing.listMarketing(actor);
+    assert.equal(listed.vouchers.find(v => v.code === code)?.usedCount, 1, "Cancelled coupon order must not show as redeemed in Marketing");
+    await orders.transitionOrder(orderB.id, "EXPIRED", adminId);
+    const afterExpiry = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
+    assert.equal(afterExpiry.discount, 10000, "Expired checkout restores quota");
+    assert.equal((await marketing.listMarketing(actor)).vouchers.find(v => v.code === code)?.usedCount, 0);
+    await invariant();
+  });
   await t.test("future voucher start and per-user limit are enforced by both preview and transactional checkout", async () => {
     const p = await product(5); const b = await buyer(p.variants[0].id);
     const code = `USER-CAP-${prefix}-${++seq}`.toUpperCase();

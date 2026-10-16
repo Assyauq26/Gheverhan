@@ -18,7 +18,8 @@ export function voucherStatus(v: { isActive: boolean; expiresAt: Date | null }, 
 export async function listMarketing(actor: Actor) {
   if (!actor.isAdmin || ![PERMISSIONS.PROMOTION_CREATE, PERMISSIONS.PROMOTION_UPDATE].some(p => actor.permissions.includes(p)))
     throw new HttpError("Anda tidak memiliki izin melihat Marketing", 403);
-  const [vouchers, products] = await Promise.all([
+  const now = new Date();
+  const [vouchers, products, activeVouchers, activeFlashSales] = await Promise.all([
     prisma.coupon.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 100 }),
     actor.permissions.includes(PERMISSIONS.PRODUCT_READ)
       ? prisma.product.findMany({
@@ -28,8 +29,10 @@ export async function listMarketing(actor: Actor) {
           select: { id: true, name: true, slug: true, basePrice: true, salePrice: true, isFlashSale: true, updatedAt: true, variants: { select: { price: true, salePrice: true }, take: 50 } },
         })
       : Promise.resolve([]),
+    prisma.coupon.count({ where: { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
+    actor.permissions.includes(PERMISSIONS.PRODUCT_READ) ? prisma.product.count({ where: { isFlashSale: true, status: "PUBLISHED" } }) : Promise.resolve(0),
   ]);
-  return { vouchers, products };
+  return { vouchers, products, activeVouchers, activeFlashSales };
 }
 
 export async function saveVoucher(actor: Actor, id: string | null, value: unknown) {

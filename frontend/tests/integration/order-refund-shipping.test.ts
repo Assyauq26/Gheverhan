@@ -246,6 +246,15 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 0);
     await invariant();
   });
+  await t.test("failed automatic dispatch rolls back order, shipment and event atomically", async () => {
+    const f = await paid(); await pack(f.order.id);
+    const data = { ...shippingInput("PROCESSING"), trackingNumber: `ROLLBACK-${prefix}-${++seq}` };
+    await auditFailure(() => shipments.upsertManualShipment(f.order.id, warehouseId, data));
+    assert.equal((await status(f.order.id)).status, "PACKED");
+    assert.equal(await db.shipment.count({ where: { orderId: f.order.id } }), 0);
+    assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 0);
+    await invariant();
+  });
   await t.test("historical AWB stays PROCESSING on unrelated edit; explicit SHIPPED remains available", async () => {
     const f = await paid(); await pack(f.order.id);
     const legacy = await db.shipment.create({

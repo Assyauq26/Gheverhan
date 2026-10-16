@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { voucherInputSchema, flashSaleInputSchema } from "@/modules/promotions/marketing.validation";
+import { voucherInputSchema, flashSaleInputSchema, scheduledFlashSaleSchema } from "@/modules/promotions/marketing.validation";
+import { activeScheduledFlashPrice, effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
 
 const voucher = () => ({
   code: "GHEVER10", discountType: "PERCENT" as const,
@@ -49,5 +50,30 @@ describe("Flash sale input", () => {
   });
   it("accepts disabling the flash sale without a sale price", () => {
     expect(flashSaleInputSchema.safeParse({ ...input, enabled: false, salePrice: null }).success).toBe(true);
+  });
+});
+
+describe("Scheduled flash sales", () => {
+  const startsAt = new Date(Date.now() - 60_000).toISOString();
+  const endsAt = new Date(Date.now() + 60_000).toISOString();
+  const request = { productId: "p1", expectedUpdatedAt: new Date().toISOString(), enabled: true,
+    price: 70000, startsAt, endsAt };
+  it("validates time windows and required sale price", () => {
+    expect(scheduledFlashSaleSchema.safeParse(request).success).toBe(true);
+    expect(scheduledFlashSaleSchema.safeParse({ ...request, startsAt: endsAt, endsAt: startsAt }).success).toBe(false);
+    expect(scheduledFlashSaleSchema.safeParse({ ...request, price: 0 }).success).toBe(false);
+    expect(scheduledFlashSaleSchema.safeParse({ ...request, price: null }).success).toBe(false);
+    expect(scheduledFlashSaleSchema.safeParse({ ...request, endsAt: "2020-01-01T00:00:00.000Z" }).success).toBe(false);
+    expect(scheduledFlashSaleSchema.safeParse({ ...request, enabled: false, price: null, startsAt: null, endsAt: null }).success).toBe(true);
+  });
+  it("shows scheduled price only in inclusive/exclusive UTC window", () => {
+    const fields = { basePrice: 150000, salePrice: null,
+      flashSalePrice: 90000, flashSaleStartsAt: new Date("2030-01-01T12:00:00Z"),
+      flashSaleEndsAt: new Date("2030-01-01T13:00:00Z") };
+    expect(effectiveProductPrice(fields, new Date("2030-01-01T11:59:59Z"))).toBe(150000);
+    expect(effectiveProductPrice(fields, new Date("2030-01-01T12:00:00Z"))).toBe(90000);
+    expect(effectiveProductPrice(fields, new Date("2030-01-01T12:59:59Z"))).toBe(90000);
+    expect(effectiveProductPrice(fields, new Date("2030-01-01T13:00:00Z"))).toBe(150000);
+    expect(activeScheduledFlashPrice({ ...fields, flashSalePrice: 155000 }, new Date("2030-01-01T12:30:00Z"))).toBeNull();
   });
 });

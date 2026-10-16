@@ -167,9 +167,17 @@ async function main() {
         await expect(page.getByTestId("adminnav-marketing").filter({ visible: true })).toHaveAttribute("aria-current", "page");
         await page.getByLabel("Kode voucher").fill(voucherCode);
         await page.getByLabel("Nilai diskon (%)").fill("15");
+        await page.getByLabel("Mulai berlaku (opsional)").fill("2030-01-01T12:00");
+        await page.getByLabel("Kuota total (opsional)").fill("5");
+        await page.getByLabel("Batas per pelanggan").fill("1");
         await page.getByRole("button", { name: "Buat voucher", exact: true }).click();
         await expect(page.getByTestId("marketing-feedback")).toHaveText("Voucher berhasil disimpan.");
         await expect.poll(() => db.coupon.count({ where: { code: voucherCode } })).toBe(1);
+        const scheduledVoucher = await db.coupon.findUniqueOrThrow({ where: { code: voucherCode } });
+        assert.equal(scheduledVoucher.usageLimit, 5);
+        assert.equal(scheduledVoucher.perUserLimit, 1);
+        assert.ok(scheduledVoucher.startsAt && scheduledVoucher.startsAt.getTime() > Date.now());
+        await expect(page.getByText("Terjadwal")).toBeVisible();
         await page.getByRole("button", { name: `Nonaktifkan ${voucherCode}` }).click();
         await expect(page.getByTestId("marketing-feedback")).toContainText("Status voucher diperbarui.");
         assert.equal((await db.coupon.findUniqueOrThrow({ where: { code: voucherCode } })).isActive, false);

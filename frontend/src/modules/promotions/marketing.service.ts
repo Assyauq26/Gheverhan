@@ -14,7 +14,7 @@ export function voucherStatus(v: { isActive: boolean; startsAt?: Date | null; ex
   return !v.isActive ? "NONAKTIF" : v.expiresAt && v.expiresAt <= now ? "KEDALUWARSA" : v.startsAt && v.startsAt > now ? "TERJADWAL" : "AKTIF";
 }
 
-/** No schema change: the existing Coupon table is already used by checkout. */
+/** Reads marketing campaigns with usage totals; requires Sprint 2K Coupon migration. */
 export async function listMarketing(actor: Actor) {
   if (!actor.isAdmin || ![PERMISSIONS.PROMOTION_CREATE, PERMISSIONS.PROMOTION_UPDATE].some(p => actor.permissions.includes(p)))
     throw new HttpError("Anda tidak memiliki izin melihat Marketing", 403);
@@ -60,7 +60,7 @@ export async function saveVoucher(actor: Actor, id: string | null, value: unknow
   try {
     return await prisma.$transaction(async tx => {
       if (id) {
-        // Locks serialize editing with checkout's SELECT FOR SHARE of this coupon.
+        // Locks serialize edits with checkout's exclusive Coupon row lock.
         const rows = await tx.$queryRaw<Array<{ id: string; code: string }>>(Prisma.sql`SELECT "id", "code" FROM "Coupon" WHERE "id" = ${id} FOR UPDATE`);
         if (!rows.length) throw new HttpError("Voucher tidak ditemukan", 404);
         if (rows[0].code !== input.code) throw new HttpError("Kode voucher tidak boleh diubah. Buat voucher baru.", 422);

@@ -297,6 +297,12 @@ async function main() {
             overflowing: document.documentElement.scrollWidth > innerWidth,
             viewport: innerWidth,
             documentWidth: document.documentElement.scrollWidth,
+            bodyWidth: document.body.scrollWidth,
+            scrollCandidates: [...document.querySelectorAll("body *")].map(node => {
+              const el = node as HTMLElement;
+              return { tag: el.tagName, classes: String(el.className || "").slice(0, 90),
+                delta: el.scrollWidth - el.clientWidth, overflowX: getComputedStyle(el).overflowX };
+            }).filter(el => el.delta > 2 && el.overflowX === "visible").slice(0, 18),
             elements: [...document.querySelectorAll("body *")].map(node => {
               const rect = node.getBoundingClientRect();
               return { tag: node.tagName, classes: String((node as HTMLElement).className || "").slice(0, 110), left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) };

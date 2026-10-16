@@ -3,6 +3,7 @@ import { OperationsSkeleton } from "@/components/admin/operations-skeleton";
 import type { AuthUser } from "@/lib/auth/session";
 import { FilterForm } from "@/components/ui/filter-form";
 import Link from "@/components/ui/navigation";
+import NextLink from "next/link";
 import Image from "next/image";
 import { Package, Plus } from "lucide-react";
 import { ProductStatus } from "@prisma/client";
@@ -33,6 +34,6 @@ async function ProductsContent({ user, searchParams }: { user: AuthUser; searchP
       <div className="min-w-0"><Link href={`/admin/products/${p.id}`} prefetch={false} className="break-words font-semibold underline-offset-4 hover:underline">{p.name}</Link><p className="mt-1 text-xs text-ink-soft">{p.category?.name || "Tanpa kategori"} · {p._count.variants} varian</p><span className="mt-2 inline-block rounded-full border border-line px-2.5 py-1 text-xs font-medium">{labels[p.status]}</span></div>
       <div className="col-start-2 text-sm font-semibold tabular-nums sm:col-auto sm:text-right">{formatIDR(effectivePrice(p.basePrice, p.salePrice))}<div className="mt-2"><Link href={`/admin/products/${p.id}`} prefetch={false} className="inline-flex min-h-11 items-center text-xs font-normal underline underline-offset-4">Buka produk</Link></div></div>
     </li>)}</ul>}
-    {result.pages > 1 && <nav aria-label="Halaman produk" className="flex flex-wrap items-center justify-between gap-3 text-sm"><span>Halaman {result.page} dari {result.pages}</span><div className="flex gap-3">{result.page > 1 && <Button asChild variant="outline" size="sm" className="min-h-11"><Link href={href(result.page - 1)} prefetch={false}>Sebelumnya</Link></Button>}{result.page < result.pages && <Button asChild variant="outline" size="sm" className="min-h-11"><Link href={href(result.page + 1)} prefetch={false}>Berikutnya</Link></Button>}</div></nav>}
+    {result.pages > 1 && <nav aria-label="Halaman produk" className="flex flex-wrap items-center justify-between gap-3 text-sm"><span>Halaman {result.page} dari {result.pages}</span><div className="flex gap-3">{result.page > 1 && <Button asChild variant="outline" size="sm" className="min-h-11"><NextLink href={href(result.page - 1)} prefetch={false}>Sebelumnya</NextLink></Button>}{result.page < result.pages && <Button asChild variant="outline" size="sm" className="min-h-11"><NextLink href={href(result.page + 1)} prefetch={false}>Berikutnya</NextLink></Button>}</div></nav>}
   </div>;
 }

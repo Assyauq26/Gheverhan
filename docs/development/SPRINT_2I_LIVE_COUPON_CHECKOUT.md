@@ -10,7 +10,7 @@
 2. Coupon entry is normalized to uppercase without whitespace and debounced (350 ms). The customer sees whether the code applies, the discount in rupiah, and the resulting order total.
 3. Choosing a different shipping method refreshes the quote. Outdated request results are canceled/ignored and cannot overwrite the currently selected coupon/kurir totals.
 4. The submit button is unavailable while a quote is missing, pending, failed, or materially different from the checkout's initially confirmed subtotal/selected rate. Errors provide a retry or reload path; coupon invalidity alone does not block checkout, but is disclosed.
-5. The actual `createOrder` service still recomputes authoritative prices, coupons, rates, stock and bank status inside its existing transaction with its idempotency and price-confirmation guards. Browser quotes are informational, never price authority.
+5. Checkout sends the subtotal/ongkir/discount/total actually shown to the customer as an `expectedQuote` confirmation. The `createOrder` transaction recomputes and compares all four amounts while reading/locking the coupon, before reserving stock, creating payment, or writing the order. A changed, disabled or expired coupon returns HTTP 409 with an instruction to refresh checkout. Browser values are **confirmations to compare**, never price authority.
 
 ## Server safety boundaries
 
@@ -18,6 +18,7 @@
 - The client-supplied shipping cost is ignored by `resolveShippingCost`. The client never submits the preview total as a trusted field for order creation.
 - Coupon code and shipping choice are length-bounded in preview input validation; no new coupon creation/administration functionality.
 - Preview is read-only and does not reserve inventory, create an order or consume a coupon.
+- Coupon checkouts must provide a valid `expectedQuote` through server actions or REST; legacy API checkout without coupons remains supported with `expectedLines`, and may optionally provide `expectedQuote` for stricter confirmation.
 - No real payment, courier pickup, production order or Supabase production write is performed.
 
 ## Acceptance and checks
@@ -27,6 +28,7 @@
 - API ignores fraudulent browser shipping cost (e.g. Rp0); anonymous API callers receive HTTP 401.
 - Repricing updates desktop/mobile summary without horizontal overflow.
 - Existing checkout stale-price rejection stays intact, preventing orders against unconfirmed catalog edits.
+- PostgreSQL regression changes the coupon from 10% to 5% or disables it after preview, confirms HTTP 409, zero created orders/reservations and preserved cart; accepting a new quote creates an order with the updated discount. Browser regression confirms a disabled coupon cannot silently create a higher-total order.
 - `npm test`, containment, TypeScript/lint/build, isolated PostgreSQL suites, and Chromium regression must pass on the exact PR head before approval.
 
 ## Release gate

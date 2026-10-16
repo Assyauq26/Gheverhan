@@ -49,17 +49,16 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     const tracking = enteredTracking ?? order.shipment?.trackingNumber?.trim();
     const replayOfDispatch = order.status === "SHIPPED" &&
       order.shipment?.status === "SHIPPED" && enteredTracking === order.shipment.trackingNumber;
-    const autoDispatch = Boolean(tracking) &&
+    const autoDispatch = Boolean(enteredTracking) &&
       (order.status === "PACKED" || replayOfDispatch) &&
       ["PENDING", "PROCESSING", "SHIPPED"].includes(requested.status);
     const effectiveStatus: ShipmentStatus = autoDispatch ? "SHIPPED" : requested.status;
     const data = {
       ...requested,
       status: effectiveStatus,
-      // First dispatch gets a server-authoritative timestamp, unless one was
-      // already recorded. Never rewrite the original handover timestamp.
-      ...(effectiveStatus === "SHIPPED" && !requested.shippedDate && !order.shipment?.shippedDate
-        ? { shippedDate: new Date() } : {}),
+      // The first dispatch uses server time; all later edits retain that exact
+      // timestamp. Never trust a browser-supplied shippedDate for this audit field.
+      shippedDate: order.shipment?.shippedDate ?? (effectiveStatus === "SHIPPED" ? new Date() : undefined),
     };
     const target = shipmentOrderTarget(
       { status: order.status, paymentStatus: order.paymentStatus,
@@ -74,7 +73,7 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
       const before = (order.shipment as unknown as Record<string, unknown>)[key]; const after = (merged as Record<string, unknown>)[key];
       return (before instanceof Date ? before.toISOString() : before ?? null) !== (after instanceof Date ? after.toISOString() : after ?? null);
     });
-    if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${input.status}`, { source: "shipment" });
+    if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${effectiveStatus}`, { source: "shipment" });
     const shipment = changed ? await tx.shipment.upsert({ where: { orderId }, create: { orderId, provider: "manual", ...data }, update: data }) : order.shipment!;
     if (changed) {
       await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: effectiveStatus, description: `Manual shipment: ${effectiveStatus}${merged.trackingNumber ? ` (${merged.trackingNumber})` : ""}` } });

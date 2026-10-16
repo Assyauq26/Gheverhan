@@ -50,7 +50,15 @@ async function main() {
         await route.continue();
       });
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
-      const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+      const page = await context.newPage();
+      page.on('pageerror', e => {
+        const message = e.message;
+        const route = new URL(page.url()).pathname;
+        // Keep strict failure, but retain route context for intermittent #418.
+        const safe = `viewport=${width}px path=${route} error=${message.slice(0, 300)}`;
+        errors.push(safe);
+        console.error('[browser-error] ' + safe);
+      });
       // Read-only diagnostic: log RSC state without cookies, headers or query values.
       const rsc = new Map<string, { path: string; started: number }>();
       const rscEvents: string[] = [];

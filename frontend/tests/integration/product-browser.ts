@@ -159,6 +159,37 @@ async function main() {
       const store = await anonymous.newPage(); await store.goto(`${base}/product/${slug}`); await expect(store.getByTestId("purchase-panel")).toBeVisible(); await expect(store.getByRole("heading", { name: `Kaos Sprint ${prefix} Edited`, exact: true })).toBeVisible();
       await expect.poll(() => store.getByTestId("product-gallery").locator("img").first().evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0); await store.close();
     });
+    await check("admin Marketing UI creates voucher and activates/deactivates flash sale with effective price", async () => {
+      const voucherCode = `WEB-${prefix}`.toUpperCase();
+      try {
+        await page.goto(`${base}/admin/marketing`);
+        await expect(page.getByRole("heading", { name: "Marketing", exact: true })).toBeVisible();
+        await expect(page.getByTestId("adminnav-marketing").filter({ visible: true })).toHaveAttribute("aria-current", "page");
+        await page.getByLabel("Kode voucher").fill(voucherCode);
+        await page.getByLabel("Nilai diskon (%)").fill("15");
+        await page.getByRole("button", { name: "Buat voucher", exact: true }).click();
+        await expect(page.getByTestId("marketing-feedback")).toHaveText("Voucher berhasil disimpan.");
+        await expect.poll(() => db.coupon.count({ where: { code: voucherCode } })).toBe(1);
+        await page.getByRole("button", { name: `Nonaktifkan ${voucherCode}` }).click();
+        await expect(page.getByTestId("marketing-feedback")).toContainText("Status voucher diperbarui.");
+        assert.equal((await db.coupon.findUniqueOrThrow({ where: { code: voucherCode } })).isActive, false);
+
+        await page.getByLabel("Pilih produk terbit").selectOption(product.id);
+        await page.getByLabel("Harga flash sale (Rp)").fill("169000");
+        await page.getByRole("button", { name: "Aktifkan flash sale" }).click();
+        await expect(page.getByTestId("marketing-feedback")).toContainText("berhasil masuk flash sale");
+        await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).salePrice).toBe(169000);
+        await page.getByRole("button", { name: "Akhiri flash sale" }).click();
+        await expect(page.getByTestId("marketing-feedback")).toContainText("harga normal dipulihkan");
+        const ended = await db.product.findUniqueOrThrow({ where: { id: product.id } });
+        assert.equal(ended.salePrice, null); assert.equal(ended.isFlashSale, false);
+        // Restore the admin product editor for the subsequent pre-existing checkout regression.
+        await page.goto(`${base}/admin/products/${product.id}`);
+        await expect(page.getByLabel("Harga normal (Rp)", { exact: true })).toBeVisible();
+      } finally {
+        await db.coupon.deleteMany({ where: { code: voucherCode } });
+      }
+    });
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });

@@ -28,6 +28,69 @@ after(async () => { await prisma?.$disconnect(); });
 const input = (suffix: string) => ({ name: "Integration product", slug: `integration-${prefix}-${suffix}`, basePrice: 100000, salePrice: null, variants: [{ sku: `GH-${prefix}-${suffix}`, color: "Black", size: "M", onHand: 5 }], images: [] });
 
 test("real PostgreSQL product lifecycle and transactional guards", async t => {
+  await t.test("Marketing creates, edits, disables and audits voucher with RBAC and duplicate protection", async () => {
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const code = `MKT-${prefix}`.toUpperCase();
+    const inputVoucher = { code, discountType: "PERCENT" as const, discountValue: 10, minSpend: 100000, maxDiscount: 20000, expiresAt: null, isActive: true };
+    const marketer = { ...actor, permissions: [PERMISSIONS.PRODUCT_READ, PERMISSIONS.PROMOTION_CREATE, PERMISSIONS.PROMOTION_UPDATE] };
+    const before = await prisma.coupon.count({ where: { code } });
+    await assert.rejects(marketing.saveVoucher({ ...marketer, isAdmin: false }, null, inputVoucher), { status: 403 });
+    await assert.rejects(marketing.saveVoucher({ ...marketer, permissions: [] }, null, inputVoucher), { status: 403 });
+    assert.equal(await prisma.coupon.count({ where: { code } }), before);
+    const created = await marketing.saveVoucher(marketer, null, inputVoucher);
+    assert.equal((await prisma.coupon.findUniqueOrThrow({ where: { id: created.id } })).code, code);
+    await assert.rejects(marketing.saveVoucher(marketer, null, inputVoucher), { status: 409 });
+    await assert.rejects(marketing.saveVoucher(marketer, created.id, { ...inputVoucher, code: "DIFFERENT" }), { status: 422 });
+    await marketing.saveVoucher(marketer, created.id, { ...inputVoucher, discountValue: 15 });
+    assert.equal((await prisma.coupon.findUniqueOrThrow({ where: { id: created.id } })).discountValue, 15);
+    await marketing.setVoucherActive(marketer, created.id, false);
+    assert.equal((await prisma.coupon.findUniqueOrThrow({ where: { id: created.id } })).isActive, false);
+    assert.equal(await prisma.auditLog.count({ where: { entity: "Coupon", entityId: created.id } }), 3);
+  });
+  await t.test("Marketing active voucher totals stay accurate beyond the 100-row list limit", async () => {
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const many = Array.from({ length: 102 }, (_, i) => ({
+      code: `PAGE-${prefix}-${i}`, discountType: "PERCENT" as const, discountValue: 5,
+      isActive: true,
+    }));
+    await prisma.coupon.createMany({ data: many });
+    try {
+      const actual = await prisma.coupon.count({ where: { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } });
+      const listing = await marketing.listMarketing(actor);
+      assert.ok(listing.vouchers.length <= 100);
+      assert.equal(listing.activeVouchers, actual);
+    } finally {
+      await prisma.coupon.deleteMany({ where: { code: { startsWith: `PAGE-${prefix}` } } });
+    }
+  });
+  await t.test("Marketing flash sale controls real buyer price and rejects stale and variant-priced products", async () => {
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const p = await prisma.product.create({ data: {
+      name: "Flash fixture", slug: `flash-${prefix}`, basePrice: 100000, status: "PUBLISHED",
+      variants: { create: { sku: `FLASH-${prefix}`, inventory: { create: { onHand: 4 } } } },
+    }, include: { variants: true } });
+    const marketer = { ...actor, permissions: [PERMISSIONS.PRODUCT_READ, PERMISSIONS.PROMOTION_UPDATE] };
+    const before = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    await assert.rejects(marketing.setFlashSale({ ...marketer, permissions: [PERMISSIONS.PRODUCT_READ] },
+      { productId: p.id, expectedUpdatedAt: before.updatedAt.toISOString(), enabled: true, salePrice: 90000 }), { status: 403 });
+    await assert.rejects(marketing.setFlashSale(marketer,
+      { productId: p.id, expectedUpdatedAt: before.updatedAt.toISOString(), enabled: true, salePrice: 100000 }), { status: 422 });
+    await marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: before.updatedAt.toISOString(), enabled: true, salePrice: 90000 });
+    const active = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    assert.equal(active.isFlashSale, true); assert.equal(active.salePrice, 90000);
+    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: before.updatedAt.toISOString(), enabled: false, salePrice: null }), { status: 409 });
+    await marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: active.updatedAt.toISOString(), enabled: false, salePrice: null });
+    const ended = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
+    assert.equal(ended.isFlashSale, false); assert.equal(ended.salePrice, null);
+    assert.equal(await prisma.auditLog.count({ where: { entity: "Product", entityId: p.id, action: { startsWith: "flash-sale." } } }), 2);
+    // An existing ordinary sale price must never be lost by starting/ending a flash campaign.
+    const originalSale = await prisma.product.update({ where: { id: p.id }, data: { salePrice: 95000 } });
+    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: originalSale.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
+    assert.equal((await prisma.product.findUniqueOrThrow({ where: { id: p.id } })).salePrice, 95000);
+    const restored = await prisma.product.update({ where: { id: p.id }, data: { salePrice: null } });
+    await prisma.productVariant.update({ where: { id: p.variants[0].id }, data: { price: 120000 } });
+    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: restored.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
+  });
   await t.test("editing and adding a variant preserves deterministic editor ordering", async () => {
     const created = await service.createManagedProduct(actor, input("variant-order"));
     const initial = await service.getManagedProduct(actor, created.id); const originalId = initial.variants[0].id;

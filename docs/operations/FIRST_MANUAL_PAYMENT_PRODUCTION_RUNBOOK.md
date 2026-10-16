@@ -139,7 +139,7 @@ Pemeriksaan **baca-saja** dari Supabase production setelah ada transaksi pertama
 
 Tindak lanjut Admin:
 1. Finance memastikan bahwa approval yang tercatat memang didahului pencocokan **mutasi rekening bank asli**. Jangan approve ulang atau memodifikasi payment via SQL hanya untuk tes.
-2. Tim operasional memastikan status fisik paket, kurir dan nomor resi secara internal. Adanya nomor resi/tanggal kirim pada record tidak membuktikan serah-terima; transisi dari `PACKED` dilakukan setelah handover aktual dan sesuai aturan aplikasi.
+2. **Aturan bisnis baru:** seller/staf yang memasukkan **nomor resi baru** menyatakan paket telah diserahkan kepada kurir. Pada pesanan **PACKED + PAID**, aplikasi otomatis mengubah shipment/order menjadi `SHIPPED`, mencatat waktu kirim jika belum ada, dan menulis riwayat/audit. Jangan input resi sebelum handover. Resi lama yang sudah tercatat **tidak** diubah retroaktif hanya karena field lain diedit. Konfirmasi penerimaan kurir secara independen masih memerlukan bukti operasional atau pelacakan jasa kirim, karena API pelacakan kurir belum terhubung.
 3. Pesanan kedua yang masih menunggu pembayaran tidak boleh diberi status `PAID` tanpa bukti uang masuk.
 4. Dokumentasikan hasil internal secara terbatas tanpa menyalin rekening, identitas pelanggan, ataupun berkas bukti ke GitHub.
 
@@ -187,6 +187,14 @@ FULL JOIN sale_units sm
 WHERE COALESCE(oi.units,0)<>COALESCE(sm.units,0);
 ```
 
-## 7. Definisi selesai
+## 7. Aturan operasional resi sebagai deklarasi serah-terima
+
+- **Tindakan seller/staf:** masukkan nomor resi **setelah paket fisik diserahkan** kepada kurir; nomor resi adalah deklarasi serah-terima dari pihak penginput, bukan hasil pemindaian langsung sistem kurir.
+- **Efek otomatis:** untuk pesanan yang telah `PACKED` dan `PAID`, memasukkan nomor resi **baru** saat status `PENDING`/`PROCESSING` otomatis menetapkan `Shipment.status = SHIPPED` dan `Order.status = SHIPPED`, mencatat `shippedDate` jika belum tersedia, serta mencatat audit/riwayat tepat sekali melalui transaksi database.
+- **Pengaman:** pesanan yang belum `PACKED`, pembayaran belum `PAID`, atau refund aktif tidak dapat dilewati hanya dengan memasukkan resi. Perubahan status `IN_TRANSIT` dan `DELIVERED` tetap mengikuti aturan operasional terpisah.
+- **Data historis:** resi yang pernah tercatat sebelum kebijakan ini (contoh snapshot `PACKED` + shipment `PROCESSING`) **tidak** otomatis dinaikkan statusnya melalui migrasi SQL maupun edit field lain. Operator boleh memilih `SHIPPED` secara eksplisit setelah memastikan handover nyata.
+- **Lingkup akses:** fitur form resi saat ini berada di backoffice `/admin/shipping` → detail order dan membutuhkan izin `shipping.update`. Belum ada bukti bahwa portal seller mandiri menyediakan form ini; implementasi portal merchant merupakan pekerjaan terpisah.
+
+## 8. Definisi selesai
 
 Tandai validasi operasional **PASS penuh** hanya bila bukti asli telah diterima, otorisasi/rekonsiliasi terpenuhi, **penerimaan dana telah diverifikasi lewat mutasi bank resmi**, dan aksi Finance sah. Saat ini telah teramati satu konfirmasi `APPROVED` dan order `PACKED` yang konsisten secara database, tetapi verifikasi bank independen oleh pemeriksa ini masih **belum diketahui**. Jangan menyatakan *PASS penuh* hanya berdasarkan database.

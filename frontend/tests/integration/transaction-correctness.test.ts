@@ -337,6 +337,21 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "EXPIRED");
     assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1); await invariant();
   });
+  await t.test("finance can reject a late proof so cron can release the reservation", async () => {
+    const f = await pending();
+    // Simulate the race where a submitted proof is timestamped just beyond
+    // the deadline. Approval remains forbidden; rejection must unblock expiry.
+    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(Date.now() - 60_000) } });
+    await assert.rejects(payments.approvePayment(f.payment.id, adminId), { status: 409 });
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
+    await payments.rejectPayment(f.payment.id, adminId, "Bukti tercatat setelah tenggat");
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "EXPIRED");
+    assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1);
+    assert.equal(await movements(f.p.variants[0].id, "SALE"), 0);
+    await invariant();
+  });
   await t.test("financial staff can approve proof submitted before expiry even if review is later", async () => {
     const f = await pending();
     const expiry = new Date(Date.now() - 60_000);

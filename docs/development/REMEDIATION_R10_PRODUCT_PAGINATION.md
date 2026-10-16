@@ -28,3 +28,6 @@ feedback; this is an isolated targeted remediation, **not proven root cause**.
   unchanged.
 - Main stays unchanged until full CI and review pass; see hydration diagnostic
   PR #43 for a different possible streaming-related issue.
+
+## Additional network tracing
+If desktop pagination times out, the browser regression now prints route-only RSC request start/response/finalization, in-flight duration, and a read-only HTTP GET check of the second page. No query values, cookies, tokens, passwords or private record content are logged. This distinguishes server-rendering failure from client router/transport deadlock. A failing scenario remains **red**; diagnostics are not a waiver.

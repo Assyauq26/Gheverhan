@@ -173,12 +173,28 @@ async function main() {
       assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "PAID"); assert.equal(await db.inventoryMovement.count({ where: { variantId: variant.id, type: "SALE" } }), 1);
     });
     await check("authorized order processing and packing use lifecycle service", async () => {
-      await page.goto(orderUrl); await submit(page, "Ubah status order", `/api/v1/admin/orders/${sale.order.id}/status`); await page.reload(); await submit(page, "Ubah status order", `/api/v1/admin/orders/${sale.order.id}/status`);
+      await page.goto(orderUrl);
+      await expect(page.getByRole("form", { name: "Simpan pengiriman" }).getByLabel("Nomor resi")).toHaveCount(0);
+      await submit(page, "Ubah status order", `/api/v1/admin/orders/${sale.order.id}/status`);
+      await page.reload();
+      await expect(page.getByRole("form", { name: "Simpan pengiriman" }).getByLabel("Nomor resi")).toHaveCount(0);
+      await submit(page, "Ubah status order", `/api/v1/admin/orders/${sale.order.id}/status`);
       assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "PACKED");
     });
-    await check("manual shipment dispatch is atomically reflected in order and history", async () => {
-      await wp.goto(orderUrl); const f = wp.getByRole("form", { name: "Simpan pengiriman" }); await f.getByLabel("Kurir *").fill("JNE"); await f.getByLabel("Layanan *").fill("REG"); await f.getByLabel("Nomor resi").fill(`RESI-${prefix}`); await f.getByLabel("Status pengiriman *").selectOption("SHIPPED"); await submit(wp, "Simpan pengiriman", "/api/v1/admin/shipments");
-      assert.equal((await db.order.findUniqueOrThrow({ where: { id: sale.order.id } })).status, "SHIPPED"); assert.equal(await db.shipmentEvent.count({ where: { shipment: { orderId: sale.order.id }, status: "SHIPPED" } }), 1);
+    await check("saving a resi automatically dispatches a packed order without manual status selection", async () => {
+      await wp.goto(orderUrl);
+      await expect(wp.getByTestId("tracking-auto-dispatch-info")).toContainText("otomatis");
+      const f = wp.getByRole("form", { name: "Simpan pengiriman" });
+      await expect(f.getByLabel("Status pengiriman *")).toHaveCount(0);
+      await f.getByLabel("Kurir *").fill("JNE");
+      await f.getByLabel("Layanan *").fill("REG");
+      await f.getByLabel("Nomor resi").fill(`RESI-${prefix}`);
+      await submit(wp, "Simpan pengiriman", "/api/v1/admin/shipments");
+      const state = await db.order.findUniqueOrThrow({ where: { id: sale.order.id }, include: { shipment: true } });
+      assert.equal(state.status, "SHIPPED");
+      assert.equal(state.shipment?.status, "SHIPPED");
+      assert.ok(state.shipment?.shippedDate instanceof Date);
+      assert.equal(await db.shipmentEvent.count({ where: { shipment: { orderId: sale.order.id }, status: "SHIPPED" } }), 1);
     });
     let refundId = "";
     await check("refund request freezes fulfillment and requester cannot verify settlement", async () => {

@@ -137,7 +137,23 @@ async function main() {
         await expect(page.getByTestId('product-pagination')).toBeVisible();
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', /page=2/);
         await page.getByRole('link', { name: 'Berikutnya' }).click();
-        await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        try {
+          // Keep the original strict assertion; diagnose the transport on
+          // failure rather than hiding an intermittent navigation regression.
+          await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        } catch (error) {
+          const direct = await page.request.get(`${base}/shop?q=${prefix}&page=2`, { timeout: 8_000 }).catch(() => null);
+          console.error('[storefront-pagination-diagnostic] ' + JSON.stringify({
+            viewport: width,
+            pathname: new URL(page.url()).pathname,
+            currentPage: new URL(page.url()).searchParams.get('page') || '1',
+            directStatus: direct?.status() ?? 'timeout',
+            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 3') : false,
+            inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
+            recentRscEvents: rscEvents.slice(-20),
+          }));
+          throw error;
+        }
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         await page.goBack();
         await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();

@@ -1,6 +1,6 @@
 # R18 — recovered remediation and retained navigation failure evidence
 
-17 October 2026 (Asia/Jakarta). Release: **NOT READY**.
+16 October 2026 (Asia/Jakarta). Release: **NOT READY**.
 
 ## Recovery and verified environment
 
@@ -153,3 +153,18 @@ including on test failure, for seven days. No raw server logs, headers, cookies 
 screenshots are uploaded. GitHub's upload-artifact action is pinned to verified
 v7.0.2 commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`; its action manifest uses
 Node 24. Missing expected JSON is an error. This does not change the test exit code.
+
+The response-delay A/B experiment ran **five** times: **four passed 10/10, one failed**
+React #418 at 390px inventory. Its captured recoverable component stack begins at
+`main → div → div` in the admin layout. Changing the harness delay therefore does
+**not** eliminate hydration failure and is not adopted as a fix. Thirty additional
+development-mode inventory document loads (15 per viewport) emitted no hydration
+error; this negative diagnostic is not a production regression pass. A separate
+production hydration-claim probe remains diagnostic-only in the detached worktree.
+
+At documentation time, code/CI-upload commit `a1a103e` has successful remote unit
+run [38925472921](https://github.com/Assyauq26/Gheverhan/actions/runs/38925472921)
+and successful Vercel Preview build status. Full isolated integration/browser run
+[38925473100](https://github.com/Assyauq26/Gheverhan/actions/runs/38925473100)
+is still running and must not be called PASS until completed. Vercel status alone
+is not HTTP smoke. Final check status is also available directly on Draft PR #58.

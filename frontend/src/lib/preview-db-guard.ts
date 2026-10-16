@@ -1,41 +1,39 @@
 /**
- * DB guard for Vercel previews. Prevents shared production/preview secrets
- * from silently connecting a PR build to the production Supabase project.
+ * Preview database guard for Gheverhan's explicitly approved DUMMY-DATA
+ * single-database development phase (Production + Preview on one Supabase).
  *
- * This complements (does NOT replace) environment scoping on Vercel.
- * It checks only Supabase URL host / username: never inspect or print passwords.
+ * A preview must opt in AND both DSNs must identify the verified dev project.
+ * The opt-in must be removed before any real customer/payment data is stored.
+ *
+ * Never log database URLs, which include credentials. This runtime guard does
+ * NOT protect migrations, Prisma CLI or arbitrary direct database clients.
  */
 type PreviewEnv = Record<string, string | undefined>;
+const APPROVED_DEV_PROJECT_REF = "bztprltkevacidcpjaam";
 
-const refPattern = /^[a-z0-9]{20}$/;
-
-function isSupabaseProjectUrl(raw: string | undefined, ref: string): boolean {
+function isApprovedSupabaseConnection(raw: string | undefined): boolean {
   if (!raw) return false;
   try {
     const url = new URL(raw);
-    if (!["postgresql:", "postgres:"].includes(url.protocol)) return false;
-    const username = decodeURIComponent(url.username);
-    const hostname = url.hostname.toLowerCase();
-    // Supabase direct connection: db.<project-ref>.supabase.co
-    // Supabase pooler connection: postgres.<project-ref>@<region>.pooler.supabase.com
-    return (hostname === `db.${ref}.supabase.co`) ||
-      (hostname.endsWith(".pooler.supabase.com") && username === `postgres.${ref}`);
+    if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") return false;
+    const host = url.hostname.toLowerCase();
+    const user = decodeURIComponent(url.username);
+    // Direct: db.<ref>.supabase.co as postgres.
+    if (host === `db.${APPROVED_DEV_PROJECT_REF}.supabase.co`) return user === "postgres";
+    // Pooler: postgres.<ref>@<region>.pooler.supabase.com
+    return host.endsWith(".pooler.supabase.com") &&
+      host !== ".pooler.supabase.com" && user === `postgres.${APPROVED_DEV_PROJECT_REF}`;
   } catch {
     return false;
   }
 }
 
 export function assertPreviewDatabaseIsolation(env: PreviewEnv): void {
-  if (env.VERCEL_ENV !== "preview") return; // local and production unchanged
-  const productionRef = env.GHEVERHAN_PRODUCTION_SUPABASE_REF?.trim().toLowerCase() ?? "";
-  const previewRef = env.GHEVERHAN_PREVIEW_SUPABASE_REF?.trim().toLowerCase() ?? "";
-  const configured = refPattern.test(productionRef) && refPattern.test(previewRef) && productionRef !== previewRef;
-  if (!configured ||
-      !isSupabaseProjectUrl(env.DATABASE_URL, previewRef) ||
-      !isSupabaseProjectUrl(env.DIRECT_URL, previewRef) ||
-      isSupabaseProjectUrl(env.DATABASE_URL, productionRef) ||
-      isSupabaseProjectUrl(env.DIRECT_URL, productionRef)) {
-    // Do not include environment values/URLs: they contain credentials.
-    throw new Error("Vercel Preview database belum diisolasi; koneksi ditolak untuk melindungi production.");
+  if (env.VERCEL_ENV !== "preview") return;
+  const enabled = env.GHEVERHAN_SHARED_DEV_DATABASE === "true";
+  if (!enabled ||
+      !isApprovedSupabaseConnection(env.DATABASE_URL) ||
+      !isApprovedSupabaseConnection(env.DIRECT_URL)) {
+    throw new Error("Akses database Preview ditolak: single development database belum disetujui/valid.");
   }
 }

@@ -200,6 +200,8 @@ async function main() {
     });
     await check("customer confirms quoted prices and receives a price conflict without an order", async () => {
       const customerPage = await buyer.newPage(); await customerPage.goto(`${base}/checkout`);
+      // Establish the original server-priced quote before simulating a price change.
+      await expect(customerPage.getByTestId("place-order-btn")).toBeEnabled();
       const quote = JSON.parse(await customerPage.locator('input[name="expectedLines"]').inputValue());
       assert.equal(quote[0].unitPrice, 190000); assert.match(await customerPage.locator('input[name="requestId"]').inputValue(), /^[0-9a-f-]{36}$/);
       await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("195000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");

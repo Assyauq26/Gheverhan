@@ -152,7 +152,7 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
                   <span className="rounded-full bg-surface px-2 py-1 text-xs">{voucherLabel(v)}</span></div>
                 <p className="text-sm">{v.discountType === "PERCENT" ? `${v.discountValue}%` : formatIDR(v.discountValue)} diskon · Min. belanja {formatIDR(v.minSpend)}</p>
                 <p className="text-xs text-ink-soft">{v.maxDiscount ? `Batas diskon ${formatIDR(v.maxDiscount)} · ` : ""}{v.startsAt ? `Mulai ${new Date(v.startsAt).toLocaleString("id-ID")} · ` : ""}{v.expiresAt ? `Berakhir ${new Date(v.expiresAt).toLocaleString("id-ID")}` : "Tanpa tanggal berakhir"}</p>
-                <p className="text-xs text-ink-soft">{v.usedCount} digunakan{v.usageLimit != null ? ` / ${v.usageLimit} kuota` : " · tanpa batas total"}{v.perUserLimit != null ? ` · Maks. ${v.perUserLimit} per pelanggan` : ""}</p>
+                <p className="text-xs text-ink-soft">{v.usedCount} terpakai/ditahan{v.usageLimit != null ? ` / ${v.usageLimit} kuota` : " · tanpa batas total"}{v.perUserLimit != null ? ` · Maks. ${v.perUserLimit} per pelanggan` : ""}</p>
               </div>
               {canUpdate && <div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => beginEdit(v)}>Edit<span className="sr-only"> {v.code}</span></Button>
                 <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => toggle(v)}>{v.isActive ? "Nonaktifkan" : "Aktifkan"}<span className="sr-only"> {v.code}</span></Button></div>}

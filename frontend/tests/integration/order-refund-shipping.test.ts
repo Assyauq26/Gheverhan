@@ -182,7 +182,7 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     assert.equal(await db.payment.count({ where: { id: { in: [a.payment.id, b.payment.id] }, status: "REFUNDED" } }), 1); await invariant();
   });
   await t.test("pending cancellation versus refund rejects refund and releases once", async () => {
-    const f = await pending(); const results = await parallelOrder(f.order.id, [() => refunds.requestRefund(f.order.id, adminId, { requestId: randomUUID(), amount: f.order.total, reason: "Not paid refund" }), () => orders.transitionOrder(f.order.id, "CANCELLED", adminId)]);
+    const f = await pending(); await payments.rejectPayment(f.payment.id, adminId, "Bukti transfer tidak cocok"); const results = await parallelOrder(f.order.id, [() => refunds.requestRefund(f.order.id, adminId, { requestId: randomUUID(), amount: f.order.total, reason: "Not paid refund" }), () => orders.transitionOrder(f.order.id, "CANCELLED", adminId)]);
     assert.equal(results.filter(r => r.status === "fulfilled").length, 1); assert.equal((await status(f.order.id)).status, "CANCELLED"); assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1); await invariant();
   });
   await t.test("verified refund versus paid cancellation never releases sale inventory", async () => {

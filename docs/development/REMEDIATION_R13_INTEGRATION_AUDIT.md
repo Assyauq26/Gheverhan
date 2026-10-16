@@ -9,6 +9,9 @@ branch combines:
 - R10 (#45) admin pagination and read-only RSC route diagnostics,
 - R11 (#46) deterministic Marketing SSR clock/timezone,
 - R12 (#47) semantic, non-nested wishlist action markup.
+- R2 (#37) one-use password reset tokens with fail-closed Resend delivery.
+- R3 (#38) safe expiry of unpaid orders via authenticated production cron.
+- R6 (#41) voucher reservation/usage exclusion for CANCELLED/EXPIRED orders.
 
 ## Root-cause investigation
 The original `NavigationLink` cancelled Next.js `onNavigate` with
@@ -43,9 +46,11 @@ has been eliminated.** A green run must be repeated before release.
    Supabase project. Before real customers, remove the shared-DB exception.
 7. Inspect old Preview deployments and the R4 tracked PostgreSQL runtime files
    in git history, regardless of whether build workflows pass.
-8. R2 password reset (#37) and R3 expiry (#38)/R6 coupon (#41) are NOT
-   included in this branch pending provider configuration and combined payment
-   lifecycle tests. R4 artifact clean-up (#39) is on HOLD for incident review.
+8. R2, R3, and R6 code/tests are INCLUDED for cross-sprint integration, but
+   email reset requires verified Resend sender and RESEND_API_KEY / PASSWORD_RESET_FROM /
+   PASSWORD_RESET_BASE_URL; cron requires CRON_SECRET and production cron registration.
+   Do not enable either service without an operational smoke test and proof review.
+   R4 artifact clean-up (#39) is on HOLD for incident review.
 9. Align Node.js engines: repo/CI Node 22, Vercel project Node 24.x.
    This requires a reviewed project setting change, not a side effect of PR.
 10. No main merge, production promotion, database migrations, wipes or secret
@@ -54,3 +59,20 @@ has been eliminated.** A green run must be repeated before release.
 ## Next.js references
 https://nextjs.org/docs/15/app/api-reference/functions/use-link-status
 https://nextjs.org/docs/15/app/api-reference/components/link
+
+## Cross-sprint merge verification
+PR #38 modifies transaction correctness tests for proofs awaiting review, while
+PR #41 adds coupon quota lifecycle tests to the same file. These were combined
+without dropping either test. PR #46 changes Marketing SSR dates, and PR #41
+renames voucher counters; both changes are retained in the same Marketing client.
+The shared database contains dummy data by owner decision; full integration
+runs in disposable CI Postgres and MUST NEVER seed/reset shared Supabase.
+
+## CI regression isolation improvement
+The original Playwright network route delayed **every** non-prefetch RSC
+request by 600 ms, across all navigations. Logs show several successful 200
+RSC responses immediately followed by ERR_ABORTED streams during pagination.
+The harness now injects this delay only for explicit navigation-feedback
+checks; the pagination checks remain strict against real response behavior.
+One CI integration run repeats navigation/browser 3 times on freshly created
+synthetic fixtures, preserving all error/hydration assertions.

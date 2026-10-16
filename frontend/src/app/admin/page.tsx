@@ -32,11 +32,11 @@ function Metric({ label, value, description, href, tone, icon, testId }: {
     <Link href={href} prefetch={false} className={`${panel} group relative block min-w-0 px-4 py-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md sm:px-5 sm:py-5`}>
       <div className="flex items-center gap-3">
         <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${tone}`}>{icon}</span>
-        <span className="min-w-0 text-xs font-medium text-zinc-700 sm:text-sm">{label}</span>
+        <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-[11px] font-medium text-zinc-700 sm:text-sm">{label}</span>
         <span className="ml-auto grid size-7 shrink-0 place-items-center rounded-full bg-zinc-50 text-zinc-500 transition group-hover:translate-x-0.5 group-hover:bg-zinc-100"><ChevronRight size={15}/></span>
       </div>
-      <p data-testid={testId} className="mt-1 pl-[52px] text-[24px] font-bold leading-tight tracking-[-0.04em] text-zinc-950 sm:text-[29px]">{value}</p>
-      <p className="mt-2 pl-[52px] text-[11px] leading-relaxed text-zinc-500 sm:text-xs">{description}</p>
+      <p data-testid={testId} className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] pl-[52px] text-[24px] font-bold leading-tight tracking-[-0.04em] text-zinc-950 sm:text-[29px]">{value}</p>
+      <p className="mt-2 min-w-0 break-words [overflow-wrap:anywhere] pl-[52px] text-[11px] leading-relaxed text-zinc-500 sm:text-xs">{description}</p>
     </Link>
   );
 }

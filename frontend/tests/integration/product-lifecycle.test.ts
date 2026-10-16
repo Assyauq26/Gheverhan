@@ -87,9 +87,9 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     const originalSale = await prisma.product.update({ where: { id: p.id }, data: { salePrice: 95000 } });
     await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: originalSale.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
     assert.equal((await prisma.product.findUniqueOrThrow({ where: { id: p.id } })).salePrice, 95000);
-    await prisma.product.update({ where: { id: p.id }, data: { salePrice: null } });
+    const restored = await prisma.product.update({ where: { id: p.id }, data: { salePrice: null } });
     await prisma.productVariant.update({ where: { id: p.variants[0].id }, data: { price: 120000 } });
-    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: ended.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
+    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: restored.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
   });
   await t.test("editing and adding a variant preserves deterministic editor ordering", async () => {
     const created = await service.createManagedProduct(actor, input("variant-order"));

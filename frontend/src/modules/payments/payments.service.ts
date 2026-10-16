@@ -173,8 +173,10 @@ export async function rejectPayment(paymentId: string, adminId: string, reason: 
     }
     const latest = payment.confirmations.find((c) => c.status === "SUBMITTED");
     if (!latest) throw new HttpError("Bukti pembayaran belum tersedia", 409);
-    if (payment.order.expiresAt && latest.createdAt > payment.order.expiresAt)
-      throw new HttpError("Bukti pembayaran diajukan setelah tenggat", 409);
+    // Rejection must remain possible for a late or disputed proof. Otherwise
+    // WAITING_VERIFICATION cannot be reconciled and the expiry cron will
+    // deliberately keep its stock/coupon reservation forever.
+
     if (latest) {
       await tx.paymentConfirmation.update({
         where: { id: latest.id },

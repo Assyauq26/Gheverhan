@@ -168,3 +168,23 @@ and successful Vercel Preview build status. Full isolated integration/browser ru
 [38925473100](https://github.com/Assyauq26/Gheverhan/actions/runs/38925473100)
 is still running and must not be called PASS until completed. Vercel status alone
 is not HTTP smoke. Final check status is also available directly on Draft PR #58.
+
+## Final diagnostic limits
+
+Thirty production-mode inventory-only document loads also completed without #418.
+Five full runs on the additional hydration-claim-instrumented build passed 10/10;
+no mismatch was captured by that probe. These negative diagnostic runs do not erase
+any earlier failure and do not establish an application root cause or fix.
+
+Local pinned-browser installation was retried using `PLAYWRIGHT_BROWSERS_PATH` under
+`/tmp`. The official download for Chromium **153.0.8010.12**, revision **1243**, at
+`cdn.playwright.dev/builds/cft/153.0.8010.12/linux64/chrome-linux64.zip` is denied
+HTTP **403 Domain forbidden**, despite the configured hostname. Browser-version A/B
+against local system Chromium **154.0.8037.57** remains **BLOCKED**. No alternate
+forbidden download path, proxy bypass or TLS bypass was attempted. Owner/environment
+support must reconcile effective CDN access before this comparison is possible.
+
+All application-baseline, instrumented and A/B run groups above are deliberately
+reported separately. The strict consistency gate remains **FAILED**. The remote
+checks for the latest PR head must be read separately from these local observations;
+a green remote run does not close intermittent failures.

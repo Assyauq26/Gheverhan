@@ -29,7 +29,7 @@ export default async function MarketingPage() {
     </div>
     <MarketingManager
       vouchers={vouchers.map(v => ({ ...v, expiresAt: v.expiresAt?.toISOString() || null, createdAt: v.createdAt.toISOString() }))}
-      products={products.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString(), eligible: p.variants.length > 0 && p.variants.every(v => v.price == null && v.salePrice == null), variants: undefined }))}
+      products={products.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString(), eligible: p.variants.length > 0 && p.salePrice == null && p.variants.every(v => v.price == null && v.salePrice == null), variants: undefined }))}
       canCreate={actor.permissions.includes(PERMISSIONS.PROMOTION_CREATE)}
       canUpdate={actor.permissions.includes(PERMISSIONS.PROMOTION_UPDATE)}
       canReadProducts={actor.permissions.includes(PERMISSIONS.PRODUCT_READ)}

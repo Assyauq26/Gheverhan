@@ -24,7 +24,7 @@ export async function listMarketing(actor: Actor) {
     actor.permissions.includes(PERMISSIONS.PRODUCT_READ)
       ? prisma.product.findMany({
           where: { status: "PUBLISHED" },
-          orderBy: [{ isFlashSale: "desc" }, { flashSaleStartsAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+          orderBy: [{ flashSaleStartsAt: { sort: "desc", nulls: "last" } }, { isFlashSale: "desc" }, { createdAt: "desc" }, { id: "desc" }],
           take: 60,
           select: { id: true, name: true, slug: true, basePrice: true, salePrice: true, isFlashSale: true, flashSalePrice: true, flashSaleStartsAt: true, flashSaleEndsAt: true, updatedAt: true, variants: { select: { price: true, salePrice: true }, take: 50 } },
         })

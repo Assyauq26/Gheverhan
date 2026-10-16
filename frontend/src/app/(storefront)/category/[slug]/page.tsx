@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 type CategoryRouteProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string }>;
 };
 
 export async function generateMetadata({
@@ -29,13 +29,13 @@ export default async function CategoryPage({
   searchParams,
 }: CategoryRouteProps) {
   const { slug } = await params;
-  const { sort: sortParam } = await searchParams;
+  const { sort: sortParam, page: pageParam } = await searchParams;
   const cat = await getCategoryBySlug(slug);
   if (!cat) notFound();
   const user = await getCurrentUserBasic();
   const sort = (sortParam as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
-    listProducts({ categorySlug: slug, sort, pageSize: 24 }),
+    listProducts({ categorySlug: slug, sort, page: Number(pageParam) || 1, pageSize: 24 }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
   ]);
 
@@ -47,6 +47,8 @@ export default async function CategoryPage({
       wishlisted={new Set(wishIds)}
       basePath={`/category/${slug}`}
       currentSort={sort}
+      currentPage={result.page}
+      pageSize={result.pageSize}
     />
   );
 }

@@ -2,7 +2,6 @@ import Link from "@/components/ui/navigation";
 import { ArrowRight, Zap } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { CategoryNav } from "@/components/storefront/category-nav";
-import { FlashSaleTimer } from "@/components/storefront/flash-sale-timer";
 import { SectionHeader } from "@/components/storefront/section-header";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +16,12 @@ const HERO_IMG2 =
 
 export default async function HomePage() {
   const wishIdsPromise = getStorefrontUserContext().then(user => user ? wishlistProductIds(user.id) : []);
-  const [categories, featured, latest, wishIds] = await Promise.all([
+  const [categories, featured, latest, wishIds, flash] = await Promise.all([
     listCategories(),
     listProducts({ featured: true, pageSize: 4, includeTotal: false }),
     listProducts({ pageSize: 12, includeTotal: false }),
     wishIdsPromise,
+    listProducts({ flashSale: true, pageSize: 1, includeTotal: false }),
   ]);
 
   const wl = new Set(wishIds);
@@ -52,7 +52,7 @@ export default async function HomePage() {
         <CategoryNav categories={categories} />
       </section>
 
-      <section
+      {flash.items.length > 0 && <section
         className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-3 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-3"
         data-testid="flash-sale"
       >
@@ -67,13 +67,13 @@ export default async function HomePage() {
           <div className="relative min-w-0 flex-1 self-center">
             <p className="text-[17px] font-bold leading-tight text-ink sm:text-lg">Flash Sale!</p>
             <h2 className="mt-0.5 font-display text-[29px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[32px]">
-              Diskon hingga 40%
+              Harga spesial hari ini
             </h2>
-            <p className="mt-1 text-sm leading-tight text-ink-soft sm:text-base">Produk pilihan, stok terbatas!</p>
+            <p className="mt-1 text-sm leading-tight text-ink-soft sm:text-base">Lihat penawaran yang sedang aktif.</p>
           </div>
 
           <div className="flex w-[145px] shrink-0 flex-col items-end gap-1.5 sm:w-[158px] sm:gap-2 md:w-[166px]">
-            <FlashSaleTimer compact />
+            <span className="text-xs font-semibold text-ink-soft" data-testid="flash-active-label">Promo berlangsung</span>
             <Button
               asChild
               className="h-9 w-full rounded-[7px] px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
@@ -86,7 +86,7 @@ export default async function HomePage() {
             </Button>
           </div>
         </div>
-      </section>
+      </section>}
 
       <section>
         <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />

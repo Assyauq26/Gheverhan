@@ -92,6 +92,16 @@ async function main() {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow');
         await page.screenshot({ path: path.join(artifacts, `${width}-inventory.png`), fullPage: true });
       });
+      await check(`${width}px: shop pagination exposes later catalog items`, async () => {
+        await page.goto(`${base}/shop?q=${prefix}`);
+        await expect(page.getByTestId('product-pagination')).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', /page=2/);
+        await page.getByRole('link', { name: 'Berikutnya' }).click();
+        await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
+        await page.goBack();
+        await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();
+      });
       await check(`${width}px: storefront navigation, search touch target and back/forward work`, async () => {
         await page.goto(`${base}/shop?q=${prefix}`); await page.waitForLoadState('networkidle');
         const search = page.getByTestId('search-bar').filter({ visible: true });

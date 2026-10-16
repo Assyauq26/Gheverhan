@@ -7,7 +7,7 @@ import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 type BrandRouteProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string }>;
 };
 
 export async function generateMetadata({
@@ -26,13 +26,13 @@ export default async function BrandPage({
   searchParams,
 }: BrandRouteProps) {
   const { slug } = await params;
-  const { sort: sortParam } = await searchParams;
+  const { sort: sortParam, page: pageParam } = await searchParams;
   const brand = await getBrandBySlug(slug);
   if (!brand) notFound();
   const user = await getCurrentUserBasic();
   const sort = (sortParam as "newest" | "price_asc" | "price_desc") ?? "newest";
   const [result, wishIds] = await Promise.all([
-    listProducts({ brandSlug: slug, sort, pageSize: 24 }),
+    listProducts({ brandSlug: slug, sort, page: Number(pageParam) || 1, pageSize: 24 }),
     user ? wishlistProductIds(user.id) : Promise.resolve([]),
   ]);
 
@@ -44,6 +44,8 @@ export default async function BrandPage({
       wishlisted={new Set(wishIds)}
       basePath={`/brand/${slug}`}
       currentSort={sort}
+      currentPage={result.page}
+      pageSize={result.pageSize}
     />
   );
 }

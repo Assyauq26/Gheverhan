@@ -20,6 +20,19 @@ describe("Marketing voucher input", () => {
     expect(voucherInputSchema.safeParse({ ...voucher(), minSpend: -1 }).success).toBe(false);
     expect(voucherInputSchema.safeParse({ ...voucher(), maxDiscount: 0 }).success).toBe(false);
   });
+  it("validates startsAt and usage limits", () => {
+    expect(voucherInputSchema.safeParse({ ...voucher(), usageLimit: 1, perUserLimit: 1 }).success).toBe(true);
+    for (const limit of [0, -1, 1.2, 1_000_001, Infinity]) {
+      expect(voucherInputSchema.safeParse({ ...voucher(), usageLimit: limit }).success).toBe(false);
+      expect(voucherInputSchema.safeParse({ ...voucher(), perUserLimit: limit }).success).toBe(false);
+    }
+    expect(voucherInputSchema.safeParse({
+      ...voucher(), startsAt: "2030-01-02T00:00:00.000Z", expiresAt: "2030-01-01T00:00:00.000Z",
+    }).success).toBe(false);
+    expect(voucherInputSchema.safeParse({
+      ...voucher(), startsAt: "2030-01-01T00:00:00.000Z", expiresAt: "2030-01-02T00:00:00.000Z",
+    }).success).toBe(true);
+  });
   it("prevents creating an already-expired active coupon", () => {
     expect(voucherInputSchema.safeParse({ ...voucher(), expiresAt: "2020-01-01T00:00:00.000Z" }).success).toBe(false);
     expect(voucherInputSchema.safeParse({ ...voucher(), expiresAt: "2020-01-01T00:00:00.000Z", isActive: false }).success).toBe(true);

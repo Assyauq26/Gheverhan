@@ -11,7 +11,8 @@ import { saveVoucherAction, toggleVoucherAction, setFlashSaleAction } from "@/mo
 
 type Voucher = {
   id: string; code: string; discountType: "PERCENT" | "FIXED"; discountValue: number;
-  minSpend: number; maxDiscount: number | null; isActive: boolean; expiresAt: string | null; createdAt: string;
+  minSpend: number; maxDiscount: number | null; isActive: boolean; startsAt: string | null; expiresAt: string | null;
+  usageLimit: number | null; perUserLimit: number | null; usedCount: number; createdAt: string;
 };
 type Product = {
   id: string; name: string; slug: string; basePrice: number; salePrice: number | null;
@@ -19,11 +20,11 @@ type Product = {
 };
 type VoucherDraft = {
   code: string; discountType: "PERCENT" | "FIXED"; discountValue: string;
-  minSpend: string; maxDiscount: string; expiresAt: string; isActive: boolean;
+  minSpend: string; maxDiscount: string; startsAt: string; expiresAt: string; usageLimit: string; perUserLimit: string; isActive: boolean;
 };
 const initial: VoucherDraft = {
   code: "", discountType: "PERCENT", discountValue: "10",
-  minSpend: "0", maxDiscount: "", expiresAt: "", isActive: true,
+  minSpend: "0", maxDiscount: "", startsAt: "", expiresAt: "", usageLimit: "", perUserLimit: "", isActive: true,
 };
 const localDate = (iso: string | null) => {
   if (!iso) return "";
@@ -31,7 +32,7 @@ const localDate = (iso: string | null) => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 };
 const voucherLabel = (v: Voucher) =>
-  !v.isActive ? "Nonaktif" : v.expiresAt && Date.parse(v.expiresAt) <= Date.now() ? "Kedaluwarsa" : "Aktif";
+  !v.isActive ? "Nonaktif" : v.expiresAt && Date.parse(v.expiresAt) <= Date.now() ? "Kedaluwarsa" : v.startsAt && Date.parse(v.startsAt) > Date.now() ? "Terjadwal" : "Aktif";
 
 export function MarketingManager({ vouchers, products, canCreate, canUpdate, canReadProducts }: {
   vouchers: Voucher[]; products: Product[]; canCreate: boolean; canUpdate: boolean; canReadProducts: boolean;
@@ -50,7 +51,9 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
     setEditing(v.id); setDraft({
       code: v.code, discountType: v.discountType, discountValue: String(v.discountValue),
       minSpend: String(v.minSpend), maxDiscount: v.maxDiscount == null ? "" : String(v.maxDiscount),
-      expiresAt: localDate(v.expiresAt), isActive: v.isActive,
+      startsAt: localDate(v.startsAt), expiresAt: localDate(v.expiresAt),
+      usageLimit: v.usageLimit == null ? "" : String(v.usageLimit),
+      perUserLimit: v.perUserLimit == null ? "" : String(v.perUserLimit), isActive: v.isActive,
     }); setFeedback(null);
     document.getElementById("voucher-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -61,7 +64,10 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
         code: draft.code.trim().toUpperCase(), discountType: draft.discountType,
         discountValue: Number(draft.discountValue), minSpend: Number(draft.minSpend),
         maxDiscount: draft.maxDiscount.trim() ? Number(draft.maxDiscount) : null,
+        startsAt: draft.startsAt ? new Date(draft.startsAt).toISOString() : null,
         expiresAt: draft.expiresAt ? new Date(draft.expiresAt).toISOString() : null,
+        usageLimit: draft.usageLimit.trim() ? Number(draft.usageLimit) : null,
+        perUserLimit: draft.perUserLimit.trim() ? Number(draft.perUserLimit) : null,
         isActive: draft.isActive,
       });
       if (!result.ok) { notice("error", result.error || "Voucher gagal disimpan"); return; }
@@ -103,7 +109,8 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
                 <div className="flex flex-wrap items-center gap-2"><p className="break-all font-semibold">{v.code}</p>
                   <span className="rounded-full bg-surface px-2 py-1 text-xs">{voucherLabel(v)}</span></div>
                 <p className="text-sm">{v.discountType === "PERCENT" ? `${v.discountValue}%` : formatIDR(v.discountValue)} diskon · Min. belanja {formatIDR(v.minSpend)}</p>
-                <p className="text-xs text-ink-soft">{v.maxDiscount ? `Batas diskon ${formatIDR(v.maxDiscount)} · ` : ""}{v.expiresAt ? `Berakhir ${new Date(v.expiresAt).toLocaleString("id-ID")}` : "Tanpa tanggal berakhir"}</p>
+                <p className="text-xs text-ink-soft">{v.maxDiscount ? `Batas diskon ${formatIDR(v.maxDiscount)} · ` : ""}{v.startsAt ? `Mulai ${new Date(v.startsAt).toLocaleString("id-ID")} · ` : ""}{v.expiresAt ? `Berakhir ${new Date(v.expiresAt).toLocaleString("id-ID")}` : "Tanpa tanggal berakhir"}</p>
+                <p className="text-xs text-ink-soft">{v.usedCount} digunakan{v.usageLimit != null ? ` / ${v.usageLimit} kuota` : " · tanpa batas total"}{v.perUserLimit != null ? ` · Maks. ${v.perUserLimit} per pelanggan` : ""}</p>
               </div>
               {canUpdate && <div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => beginEdit(v)}>Edit<span className="sr-only"> {v.code}</span></Button>
                 <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => toggle(v)}>{v.isActive ? "Nonaktifkan" : "Aktifkan"}<span className="sr-only"> {v.code}</span></Button></div>}
@@ -125,6 +132,14 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
             <div><Label htmlFor="voucher-min">Minimal belanja (Rp)</Label><Input id="voucher-min" type="number" min={0} step={1} value={draft.minSpend} onChange={e => setField("minSpend", e.target.value)} required /></div>
             <div><Label htmlFor="voucher-max">Maksimal diskon (Rp, opsional)</Label><Input id="voucher-max" type="number" min={1} step={1} value={draft.maxDiscount}
               onChange={e => setField("maxDiscount", e.target.value)} placeholder="Tanpa batas tambahan"/></div>
+<div><Label htmlFor="voucher-start">Mulai berlaku (opsional)</Label><Input id="voucher-start" type="datetime-local" value={draft.startsAt}
+              onChange={e => setField("startsAt", e.target.value)}/></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label htmlFor="voucher-limit">Kuota total (opsional)</Label><Input id="voucher-limit" type="number" min={1} max={1000000} step={1}
+                value={draft.usageLimit} onChange={e => setField("usageLimit", e.target.value)} placeholder="Tanpa batas"/></div>
+              <div><Label htmlFor="voucher-per-customer">Batas per pelanggan</Label><Input id="voucher-per-customer" type="number" min={1} max={1000000} step={1}
+                value={draft.perUserLimit} onChange={e => setField("perUserLimit", e.target.value)} placeholder="Tanpa batas"/></div>
+            </div>
             <div><Label htmlFor="voucher-expiry">Berakhir (opsional)</Label><Input id="voucher-expiry" type="datetime-local" value={draft.expiresAt}
               onChange={e => setField("expiresAt", e.target.value)}/></div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.isActive}
@@ -143,7 +158,7 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
         <div className="min-w-0"><Label htmlFor="flash-product">Pilih produk terbit</Label><select id="flash-product" value={productId} onChange={e => { setProductId(e.target.value); setPrice(""); }}
           className="h-11 w-full min-w-0 rounded-xl border border-line bg-white px-3 text-sm">
           <option value="">Pilih produk</option>
-          {products.filter(p => !p.isFlashSale).map(p => <option key={p.id} value={p.id} disabled={!p.eligible}>{p.name}{!p.eligible ? " — harga varian khusus" : ""}</option>)}
+          {products.filter(p => !p.isFlashSale).map(p => <option key={p.id} value={p.id} disabled={!p.eligible}>{p.name}{!p.eligible ? " — harga promo reguler/varian" : ""}</option>)}
         </select></div>
         <div><Label htmlFor="flash-price">Harga flash sale (Rp)</Label><Input id="flash-price" type="number" min={1} max={selected ? selected.basePrice - 1 : undefined}
           value={price} onChange={e => setPrice(e.target.value)} placeholder={selected ? `Di bawah ${selected.basePrice}` : "Masukkan harga"} /></div>
@@ -161,6 +176,6 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
           </li>)}</ul>}
       {products.length === 60 && <p className="text-xs text-ink-soft">Menampilkan 60 produk terbit terbaru/flash sale. Gunakan editor produk untuk item di luar daftar.</p>}
     </section>
-    <p className="flex items-start gap-2 text-xs text-ink-soft"><Tag size={16} className="shrink-0"/>Fitur kuota voucher, jadwal flash sale otomatis, banner promosi publik, dan laporan performa kampanye belum tersedia pada tahap ini.</p>
+    <p className="flex items-start gap-2 text-xs text-ink-soft"><Tag size={16} className="shrink-0"/>Voucher terjadwal dan kuota sudah tersedia. Jadwal flash sale otomatis, voucher khusus produk, banner promosi publik, dan laporan performa kampanye belum tersedia pada tahap ini.</p>
   </div>;
 }

@@ -53,7 +53,7 @@ export async function previewCheckout(
   const shippingCost = input.shipping
     ? await resolveShippingCost(input.shipping.courier, input.shipping.service)
     : 0;
-  const { discount, code, reason } = await computeDiscount(input.couponCode, cart.subtotal);
+  const { discount, code, reason } = await computeDiscount(input.couponCode, cart.subtotal, prisma, userId);
   const total = cart.subtotal + shippingCost - discount;
   return {
     lines: cart.lines,
@@ -147,8 +147,9 @@ export async function createOrder(
     if (current.lines.some(l => !l.inStock || !Number.isSafeInteger(l.quantity) || l.quantity <= 0)) throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
     const lockedBank = await tx.bankAccount.findFirst({ where: { id: bank.id, isActive: true } });
     if (!lockedBank) throw new HttpError("Rekening bank tidak valid", 409);
-    if (input.couponCode) await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Coupon" WHERE "code" = ${input.couponCode.toUpperCase()} FOR SHARE`);
-    const { discount, code } = await computeDiscount(input.couponCode, current.subtotal, tx);
+    // Serializes redemptions for capped coupons across concurrent checkout transactions.
+    if (input.couponCode) await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Coupon" WHERE "code" = ${input.couponCode.toUpperCase()} FOR UPDATE`);
+    const { discount, code } = await computeDiscount(input.couponCode, current.subtotal, tx, userId);
     const total = current.subtotal + shippingCost - discount;
     // Compare against the buyer-visible preview while holding the coupon lock
     // inside the same transaction that creates the order and reserves inventory.

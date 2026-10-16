@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ok, handle } from "@/lib/response";
 import { requireUser } from "@/lib/auth/session";
-import { checkoutLinesSchema } from "@/modules/checkout/checkout.validation";
+import { checkoutLinesSchema, checkoutQuoteSchema } from "@/modules/checkout/checkout.validation";
 import { createOrder } from "@/modules/checkout/checkout.service";
 import { listOrdersForUser } from "@/modules/orders/orders.service";
 
@@ -17,6 +17,7 @@ const schema = z.object({
   couponCode: z.string().optional(),
   note: z.string().optional(),
   expectedLines: checkoutLinesSchema.optional(),
+  expectedQuote: checkoutQuoteSchema.optional(),
   requestId: z.string().uuid().optional(),
 });
 

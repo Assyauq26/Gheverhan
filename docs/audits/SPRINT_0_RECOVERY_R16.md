@@ -181,3 +181,20 @@ Release readiness: **NOT READY**. Do not merge or promote based on this report.
 
 No production/shared database mutation, new Supabase project, force push, merge or
 production deployment was performed.
+
+## R16 completed verification (before R17 follow-up)
+
+On final R16 head `a77991f6c85309f16e9ba4de601fc8140e9bd183`, remote unit
+[38920033646](https://github.com/Assyauq26/Gheverhan/actions/runs/38920033646) and full
+isolated integration/browser [38920033670](https://github.com/Assyauq26/Gheverhan/actions/runs/38920033670)
+are **SUCCESS**. The earlier code SHA `cab6e45` also passed both remote workflows.
+Vercel Preview provider status is successful on both heads; no Preview HTTP smoke is claimed.
+
+Final local R16 results: **168 unit tests + 20 containment**, product browser **16**,
+operations browser **20**, and PostgreSQL **23 + 26 + 30 + 1 entrypoint regression**
+all pass. Original navigation ran **three** times: **two passed 10/10**, **one failed**
+mobile admin pagination. Delayed-response diagnostic ran twice, both **10/10 pass**.
+No #418 observed in these completed local runs; intermittent hydration remains unclosed.
+
+The cart follow-up was discovered afterwards; see [R17](SPRINT_0_RECOVERY_R17_CART.md).
+Its changes and CI are separate from the verified R16 head above.

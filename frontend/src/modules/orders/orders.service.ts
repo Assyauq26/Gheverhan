@@ -8,6 +8,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { lockOrder, assertStaffPermission } from "./transaction-locks";
 import { assertNoActiveRefund } from "@/modules/payments/refund-state";
 import { writeAudit } from "@/modules/audit/audit.service";
+import { canExpireOrder } from "./expiry-policy";
 
 const orderInclude = {
   items: true,
@@ -88,6 +89,10 @@ export async function transitionOrderInTransaction(
     });
     if (!order) throw new HttpError("Order tidak ditemukan", 404);
     if (order.status === to) return order;
+    if ((to === "CANCELLED" || to === "EXPIRED") && order.payment?.status === "WAITING_VERIFICATION")
+      throw new HttpError("Bukti transfer sedang diverifikasi; selesaikan pemeriksaan finansial sebelum menutup pesanan.", 409);
+    if (to === "EXPIRED" && actorId === "system" && !canExpireOrder(order, new Date()))
+      throw new HttpError("Pesanan belum aman untuk kedaluwarsa otomatis.", 409);
     if (["PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"].includes(to) && (order.paymentStatus !== "PAID" || order.payment?.status !== "PAID")) throw new HttpError("Pembayaran belum terverifikasi", 409);
     if (order.payment) await assertNoActiveRefund(tx, order.payment.id);
     if (!canTransitionOrder(order.status, to)) {
@@ -127,8 +132,15 @@ export async function transitionOrderInTransaction(
 /** Expire pending orders past their deadline (used by checkout guard / cron). */
 export async function expireStaleOrders(actorId = "system") {
   const stale = await prisma.order.findMany({
-    where: { status: "PENDING_PAYMENT", expiresAt: { lt: new Date() } },
+    where: {
+      status: "PENDING_PAYMENT",
+      expiresAt: { lt: new Date() },
+      paymentStatus: { in: ["PENDING_PAYMENT", "REJECTED"] },
+      payment: { is: { status: { in: ["PENDING_PAYMENT", "REJECTED"] } } },
+    },
     select: { id: true },
+    orderBy: [{ expiresAt: "asc" }, { id: "asc" }],
+    take: 50,
   });
   let expired = 0;
   for (const o of stale) {

@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div>
           <div className="px-7 pb-7 pt-6">
             <Link href="/admin" className="font-display text-[27px] font-extrabold tracking-[-0.055em] text-black">Gheverhan</Link>
+            <h1 className="mt-1 text-xs font-medium text-zinc-400">Dashboard toko</h1>
           </div>
           <AdminNav permissions={user.permissions} />
         </div>
@@ -63,7 +64,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </div>
           <div className="flex min-h-[88px] items-center justify-between gap-3 px-5 py-4 md:hidden">
-            <div><Link href="/admin" className="font-display text-[29px] font-extrabold leading-none tracking-[-0.06em]">Gheverhan</Link><p className="mt-1 text-xs text-zinc-400">Dashboard Toko</p></div>
+            <div><Link href="/admin" className="font-display text-[29px] font-extrabold leading-none tracking-[-0.06em]">Gheverhan</Link><h1 className="mt-1 text-xs font-medium text-zinc-400">Dashboard toko</h1></div>
             <div className="flex items-center gap-2">
               <span className="grid size-11 place-items-center rounded-full bg-zinc-100 text-zinc-700" title="Notifikasi belum tersedia"><Bell size={22}/></span>
               <details className="relative">

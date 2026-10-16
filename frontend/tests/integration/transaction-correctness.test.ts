@@ -107,6 +107,59 @@ async function auditFailure<T>(run: () => Promise<T>) {
 }
 
 test("PostgreSQL transaction correctness", async t => {
+  await t.test("concurrent redemption serializes the final voucher slot without duplicate orders", async () => {
+    const p = await product(4);
+    const a = await buyer(p.variants[0].id);
+    const b = await buyer(p.variants[0].id);
+    const code = `CAP-${prefix}-${++seq}`.toUpperCase();
+    await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, usageLimit: 1 } });
+    const ai = await input(a.id); const bi = await input(b.id);
+    const aq = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
+    const bq = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bi.shipping });
+    const fields = (q: typeof aq) => ({ subtotal: q.subtotal, shippingCost: q.shippingCost, discount: q.discount, total: q.total });
+    assert.equal(aq.discount, 10000); assert.equal(bq.discount, 10000);
+    const results = await Promise.allSettled([
+      checkout.createOrder(a.id, { ...ai, couponCode: code, expectedQuote: fields(aq) }),
+      checkout.createOrder(b.id, { ...bi, couponCode: code, expectedQuote: fields(bq) }),
+    ]);
+    assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
+    assert.equal(results.filter(r => r.status === "rejected" && r.reason.status === 409).length, 1);
+    assert.equal(await db.order.count({ where: { couponCode: code } }), 1);
+    assert.equal(await movements(p.variants[0].id, "RESERVATION"), 1);
+    const loser = results[0].status === "rejected" ? a : b;
+    const after = await checkout.previewCheckout(loser.id, { couponCode: code, shipping: ai.shipping });
+    assert.equal(after.discount, 0); assert.match(after.couponReason || "", /Kuota/);
+    assert.equal((await cart.getCartView(loser.id)).count, 1);
+    await invariant();
+  });
+  await t.test("future voucher start and per-user limit are enforced by both preview and transactional checkout", async () => {
+    const p = await product(5); const b = await buyer(p.variants[0].id);
+    const code = `USER-CAP-${prefix}-${++seq}`.toUpperCase();
+    await db.coupon.create({ data: {
+      code, discountType: "PERCENT", discountValue: 5, usageLimit: 5, perUserLimit: 1,
+      startsAt: new Date(Date.now() + 86_400_000),
+    } });
+    const initial = await input(b.id);
+    const future = await checkout.previewCheckout(b.id, { couponCode: code, shipping: initial.shipping });
+    assert.equal(future.discount, 0); assert.match(future.couponReason || "", /belum mulai/);
+    await db.coupon.update({ where: { code }, data: { startsAt: new Date(Date.now() - 86_400_000) } });
+    const current = await checkout.previewCheckout(b.id, { couponCode: code, shipping: initial.shipping });
+    assert.equal(current.discount, 5000);
+    const accepted = await checkout.createOrder(b.id, { ...initial, couponCode: code,
+      expectedQuote: { subtotal: current.subtotal, shippingCost: current.shippingCost, discount: current.discount, total: current.total } });
+    assert.equal(accepted.discount, 5000);
+    const replay = await checkout.createOrder(b.id, { ...initial, couponCode: code,
+      expectedQuote: { subtotal: current.subtotal, shippingCost: current.shippingCost, discount: current.discount, total: current.total } });
+    assert.equal(replay.id, accepted.id, "idempotent replay must not consume a second slot");
+    await cart.addItem(b.id, p.variants[0].id, 1);
+    const nextInput = await input(b.id);
+    const subsequent = await checkout.previewCheckout(b.id, { couponCode: code, shipping: nextInput.shipping });
+    assert.equal(subsequent.discount, 0); assert.match(subsequent.couponReason || "", /Batas penggunaan/);
+    await assert.rejects(checkout.createOrder(b.id, { ...nextInput, couponCode: code,
+      expectedQuote: { subtotal: current.subtotal, shippingCost: current.shippingCost, discount: current.discount, total: current.total } }), { status: 409 });
+    assert.equal(await db.order.count({ where: { couponCode: code, userId: b.id } }), 1);
+    await invariant();
+  });
   await t.test("coupon expiry or repricing after preview cannot silently increase the confirmed total", async () => {
     const p = await product(4); const b = await buyer(p.variants[0].id);
     const code = `QUOTE-${prefix}-${++seq}`.toUpperCase();

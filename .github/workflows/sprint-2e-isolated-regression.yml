@@ -86,6 +86,9 @@ jobs:
       - name: Direct database entrypoint safety in a disposable local schema
         run: node --import tsx --test tests/integration/database-entrypoints.test.ts
 
+      - name: Real PostgreSQL concurrent cart increments and first-cart creation
+        run: node --import tsx --test tests/integration/cart-concurrency.test.ts
+
       - name: Real PostgreSQL product lifecycle and concurrency
         run: npm run test:integration:products
 

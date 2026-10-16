@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = vi.hoisted(() => ({
+  $transaction: vi.fn(), $queryRaw: vi.fn(),
   cart: { findUnique: vi.fn(), create: vi.fn(), upsert: vi.fn() },
   cartItem: { findUnique: vi.fn(), findFirst: vi.fn(), upsert: vi.fn(), update: vi.fn(), delete: vi.fn() },
   productVariant: { findUnique: vi.fn() },
@@ -11,6 +12,8 @@ import { addItem, quickAddItem, updateItem } from "@/modules/cart/cart.service";
 
 beforeEach(() => {
   vi.resetAllMocks();
+  db.$transaction.mockImplementation((run) => run(db));
+  db.$queryRaw.mockResolvedValue([{ id: "cart" }]);
   db.cart.findUnique.mockResolvedValue({ id: "cart", items: [] });
   db.cart.upsert.mockResolvedValue({ id: "cart" });
   db.productVariant.findUnique.mockResolvedValue({ id: "variant", inventory: { onHand: 10, reserved: 0 } });

@@ -19,7 +19,16 @@ const artifacts = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-navigation
 const prefix = `nav2d-${randomUUID().slice(0, 8)}`;
 const secret = randomBytes(32).toString('hex'); process.env.JWT_SECRET = secret;
 let checks = 0;
-async function check(label: string, run: () => Promise<void>) { await run(); checks++; console.log(`PASS ${label}`); }
+let activeCheck = 'browser startup';
+// Keep diagnostics scoped to the isolated fixture: do not log cookies, form inputs or URLs with queries.
+const errors: string[] = [];
+async function check(label: string, run: () => Promise<void>) {
+  activeCheck = label;
+  await run();
+  if (errors.length) throw new Error(`Browser exception during ${label}: ${errors.join(' | ')}`);
+  checks++;
+  console.log(`PASS ${label}`);
+}
 async function main() {
   await mkdir(artifacts, { recursive: true });
   const role = await db.role.upsert({ where: { name: 'Admin' }, create: { name: 'Admin', label: 'Admin' }, update: {} });
@@ -33,7 +42,6 @@ async function main() {
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '3116'], { cwd: root, env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.pipe(log); server.stderr.pipe(log);
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
-  const errors: string[] = [];
   const timings: Array<{ viewport: number; pendingFeedbackMs: number; imposedResponseDelayMs: number }> = [];
   try {
     for (let n = 0; ; n++) {
@@ -49,8 +57,27 @@ async function main() {
         if (route.request().headers()['rsc'] === '1' && !route.request().headers()['next-router-prefetch']) await new Promise(resolve => setTimeout(resolve, 600));
         await route.continue();
       });
+      // Capture parser state at the time a hydration exception occurs. React
+      // may recover visually, but a recovered #418 is still a failed regression.
+      await context.addInitScript(() => {
+        window.addEventListener('error', event => {
+          const message = event.message || '';
+          if (message.includes('Minified React error #418') || message.includes('Hydration failed')) {
+            console.error(`[hydration-diagnostic] path=${location.pathname} readyState=${document.readyState} message=${message.slice(0, 260)}`);
+          }
+        }, true);
+      });
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
-      const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+      const page = await context.newPage();
+      page.on('console', message => {
+        if (message.text().startsWith('[hydration-diagnostic]')) console.error(`${width}px ${message.text()}`);
+      });
+      page.on('pageerror', error => {
+        const pathname = new URL(page.url()).pathname;
+        const report = `${width}px path=${pathname} check="${activeCheck}" error=${error.message.slice(0, 320)}`;
+        errors.push(report);
+        console.error(`[browser-exception] ${report}`);
+      });
       await page.goto(`${base}/admin`); await page.waitForLoadState('networkidle');
       await page.evaluate(() => { (window as unknown as { shellMarker: string }).shellMarker = 'preserved'; });
       await check(`${width}px: navigation has immediate feedback and preserves document`, async () => {
@@ -121,9 +148,14 @@ async function main() {
       await context.close();
     }
     assert.deepEqual(errors, []);
-    await writeFile(path.join(artifacts, 'navigation-results.json'), JSON.stringify({ checks, timings, browserErrors: errors, note: 'Synthetic 600 ms RSC response delay; feedback duration includes Playwright click dispatch. Not a live latency benchmark. External images deliberately blocked.' }, null, 2));
     console.log(`${checks} navigation checks PASS`);
   } finally {
+    // The original test wrote results only after a pass, hiding crucial CI
+    // evidence on a hydration mismatch. Persist diagnostics even on failure.
+    await writeFile(path.join(artifacts, 'navigation-results.json'), JSON.stringify({
+      checks, timings, browserErrors: errors, activeCheck,
+      note: 'Synthetic 600 ms RSC delay; fixture data only. No cookies, query parameters or credentials recorded.',
+    }, null, 2));
     await browser?.close(); server.kill('SIGTERM'); await new Promise(resolve => server.once('exit', resolve)); log.end();
     // Owned fixtures only, on the explicitly guarded disposable local database.
     await db.inventory.deleteMany({ where: { variant: { productId: { startsWith: prefix } } } });

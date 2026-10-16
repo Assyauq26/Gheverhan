@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Truck, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -13,11 +13,24 @@ import { cn } from "@/lib/utils";
 interface Rate { courier: string; service: string; cost: number; etd?: string }
 interface Bank { id: string; displayName: string; bankName: string; accountNumber: string; accountHolder: string }
 interface Addr { recipientName: string; phone: string; line: string; city: string; province: string; postalCode: string }
+interface CheckoutQuote {
+  subtotal: number;
+  shippingCost: number;
+  discount: number;
+  total: number;
+  couponCode: string | null;
+  couponReason: string | null;
+}
+type QuoteState =
+  | { key: string; status: "loading" }
+  | { key: string; status: "error"; message: string }
+  | { key: string; status: "ready"; data: CheckoutQuote };
 
-function PlaceOrderBtn() {
+
+function PlaceOrderBtn({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" size="lg" disabled={pending} data-testid="place-order-btn">
+    <Button type="submit" className="w-full" size="lg" disabled={pending || disabled} data-testid="place-order-btn">
       {pending ? "Memproses..." : "Buat Pesanan"}
     </Button>
   );
@@ -41,13 +54,68 @@ export function CheckoutClient({
   const [state, action] = useFormState(createOrderAction, { ok: false } as any);
   const [rateIdx, setRateIdx] = useState(0);
   const [bankId, setBankId] = useState(banks[0]?.id ?? "");
+  const [couponCode, setCouponCode] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [quote, setQuote] = useState<QuoteState | null>(null);
   const rate = rates[rateIdx];
-  const total = subtotal + (rate?.cost ?? 0);
+  const quoteKey = JSON.stringify([couponCode, rate?.courier, rate?.service, rate?.cost, retry]);
+
+  useEffect(() => {
+    if (!rate) {
+      setQuote({ key: quoteKey, status: "error", message: "Belum ada metode pengiriman tersedia." });
+      return;
+    }
+    let active = true;
+    const controller = new AbortController();
+    setQuote({ key: quoteKey, status: "loading" });
+    // Debounce typing; clearing a coupon / changing a rate can refresh immediately.
+    const timeout = setTimeout(async () => {
+      try {
+        const response = await fetch("/api/v1/checkout/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+          body: JSON.stringify({
+            couponCode: couponCode || undefined,
+            shipping: { courier: rate.courier, service: rate.service, cost: rate.cost },
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok || result.success !== true) {
+          throw new Error(result.error?.message || "Perhitungan checkout gagal.");
+        }
+        const data = result.data as CheckoutQuote;
+        if (![data.subtotal, data.shippingCost, data.discount, data.total].every(
+          value => Number.isSafeInteger(value) && value >= 0
+        ) || data.total !== data.subtotal + data.shippingCost - data.discount) {
+          throw new Error("Ringkasan dari server tidak valid.");
+        }
+        if (active) setQuote({ key: quoteKey, status: "ready", data });
+      } catch (error) {
+        if (active && !controller.signal.aborted) {
+          setQuote({ key: quoteKey, status: "error", message: error instanceof Error ? error.message : "Koneksi terputus." });
+        }
+      }
+    }, couponCode ? 350 : 0);
+    return () => { active = false; clearTimeout(timeout); controller.abort(); };
+  }, [quoteKey, couponCode, rate]);
+
+  // Never render stale coupon/rate results, even before a previous request's effect cleanup runs.
+  const currentQuote = quote?.key === quoteKey && quote.status === "ready" ? quote.data : null;
+  const changedQuote = !!currentQuote &&
+    (currentQuote.subtotal !== subtotal || currentQuote.shippingCost !== rate?.cost);
+  const canSubmit = !!currentQuote && !changedQuote;
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_360px]" data-testid="checkout-form">
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="expectedLines" value={JSON.stringify(expectedLines)} />
+      <input type="hidden" name="expectedQuote" value={currentQuote ? JSON.stringify({
+        subtotal: currentQuote.subtotal, shippingCost: currentQuote.shippingCost,
+        discount: currentQuote.discount, total: currentQuote.total,
+      }) : ""} />
       <div className="space-y-8">
         {/* Address */}
         <section className="space-y-3">
@@ -104,24 +172,52 @@ export function CheckoutClient({
         </section>
 
         <div>
-          <Label>Kode Kupon (opsional)</Label>
-          <Input name="couponCode" placeholder="GHEVER10" data-testid="input-coupon" />
+          <Label htmlFor="checkout-coupon">Kode Kupon (opsional)</Label>
+          <Input id="checkout-coupon" name="couponCode" value={couponCode} maxLength={64}
+            autoComplete="off" placeholder="GHEVER10" data-testid="input-coupon"
+            onChange={event => setCouponCode(event.target.value.toUpperCase().replace(/\s/g, ""))} />
+          {currentQuote && couponCode && (
+            <p className={cn("mt-2 text-sm", currentQuote.couponCode ? "text-ink" : "text-destructive")}
+              role="status" data-testid="coupon-feedback">
+              {currentQuote.couponCode
+                ? `Kupon ${currentQuote.couponCode} berhasil diterapkan.`
+                : currentQuote.couponReason || "Kupon tidak valid."}
+            </p>
+          )}
         </div>
       </div>
 
       <div className="h-fit space-y-4 rounded-2xl border border-line p-5 lg:sticky lg:top-24" data-testid="checkout-summary">
         <h2 className="font-display text-lg font-bold text-ink">Ringkasan Pesanan</h2>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-ink-soft">Subtotal</span><span className="font-semibold">{formatIDR(subtotal)}</span></div>
-          <div className="flex justify-between"><span className="text-ink-soft">Ongkir ({rate?.courier})</span><span className="font-semibold">{formatIDR(rate?.cost ?? 0)}</span></div>
+          <div className="flex justify-between"><span className="text-ink-soft">Subtotal</span><span className="font-semibold">{formatIDR(currentQuote?.subtotal ?? subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-ink-soft">Ongkir ({rate?.courier})</span><span className="font-semibold">{currentQuote ? formatIDR(currentQuote.shippingCost) : "—"}</span></div>
+          {currentQuote && currentQuote.discount > 0 && (
+            <div className="flex justify-between" data-testid="checkout-discount">
+              <span className="text-ink-soft">Diskon kupon</span>
+              <span className="font-semibold">- {formatIDR(currentQuote.discount)}</span>
+            </div>
+          )}
         </div>
         <div className="flex justify-between border-t border-line pt-3">
           <span className="font-semibold text-ink">Total</span>
-          <span className="font-display text-xl font-black text-ink" data-testid="checkout-total">{formatIDR(total)}</span>
+          <span className="font-display text-xl font-black text-ink" data-testid="checkout-total">{currentQuote ? formatIDR(currentQuote.total) : "—"}</span>
         </div>
+        {(!quote || quote.key !== quoteKey || quote.status === "loading") && (
+          <p className="text-xs text-ink-soft" role="status" data-testid="checkout-quote-loading">Memeriksa total terbaru…</p>
+        )}
+        {quote?.key === quoteKey && quote.status === "error" && (
+          <div className="space-y-1 text-sm text-destructive" role="alert" data-testid="checkout-quote-error">
+            <p>{quote.message}</p>
+            <button type="button" className="underline" onClick={() => setRetry(value => value + 1)}>Coba lagi</button>
+          </div>
+        )}
+        {changedQuote && <p className="text-sm text-destructive" role="alert" data-testid="checkout-price-changed">
+          Harga atau ongkir berubah. <a href="/checkout" className="underline">Muat ulang checkout</a> untuk mengonfirmasi total terbaru.
+        </p>}
         {state?.ok === false && state?.error && <p className="text-sm text-destructive" data-testid="checkout-error">{state.error} <a href="/checkout" className="underline">Muat ulang checkout untuk konfirmasi ulang</a></p>}
-        <PlaceOrderBtn />
-        <p className="text-center text-[11px] text-ink-muted">Total final & diskon dihitung ulang oleh server.</p>
+        <PlaceOrderBtn disabled={!canSubmit} />
+        <p className="text-center text-[11px] text-ink-muted">Ringkasan dihitung oleh server. Total akan diverifikasi ulang saat pesanan dibuat.</p>
       </div>
     </form>
   );

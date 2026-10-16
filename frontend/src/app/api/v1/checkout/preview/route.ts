@@ -6,8 +6,8 @@ import { previewCheckout } from "@/modules/checkout/checkout.service";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  couponCode: z.string().optional(),
-  shipping: z.object({ courier: z.string(), service: z.string(), cost: z.number().int().nonnegative() }).optional(),
+  couponCode: z.string().max(64).optional(),
+  shipping: z.object({ courier: z.string().min(1).max(100), service: z.string().min(1).max(100), cost: z.number().int().nonnegative() }).optional(),
 });
 
 export async function POST(req: Request) {

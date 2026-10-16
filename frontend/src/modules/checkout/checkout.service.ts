@@ -7,7 +7,7 @@ import { reserveStock } from "@/modules/inventory/inventory.service";
 import { computeDiscount } from "@/modules/promotions/coupon.service";
 import { getPaymentProvider } from "@/infrastructure/payments";
 import { getShippingProvider } from "@/infrastructure/shipping";
-import { checkoutLinesSchema, checkoutSignature, type CheckoutLines } from "./checkout.validation";
+import { checkoutLinesSchema, checkoutQuoteSchema, checkoutSignature, type CheckoutLines, type CheckoutQuoteConfirmation } from "./checkout.validation";
 import { writeAudit } from "@/modules/audit/audit.service";
 
 export interface AddressInput {
@@ -75,16 +75,24 @@ export async function createOrder(
     bankAccountId: string;
     note?: string;
     expectedLines?: CheckoutLines;
+    expectedQuote?: CheckoutQuoteConfirmation;
     requestId?: string;
   },
 ) {
   const confirmation = checkoutLinesSchema.safeParse(input.expectedLines);
   if (!confirmation.success) throw new HttpError("Muat ulang checkout dan konfirmasi harga sebelum membuat pesanan.", 409);
+  const acceptedQuote = input.expectedQuote ? checkoutQuoteSchema.safeParse(input.expectedQuote) : null;
+  if (acceptedQuote && !acceptedQuote.success) throw new HttpError("Ringkasan harga tidak valid. Muat ulang checkout.", 409);
+  // Existing non-coupon API orders can still use the historical lines confirmation,
+  // but a coupon order MUST include the confirmed discount and final total.
+  if (input.couponCode?.trim() && !acceptedQuote?.success) {
+    throw new HttpError("Konfirmasi diskon dan total diperlukan. Muat ulang checkout.", 409);
+  }
   if (input.requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId)) throw new HttpError("Request checkout tidak valid", 422);
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
   // Persist idempotency through the existing Order PK and transactional audit metadata.
   const orderId = input.requestId ? `chk_${hash(`${userId}:${input.requestId}`).slice(0, 40)}` : undefined;
-  const requestDigest = hash(JSON.stringify({ address: Object.entries(input.address).sort(([a], [b]) => a.localeCompare(b)), shipping: { courier: input.shipping.courier, service: input.shipping.service }, bankAccountId: input.bankAccountId, couponCode: input.couponCode?.toUpperCase() || null, note: input.note || null, lines: checkoutSignature(confirmation.data) }));
+  const requestDigest = hash(JSON.stringify({ address: Object.entries(input.address).sort(([a], [b]) => a.localeCompare(b)), shipping: { courier: input.shipping.courier, service: input.shipping.service }, bankAccountId: input.bankAccountId, couponCode: input.couponCode?.toUpperCase() || null, note: input.note || null, lines: checkoutSignature(confirmation.data), expectedQuote: acceptedQuote?.success ? acceptedQuote.data : null }));
   const replay = async (tx: Prisma.TransactionClient) => {
     if (!orderId) return null;
     const existing = await tx.order.findUnique({ where: { id: orderId, userId } });
@@ -142,6 +150,14 @@ export async function createOrder(
     if (input.couponCode) await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Coupon" WHERE "code" = ${input.couponCode.toUpperCase()} FOR SHARE`);
     const { discount, code } = await computeDiscount(input.couponCode, current.subtotal, tx);
     const total = current.subtotal + shippingCost - discount;
+    // Compare against the buyer-visible preview while holding the coupon lock
+    // inside the same transaction that creates the order and reserves inventory.
+    if (acceptedQuote?.success && (
+      acceptedQuote.data.subtotal !== current.subtotal ||
+      acceptedQuote.data.shippingCost !== shippingCost ||
+      acceptedQuote.data.discount !== discount ||
+      acceptedQuote.data.total !== total
+    )) throw new HttpError("Harga, ongkir, atau kupon berubah. Muat ulang checkout dan konfirmasi ulang total pesanan.", 409);
     if (![current.subtotal, shippingCost, discount, total].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 2_147_483_647)) throw new HttpError("Total pesanan tidak valid", 422);
     const created = await tx.order.create({
       data: {

@@ -1,53 +1,53 @@
 # Remediation R7 — JWT isolation between Preview and Production
 
-## Status (2026-10-16)
-Vercel project `gheverhan` currently has one `JWT_SECRET` entry scoped to both
-`production` and `preview` (metadata-only check; values were **not** read).
-`DATABASE_URL` and `DIRECT_URL` are also shared. These are separate blockers.
+## Verified configuration (2026-10-16)
+The owner chose ONE Supabase PostgreSQL database for DEVELOPMENT only because
+all current catalog, customer, order and payment records are synthetic.
+Vercel `DATABASE_URL` / `DIRECT_URL` are therefore deliberately scoped to
+Production + Preview. That data-sharing decision is governed by PR #40.
 
-This pull request is a defense-in-depth change and **does not fix shared
-credentials**. A user with access to the actual HS256 signing key can mint
-arbitrary JWT claims, including production issuer and audience; changing JWT
-claims alone is not secret isolation.
+However, JWT signing material is isolated regardless of database topology:
+- Production: original `JWT_SECRET` retained, Production-only.
+- Preview: separately generated strong `JWT_SECRET`, Preview-only.
+- Both secret keys are server-only and must never be committed.
+- `GHEVERHAN_SHARED_DEV_DATABASE=true` is Preview-only.
+- Supabase service-role/storage keys remain Production-only.
+
+The configuration metadata was verified without decrypting either JWT key.
+A Vercel environment-scope update affects NEW deployments only. Inspect or
+protect old Preview deployments separately; do not assume previously built
+deployments have been retroactively revoked.
 
 ## Code behavior
-- Production retains issuer `gheverhan` and audience `gheverhan-web`.
-  Existing production tokens retain their expected claims and remain valid.
-- Vercel Preview uses issuer `gheverhan-preview` and audience
+- Production issuer `gheverhan`, audience `gheverhan-web` remain unchanged.
+  Existing Production cookies keep the same signing key and claims.
+- Vercel Preview uses issuer `gheverhan-preview`, audience
   `gheverhan-web-preview`.
-- A token from one environment is not accepted in the other simply because the
-  same key was accidentally configured.
-- Existing Preview tokens will require a new login after this code is released.
-- Local development retains production-format claims for backward compatibility;
-  local deployments must still use development-only DB credentials and JWT keys.
+- Cross-environment JWT acceptance is rejected by issuer/audience, independently
+  of key separation; separate secrets also prevent JWT forgery between scopes.
+- Old Preview sessions will need to sign in again after the new code deploys.
+- Local development retains legacy claims solely for backwards compatibility.
 
-## Release gates — required before production merge
-1. Authorize/setup a **separate Preview database** according to
-   `docs/security/VERCEL_PREVIEW_DATABASE_ISOLATION.md` in PR #40.
-2. In Vercel Project Settings > Environment Variables, replace the shared
-   `DATABASE_URL` and `DIRECT_URL` scopes with two isolated sets:
-   production credentials scoped only to production, preview credentials scoped
-   only to preview. Never copy production customer data into Preview.
-3. **Replace the shared `JWT_SECRET` entry** with two cryptographically random,
-   independently generated server-only values, each scoped to only one
-   environment. Do not add `NEXT_PUBLIC_` prefixes. Configure values through
-   Vercel's authenticated secret UI; never put them into Git, chat, logs or
-   artifacts. Evaluate production-session invalidation before changing a live
-   signing key; swapping a production signing key logs out all current users.
-4. Deploy a safe Preview using synthetic accounts. Confirm:
-   - Preview sign-in and protected route access work.
-   - Preview token is rejected when verified as a production token (unit test).
-   - Production sessions and existing accounts still behave correctly.
-   - Preview cannot query or mutate production data; verify outside the app
-     with read-only baseline counts.
-5. Confirm `VERCEL_ENV` for each deployment and re-run CI and code review.
-   Cross-check the latest production deployment, runtime errors and alias.
-6. Any suspected signing-key disclosure requires an incident response and
-   coordinated production-key rotation. The shared scope alone does not prove
-   key disclosure; do not rotate live credentials blindly.
+## Release gates
+1. PR #40 must be reviewed for the explicitly approved single-dummy-database
+   guard. When real customers arrive, split databases or disable Preview DB
+   access and remove the development exception.
+2. Keep Vercel JWT keys scoped separately and **do not rotate Production JWT**
+   without a planned session-invalidation event. Do not use `NEXT_PUBLIC_`
+   secrets. A new Preview build is needed to use newly scoped variables.
+3. Verify Preview sign-in and protected routes with SYNTHETIC accounts only.
+   An existing Production JWT must not work in Preview; a Preview JWT must
+   not work in Production.
+4. Because data is shared, Preview test writes are visible to Production:
+   no destructive E2E, delete/reset, migrations or background automation on the
+   shared database. PostgreSQL/Playwright CI MUST use disposable LOCAL DB.
+5. Verify Vercel environment assignments, code review, typechecking, isolated
+   PostgreSQL CI and browser regression before merging this PR.
+6. Inventory stale Preview deployments built while JWT_SECRET had both scopes;
+   revoke/protect old deployments as needed. No production data migration or
+   production token rotation is authorized by this PR.
 
-## Risk limitation
-This code reduces accidental acceptance of sessions across deployments.
-**It cannot protect production from a leaked/shared signing key** and is not
-a substitute for unique key scopes, separate databases and deployment access
-controls. Keep this PR isolated until the configuration gates above are met.
+## Security limitations
+This implementation separates session authorization, NOT data access.
+A Preview code vulnerability can still access dummy records in the shared DB.
+The shared-DB exception must end before ANY real customer information appears.

@@ -83,6 +83,9 @@ jobs:
           mkdir -p node_modules/server-only
           echo 'module.exports = {};' > node_modules/server-only/index.js
 
+      - name: Direct database entrypoint safety in a disposable local schema
+        run: node --import tsx --test tests/integration/database-entrypoints.test.ts
+
       - name: Real PostgreSQL product lifecycle and concurrency
         run: npm run test:integration:products
 

@@ -100,7 +100,7 @@ export function CheckoutClient({
       }
     }, couponCode ? 350 : 0);
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
-  }, [quoteKey, couponCode, rate?.courier, rate?.service, rate?.cost, retry]);
+  }, [quoteKey, couponCode, rate]);
 
   // Never render stale coupon/rate results, even before a previous request's effect cleanup runs.
   const currentQuote = quote?.key === quoteKey && quote.status === "ready" ? quote.data : null;

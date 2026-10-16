@@ -220,7 +220,8 @@ test("real PostgreSQL refund and shipment correctness", async t => {
   });
   await t.test("tracking on a packed order automatically dispatches exactly once with audit and server time", async () => {
     const f = await paid(); await pack(f.order.id);
-    const body = { ...shippingInput("PROCESSING"), trackingNumber: "TRACK-AUTO-1" };
+    const forgedDate = new Date("2020-01-02T00:00:00.000Z");
+    const body = { ...shippingInput("PROCESSING"), trackingNumber: "TRACK-AUTO-1", shippedDate: forgedDate };
     const results = await parallelOrder(f.order.id, [
       () => shipments.upsertManualShipment(f.order.id, warehouseId, body),
       () => shipments.upsertManualShipment(f.order.id, warehouseId, body),
@@ -231,11 +232,16 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     assert.equal(first.shipment!.status, "SHIPPED");
     assert.equal(first.shipment!.trackingNumber, "TRACK-AUTO-1");
     assert.ok(first.shipment!.shippedDate instanceof Date);
+    assert.notEqual(first.shipment!.shippedDate!.getTime(), forgedDate.getTime(), "first dispatch ignores browser supplied date");
+    assert.ok(Math.abs(Date.now() - first.shipment!.shippedDate!.getTime()) < 60_000, "first dispatch uses server clock");
+    const dispatchHistory = await db.orderStatusHistory.findFirstOrThrow({ where: { orderId: f.order.id, toStatus: "SHIPPED" } });
+    assert.equal(dispatchHistory.note, "Shipment: SHIPPED");
     assert.equal(await db.shipmentEvent.count({ where: { shipmentId: first.shipment!.id, status: "SHIPPED" } }), 1);
     assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
     assert.equal(await db.auditLog.count({ where: { entity: "Shipment", entityId: first.shipment!.id, action: "shipping.update" } }), 1);
     await shipments.upsertManualShipment(f.order.id, warehouseId, body);
     await shipments.upsertManualShipment(f.order.id, warehouseId, { ...body, requestId: undefined });
+    await shipments.upsertManualShipment(f.order.id, warehouseId, { ...body, requestId: randomUUID(), status: "SHIPPED", shippedDate: new Date("2022-03-04T00:00:00.000Z") });
     assert.equal(await db.shipmentEvent.count({ where: { shipmentId: first.shipment!.id } }), 1);
     assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
     assert.equal((await db.shipment.findUniqueOrThrow({ where: { id: first.shipment!.id } })).shippedDate!.getTime(), first.shipment!.shippedDate!.getTime());

@@ -71,7 +71,11 @@ async function main() {
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
         await page.getByRole('link', { name: 'Berikutnya' }).click();
-        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible();
+        // The production Next.js server can take >5s to settle a filtered RSC
+        // navigation under the shared CI runner. Keep the real content assertion
+        // and require the loading indicator to clear; never use fixed sleeps.
+        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0, { timeout: 15_000 });
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         assert.equal(await page.evaluate(() => (window as unknown as { shellMarker: string }).shellMarker), 'preserved');
         await page.goBack(); await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();

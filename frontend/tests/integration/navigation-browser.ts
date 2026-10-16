@@ -50,7 +50,36 @@ async function main() {
         await route.continue();
       });
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
-      const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+      const page = await context.newPage();
+      page.on('pageerror', e => {
+        const message = e.message;
+        const route = new URL(page.url()).pathname;
+        // Keep strict failure, but retain route context for intermittent #418.
+        const safe = `viewport=${width}px path=${route} error=${message.slice(0, 300)}`;
+        errors.push(safe);
+        console.error('[browser-error] ' + safe);
+      });
+      // Read-only diagnostic: log RSC state without cookies, headers or query values.
+      const rsc = new Map<string, { path: string; started: number }>();
+      const rscEvents: string[] = [];
+      page.on('request', request => {
+        if (request.headers()['rsc'] !== '1') return;
+        const path = new URL(request.url()).pathname;
+        rsc.set(request.url(), { path, started: Date.now() });
+        rscEvents.push('start ' + path);
+      });
+      page.on('response', response => {
+        const start = rsc.get(response.url());
+        if (start) rscEvents.push('response ' + start.path + ' ' + response.status() + ' ' + (Date.now() - start.started) + 'ms');
+      });
+      page.on('requestfinished', request => {
+        const start = rsc.get(request.url());
+        if (start) { rscEvents.push('finished ' + start.path); rsc.delete(request.url()); }
+      });
+      page.on('requestfailed', request => {
+        const start = rsc.get(request.url());
+        if (start) { rscEvents.push('failed ' + start.path + ' ' + (request.failure()?.errorText ?? 'unknown')); rsc.delete(request.url()); }
+      });
       await page.goto(`${base}/admin`); await page.waitForLoadState('networkidle');
       await page.evaluate(() => { (window as unknown as { shellMarker: string }).shellMarker = 'preserved'; });
       await check(`${width}px: navigation has immediate feedback and preserves document`, async () => {
@@ -71,10 +100,29 @@ async function main() {
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
         await page.getByRole('link', { name: 'Berikutnya' }).click();
+        // Admin products pagination must use the same shared transition feedback
+        // as inventory pagination and search; do not silently fall back to an
+        // unobserved separate NextLink transition.
+        await expect(page.getByTestId('navigation-pending')).toBeVisible();
         // The production Next.js server can take >5s to settle a filtered RSC
         // navigation under the shared CI runner. Keep the real content assertion
         // and require the loading indicator to clear; never use fixed sleeps.
-        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible({ timeout: 15_000 });
+        try {
+          await expect(page.getByText('Halaman 2 dari 2')).toBeVisible({ timeout: 15_000 });
+        } catch (error) {
+          // Diagnose whether the browser received a completed RSC response or
+          // whether the server itself fails even on direct (read-only) GET.
+          const direct = await page.request.get(`${base}/admin/products?q=${prefix}&page=2`, { timeout: 8_000 }).catch(() => null);
+          console.error('[pagination-diagnostic] ' + JSON.stringify({
+            viewport: width, pathname: new URL(page.url()).pathname,
+            currentPage: new URL(page.url()).searchParams.get('page') || '1',
+            directStatus: direct?.status() ?? 'timeout',
+            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 2') : false,
+            inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
+            recentRscEvents: rscEvents.slice(-20),
+          }));
+          throw error;
+        }
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0, { timeout: 15_000 });
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         assert.equal(await page.evaluate(() => (window as unknown as { shellMarker: string }).shellMarker), 'preserved');
@@ -97,7 +145,23 @@ async function main() {
         await expect(page.getByTestId('product-pagination')).toBeVisible();
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', /page=2/);
         await page.getByRole('link', { name: 'Berikutnya' }).click();
-        await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        try {
+          // Keep the original strict assertion; diagnose the transport on
+          // failure rather than hiding an intermittent navigation regression.
+          await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        } catch (error) {
+          const direct = await page.request.get(`${base}/shop?q=${prefix}&page=2`, { timeout: 8_000 }).catch(() => null);
+          console.error('[storefront-pagination-diagnostic] ' + JSON.stringify({
+            viewport: width,
+            pathname: new URL(page.url()).pathname,
+            currentPage: new URL(page.url()).searchParams.get('page') || '1',
+            directStatus: direct?.status() ?? 'timeout',
+            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 3') : false,
+            inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
+            recentRscEvents: rscEvents.slice(-20),
+          }));
+          throw error;
+        }
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         await page.goBack();
         await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();

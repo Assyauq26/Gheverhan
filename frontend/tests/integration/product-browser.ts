@@ -25,6 +25,7 @@ const objects = new Map<string, { bytes: Buffer; mime: string }>();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
 const db = new PrismaClient({ datasources: { db: { url: target } } });
 const prefix = randomUUID().slice(0, 8);
+const couponCode = `LIVE-${prefix}`.toUpperCase();
 let checks = 0;
 async function check(name: string, fn: () => Promise<void>) { await fn(); checks++; console.log(`PASS ${name}`); }
 async function fixtureRole(name: string, permissions: string[]) {
@@ -161,6 +162,42 @@ async function main() {
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
+    await check("live checkout coupon is priced by server, shows errors, and updates shipping without creating orders", async () => {
+      await db.coupon.create({ data: { code: couponCode, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });
+      const before = await db.order.count({ where: { userId: customer.id } });
+      const unauthorized = await anonymous.request.post(`${base}/api/v1/checkout/preview`, {
+        data: { couponCode, shipping: { courier: "JNE", service: "REG", cost: 0 } },
+      });
+      assert.equal(unauthorized.status(), 401);
+      const verified = await buyer.request.post(`${base}/api/v1/checkout/preview`, {
+        data: { couponCode, shipping: { courier: "JNE", service: "REG", cost: 0 } },
+      });
+      assert.equal(verified.status(), 200);
+      const data = (await verified.json()).data;
+      assert.equal(data.subtotal, 190000);
+      assert.equal(data.shippingCost, 20000, "client shipping cost must be ignored");
+      assert.equal(data.discount, 19000);
+      assert.equal(data.total, 191000);
+      const page = await buyer.newPage();
+      try {
+        await page.goto(`${base}/checkout`);
+        await expect(page.getByTestId("checkout-total")).toHaveText("Rp 210.000");
+        await page.getByTestId("input-coupon").fill(couponCode.toLowerCase());
+        await expect(page.getByTestId("coupon-feedback")).toContainText("berhasil diterapkan");
+        await expect(page.getByTestId("checkout-discount")).toContainText("Rp 19.000");
+        await expect(page.getByTestId("checkout-total")).toHaveText("Rp 191.000");
+        await expect(page.getByTestId("place-order-btn")).toBeEnabled();
+        await page.getByTestId("ship-option-1").click();
+        await expect(page.getByTestId("checkout-total")).toHaveText("Rp 193.000");
+        await page.getByTestId("input-coupon").fill(`INVALID-${prefix}`);
+        await expect(page.getByTestId("coupon-feedback")).toContainText("Kupon tidak valid");
+        await expect(page.getByTestId("checkout-discount")).toHaveCount(0);
+        await expect(page.getByTestId("checkout-total")).toHaveText("Rp 212.000");
+        await page.setViewportSize({ width: 390, height: 844 });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "checkout quote mobile overflow");
+      } finally { await page.close(); }
+      assert.equal(await db.order.count({ where: { userId: customer.id } }), before);
+    });
     await check("customer confirms quoted prices and receives a price conflict without an order", async () => {
       const customerPage = await buyer.newPage(); await customerPage.goto(`${base}/checkout`);
       const quote = JSON.parse(await customerPage.locator('input[name="expectedLines"]').inputValue());
@@ -207,7 +244,9 @@ async function main() {
   } finally {
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
-    log.end(); await new Promise<void>(resolve => storage.close(() => resolve())); await db.$disconnect();
+    log.end(); await new Promise<void>(resolve => storage.close(() => resolve()));
+    await db.coupon.deleteMany({ where: { code: couponCode } });
+    await db.$disconnect();
   }
 }
 main().catch(err => { console.error(err); process.exitCode = 1; });

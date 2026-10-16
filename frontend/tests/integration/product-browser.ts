@@ -177,7 +177,7 @@ async function main() {
         assert.equal(scheduledVoucher.usageLimit, 5);
         assert.equal(scheduledVoucher.perUserLimit, 1);
         assert.ok(scheduledVoucher.startsAt && scheduledVoucher.startsAt.getTime() > Date.now());
-        await expect(page.getByText("Terjadwal")).toBeVisible();
+        await expect(page.getByText("Terjadwal", { exact: true })).toBeVisible();
         await page.getByRole("button", { name: `Nonaktifkan ${voucherCode}` }).click();
         await expect(page.getByTestId("marketing-feedback")).toContainText("Status voucher diperbarui.");
         assert.equal((await db.coupon.findUniqueOrThrow({ where: { code: voucherCode } })).isActive, false);

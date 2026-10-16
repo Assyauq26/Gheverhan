@@ -293,7 +293,17 @@ async function main() {
         await page.setViewportSize(viewport);
         for (const route of ["/admin", `/admin/products/${product.id}`, "/admin/categories"]) {
           await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle");
-          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`);
+          const overflow = await page.evaluate(() => ({
+            overflowing: document.documentElement.scrollWidth > innerWidth,
+            viewport: innerWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            elements: [...document.querySelectorAll("body *")].map(node => {
+              const rect = node.getBoundingClientRect();
+              return { tag: node.tagName, classes: String((node as HTMLElement).className || "").slice(0, 110), left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) };
+            }).filter(e => e.right > innerWidth + 1 || e.left < -1).slice(0, 16),
+          }));
+          if (overflow.overflowing) console.error("[admin-viewport-overflow] " + JSON.stringify({ route, ...overflow }));
+          assert.equal(overflow.overflowing, false, `${route} overflow at ${viewport.width}`);
         }
       }
       assert.deepEqual(pageErrors, []);

@@ -1,5 +1,18 @@
 import { prisma } from "@/lib/prisma";
-import { DiscountType, type Prisma } from "@prisma/client";
+import { DiscountType, OrderStatus, type Prisma } from "@prisma/client";
+
+/** Cancelled or expired orders release their coupon reservation.
+ * Refunded orders remain redeemed to prevent repeat-use abuse.
+ */
+export const NON_CONSUMING_COUPON_ORDER_STATUSES = [OrderStatus.CANCELLED, OrderStatus.EXPIRED];
+
+export function couponReservationWhere(code: string, userId?: string): Prisma.OrderWhereInput {
+  return {
+    couponCode: code,
+    status: { notIn: NON_CONSUMING_COUPON_ORDER_STATUSES },
+    ...(userId ? { userId } : {}),
+  };
+}
 
 /** Returns discount amount (integer Rupiah) for a coupon against a subtotal. */
 export async function computeDiscount(
@@ -16,17 +29,16 @@ export async function computeDiscount(
     return { discount: 0, code: null, reason: "Kupon belum mulai berlaku" };
   if (coupon.expiresAt && coupon.expiresAt <= now)
     return { discount: 0, code: null, reason: "Kupon kedaluwarsa" };
-  // All completed order creations count as redeemed, including cancelled/unpaid orders.
-  // createOrder holds an exclusive coupon row lock, so two concurrent requests
-  // cannot both pass the last available redemption quota.
+  // A pending order holds a coupon slot, but cancellation/expiry releases it.
+  // createOrder holds the Coupon row lock to serialize last-slot redemption.
   if (coupon.usageLimit != null) {
-    const used = await client.order.count({ where: { couponCode: coupon.code } });
+    const used = await client.order.count({ where: couponReservationWhere(coupon.code) });
     if (used >= coupon.usageLimit)
       return { discount: 0, code: null, reason: "Kuota kupon telah habis" };
   }
   if (coupon.perUserLimit != null) {
     if (!userId) return { discount: 0, code: null, reason: "Identitas pelanggan diperlukan" };
-    const usedByCustomer = await client.order.count({ where: { couponCode: coupon.code, userId } });
+    const usedByCustomer = await client.order.count({ where: couponReservationWhere(coupon.code, userId) });
     if (usedByCustomer >= coupon.perUserLimit)
       return { discount: 0, code: null, reason: "Batas penggunaan kupon Anda telah tercapai" };
   }

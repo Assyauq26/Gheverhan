@@ -47,6 +47,22 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     assert.equal((await prisma.coupon.findUniqueOrThrow({ where: { id: created.id } })).isActive, false);
     assert.equal(await prisma.auditLog.count({ where: { entity: "Coupon", entityId: created.id } }), 3);
   });
+  await t.test("Marketing active voucher totals stay accurate beyond the 100-row list limit", async () => {
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const many = Array.from({ length: 102 }, (_, i) => ({
+      code: `PAGE-${prefix}-${i}`, discountType: "PERCENT" as const, discountValue: 5,
+      isActive: true,
+    }));
+    await prisma.coupon.createMany({ data: many });
+    try {
+      const actual = await prisma.coupon.count({ where: { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } });
+      const listing = await marketing.listMarketing(actor);
+      assert.ok(listing.vouchers.length <= 100);
+      assert.equal(listing.activeVouchers, actual);
+    } finally {
+      await prisma.coupon.deleteMany({ where: { code: { startsWith: `PAGE-${prefix}` } } });
+    }
+  });
   await t.test("Marketing flash sale controls real buyer price and rejects stale and variant-priced products", async () => {
     const marketing = await import("../../src/modules/promotions/marketing.service");
     const p = await prisma.product.create({ data: {

@@ -124,9 +124,12 @@ async function main() {
           throw error;
         }
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0, { timeout: 15_000 });
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBe('2');
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         assert.equal(await page.evaluate(() => (window as unknown as { shellMarker: string }).shellMarker), 'preserved');
-        await page.goBack(); await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();
+        await page.goBack();
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBeNull();
+        await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();
         await expect(page.getByPlaceholder('Cari nama atau slug produk')).toHaveValue(prefix);
       });
       await check(`${width}px: inventory query conflict clamp and active navigation remain usable`, async () => {
@@ -162,8 +165,10 @@ async function main() {
           }));
           throw error;
         }
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBe('2');
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         await page.goBack();
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBeNull();
         await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();
         await page.goto(`${base}/shop?q=${prefix}&page=999`);
         await expect(page.getByText('Halaman 3 dari 3')).toBeVisible();

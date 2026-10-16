@@ -5,7 +5,7 @@ import { existsSync, createWriteStream } from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { PrismaClient } from '@prisma/client';
-import { chromium, expect } from '@playwright/test';
+import { chromium, expect, type Request } from '@playwright/test';
 import { signSession } from '../../src/lib/auth/jwt';
 import { PERMISSIONS } from '../../src/lib/auth/permissions';
 
@@ -34,6 +34,10 @@ async function main() {
   server.stdout.pipe(log); server.stderr.pipe(log);
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   const errors: string[] = [];
+  const browserErrors: Array<{ viewport: number; path: string; message: string; stack?: string }> = [];
+  const transport: Array<{ viewport: number; events: string[] }> = [];
+  let browserVersion: string | undefined;
+  let completed = false;
   const timings: Array<{ viewport: number; pendingFeedbackMs: number; imposedResponseDelayMs: number }> = [];
   try {
     for (let n = 0; ; n++) {
@@ -42,6 +46,7 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     browser = await chromium.launch({ executablePath: process.env.SPRINT1_CHROMIUM_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
+    browserVersion = browser.version();
     for (const width of [390, 1360]) {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       await context.route('**/*', async route => {
@@ -57,28 +62,35 @@ async function main() {
         // Keep strict failure, but retain route context for intermittent #418.
         const safe = `viewport=${width}px path=${route} error=${message.slice(0, 300)}`;
         errors.push(safe);
+        // This suite uses synthetic local fixtures only. Preserve the complete
+        // React diagnostic and stack in local artifacts; the short console
+        // summary above may truncate the useful part of a hydration failure.
+        browserErrors.push({ viewport: width, path: route, message, stack: e.stack });
         console.error('[browser-error] ' + safe);
       });
       // Read-only diagnostic: log RSC state without cookies, headers or query values.
-      const rsc = new Map<string, { path: string; started: number }>();
+      // Prefetch and navigation may share a URL. Key by request identity so an
+      // aborted prefetch cannot remove a different in-flight navigation.
+      const rsc = new Map<Request, { path: string; started: number }>();
       const rscEvents: string[] = [];
+      transport.push({ viewport: width, events: rscEvents });
       page.on('request', request => {
         if (request.headers()['rsc'] !== '1') return;
         const path = new URL(request.url()).pathname;
-        rsc.set(request.url(), { path, started: Date.now() });
+        rsc.set(request, { path, started: Date.now() });
         rscEvents.push('start ' + path);
       });
       page.on('response', response => {
-        const start = rsc.get(response.url());
+        const start = rsc.get(response.request());
         if (start) rscEvents.push('response ' + start.path + ' ' + response.status() + ' ' + (Date.now() - start.started) + 'ms');
       });
       page.on('requestfinished', request => {
-        const start = rsc.get(request.url());
-        if (start) { rscEvents.push('finished ' + start.path); rsc.delete(request.url()); }
+        const start = rsc.get(request);
+        if (start) { rscEvents.push('finished ' + start.path); rsc.delete(request); }
       });
       page.on('requestfailed', request => {
-        const start = rsc.get(request.url());
-        if (start) { rscEvents.push('failed ' + start.path + ' ' + (request.failure()?.errorText ?? 'unknown')); rsc.delete(request.url()); }
+        const start = rsc.get(request);
+        if (start) { rscEvents.push('failed ' + start.path + ' ' + (request.failure()?.errorText ?? 'unknown')); rsc.delete(request); }
       });
       await page.goto(`${base}/admin`); await page.waitForLoadState('networkidle');
       await page.evaluate(() => { (window as unknown as { shellMarker: string }).shellMarker = 'preserved'; });
@@ -117,7 +129,7 @@ async function main() {
             viewport: width, pathname: new URL(page.url()).pathname,
             currentPage: new URL(page.url()).searchParams.get('page') || '1',
             directStatus: direct?.status() ?? 'timeout',
-            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 2') : false,
+            directHasSecondPage: direct ? (await direct.text()).replace(/<!--[\s\S]*?-->/g, '').includes('Halaman 2 dari 2') : false,
             inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
             recentRscEvents: rscEvents.slice(-20),
           }));
@@ -156,7 +168,7 @@ async function main() {
             pathname: new URL(page.url()).pathname,
             currentPage: new URL(page.url()).searchParams.get('page') || '1',
             directStatus: direct?.status() ?? 'timeout',
-            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 3') : false,
+            directHasSecondPage: direct ? (await direct.text()).replace(/<!--[\s\S]*?-->/g, '').includes('Halaman 2 dari 3') : false,
             inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
             recentRscEvents: rscEvents.slice(-20),
           }));
@@ -185,15 +197,25 @@ async function main() {
       await context.close();
     }
     assert.deepEqual(errors, []);
-    await writeFile(path.join(artifacts, 'navigation-results.json'), JSON.stringify({ checks, timings, browserErrors: errors, note: 'Synthetic 600 ms RSC response delay; feedback duration includes Playwright click dispatch. Not a live latency benchmark. External images deliberately blocked.' }, null, 2));
+    completed = true;
     console.log(`${checks} navigation checks PASS`);
   } finally {
-    await browser?.close(); server.kill('SIGTERM'); await new Promise(resolve => server.once('exit', resolve)); log.end();
-    // Owned fixtures only, on the explicitly guarded disposable local database.
-    await db.inventory.deleteMany({ where: { variant: { productId: { startsWith: prefix } } } });
-    await db.productVariant.deleteMany({ where: { productId: { startsWith: prefix } } });
-    await db.product.deleteMany({ where: { id: { startsWith: prefix } } });
-    await db.user.delete({ where: { id: user.id } });
+    // Failed runs are the most valuable evidence. Save before closing contexts
+    // and cleaning fixtures, without changing assertions, routing or timeouts.
+    try {
+      await writeFile(path.join(artifacts, 'navigation-results.json'), JSON.stringify({
+        status: completed ? 'PASS' : 'FAILED', checks, timings, browserVersion,
+        browserErrors, transport,
+        note: 'Synthetic 600 ms RSC response delay; feedback duration includes Playwright click dispatch. Not a live latency benchmark. External images deliberately blocked. Only paths and synthetic fixture diagnostics are retained; no request headers/cookies.',
+      }, null, 2));
+    } finally {
+      await browser?.close(); server.kill('SIGTERM'); await new Promise(resolve => server.once('exit', resolve)); log.end();
+      // Owned fixtures only, on the explicitly guarded disposable local database.
+      await db.inventory.deleteMany({ where: { variant: { productId: { startsWith: prefix } } } });
+      await db.productVariant.deleteMany({ where: { productId: { startsWith: prefix } } });
+      await db.product.deleteMany({ where: { id: { startsWith: prefix } } });
+      await db.user.delete({ where: { id: user.id } });
+    }
   }
 }
 main().finally(() => db.$disconnect()).catch(error => { console.error(error); process.exitCode = 1; });

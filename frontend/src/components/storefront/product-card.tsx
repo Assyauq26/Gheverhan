@@ -41,7 +41,7 @@ export function ProductCard({
       data-testid={`product-card-${product.slug}`}
     >
       <div className="relative">
-        <Link href={`/product/${product.slug}`} className="block" aria-label={`Lihat detail ${product.name}`}>
+        <Link href={`/product/${product.slug}`} prefetch={false} className="block" aria-label={`Lihat detail ${product.name}`}>
           <div className="relative aspect-square overflow-hidden rounded-xl bg-surface">
             {product.image ? (
               <Image
@@ -74,7 +74,7 @@ export function ProductCard({
 
       <div className="px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
-        <Link href={`/product/${product.slug}`}>
+        <Link href={`/product/${product.slug}`} prefetch={false}>
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
             {product.name}
           </h3>

@@ -63,6 +63,24 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
       await prisma.coupon.deleteMany({ where: { code: { startsWith: `PAGE-${prefix}` } } });
     }
   });
+  await t.test("Marketing keeps scheduled campaigns visible ahead of 60 regular products", async () => {
+    const marketing = await import("../../src/modules/promotions/marketing.service");
+    const scheduled = await prisma.product.create({ data: {
+      name: "Scheduled featured fixture", slug: `scheduled-priority-${prefix}`,
+      basePrice: 100000, flashSalePrice: 80000,
+      flashSaleStartsAt: new Date(Date.now() + 3_600_000),
+      flashSaleEndsAt: new Date(Date.now() + 7_200_000),
+      status: "PUBLISHED",
+    } });
+    await prisma.product.createMany({ data: Array.from({ length: 65 }, (_, i) => ({
+      name: `Regular fixture ${i}`, slug: `regular-priority-${prefix}-${i}`,
+      basePrice: 120000, status: "PUBLISHED" as const,
+    })) });
+    const listing = await marketing.listMarketing(actor);
+    assert.equal(listing.products.length, 60);
+    assert.ok(listing.products.some(p => p.id === scheduled.id),
+      "Seller must be able to edit/remove the scheduled campaign despite the 60-row cap");
+  });
   await t.test("Marketing flash sale controls real buyer price and rejects stale and variant-priced products", async () => {
     const marketing = await import("../../src/modules/promotions/marketing.service");
     const p = await prisma.product.create({ data: {

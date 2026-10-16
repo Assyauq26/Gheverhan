@@ -29,6 +29,15 @@ async function main() {
   }
   const user = await db.user.create({ data: { id: prefix, name: 'Navigation Fixture', email: `${prefix}@example.test`, passwordHash: 'isolated-fixture', roles: { create: { roleId: role.id } } } });
   for (let i = 0; i < 25; i++) await db.product.create({ data: { id: `${prefix}-${i}`, name: `${prefix} Product ${i}`, slug: `${prefix}-${i}`, status: 'PUBLISHED', basePrice: 100000, variants: { create: { id: `${prefix}-variant-${i}`, sku: `${prefix}-sku-${i}`, inventory: { create: { onHand: 10 } } } } } });
+  // Explicit Marketing SSR fixture to exercise voucher status/date hydration,
+  // not just the empty-state component. All data stays in disposable CI Postgres.
+  const marketingCouponCode = `NAV-${prefix.toUpperCase()}`;
+  await db.coupon.create({ data: {
+    code: marketingCouponCode, discountType: 'PERCENT', discountValue: 10,
+    minSpend: 0, isActive: true,
+    startsAt: new Date('2030-01-01T17:00:00.000Z'),
+    expiresAt: new Date('2030-01-03T17:00:00.000Z'),
+  } });
   const log = createWriteStream(path.join(artifacts, 'server.log'));
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '3116'], { cwd: root, env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.pipe(log); server.stderr.pipe(log);
@@ -44,13 +53,38 @@ async function main() {
     browser = await chromium.launch({ executablePath: process.env.SPRINT1_CHROMIUM_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
     for (const width of [390, 1360]) {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
+      // Artificial RSC delay is active ONLY for the feedback scenarios. Delaying
+      // every subsequent pagination/back-forward request caused a cascade of
+      // aborted RSC streams and made normal-route tests artificially flaky.
+      let injectFeedbackDelay = true;
       await context.route('**/*', async route => {
         if (new URL(route.request().url()).hostname !== 'localhost') return route.abort();
-        if (route.request().headers()['rsc'] === '1' && !route.request().headers()['next-router-prefetch']) await new Promise(resolve => setTimeout(resolve, 600));
+        if (injectFeedbackDelay && route.request().headers()['rsc'] === '1' && !route.request().headers()['next-router-prefetch']) await new Promise(resolve => setTimeout(resolve, 600));
         await route.continue();
       });
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
       const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+      // Read-only diagnostic: log RSC state without cookies, headers or query values.
+      const rsc = new Map<string, { path: string; started: number }>();
+      const rscEvents: string[] = [];
+      page.on('request', request => {
+        if (request.headers()['rsc'] !== '1') return;
+        const path = new URL(request.url()).pathname;
+        rsc.set(request.url(), { path, started: Date.now() });
+        rscEvents.push('start ' + path);
+      });
+      page.on('response', response => {
+        const start = rsc.get(response.url());
+        if (start) rscEvents.push('response ' + start.path + ' ' + response.status() + ' ' + (Date.now() - start.started) + 'ms');
+      });
+      page.on('requestfinished', request => {
+        const start = rsc.get(request.url());
+        if (start) { rscEvents.push('finished ' + start.path); rsc.delete(request.url()); }
+      });
+      page.on('requestfailed', request => {
+        const start = rsc.get(request.url());
+        if (start) { rscEvents.push('failed ' + start.path + ' ' + (request.failure()?.errorText ?? 'unknown')); rsc.delete(request.url()); }
+      });
       await page.goto(`${base}/admin`); await page.waitForLoadState('networkidle');
       await page.evaluate(() => { (window as unknown as { shellMarker: string }).shellMarker = 'preserved'; });
       await check(`${width}px: navigation has immediate feedback and preserves document`, async () => {
@@ -69,16 +103,42 @@ async function main() {
         await expect(page.getByRole('search').getByRole('button', { name: 'Cari', exact: true })).toBeDisabled();
         await expect(page.getByText('25 produk · kelola katalog toko Gheverhan.')).toBeVisible();
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+        // Pagination checks real Next.js transitions, not repeatedly delayed
+        // synthetic streams. Preserve exact destination/content assertions.
+        injectFeedbackDelay = false;
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
         await page.getByRole('link', { name: 'Berikutnya' }).click();
+        // Admin products pagination must use the same shared transition feedback
+        // as inventory pagination and search; do not silently fall back to an
+        // unobserved separate NextLink transition.
+        // Native Link may finish immediately (prefetch/cache), so transient
+        // pending feedback is not guaranteed or required on fast navigation.
         // The production Next.js server can take >5s to settle a filtered RSC
         // navigation under the shared CI runner. Keep the real content assertion
         // and require the loading indicator to clear; never use fixed sleeps.
-        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible({ timeout: 15_000 });
+        try {
+          await expect(page.getByText('Halaman 2 dari 2')).toBeVisible({ timeout: 15_000 });
+        } catch (error) {
+          // Diagnose whether the browser received a completed RSC response or
+          // whether the server itself fails even on direct (read-only) GET.
+          const direct = await page.request.get(`${base}/admin/products?q=${prefix}&page=2`, { timeout: 8_000 }).catch(() => null);
+          console.error('[pagination-diagnostic] ' + JSON.stringify({
+            viewport: width, pathname: new URL(page.url()).pathname,
+            currentPage: new URL(page.url()).searchParams.get('page') || '1',
+            directStatus: direct?.status() ?? 'timeout',
+            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 2') : false,
+            inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
+            recentRscEvents: rscEvents.slice(-20),
+          }));
+          throw error;
+        }
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0, { timeout: 15_000 });
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBe('2');
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         assert.equal(await page.evaluate(() => (window as unknown as { shellMarker: string }).shellMarker), 'preserved');
-        await page.goBack(); await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();
+        await page.goBack();
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBeNull();
+        await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();
         await expect(page.getByPlaceholder('Cari nama atau slug produk')).toHaveValue(prefix);
       });
       await check(`${width}px: inventory query conflict clamp and active navigation remain usable`, async () => {
@@ -97,9 +157,27 @@ async function main() {
         await expect(page.getByTestId('product-pagination')).toBeVisible();
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', /page=2/);
         await page.getByRole('link', { name: 'Berikutnya' }).click();
-        await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        try {
+          // Keep the original strict assertion; diagnose the transport on
+          // failure rather than hiding an intermittent navigation regression.
+          await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        } catch (error) {
+          const direct = await page.request.get(`${base}/shop?q=${prefix}&page=2`, { timeout: 8_000 }).catch(() => null);
+          console.error('[storefront-pagination-diagnostic] ' + JSON.stringify({
+            viewport: width,
+            pathname: new URL(page.url()).pathname,
+            currentPage: new URL(page.url()).searchParams.get('page') || '1',
+            directStatus: direct?.status() ?? 'timeout',
+            directHasSecondPage: direct ? (await direct.text()).includes('Halaman 2 dari 3') : false,
+            inFlightRsc: [...rsc.values()].map(req => ({ path: req.path, ageMs: Date.now() - req.started })),
+            recentRscEvents: rscEvents.slice(-20),
+          }));
+          throw error;
+        }
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBe('2');
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         await page.goBack();
+        await expect.poll(() => new URL(page.url()).searchParams.get('page')).toBeNull();
         await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();
         await page.goto(`${base}/shop?q=${prefix}&page=999`);
         await expect(page.getByText('Halaman 3 dari 3')).toBeVisible();
@@ -118,6 +196,14 @@ async function main() {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({ path: path.join(artifacts, `${width}-shop.png`), fullPage: true });
       });
+      await check(`${width}px: Marketing SSR status and WIB date hydrate without browser exceptions`, async () => {
+        await page.goto(`${base}/admin/marketing`);
+        await expect(page.getByRole('heading', { name: 'Marketing', exact: true })).toBeVisible();
+        const voucher = page.locator('li').filter({ has: page.getByText(marketingCouponCode, { exact: true }) }).first();
+        await expect(voucher.getByText('Terjadwal', { exact: true })).toBeVisible();
+        await expect(voucher).toContainText('02/01/2030 00:00 WIB');
+        await page.waitForLoadState('networkidle');
+      });
       await context.close();
     }
     assert.deepEqual(errors, []);
@@ -129,6 +215,7 @@ async function main() {
     await db.inventory.deleteMany({ where: { variant: { productId: { startsWith: prefix } } } });
     await db.productVariant.deleteMany({ where: { productId: { startsWith: prefix } } });
     await db.product.deleteMany({ where: { id: { startsWith: prefix } } });
+    await db.coupon.deleteMany({ where: { code: marketingCouponCode } });
     await db.user.delete({ where: { id: user.id } });
   }
 }

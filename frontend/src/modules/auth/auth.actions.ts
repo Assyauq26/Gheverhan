@@ -79,7 +79,8 @@ export async function forgotPasswordAction(_prev: unknown, formData: FormData) {
   if (!z.string().email().safeParse(email).success) {
     return { ok: false, error: "Email tidak valid" };
   }
-  await requestPasswordReset(email);
+  const res = await runAction(() => requestPasswordReset(email));
+  if (!res.ok) return res;
   return { ok: true, message: "Jika email terdaftar, tautan reset telah dikirim." };
 }
 

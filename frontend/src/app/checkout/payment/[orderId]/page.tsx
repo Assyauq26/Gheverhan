@@ -30,7 +30,7 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
   // to the entire payment panel, not only to the upload form.
   const isDeadlinePassed = Boolean(order.expiresAt && order.expiresAt <= new Date());
   const isOrderClosed = order.status === "CANCELLED" || order.status === "EXPIRED" ||
-    (order.status === "PENDING_PAYMENT" && isDeadlinePassed);
+    (order.status === "PENDING_PAYMENT" && isDeadlinePassed && !isWaiting);
   const canUpload = !isOrderClosed && order.status === "PENDING_PAYMENT" &&
     (payment.status === "PENDING_PAYMENT" || payment.status === "REJECTED");
   const lastRejected = order.payment?.confirmations.find((c) => c.status === "REJECTED");

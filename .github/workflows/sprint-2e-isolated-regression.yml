@@ -98,5 +98,9 @@ jobs:
       - name: Chromium operations/payment proof and RBAC test with loopback storage double
         run: npm run test:e2e:operations
 
-      - name: Chromium navigation and mobile responsiveness regression
-        run: node --import tsx tests/integration/navigation-browser.ts
+      - name: Chromium navigation and mobile responsiveness regression (3 isolated passes)
+        run: |
+          for attempt in 1 2 3; do
+            echo "Isolated Chromium navigation/hydration pass $attempt of 3"
+            node --import tsx tests/integration/navigation-browser.ts
+          done

@@ -62,7 +62,7 @@ export function ProductListing({
           {SORTS.map((s) => (
             <Link
               key={s.key}
-              href={sortHref(s.key)}
+              prefetch={false} href={sortHref(s.key)}
               className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
                 (currentSort ?? "newest") === s.key
                   ? "border-black bg-black text-white"
@@ -90,9 +90,9 @@ export function ProductListing({
       )}
       {pages > 1 && (
         <nav aria-label="Halaman produk" className="flex items-center justify-center gap-4 pt-2 text-sm" data-testid="product-pagination">
-          {page > 1 ? <Link href={pageHref(page - 1)} className="min-h-11 rounded-lg border border-line px-4 py-3 font-semibold hover:bg-surface">Sebelumnya</Link> : <span className="px-4 text-ink-muted">Sebelumnya</span>}
+          {page > 1 ? <Link prefetch={false} href={pageHref(page - 1)} className="min-h-11 rounded-lg border border-line px-4 py-3 font-semibold hover:bg-surface">Sebelumnya</Link> : <span className="px-4 text-ink-muted">Sebelumnya</span>}
           <span aria-live="polite">Halaman {page} dari {pages}</span>
-          {page < pages ? <Link href={pageHref(page + 1)} className="min-h-11 rounded-lg border border-line px-4 py-3 font-semibold hover:bg-surface">Berikutnya</Link> : <span className="px-4 text-ink-muted">Berikutnya</span>}
+          {page < pages ? <Link prefetch={false} href={pageHref(page + 1)} className="min-h-11 rounded-lg border border-line px-4 py-3 font-semibold hover:bg-surface">Berikutnya</Link> : <span className="px-4 text-ink-muted">Berikutnya</span>}
         </nav>
       )}
     </div>

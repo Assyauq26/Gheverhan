@@ -40,39 +40,41 @@ export function ProductCard({
       className="group relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
-      <Link href={`/product/${product.slug}`} className="block">
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-surface">
-          {product.image ? (
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(max-width:768px) 50vw, 25vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-ink-muted">
-              No image
-            </div>
-          )}
+      <div className="relative">
+        <Link href={`/product/${product.slug}`} prefetch={false} className="block" aria-label={`Lihat detail ${product.name}`}>
+          <div className="relative aspect-square overflow-hidden rounded-xl bg-surface">
+            {product.image ? (
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                sizes="(max-width:768px) 50vw, 25vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-ink-muted">
+                No image
+              </div>
+            )}
 
-          {pct > 0 && !compact && (
-            <div className="absolute left-2 top-2 z-10">
-              <Badge variant="sale">{pct}%</Badge>
-            </div>
-          )}
-
-          {!featured && (
-            <div className="absolute right-2 top-2 z-10">
-              <WishlistButton productId={product.id} initialActive={wishlisted} />
-            </div>
-          )}
-        </div>
-      </Link>
+            {pct > 0 && !compact && (
+              <div className="absolute left-2 top-2 z-10">
+                <Badge variant="sale">{pct}%</Badge>
+              </div>
+            )}
+          </div>
+        </Link>
+        {/* Interactive wishlist control must NOT be nested inside a product link. */}
+        {!featured && (
+          <div className="absolute right-2 top-2 z-20">
+            <WishlistButton productId={product.id} initialActive={wishlisted} />
+          </div>
+        )}
+      </div>
 
       <div className="px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
-        <Link href={`/product/${product.slug}`}>
+        <Link href={`/product/${product.slug}`} prefetch={false}>
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
             {product.name}
           </h3>

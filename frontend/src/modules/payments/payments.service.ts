@@ -103,13 +103,17 @@ export async function approvePayment(paymentId: string, adminId: string) {
       if (payment.order.paymentStatus !== "PAID" || payment.order.status === "PENDING_PAYMENT") throw new HttpError("Status order dan pembayaran tidak konsisten", 409);
       return { ok: true };
     }
-    if (payment.order.status !== "PENDING_PAYMENT" || (payment.order.expiresAt && payment.order.expiresAt < new Date())) throw new HttpError("Order tidak menerima approval pembayaran", 409);
+    if (payment.order.status !== "PENDING_PAYMENT") throw new HttpError("Order tidak menerima approval pembayaran", 409);
     if (!canTransitionPayment(payment.status, "PAID")) {
       throw new HttpError("Pembayaran tidak dalam status menunggu verifikasi", 409);
     }
 
     const latest = payment.confirmations.find((c) => c.status === "SUBMITTED");
     if (!latest) throw new HttpError("Bukti pembayaran belum tersedia", 409);
+    // A proof submitted before the deadline must remain reviewable afterward.
+    // Financial staff still need to verify settlement against the actual bank.
+    if (payment.order.expiresAt && latest.createdAt > payment.order.expiresAt)
+      throw new HttpError("Bukti pembayaran diajukan setelah tenggat", 409);
     if (latest) {
       await tx.paymentConfirmation.update({
         where: { id: latest.id },
@@ -163,12 +167,16 @@ export async function rejectPayment(paymentId: string, adminId: string, reason: 
       include: { order: true, confirmations: { orderBy: { createdAt: "desc" } } },
     });
     if (!payment) throw new HttpError("Pembayaran tidak ditemukan", 404);
-    if (payment.order.status !== "PENDING_PAYMENT" || (payment.order.expiresAt && payment.order.expiresAt < new Date())) throw new HttpError("Order tidak menerima verifikasi pembayaran", 409);
+    if (payment.order.status !== "PENDING_PAYMENT") throw new HttpError("Order tidak menerima verifikasi pembayaran", 409);
     if (!canTransitionPayment(payment.status, "REJECTED")) {
       throw new HttpError("Pembayaran tidak dalam status menunggu verifikasi", 409);
     }
     const latest = payment.confirmations.find((c) => c.status === "SUBMITTED");
     if (!latest) throw new HttpError("Bukti pembayaran belum tersedia", 409);
+    // Rejection must remain possible for a late or disputed proof. Otherwise
+    // WAITING_VERIFICATION cannot be reconciled and the expiry cron will
+    // deliberately keep its stock/coupon reservation forever.
+
     if (latest) {
       await tx.paymentConfirmation.update({
         where: { id: latest.id },

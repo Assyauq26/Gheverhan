@@ -294,7 +294,10 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "COMPLETED"); assert.equal(await movements(f.p.variants[0].id, "SALE"), 1); await invariant();
   });
   await t.test("system expiry protects submitted proofs and releases after financial reconciliation", async () => {
-    const f = await pending(); await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(0) } });
+    const f = await pending();
+    const expiry = new Date(Date.now() - 60_000);
+    await db.paymentConfirmation.updateMany({ where: { paymentId: f.payment.id, status: "SUBMITTED" }, data: { createdAt: new Date(expiry.getTime() - 60_000) } });
+    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: expiry } });
     await orders.expireStaleOrders();
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
     assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0);
@@ -305,7 +308,9 @@ test("PostgreSQL transaction correctness", async t => {
   });
   await t.test("financial staff can approve proof submitted before expiry even if review is later", async () => {
     const f = await pending();
-    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(0) } });
+    const expiry = new Date(Date.now() - 60_000);
+    await db.paymentConfirmation.updateMany({ where: { paymentId: f.payment.id, status: "SUBMITTED" }, data: { createdAt: new Date(expiry.getTime() - 60_000) } });
+    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: expiry } });
     await orders.expireStaleOrders();
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
     await payments.approvePayment(f.payment.id, adminId);

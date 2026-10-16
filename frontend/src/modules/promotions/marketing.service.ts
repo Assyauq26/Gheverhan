@@ -10,8 +10,8 @@ function permit(actor: Actor, permission: string) {
   if (!actor.isAdmin || !actor.permissions.includes(permission))
     throw new HttpError("Anda tidak memiliki izin mengelola promosi", 403);
 }
-export function voucherStatus(v: { isActive: boolean; expiresAt: Date | null }, now = new Date()) {
-  return !v.isActive ? "NONAKTIF" : v.expiresAt && v.expiresAt <= now ? "KEDALUWARSA" : "AKTIF";
+export function voucherStatus(v: { isActive: boolean; startsAt?: Date | null; expiresAt: Date | null }, now = new Date()) {
+  return !v.isActive ? "NONAKTIF" : v.expiresAt && v.expiresAt <= now ? "KEDALUWARSA" : v.startsAt && v.startsAt > now ? "TERJADWAL" : "AKTIF";
 }
 
 /** No schema change: the existing Coupon table is already used by checkout. */
@@ -29,10 +29,15 @@ export async function listMarketing(actor: Actor) {
           select: { id: true, name: true, slug: true, basePrice: true, salePrice: true, isFlashSale: true, updatedAt: true, variants: { select: { price: true, salePrice: true }, take: 50 } },
         })
       : Promise.resolve([]),
-    prisma.coupon.count({ where: { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
+    prisma.coupon.count({ where: { isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] } }),
     actor.permissions.includes(PERMISSIONS.PRODUCT_READ) ? prisma.product.count({ where: { isFlashSale: true, status: "PUBLISHED" } }) : Promise.resolve(0),
   ]);
-  return { vouchers, products, activeVouchers, activeFlashSales };
+  const codes = vouchers.map(v => v.code);
+  const usage = codes.length ? await prisma.order.groupBy({
+    by: ["couponCode"], where: { couponCode: { in: codes } }, _count: { _all: true },
+  }) : [];
+  const usedMap = new Map(usage.map(row => [row.couponCode, row._count._all]));
+  return { vouchers: vouchers.map(row => ({ ...row, usedCount: usedMap.get(row.code) ?? 0 })), products, activeVouchers, activeFlashSales };
 }
 
 export async function saveVoucher(actor: Actor, id: string | null, value: unknown) {
@@ -46,7 +51,10 @@ export async function saveVoucher(actor: Actor, id: string | null, value: unknow
     discountValue: input.discountValue,
     minSpend: input.minSpend,
     maxDiscount: input.maxDiscount,
+    startsAt: input.startsAt ? new Date(input.startsAt) : null,
     expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+    usageLimit: input.usageLimit,
+    perUserLimit: input.perUserLimit,
     isActive: input.isActive,
   };
   try {
@@ -56,6 +64,10 @@ export async function saveVoucher(actor: Actor, id: string | null, value: unknow
         const rows = await tx.$queryRaw<Array<{ id: string; code: string }>>(Prisma.sql`SELECT "id", "code" FROM "Coupon" WHERE "id" = ${id} FOR UPDATE`);
         if (!rows.length) throw new HttpError("Voucher tidak ditemukan", 404);
         if (rows[0].code !== input.code) throw new HttpError("Kode voucher tidak boleh diubah. Buat voucher baru.", 422);
+        if (input.usageLimit != null) {
+          const used = await tx.order.count({ where: { couponCode: input.code } });
+          if (input.usageLimit < used) throw new HttpError("Kuota total tidak boleh lebih kecil dari jumlah pemakaian yang sudah terjadi.", 422);
+        }
       }
       const row = id
         ? await tx.coupon.update({ where: { id }, data: payload })

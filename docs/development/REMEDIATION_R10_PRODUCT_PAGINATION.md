@@ -31,3 +31,14 @@ feedback; this is an isolated targeted remediation, **not proven root cause**.
 
 ## Additional network tracing
 If desktop pagination times out, the browser regression now prints route-only RSC request start/response/finalization, in-flight duration, and a read-only HTTP GET check of the second page. No query values, cookies, tokens, passwords or private record content are logged. This distinguishes server-rendering failure from client router/transport deadlock. A failing scenario remains **red**; diagnostics are not a waiver.
+
+## Cross-route regression (2026-10-16)
+PR #46 (Marketing SSR clock change, unrelated to pagination) produced a desktop
+storefront `/shop` page-2 timeout at 1360px after all admin navigation checks
+passed. This establishes that the intermittent route transition symptom is
+**not limited to admin pagination**. The R10 browser test now logs the same
+redacted RSC transport chronology and a read-only direct response check when
+storefront page 2 times out. The original 5-second storefront assertion remains
+strict; no retries/timeouts are loosened, and the failure remains fatal.
+Root cause is still open until a failing trace identifies the transport/router
+issue; R10 is not approved for release solely due to prior green attempts.

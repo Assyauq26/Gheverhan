@@ -237,6 +237,22 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
     await invariant();
   });
+  await t.test("identical keyless AWB retry retains SHIPPED without duplicate event or date", async () => {
+    const f = await paid(); await pack(f.order.id);
+    const body = { ...shippingInput("PROCESSING"), requestId: undefined, trackingNumber: `KEYLESS-${prefix}-${++seq}` };
+    const first = await shipments.upsertManualShipment(f.order.id, warehouseId, body);
+    const sentDate = first.shippedDate?.toISOString();
+    assert.ok(sentDate, "First AWB entry must create a shipped timestamp");
+    const again = await shipments.upsertManualShipment(f.order.id, warehouseId, body);
+    assert.equal(again.id, first.id);
+    assert.equal(again.status, "SHIPPED");
+    assert.equal(again.shippedDate?.toISOString(), sentDate);
+    assert.equal((await status(f.order.id)).status, "SHIPPED");
+    assert.equal(await db.shipmentEvent.count({ where: { shipmentId: first.id, status: "SHIPPED" } }), 1);
+    assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
+    assert.equal(await db.auditLog.count({ where: { action: "shipping.update", entityId: first.id } }), 1);
+    await invariant();
+  });
   await t.test("new AWB without PACKED rejects atomically; never skips fulfillment", async () => {
     const f = await paid();
     const body = { ...shippingInput("PROCESSING"), trackingNumber: `EARLY-${prefix}-${++seq}` };

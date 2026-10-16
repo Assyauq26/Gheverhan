@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { writeAudit } from "@/modules/audit/audit.service";
+import { couponReservationWhere, NON_CONSUMING_COUPON_ORDER_STATUSES } from "./coupon.service";
 import { flashSaleInputSchema, scheduledFlashSaleSchema, voucherInputSchema } from "./marketing.validation";
 
 type Actor = { id: string; isAdmin: boolean; permissions: string[] };
@@ -34,7 +35,7 @@ export async function listMarketing(actor: Actor) {
   ]);
   const codes = vouchers.map(v => v.code);
   const usage = codes.length ? await prisma.order.groupBy({
-    by: ["couponCode"], where: { couponCode: { in: codes } }, _count: { _all: true },
+    by: ["couponCode"], where: { couponCode: { in: codes }, status: { notIn: NON_CONSUMING_COUPON_ORDER_STATUSES } }, _count: { _all: true },
   }) : [];
   const usedMap = new Map(usage.map(row => [row.couponCode, row._count._all]));
   return { vouchers: vouchers.map(row => ({ ...row, usedCount: usedMap.get(row.code) ?? 0 })), products, activeVouchers, activeFlashSales };
@@ -65,7 +66,7 @@ export async function saveVoucher(actor: Actor, id: string | null, value: unknow
         if (!rows.length) throw new HttpError("Voucher tidak ditemukan", 404);
         if (rows[0].code !== input.code) throw new HttpError("Kode voucher tidak boleh diubah. Buat voucher baru.", 422);
         if (input.usageLimit != null) {
-          const used = await tx.order.count({ where: { couponCode: input.code } });
+          const used = await tx.order.count({ where: couponReservationWhere(input.code) });
           if (input.usageLimit < used) throw new HttpError("Kuota total tidak boleh lebih kecil dari jumlah pemakaian yang sudah terjadi.", 422);
         }
       }

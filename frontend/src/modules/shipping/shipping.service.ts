@@ -54,7 +54,7 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
       const before = (order.shipment as unknown as Record<string, unknown>)[key]; const after = (merged as Record<string, unknown>)[key];
       return (before instanceof Date ? before.toISOString() : before ?? null) !== (after instanceof Date ? after.toISOString() : after ?? null);
     });
-    if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${input.status}`, { source: "shipment" });
+    if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${status}`, { source: "shipment" });
     const shipment = changed ? await tx.shipment.upsert({ where: { orderId }, create: { orderId, provider: "manual", ...normalizedData }, update: normalizedData }) : order.shipment!;
     if (changed) {
       await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status, description: `Manual shipment: ${status}${input.trackingNumber ? ` (${input.trackingNumber})` : ""}` } });

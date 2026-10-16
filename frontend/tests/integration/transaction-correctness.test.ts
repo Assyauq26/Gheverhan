@@ -107,6 +107,32 @@ async function auditFailure<T>(run: () => Promise<T>) {
 }
 
 test("PostgreSQL transaction correctness", async t => {
+  await t.test("coupon expiry or repricing after preview cannot silently increase the confirmed total", async () => {
+    const p = await product(4); const b = await buyer(p.variants[0].id);
+    const code = `QUOTE-${prefix}-${++seq}`.toUpperCase();
+    await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });
+    const base = await input(b.id);
+    const confirmed = await checkout.previewCheckout(b.id, { couponCode: code, shipping: base.shipping });
+    const quote = { subtotal: confirmed.subtotal, shippingCost: confirmed.shippingCost, discount: confirmed.discount, total: confirmed.total };
+    assert.equal(quote.total, 110000); assert.equal(quote.discount, 10000);
+
+    await assert.rejects(checkout.createOrder(b.id, { ...base, couponCode: code }), { status: 409 });
+    await db.coupon.update({ where: { code }, data: { isActive: false } });
+    await assert.rejects(checkout.createOrder(b.id, { ...base, couponCode: code, expectedQuote: quote }), { status: 409 });
+    await db.coupon.update({ where: { code }, data: { isActive: true, discountValue: 5 } });
+    await assert.rejects(checkout.createOrder(b.id, { ...base, couponCode: code, expectedQuote: quote }), { status: 409 });
+    assert.equal(await db.order.count({ where: { userId: b.id } }), 0);
+    assert.equal(await movements(p.variants[0].id, "RESERVATION"), 0);
+    assert.equal((await cart.getCartView(b.id)).count, 1, "cart must remain untouched");
+
+    const refreshed = await checkout.previewCheckout(b.id, { couponCode: code, shipping: base.shipping });
+    const accepted = await checkout.createOrder(b.id, { ...base, couponCode: code,
+      expectedQuote: { subtotal: refreshed.subtotal, shippingCost: refreshed.shippingCost, discount: refreshed.discount, total: refreshed.total } });
+    assert.equal(accepted.discount, 5000);
+    assert.equal(accepted.total, 115000);
+    assert.equal(await movements(p.variants[0].id, "RESERVATION"), 1);
+    await invariant();
+  });
   await t.test("two checkouts for stock 1: exactly one order and reservation", async () => {
     const p = await product(); const [a, b] = await Promise.all([buyer(p.variants[0].id), buyer(p.variants[0].id)]); const [ai, bi] = await Promise.all([input(a.id), input(b.id)]);
     const results = await gatedShipping(() => Promise.allSettled([checkout.createOrder(a.id, ai), checkout.createOrder(b.id, bi)]), async () => {}, 2);

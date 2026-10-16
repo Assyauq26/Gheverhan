@@ -83,6 +83,11 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     const ended = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
     assert.equal(ended.isFlashSale, false); assert.equal(ended.salePrice, null);
     assert.equal(await prisma.auditLog.count({ where: { entity: "Product", entityId: p.id, action: { startsWith: "flash-sale." } } }), 2);
+    // An existing ordinary sale price must never be lost by starting/ending a flash campaign.
+    const originalSale = await prisma.product.update({ where: { id: p.id }, data: { salePrice: 95000 } });
+    await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: originalSale.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
+    assert.equal((await prisma.product.findUniqueOrThrow({ where: { id: p.id } })).salePrice, 95000);
+    await prisma.product.update({ where: { id: p.id }, data: { salePrice: null } });
     await prisma.productVariant.update({ where: { id: p.variants[0].id }, data: { price: 120000 } });
     await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: ended.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 422 });
   });

@@ -12,13 +12,19 @@ export function statusOnTrackingSubmission(
   requestedStatus: ShipmentStatus,
   trackingNumber: string | null | undefined,
   previousTrackingNumber: string | null | undefined,
+  previousStatus: ShipmentStatus | null = null,
 ): ShipmentStatus {
   const next = trackingNumber?.trim();
   const previous = previousTrackingNumber?.trim();
-  if (next && next !== previous && (requestedStatus === "PENDING" || requestedStatus === "PROCESSING")) {
-    return "SHIPPED";
+  if (!next || (requestedStatus !== "PENDING" && requestedStatus !== "PROCESSING")) {
+    return requestedStatus;
   }
-  return requestedStatus;
+  // First entry or a changed AWB: the operator attests courier handover.
+  if (next !== previous) return "SHIPPED";
+  // A retry can omit requestId. If the same AWB was already dispatched, retain
+  // SHIPPED rather than attempting the forbidden SHIPPED -> PROCESSING regression.
+  // Crucially, a historical PROCESSING + AWB record must NOT be backfilled.
+  return previousStatus === "SHIPPED" ? "SHIPPED" : requestedStatus;
 }
 
 /** Shared by the writer and server-rendered action options; no client lifecycle engine. */

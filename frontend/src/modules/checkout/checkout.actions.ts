@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { runAction } from "@/lib/action";
-import { checkoutLinesSchema } from "./checkout.validation";
+import { checkoutLinesSchema, checkoutQuoteSchema } from "./checkout.validation";
 import { createOrder } from "./checkout.service";
 
 const schema = z.object({
@@ -23,6 +23,7 @@ const schema = z.object({
   note: z.string().optional(),
   requestId: z.string().uuid(),
   expectedLines: z.string().transform((value, ctx) => { try { return JSON.parse(value) as unknown; } catch { ctx.addIssue({ code: "custom", message: "Konfirmasi harga tidak valid" }); return z.NEVER; } }).pipe(checkoutLinesSchema),
+  expectedQuote: z.string().transform((value, ctx) => { try { return JSON.parse(value) as unknown; } catch { ctx.addIssue({ code: "custom", message: "Ringkasan total tidak valid" }); return z.NEVER; } }).pipe(checkoutQuoteSchema),
 });
 
 export async function createOrderAction(_prev: unknown, formData: FormData) {
@@ -47,6 +48,7 @@ export async function createOrderAction(_prev: unknown, formData: FormData) {
       couponCode: d.couponCode,
       note: d.note,
       expectedLines: d.expectedLines,
+      expectedQuote: d.expectedQuote,
       requestId: d.requestId,
     });
     return order.id;

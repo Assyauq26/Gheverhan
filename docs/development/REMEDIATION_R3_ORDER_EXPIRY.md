@@ -33,3 +33,11 @@ with plan-dependent scheduling accuracy.
 - Real-time/near-real-time expiration requires a plan-compatible frequency
   or reliable queue, and a policy for late-arriving bank settlement.
 - Large backlog needs cursor/batches beyond the 50-order daily cap.
+
+## Late financial verification
+Proofs submitted before `Order.expiresAt` remain in WAITING_VERIFICATION
+and are eligible for staff approval or rejection after that deadline. Approval
+commits the sale only after real bank reconciliation; rejection allows the next
+cron run to expire the order and release its reservation. The buyer's payment
+page continues to show `Menunggu Verifikasi` instead of incorrectly claiming
+that such an in-review order was closed.

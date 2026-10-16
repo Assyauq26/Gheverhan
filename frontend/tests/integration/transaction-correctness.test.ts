@@ -294,16 +294,26 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "COMPLETED"); assert.equal(await movements(f.p.variants[0].id, "SALE"), 1); await invariant();
   });
   await t.test("system expiry protects submitted proofs and releases after financial reconciliation", async () => {
-    const f = await pending(); await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(0) } }); await assert.rejects(payments.approvePayment(f.payment.id, adminId), { status: 409 });
+    const f = await pending(); await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(0) } });
     await orders.expireStaleOrders();
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
     assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0);
-    // Isolated DB fixture represents a completed offline financial review after deadline.
-    await db.payment.update({ where: { id: f.payment.id }, data: { status: "REJECTED" } });
-    await db.order.update({ where: { id: f.order.id }, data: { paymentStatus: "REJECTED" } });
+    await payments.rejectPayment(f.payment.id, adminId, "Bukti transfer tidak cocok meskipun masuk sebelum tenggat");
     await orders.expireStaleOrders(); await orders.expireStaleOrders();
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "EXPIRED");
     assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1); await invariant();
+  });
+  await t.test("financial staff can approve proof submitted before expiry even if review is later", async () => {
+    const f = await pending();
+    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(0) } });
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
+    await payments.approvePayment(f.payment.id, adminId);
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PAID");
+    assert.equal(await movements(f.p.variants[0].id, "SALE"), 1);
+    assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0);
+    await invariant();
   });
   await t.test("adjustment versus reservation preserves the invariant under real row contention", async () => {
     const p = await product(); const row = await db.inventory.findUniqueOrThrow({ where: { variantId: p.variants[0].id } });

@@ -4,6 +4,7 @@ import React from "react";
 import { render, screen, cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 vi.mock("next/link", () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ children, href, ...rest }: React.ComponentProps<"a">) =>
     <a href={href} {...rest}>{children}</a>,
 }));

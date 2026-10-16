@@ -71,6 +71,10 @@ async function main() {
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
         await page.getByRole('link', { name: 'Berikutnya' }).click();
+        // Admin products pagination must use the same shared transition feedback
+        // as inventory pagination and search; do not silently fall back to an
+        // unobserved separate NextLink transition.
+        await expect(page.getByTestId('navigation-pending')).toBeVisible();
         // The production Next.js server can take >5s to settle a filtered RSC
         // navigation under the shared CI runner. Keep the real content assertion
         // and require the loading indicator to clear; never use fixed sleeps.

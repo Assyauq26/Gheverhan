@@ -36,19 +36,22 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     // The request fingerprint above remains based on the ORIGINAL payload so
     // idempotent retries still resolve to the first physical handover event.
     const status = statusOnTrackingSubmission(data.status, data.trackingNumber, order.shipment?.trackingNumber, order.shipment?.status);
+    // The Admin date input has day precision, but a server-stamped handover
+    // contains an exact timestamp. Re-submitting an empty date (null) OR the
+    // unchanged displayed calendar date must preserve the original timestamp.
+    // Only a consciously changed date should replace it.
+    const recordedDate = order.shipment?.shippedDate;
+    const sameDisplayedDate = data.shippedDate && recordedDate &&
+      data.shippedDate.toISOString().slice(0, 10) === recordedDate.toISOString().slice(0, 10);
     const normalizedData = {
       ...data,
       status,
-      // The Admin form serializes an empty date input as null, but its hint
-      // promises to preserve an existing shippedDate. Otherwise a keyless retry
-      // after successful auto-dispatch would clear the timestamp and write another
-      // shipment event even though the AWB has not changed.
-      ...(data.shippedDate === null && order.shipment?.shippedDate
-        ? { shippedDate: order.shipment.shippedDate }
+      ...(recordedDate && (data.shippedDate == null || sameDisplayedDate)
+        ? { shippedDate: recordedDate }
         : {}),
-      // A new handover gets a server-side date if no date has been recorded.
-      // Do not silently re-date preexisting SHIPPED shipments on old retries.
-      ...(status === "SHIPPED" && order.shipment?.status !== "SHIPPED" && !data.shippedDate && !order.shipment?.shippedDate
+      // New handover: server clock if there is no user-entered or prior date.
+      // An already SHIPPED legacy record must not gain a fabricated new date.
+      ...(status === "SHIPPED" && order.shipment?.status !== "SHIPPED" && !data.shippedDate && !recordedDate
         ? { shippedDate: new Date() }
         : {}),
     };

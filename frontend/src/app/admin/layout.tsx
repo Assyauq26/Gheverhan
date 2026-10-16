@@ -40,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
           <div className="hidden h-[72px] items-center justify-between gap-6 px-5 lg:px-7 md:flex">
-            <form action="/admin/products" method="get" role="search" aria-label="Cari produk" className="relative w-full max-w-[420px]">
+            <form action="/admin/products" method="get" role="form" aria-label="Pencarian produk dari header" className="relative w-full max-w-[420px]">
               <Search size={19} aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input type="search" name="q" placeholder="Cari produk..." className="h-10 w-full rounded-full border border-transparent bg-zinc-100 pl-11 pr-4 text-sm outline-none transition focus:border-zinc-300 focus:bg-white" />
             </form>

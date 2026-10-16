@@ -14,9 +14,7 @@ export default async function MarketingPage() {
     const { notFound } = await import("next/navigation");
     notFound();
   }
-  const { vouchers, products } = await listMarketing(actor);
-  const now = new Date();
-  const activeCount = vouchers.filter(v => v.isActive && (!v.expiresAt || v.expiresAt > now)).length;
+  const { vouchers, products, activeVouchers, activeFlashSales } = await listMarketing(actor);
   return <div className="mx-auto max-w-6xl space-y-6">
     <header className="space-y-2">
       <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white"><Megaphone size={19}/></span>
@@ -25,8 +23,8 @@ export default async function MarketingPage() {
       </div>
     </header>
     <div className="grid gap-3 sm:grid-cols-3">
-      <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Voucher aktif</p><p className="mt-1 text-2xl font-bold tabular-nums">{activeCount}</p></div>
-      <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Flash sale aktif</p><p className="mt-1 text-2xl font-bold tabular-nums">{products.filter(p => p.isFlashSale).length}</p></div>
+      <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Voucher aktif</p><p className="mt-1 text-2xl font-bold tabular-nums">{activeVouchers}</p></div>
+      <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Flash sale aktif</p><p className="mt-1 text-2xl font-bold tabular-nums">{activeFlashSales}</p></div>
       <div className="rounded-2xl border border-line bg-white p-4"><p className="text-sm text-ink-soft">Model promosi</p><p className="mt-1 text-sm font-semibold">Manual — tanpa auto-jadwal</p></div>
     </div>
     <MarketingManager

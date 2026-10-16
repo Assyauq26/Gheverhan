@@ -139,3 +139,17 @@ component stack was emitted in these five runs; transport/page-state failures ha
 first. Instrumentation alone does not resolve the regression. These five runs are
 separate from the three application-baseline runs above and are not counted as a
 passing release gate.
+
+Final-source fourth production navigation run: **PASS**, 10/10. This session's
+application-baseline/diagnostic-source count is therefore **four runs: three passes,
+one #418 failure**, in addition to the five separate instrumented runs above.
+The final source changes diagnostic collection only, not application/transport logic.
+Full local unit/containment and sequential typecheck/lint pass again after the change.
+
+Draft PR: https://github.com/Assyauq26/Gheverhan/pull/58, stacked on #57.
+Initial diagnostic commit: `d5c2fcd`.
+The CI navigation step now uploads only its synthetic `navigation-results.json`,
+including on test failure, for seven days. No raw server logs, headers, cookies or
+screenshots are uploaded. GitHub's upload-artifact action is pinned to verified
+v7.0.2 commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`; its action manifest uses
+Node 24. Missing expected JSON is an error. This does not change the test exit code.

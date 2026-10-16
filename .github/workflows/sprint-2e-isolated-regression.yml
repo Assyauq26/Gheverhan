@@ -105,4 +105,14 @@ jobs:
         run: npm run test:e2e:operations
 
       - name: Chromium navigation and mobile responsiveness regression
+        id: navigation
         run: node --import tsx tests/integration/navigation-browser.ts
+
+      - name: Retain synthetic navigation diagnostics, including failed runs
+        if: ${{ !cancelled() && steps.navigation.outcome != 'skipped' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24
+        with:
+          name: navigation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/gheverhan-navigation-*/navigation-results.json
+          if-no-files-found: error
+          retention-days: 7

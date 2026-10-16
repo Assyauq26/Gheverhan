@@ -108,6 +108,8 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     await assert.rejects(marketing.setScheduledFlashSale(marketer, { ...first, price: 100000 }), { status: 422 });
     await marketing.setScheduledFlashSale(marketer, first);
     assert.equal((await cart.getCartView(buyer.id)).subtotal, 70000);
+    const checkout = await import("../../src/modules/checkout/checkout.service");
+    assert.equal((await checkout.previewCheckout(buyer.id, {})).subtotal, 70000);
     const live = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
     await assert.rejects(marketing.setFlashSale(marketer, { productId: p.id, expectedUpdatedAt: live.updatedAt.toISOString(), enabled: true, salePrice: 80000 }), { status: 409 });
     await assert.rejects(service.updateManagedProduct(actor, p.id, live.updatedAt.toISOString(), { ...input("schedule-guard"), salePrice: 80000 }), { status: 409 });
@@ -116,6 +118,7 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
       startsAt: new Date(Date.now() + 60000).toISOString(), endsAt: new Date(Date.now() + 120000).toISOString() };
     await marketing.setScheduledFlashSale(marketer, future);
     assert.equal((await cart.getCartView(buyer.id)).subtotal, 100000, "future-start sale must not charge discount early");
+    assert.equal((await checkout.previewCheckout(buyer.id, {})).subtotal, 100000);
     const futureSaved = await prisma.product.findUniqueOrThrow({ where: { id: p.id } });
     await marketing.setScheduledFlashSale(marketer, { productId: p.id, expectedUpdatedAt: futureSaved.updatedAt.toISOString(),
       enabled: false, price: null, startsAt: null, endsAt: null });

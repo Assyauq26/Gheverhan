@@ -199,7 +199,7 @@ async function main() {
         await expect(page.getByTestId("marketing-feedback")).toContainText("terjadwal berhasil disimpan");
         await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBe(159000);
         await expect(page.getByText("Berlangsung", { exact: true })).toBeVisible();
-        await page.getByRole("button", { name: /Hapus jadwal/ }).click();
+        await page.getByRole("button", { name: `Hapus jadwal ${product.name}`, exact: true }).click();
         await expect(page.getByTestId("marketing-feedback")).toContainText("Jadwal flash sale berhasil dihapus");
         await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBeNull();
         // Restore the admin product editor for the subsequent pre-existing checkout regression.

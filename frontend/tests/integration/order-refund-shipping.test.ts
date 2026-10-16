@@ -114,7 +114,7 @@ async function requested(f: Awaited<ReturnType<typeof paid>>) {
   return refunds.requestRefund(f.order.id, adminId, { requestId: randomUUID(), amount: f.order.total, reason: "Customer requests full refund" });
 }
 const confirmation = (amount = 120000) => ({ amount, sourceAccountId: bankId, evidenceReference: `BANK-${randomUUID()}`, settledAt: new Date(), verificationKind: "MANUAL_BANK_REVIEW", attested: true });
-const shippingInput = (status: "PENDING" | "PROCESSING" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED") => ({ courier: "Fixture", service: "REG", cost: 20000, status, trackingNumber: "FIXTURE-TRACKING", requestId: randomUUID() });
+const shippingInput = (status: "PENDING" | "PROCESSING" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED") => ({ courier: "Fixture", service: "REG", cost: 20000, status, ...(status === "PENDING" || status === "PROCESSING" ? {} : { trackingNumber: "FIXTURE-TRACKING" }), requestId: randomUUID() });
 async function pack(orderId: string) {
   await orders.transitionOrder(orderId, "PROCESSING", adminId); await orders.transitionOrder(orderId, "PACKED", adminId);
 }
@@ -217,6 +217,55 @@ test("real PostgreSQL refund and shipment correctness", async t => {
     const f = await paid(); const request = await requested(f); const result = await refunds.declineRefund(request.id, verifierId, "Transfer was not settled");
     assert.equal((await refunds.declineRefund(request.id, verifierId, "Transfer was not settled")).id, result.id);
     await orders.transitionOrder(f.order.id, "PROCESSING", adminId); assert.equal((await status(f.order.id)).status, "PROCESSING"); await invariant();
+  });
+  await t.test("tracking on a packed order automatically dispatches exactly once with audit and server time", async () => {
+    const f = await paid(); await pack(f.order.id);
+    const body = { ...shippingInput("PROCESSING"), trackingNumber: "TRACK-AUTO-1" };
+    const results = await parallelOrder(f.order.id, [
+      () => shipments.upsertManualShipment(f.order.id, warehouseId, body),
+      () => shipments.upsertManualShipment(f.order.id, warehouseId, body),
+    ]);
+    assert.equal(results.filter(r => r.status === "fulfilled").length, 2);
+    const first = await status(f.order.id);
+    assert.equal(first.status, "SHIPPED");
+    assert.equal(first.shipment!.status, "SHIPPED");
+    assert.equal(first.shipment!.trackingNumber, "TRACK-AUTO-1");
+    assert.ok(first.shipment!.shippedDate instanceof Date);
+    assert.equal(await db.shipmentEvent.count({ where: { shipmentId: first.shipment!.id, status: "SHIPPED" } }), 1);
+    assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
+    assert.equal(await db.auditLog.count({ where: { entity: "Shipment", entityId: first.shipment!.id, action: "shipping.update" } }), 1);
+    await shipments.upsertManualShipment(f.order.id, warehouseId, body);
+    await shipments.upsertManualShipment(f.order.id, warehouseId, { ...body, requestId: undefined });
+    assert.equal(await db.shipmentEvent.count({ where: { shipmentId: first.shipment!.id } }), 1);
+    assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "SHIPPED" } }), 1);
+    assert.equal((await db.shipment.findUniqueOrThrow({ where: { id: first.shipment!.id } })).shippedDate!.getTime(), first.shipment!.shippedDate!.getTime());
+    await assert.rejects(shipments.upsertManualShipment(f.order.id, warehouseId, { ...body, trackingNumber: "TRACK-OTHER" }), { status: 409 });
+    assert.equal(await movements(f.p.variants[0].id, "SALE"), 1); await invariant();
+  });
+  await t.test("existing processing shipment with a resi becomes shipped when order is packed", async () => {
+    const f = await paid();
+    await shipments.upsertManualShipment(f.order.id, warehouseId, shippingInput("PROCESSING"));
+    assert.equal((await status(f.order.id)).shipment!.status, "PROCESSING");
+    await orders.transitionOrder(f.order.id, "PACKED", adminId);
+    const effective = await shipments.upsertManualShipment(f.order.id, warehouseId, { ...shippingInput("PROCESSING"), trackingNumber: "LATE-TRACKING" });
+    assert.equal(effective.status, "SHIPPED");
+    assert.equal((await status(f.order.id)).status, "SHIPPED");
+    assert.equal(await db.shipmentEvent.count({ where: { shipmentId: effective.id } }), 2);
+    await invariant();
+  });
+  await t.test("an early tracking number cannot skip packing or alter an unpaid order", async () => {
+    const f = await paid();
+    const early = { ...shippingInput("PROCESSING"), trackingNumber: "EARLY-TRACKING" };
+    await assert.rejects(shipments.upsertManualShipment(f.order.id, warehouseId, early), { status: 409 });
+    assert.equal((await status(f.order.id)).status, "PAID");
+    assert.equal(await db.shipment.count({ where: { orderId: f.order.id } }), 0);
+    await orders.transitionOrder(f.order.id, "PROCESSING", adminId);
+    await assert.rejects(shipments.upsertManualShipment(f.order.id, warehouseId, { ...early, requestId: randomUUID() }), { status: 409 });
+    assert.equal(await db.shipment.count({ where: { orderId: f.order.id } }), 0);
+    const unpaid = await pending();
+    await assert.rejects(shipments.upsertManualShipment(unpaid.order.id, warehouseId, { ...early, requestId: randomUUID() }), { status: 409 });
+    assert.equal(await db.shipment.count({ where: { orderId: unpaid.order.id } }), 0);
+    await invariant();
   });
   await t.test("shipment parallel/key replay and identical keyless repeats have one effect", async () => {
     const f = await paid(); const body = shippingInput("PROCESSING");

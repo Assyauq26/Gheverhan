@@ -5,9 +5,9 @@
  * This complements (does NOT replace) environment scoping on Vercel.
  * It checks only Supabase URL host / username: never inspect or print passwords.
  */
-type PreviewEnv = Pick<NodeJS.ProcessEnv,
+type PreviewEnv = Partial<Pick<NodeJS.ProcessEnv,
   "VERCEL_ENV" | "DATABASE_URL" | "DIRECT_URL" |
-  "GHEVERHAN_PRODUCTION_SUPABASE_REF" | "GHEVERHAN_PREVIEW_SUPABASE_REF">;
+  "GHEVERHAN_PRODUCTION_SUPABASE_REF" | "GHEVERHAN_PREVIEW_SUPABASE_REF">>;
 
 const refPattern = /^[a-z0-9]{20}$/;
 

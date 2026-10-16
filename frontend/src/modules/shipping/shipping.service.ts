@@ -39,8 +39,15 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     const normalizedData = {
       ...data,
       status,
-      // An AWB entered for the first time is the handover event. Use the
-      // server clock if neither the operator nor an existing record supplied a date.
+      // The Admin form serializes an empty date input as null, but its hint
+      // promises to preserve an existing shippedDate. Otherwise a keyless retry
+      // after successful auto-dispatch would clear the timestamp and write another
+      // shipment event even though the AWB has not changed.
+      ...(data.shippedDate === null && order.shipment?.shippedDate
+        ? { shippedDate: order.shipment.shippedDate }
+        : {}),
+      // A new handover gets a server-side date if no date has been recorded.
+      // Do not silently re-date preexisting SHIPPED shipments on old retries.
       ...(status === "SHIPPED" && order.shipment?.status !== "SHIPPED" && !data.shippedDate && !order.shipment?.shippedDate
         ? { shippedDate: new Date() }
         : {}),

@@ -1,4 +1,4 @@
-import { shipmentOrderTarget } from "./shipping-policy";
+import { shipmentOrderTarget, statusOnTrackingSubmission } from "./shipping-policy";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { ShipmentStatus } from "@prisma/client";
@@ -33,20 +33,42 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
       }
     }
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { payment: true, shipment: true } });
-    const target = shipmentOrderTarget({ status: order.status, paymentStatus: order.paymentStatus, paymentStatusActual: order.payment?.status, shipmentStatus: order.shipment?.status ?? null }, input.status);
+    // The request fingerprint above remains based on the ORIGINAL payload so
+    // idempotent retries still resolve to the first physical handover event.
+    const status = statusOnTrackingSubmission(data.status, data.trackingNumber, order.shipment?.trackingNumber, order.shipment?.status);
+    // The Admin date input has day precision, but a server-stamped handover
+    // contains an exact timestamp. Re-submitting an empty date (null) OR the
+    // unchanged displayed calendar date must preserve the original timestamp.
+    // Only a consciously changed date should replace it.
+    const recordedDate = order.shipment?.shippedDate;
+    const sameDisplayedDate = data.shippedDate && recordedDate &&
+      data.shippedDate.toISOString().slice(0, 10) === recordedDate.toISOString().slice(0, 10);
+    const normalizedData = {
+      ...data,
+      status,
+      ...(recordedDate && (data.shippedDate == null || sameDisplayedDate)
+        ? { shippedDate: recordedDate }
+        : {}),
+      // New handover: server clock if there is no user-entered or prior date.
+      // An already SHIPPED legacy record must not gain a fabricated new date.
+      ...(status === "SHIPPED" && order.shipment?.status !== "SHIPPED" && !data.shippedDate && !recordedDate
+        ? { shippedDate: new Date() }
+        : {}),
+    };
+    const target = shipmentOrderTarget({ status: order.status, paymentStatus: order.paymentStatus, paymentStatusActual: order.payment?.status, shipmentStatus: order.shipment?.status ?? null }, status);
     if (!order.payment) throw new HttpError("Pembayaran tidak ditemukan", 409);
     await assertNoActiveRefund(tx, order.payment.id);
-    const merged = { ...order.shipment, ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) };
-    if (["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(input.status) && !merged.trackingNumber) throw new HttpError("Nomor resi diperlukan sebelum pengiriman", 422);
+    const merged = { ...order.shipment, ...Object.fromEntries(Object.entries(normalizedData).filter(([, value]) => value !== undefined)) };
+    if (["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(status) && !merged.trackingNumber) throw new HttpError("Nomor resi diperlukan sebelum pengiriman", 422);
     const changed = !order.shipment || ["courier", "service", "cost", "status", "trackingNumber", "shippedDate", "estimatedDelivery", "notes"].some(key => {
       const before = (order.shipment as unknown as Record<string, unknown>)[key]; const after = (merged as Record<string, unknown>)[key];
       return (before instanceof Date ? before.toISOString() : before ?? null) !== (after instanceof Date ? after.toISOString() : after ?? null);
     });
-    if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${input.status}`, { source: "shipment" });
-    const shipment = changed ? await tx.shipment.upsert({ where: { orderId }, create: { orderId, provider: "manual", ...data }, update: data }) : order.shipment!;
+    if (target) await transitionOrderInTransaction(tx, orderId, target, adminId, `Shipment: ${status}`, { source: "shipment" });
+    const shipment = changed ? await tx.shipment.upsert({ where: { orderId }, create: { orderId, provider: "manual", ...normalizedData }, update: normalizedData }) : order.shipment!;
     if (changed) {
-      await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: input.status, description: `Manual shipment: ${input.status}${input.trackingNumber ? ` (${input.trackingNumber})` : ""}` } });
-      await writeAudit({ userId: adminId, action: "shipping.update", entity: "Shipment", entityId: shipment.id, meta: { orderId, status: input.status } }, tx);
+      await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status, description: `Manual shipment: ${status}${input.trackingNumber ? ` (${input.trackingNumber})` : ""}` } });
+      await writeAudit({ userId: adminId, action: "shipping.update", entity: "Shipment", entityId: shipment.id, meta: { orderId, status, ...(status !== input.status ? { automaticDispatchOnNewTracking: true } : {}) } }, tx);
     }
     if (auditId) await tx.auditLog.create({ data: { id: auditId, userId: adminId, action: "shipping.request", entity: "Shipment", entityId: shipment.id, meta: { orderId, fingerprint } } });
     return shipment;

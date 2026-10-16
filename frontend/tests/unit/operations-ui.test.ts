@@ -7,7 +7,7 @@ import { OperationNotice } from "../../src/components/admin/operation-notice";
 import { OperationForm } from "../../src/components/admin/operation-form";
 import { operationPayload } from "../../src/components/admin/operation-payload";
 import { stockAdjustmentSchema, pageNumber } from "../../src/modules/inventory/inventory.validation";
-import { manualShipmentOptions, shipmentOrderTarget } from "../../src/modules/shipping/shipping-policy";
+import { manualShipmentOptions, shipmentOrderTarget, statusOnTrackingSubmission } from "../../src/modules/shipping/shipping-policy";
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("../../src/components/admin/operation-navigation", () => ({ reloadOperationPage: refresh, OPERATION_NOTICE_KEY: "gheverhan:operation-saved" }));
 vi.mock("next/navigation", () => ({ usePathname: () => location.pathname }));
@@ -45,6 +45,14 @@ describe("operations forms", () => {
   });
 });
 describe("shared input and policy", () => {
+  it("treats a newly assigned AWB as courier handover but not old resi edits", () => {
+    expect(statusOnTrackingSubmission("PROCESSING", "  JNT-NEW  ", null)).toBe("SHIPPED");
+    expect(statusOnTrackingSubmission("PENDING", "JNT-NEW", "")).toBe("SHIPPED");
+    expect(statusOnTrackingSubmission("PROCESSING", "JNT-NEW", "JNT-NEW")).toBe("PROCESSING");
+    expect(statusOnTrackingSubmission("PROCESSING", "  ", null)).toBe("PROCESSING");
+    expect(statusOnTrackingSubmission("SHIPPED", "JNT-NEW", null)).toBe("SHIPPED");
+    expect(statusOnTrackingSubmission("IN_TRANSIT", "JNT-NEW", "JNT-OLD")).toBe("IN_TRANSIT");
+  });
   it("describes stock effects instead of labeling a sale as an increase", () => { expect(movementLabel("SALE", 1)).toBe("Fisik −1 · reservasi −1"); expect(movementLabel("RELEASE", 1)).toBe("Reservasi −1"); expect(movementLabel("RESERVATION", 1)).toBe("Reservasi +1"); expect(movementLabel("ADJUSTMENT", -2)).toBe("Fisik −2"); expect(movementLabel("RETURN", 2)).toBe("Fisik +2"); });
   it("requires expected stock, bounded integers and a meaningful adjustment reason", () => {
     expect(stockAdjustmentSchema.safeParse({ newOnHand: 5, reason: "count" }).success).toBe(false);

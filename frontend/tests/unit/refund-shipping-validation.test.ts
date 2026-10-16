@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { refundRequestSchema, refundVerificationSchema, refundReturnSchema } from "@/modules/payments/refund.validation";
 import { manualShipmentSchema, canTransitionShipment } from "@/modules/shipping/shipment.validation";
 import { canTransitionPayment } from "@/modules/payments/domain/state-machine";
+import { statusOnTrackingSubmission } from "@/modules/shipping/shipping-policy";
 const requestId = "11111111-1111-4111-8111-111111111111";
 describe("refund and shipment backend policy", () => {
   it("accepts bounded full-refund intent and rejects malformed money/key/reason", () => {
@@ -32,6 +33,20 @@ describe("refund and shipment backend policy", () => {
     expect(canTransitionShipment("SHIPPED", "IN_TRANSIT")).toBe(true);
     expect(canTransitionShipment("IN_TRANSIT", "DELIVERED")).toBe(true);
     expect(canTransitionShipment("DELIVERED", "SHIPPED")).toBe(false);
+  });
+  it("maps only new AWBs and keyless SHIPPED replays to SHIPPED", () => {
+    // First seller handover, including a resi correction.
+    expect(statusOnTrackingSubmission("PROCESSING", "AWB-1", null, "PROCESSING")).toBe("SHIPPED");
+    expect(statusOnTrackingSubmission("PENDING", "AWB-2", "AWB-1", "PROCESSING")).toBe("SHIPPED");
+    // An identical keyless retry must never regress SHIPPED -> PROCESSING.
+    expect(statusOnTrackingSubmission("PROCESSING", "AWB-1", "AWB-1", "SHIPPED")).toBe("SHIPPED");
+    expect(statusOnTrackingSubmission("PENDING", "AWB-1", "AWB-1", "SHIPPED")).toBe("SHIPPED");
+    // Existing pre-feature AWBs must not implicitly backfill past handovers.
+    expect(statusOnTrackingSubmission("PROCESSING", "OLD-AWB", "OLD-AWB", "PROCESSING")).toBe("PROCESSING");
+    expect(statusOnTrackingSubmission("PENDING", undefined, undefined, null)).toBe("PENDING");
+    // Never reinterpret a progressed shipment or override explicit later stages.
+    expect(statusOnTrackingSubmission("PROCESSING", "AWB-1", "AWB-1", "IN_TRANSIT")).toBe("PROCESSING");
+    expect(statusOnTrackingSubmission("DELIVERED", "AWB-2", "AWB-1", "IN_TRANSIT")).toBe("DELIVERED");
   });
   it("rejects invalid shipment dates and cost", () => {
     const value = { courier: "Test", service: "REG", cost: 20000, status: "PENDING" };

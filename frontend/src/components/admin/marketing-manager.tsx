@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BadgePercent, Bolt, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { formatIDR } from "@/lib/money";
+import { formatWibDate, scheduledFlashStatusAt, voucherStatusAt } from "@/modules/promotions/marketing-display";
 import { saveVoucherAction, toggleVoucherAction, setFlashSaleAction, setScheduledFlashSaleAction } from "@/modules/promotions/marketing.actions";
 
 type Voucher = {
@@ -32,11 +33,8 @@ const localDate = (iso: string | null) => {
   const date = new Date(iso);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 };
-const voucherLabel = (v: Voucher) =>
-  !v.isActive ? "Nonaktif" : v.expiresAt && Date.parse(v.expiresAt) <= Date.now() ? "Kedaluwarsa" : v.startsAt && Date.parse(v.startsAt) > Date.now() ? "Terjadwal" : "Aktif";
-
-export function MarketingManager({ vouchers, products, canCreate, canUpdate, canReadProducts }: {
-  vouchers: Voucher[]; products: Product[]; canCreate: boolean; canUpdate: boolean; canReadProducts: boolean;
+export function MarketingManager({ vouchers, products, canCreate, canUpdate, canReadProducts, asOfMs }: {
+  vouchers: Voucher[]; products: Product[]; canCreate: boolean; canUpdate: boolean; canReadProducts: boolean; asOfMs: number;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
@@ -51,7 +49,14 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
   const [feedback, setFeedback] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const selected = products.find(p => p.id === productId);
   const scheduledSelected = products.find(p => p.id === scheduledId);
-  const nowMs = Date.now();
+  // SSR and the initial browser render must agree, even at a time boundary.
+  // Update status after hydration and periodically while the page stays open.
+  const [nowMs, setNowMs] = useState(asOfMs);
+  useEffect(() => {
+    setNowMs(Date.now());
+    const timer = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, [asOfMs]);
   const setField = <K extends keyof VoucherDraft>(key: K, value: VoucherDraft[K]) => setDraft(v => ({ ...v, [key]: value }));
   const notice = (kind: "error" | "success", text: string) => setFeedback({ kind, text });
   function beginEdit(v: Voucher) {
@@ -149,10 +154,10 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
             : <ul className="divide-y divide-line">{vouchers.map(v => <li key={v.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2"><p className="break-all font-semibold">{v.code}</p>
-                  <span className="rounded-full bg-surface px-2 py-1 text-xs">{voucherLabel(v)}</span></div>
+                  <span className="rounded-full bg-surface px-2 py-1 text-xs">{voucherStatusAt(v, nowMs)}</span></div>
                 <p className="text-sm">{v.discountType === "PERCENT" ? `${v.discountValue}%` : formatIDR(v.discountValue)} diskon · Min. belanja {formatIDR(v.minSpend)}</p>
-                <p className="text-xs text-ink-soft">{v.maxDiscount ? `Batas diskon ${formatIDR(v.maxDiscount)} · ` : ""}{v.startsAt ? `Mulai ${new Date(v.startsAt).toLocaleString("id-ID")} · ` : ""}{v.expiresAt ? `Berakhir ${new Date(v.expiresAt).toLocaleString("id-ID")}` : "Tanpa tanggal berakhir"}</p>
-                <p className="text-xs text-ink-soft">{v.usedCount} digunakan{v.usageLimit != null ? ` / ${v.usageLimit} kuota` : " · tanpa batas total"}{v.perUserLimit != null ? ` · Maks. ${v.perUserLimit} per pelanggan` : ""}</p>
+                <p className="text-xs text-ink-soft">{v.maxDiscount ? `Batas diskon ${formatIDR(v.maxDiscount)} · ` : ""}{v.startsAt ? `Mulai ${formatWibDate(v.startsAt)} · ` : ""}{v.expiresAt ? `Berakhir ${formatWibDate(v.expiresAt)}` : "Tanpa tanggal berakhir"}</p>
+                <p className="text-xs text-ink-soft">{v.usedCount} terpakai/ditahan{v.usageLimit != null ? ` / ${v.usageLimit} kuota` : " · tanpa batas total"}{v.perUserLimit != null ? ` · Maks. ${v.perUserLimit} per pelanggan` : ""}</p>
               </div>
               {canUpdate && <div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => beginEdit(v)}>Edit<span className="sr-only"> {v.code}</span></Button>
                 <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => toggle(v)}>{v.isActive ? "Nonaktifkan" : "Aktifkan"}<span className="sr-only"> {v.code}</span></Button></div>}
@@ -243,12 +248,12 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
       {canReadProducts && (products.some(p => p.flashSalePrice != null) ?
         <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
           {products.filter(p => p.flashSalePrice != null).map(p => {
-            const starts = p.flashSaleStartsAt ? Date.parse(p.flashSaleStartsAt) : 0;
-            const ends = p.flashSaleEndsAt ? Date.parse(p.flashSaleEndsAt) : 0;
-            const status = starts > nowMs ? "Terjadwal" : ends > nowMs ? "Berlangsung" : "Berakhir";
+            const starts = p.flashSaleStartsAt || "";
+            const ends = p.flashSaleEndsAt || "";
+            const status = scheduledFlashStatusAt(starts, ends, nowMs);
             return <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div><p className="font-semibold">{p.name} <span className="ml-1 rounded-full bg-surface px-2 py-1 text-xs font-normal">{status}</span></p>
-                <p className="mt-1 text-sm text-ink-soft">{formatIDR(p.basePrice)} → {formatIDR(p.flashSalePrice!)} · {new Date(starts).toLocaleString("id-ID")} sampai {new Date(ends).toLocaleString("id-ID")}</p></div>
+                <p className="mt-1 text-sm text-ink-soft">{formatIDR(p.basePrice)} → {formatIDR(p.flashSalePrice!)} · {formatWibDate(starts)} sampai {formatWibDate(ends)}</p></div>
               {canUpdate && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => clearSchedule(p)}>Hapus jadwal<span className="sr-only"> {p.name}</span></Button>}
             </li>;
           })}

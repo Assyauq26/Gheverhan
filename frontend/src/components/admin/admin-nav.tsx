@@ -42,7 +42,7 @@ export function AdminNav({ permissions }: { permissions: string[] }) {
   }, [pathname]);
   return (
     <nav ref={nav} aria-label="Navigasi admin" className="no-scrollbar relative flex gap-1 overflow-x-auto overscroll-x-contain p-3 md:flex-col md:overflow-visible">
-      {items.filter(it => !it.permission || permissions.includes(it.permission)).map((it) => {
+      {items.filter(it => it.href === "/admin/marketing" ? permissions.includes(PERMISSIONS.PROMOTION_CREATE) || permissions.includes(PERMISSIONS.PROMOTION_UPDATE) : !it.permission || permissions.includes(it.permission)).map((it) => {
         const active = it.exact ? pathname === it.href : pathname.startsWith(it.href);
         return (
           <Link

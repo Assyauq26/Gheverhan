@@ -74,8 +74,10 @@ export type ProductListParams = {
 };
 
 async function listProductsUncached(params: ProductListParams) {
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(48, params.pageSize ?? 12);
+  const requestedPage = params.page ?? 1;
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 100_000) : 1;
+  const requestedSize = params.pageSize ?? 12;
+  const pageSize = Number.isSafeInteger(requestedSize) && requestedSize > 0 ? Math.min(requestedSize, 48) : 12;
   const includeTotal = params.includeTotal ?? true;
   const now = new Date();
   const filters: Prisma.ProductWhereInput[] = [];
@@ -118,7 +120,20 @@ async function listProductsUncached(params: ProductListParams) {
     includeTotal ? prisma.product.count({ where }) : Promise.resolve(0),
   ]);
 
-  return { items, total, page, pageSize, pages: includeTotal ? Math.ceil(total / pageSize) : 0 };
+  const pages = includeTotal ? Math.ceil(total / pageSize) : 0;
+  // A valid but out-of-range page still has products. Re-read the true last
+  // page instead of rendering an empty list with misleading pager controls.
+  if (includeTotal && total > 0 && page > pages) {
+    const lastItems = await prisma.product.findMany({
+      where,
+      include: productCardInclude,
+      orderBy,
+      skip: (pages - 1) * pageSize,
+      take: pageSize,
+    });
+    return { items: lastItems, total, page: pages, pageSize, pages };
+  }
+  return { items, total, page, pageSize, pages };
 }
 
 /**
@@ -135,8 +150,8 @@ export async function listProducts(params: ProductListParams = {}) {
     featured: params.featured ?? false,
     flashSale: params.flashSale ?? false,
     sort: params.sort ?? "newest",
-    page: Math.max(1, params.page ?? 1),
-    pageSize: Math.min(48, params.pageSize ?? 12),
+    page: Number.isSafeInteger(params.page) && (params.page ?? 0) > 0 ? Math.min(params.page!, 100_000) : 1,
+    pageSize: Number.isSafeInteger(params.pageSize) && (params.pageSize ?? 0) > 0 ? Math.min(params.pageSize!, 48) : 12,
     includeTotal: params.includeTotal ?? true,
   };
   const cacheKey = JSON.stringify(normalized);

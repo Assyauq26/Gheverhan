@@ -101,6 +101,9 @@ async function main() {
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         await page.goBack();
         await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();
+        await page.goto(`${base}/shop?q=${prefix}&page=999`);
+        await expect(page.getByText('Halaman 3 dari 3')).toBeVisible();
+        await expect(page.getByText(`${prefix} Product 0`)).toBeVisible();
       });
       await check(`${width}px: storefront navigation, search touch target and back/forward work`, async () => {
         await page.goto(`${base}/shop?q=${prefix}`); await page.waitForLoadState('networkidle');

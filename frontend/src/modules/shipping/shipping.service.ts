@@ -46,7 +46,6 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
         enteredTracking !== order.shipment?.trackingNumber) {
       throw new HttpError("Ubah pesanan menjadi Dikemas sebelum memasukkan nomor resi", 409);
     }
-    const tracking = enteredTracking ?? order.shipment?.trackingNumber?.trim();
     const replayOfDispatch = order.status === "SHIPPED" &&
       order.shipment?.status === "SHIPPED" && enteredTracking === order.shipment.trackingNumber;
     const autoDispatch = Boolean(enteredTracking) &&

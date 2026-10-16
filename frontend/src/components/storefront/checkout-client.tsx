@@ -112,6 +112,10 @@ export function CheckoutClient({
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_360px]" data-testid="checkout-form">
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="expectedLines" value={JSON.stringify(expectedLines)} />
+      <input type="hidden" name="expectedQuote" value={currentQuote ? JSON.stringify({
+        subtotal: currentQuote.subtotal, shippingCost: currentQuote.shippingCost,
+        discount: currentQuote.discount, total: currentQuote.total,
+      }) : ""} />
       <div className="space-y-8">
         {/* Address */}
         <section className="space-y-3">

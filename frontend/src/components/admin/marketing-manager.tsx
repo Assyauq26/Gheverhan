@@ -158,7 +158,7 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
         <div className="min-w-0"><Label htmlFor="flash-product">Pilih produk terbit</Label><select id="flash-product" value={productId} onChange={e => { setProductId(e.target.value); setPrice(""); }}
           className="h-11 w-full min-w-0 rounded-xl border border-line bg-white px-3 text-sm">
           <option value="">Pilih produk</option>
-          {products.filter(p => !p.isFlashSale).map(p => <option key={p.id} value={p.id} disabled={!p.eligible}>{p.name}{!p.eligible ? " — harga varian khusus" : ""}</option>)}
+          {products.filter(p => !p.isFlashSale).map(p => <option key={p.id} value={p.id} disabled={!p.eligible}>{p.name}{!p.eligible ? " — harga promo reguler/varian" : ""}</option>)}
         </select></div>
         <div><Label htmlFor="flash-price">Harga flash sale (Rp)</Label><Input id="flash-price" type="number" min={1} max={selected ? selected.basePrice - 1 : undefined}
           value={price} onChange={e => setPrice(e.target.value)} placeholder={selected ? `Di bawah ${selected.basePrice}` : "Masukkan harga"} /></div>
@@ -176,6 +176,6 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
           </li>)}</ul>}
       {products.length === 60 && <p className="text-xs text-ink-soft">Menampilkan 60 produk terbit terbaru/flash sale. Gunakan editor produk untuk item di luar daftar.</p>}
     </section>
-    <p className="flex items-start gap-2 text-xs text-ink-soft"><Tag size={16} className="shrink-0"/>Fitur kuota voucher, jadwal flash sale otomatis, banner promosi publik, dan laporan performa kampanye belum tersedia pada tahap ini.</p>
+    <p className="flex items-start gap-2 text-xs text-ink-soft"><Tag size={16} className="shrink-0"/>Voucher terjadwal dan kuota sudah tersedia. Jadwal flash sale otomatis, voucher khusus produk, banner promosi publik, dan laporan performa kampanye belum tersedia pada tahap ini.</p>
   </div>;
 }

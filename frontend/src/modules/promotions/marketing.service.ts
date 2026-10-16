@@ -103,13 +103,15 @@ export async function setFlashSale(actor: Actor, value: unknown) {
     if (!rows.length) throw new HttpError("Produk tidak ditemukan", 404);
     const product = await tx.product.findUniqueOrThrow({
       where: { id: input.productId },
-      select: { status: true, basePrice: true, isFlashSale: true, updatedAt: true, variants: { select: { price: true, salePrice: true } } },
+      select: { status: true, basePrice: true, salePrice: true, isFlashSale: true, updatedAt: true, variants: { select: { price: true, salePrice: true } } },
     });
     if (product.updatedAt.toISOString() !== input.expectedUpdatedAt)
       throw new HttpError("Data produk telah berubah. Muat ulang sebelum mengubah flash sale.", 409);
     if (input.enabled) {
       if (product.status !== "PUBLISHED" || product.variants.length === 0)
         throw new HttpError("Hanya produk terbit dengan varian yang bisa flash sale", 422);
+      if (!product.isFlashSale && product.salePrice != null)
+        throw new HttpError("Produk memiliki diskon reguler. Hapus diskon reguler di editor produk sebelum mengaktifkan flash sale.", 422);
       if (product.variants.some(v => v.price != null || v.salePrice != null))
         throw new HttpError("Produk memiliki harga per varian. Kelola harga varian dari editor produk.", 422);
       if (input.salePrice! >= product.basePrice)

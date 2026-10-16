@@ -71,10 +71,14 @@ async function main() {
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
         await page.getByRole('link', { name: 'Berikutnya' }).click();
-        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible();
+        // The isolated Next.js server can spend >5s building an RSC response.
+        // Keep the pagination, URL, pending-indicator and shell-retention checks.
+        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0, { timeout: 20_000 });
+        assert.equal(new URL(page.url()).searchParams.get('page'), '2');
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         assert.equal(await page.evaluate(() => (window as unknown as { shellMarker: string }).shellMarker), 'preserved');
-        await page.goBack(); await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();
+        await page.goBack(); await expect(page.getByText('Halaman 1 dari 2')).toBeVisible({ timeout: 20_000 });
         await expect(page.getByPlaceholder('Cari nama atau slug produk')).toHaveValue(prefix);
       });
       await check(`${width}px: inventory query conflict clamp and active navigation remain usable`, async () => {

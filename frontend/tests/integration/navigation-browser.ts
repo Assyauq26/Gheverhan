@@ -67,6 +67,11 @@ async function main() {
           assert.ok(rect && rect.width > 30 && rect.height > 15, `Visible KPI geometry required: ${id}`);
           rects.push(rect);
         }
+        const revenue = await page.getByTestId('dashboard-sales').evaluate(node => {
+          const style = getComputedStyle(node);
+          return { height: node.getBoundingClientRect().height, lineHeight: parseFloat(style.lineHeight) };
+        });
+        assert.ok(revenue.height <= revenue.lineHeight * 1.15, `Paid sales figure must not wrap across lines at ${width}px (height=${revenue.height}, lineHeight=${revenue.lineHeight})`);
         if (width === 390) {
           assert.ok(Math.abs(rects[0].y - rects[1].y) <= 4, 'First mobile KPI row must align');
           assert.ok(Math.abs(rects[2].y - rects[3].y) <= 4, `Second mobile KPI row must align (orders y=${rects[2].y}, sales y=${rects[3].y})`);

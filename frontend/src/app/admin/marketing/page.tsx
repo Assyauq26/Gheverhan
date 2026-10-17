@@ -37,6 +37,7 @@ export default async function MarketingPage() {
       canCreate={actor.permissions.includes(PERMISSIONS.PROMOTION_CREATE)}
       canUpdate={actor.permissions.includes(PERMISSIONS.PROMOTION_UPDATE)}
       canReadProducts={actor.permissions.includes(PERMISSIONS.PRODUCT_READ)}
+      asOfMs={Date.now()}
     />
   </div>;
 }

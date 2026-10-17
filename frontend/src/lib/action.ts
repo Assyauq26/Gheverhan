@@ -1,3 +1,4 @@
+import { logServerFailure } from "./server-error-log";
 import { HttpError } from "@/lib/response";
 
 export type ActionResult<T = unknown> = {
@@ -16,7 +17,7 @@ export async function runAction<T>(fn: () => Promise<T>): Promise<ActionResult<T
     if (err instanceof HttpError) {
       return { ok: false, error: err.message, unauthorized: err.status === 401 };
     }
-    console.error("[action-error]", err);
+    logServerFailure("action-error", err);
     return { ok: false, error: "Terjadi kesalahan. Coba lagi." };
   }
 }

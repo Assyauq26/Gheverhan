@@ -1,0 +1,12 @@
+{
+  "status": "FAILED",
+  "unpatched": true,
+  "browser": "153.0.8010.12",
+  "errors": [
+    {
+      "message": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "stack": "Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.\n    at throwOnHydrationMismatch (<anonymous>:2986:21)\n    at beginWork (<anonymous>:6510:27)\n    at replaySuspendedUnitOfWork (<anonymous>:9145:131)\n    at renderRootConcurrent (<anonymous>:9053:123)\n    at performWorkOnRoot (<anonymous>:8669:194)\n    at performWorkOnRootViaSchedulerTask (<anonymous>:9674:9)\n    at MessagePort.performWorkUntilDeadline (<anonymous>:590:50)"
+    }
+  ],
+  "html": "<main class=\"hydration-fixture\">fixture value</main>"
+}

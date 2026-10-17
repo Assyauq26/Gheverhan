@@ -1,0 +1,242 @@
+{
+  "baseline": {
+    "critical": 2,
+    "high": 8,
+    "moderate": 5,
+    "total": 15
+  },
+  "current": {
+    "info": 0,
+    "low": 0,
+    "moderate": 2,
+    "high": 7,
+    "critical": 0,
+    "total": 9
+  },
+  "officialAdvisories": {
+    "GHSA-rj75-hqrm-r3gf": [
+      {
+        "package": "postcss-selector-parser",
+        "range": "< 7.1.6",
+        "patched": "7.1.6"
+      }
+    ],
+    "GHSA-vfj7-8cjw-p6xm": [
+      {
+        "package": "braces",
+        "range": "<= 3.0.3",
+        "patched": null
+      }
+    ]
+  },
+  "findings": [
+    {
+      "package": "@next/eslint-plugin-next",
+      "severity": "high",
+      "advisory": "transitive:fast-glob",
+      "installed": [
+        "15.5.28"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:1388",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "braces",
+      "severity": "high",
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "installed": [
+        "3.0.3"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:3899",
+      "patched": [
+        {
+          "package": "braces",
+          "range": "<= 3.0.3",
+          "patched": null
+        }
+      ],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "chokidar",
+      "severity": "high",
+      "advisory": "transitive:braces",
+      "installed": [
+        "3.6.0"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:4058",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "eslint-config-next",
+      "severity": "high",
+      "advisory": "transitive:@next/eslint-plugin-next",
+      "installed": [
+        "15.5.28"
+      ],
+      "direct": true,
+      "source": "frontend/package-lock.json:4829",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "fast-glob",
+      "severity": "high",
+      "advisory": "transitive:micromatch",
+      "installed": [
+        "3.3.1",
+        "3.3.3"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:5256",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "micromatch",
+      "severity": "high",
+      "advisory": "transitive:braces",
+      "installed": [
+        "4.0.8"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:6922",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "postcss-nested",
+      "severity": "moderate",
+      "advisory": "transitive:postcss-selector-parser",
+      "installed": [
+        "6.2.0"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:7617",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "postcss-selector-parser",
+      "severity": "moderate",
+      "advisory": "GHSA-rj75-hqrm-r3gf",
+      "installed": [
+        "6.1.4"
+      ],
+      "direct": false,
+      "source": "frontend/package-lock.json:7642",
+      "patched": [
+        {
+          "package": "postcss-selector-parser",
+          "range": "< 7.1.6",
+          "patched": "7.1.6"
+        }
+      ],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "tailwindcss",
+      "severity": "high",
+      "advisory": "transitive:chokidar",
+      "installed": [
+        "3.4.19"
+      ],
+      "direct": true,
+      "source": "frontend/package-lock.json:8679",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "tailwindcss",
+      "severity": "high",
+      "advisory": "transitive:fast-glob",
+      "installed": [
+        "3.4.19"
+      ],
+      "direct": true,
+      "source": "frontend/package-lock.json:8679",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "tailwindcss",
+      "severity": "high",
+      "advisory": "transitive:micromatch",
+      "installed": [
+        "3.4.19"
+      ],
+      "direct": true,
+      "source": "frontend/package-lock.json:8679",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "tailwindcss",
+      "severity": "high",
+      "advisory": "transitive:postcss-nested",
+      "installed": [
+        "3.4.19"
+      ],
+      "direct": true,
+      "source": "frontend/package-lock.json:8679",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    },
+    {
+      "package": "tailwindcss",
+      "severity": "high",
+      "advisory": "transitive:postcss-selector-parser",
+      "installed": [
+        "3.4.19"
+      ],
+      "direct": true,
+      "source": "frontend/package-lock.json:8679",
+      "patched": [],
+      "reachability": "Build CSS/lint; konfigurasi glob statis dari source. Tidak ditemukan route yang memasukkan CSS/glob pengguna ke paket ini. Peer Tailwind tetap hadir pada production-only graph.",
+      "compatibility": "Migrasi Tailwind4/lint/Next plugin perlu regresi visual dan peer matrix; major Next tidak diotorisasi otomatis.",
+      "fix": "OPEN; tidak ada patched braces resmi; evaluasi penghapusan rantai melalui major toolchain terpisah.",
+      "validation": "Audit ulang official metadata; build/unit/browser pada source akhir terpisah; tidak mengubah severity."
+    }
+  ]
+}

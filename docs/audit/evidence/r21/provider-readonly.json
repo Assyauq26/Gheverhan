@@ -1,0 +1,168 @@
+{
+  "observedAt": "2026-10-17 UTC",
+  "source": "Read-only connector observations; summary, not a dump",
+  "supabase": {
+    "project": "bztprltkevacidcpjaam",
+    "plan": "free",
+    "region": "ap-southeast-1",
+    "version": "17.6",
+    "finishedMigrations": 5,
+    "SessionRevocation": false,
+    "AuthRateLimit": false,
+    "User.sessionVersion": false,
+    "publicRlsEnabledTables": 41,
+    "connectorRole": "postgres",
+    "connectorRoleBypassRls": true,
+    "connectorRoleSuperuser": false,
+    "applicationRole": "UNVERIFIED",
+    "maxConnections": 60,
+    "statementTimeout": "2min",
+    "lockTimeout": "0",
+    "databaseBytes": 13626515,
+    "sampleConnections": [
+      7,
+      10
+    ],
+    "buckets": [
+      {
+        "name": "product-images",
+        "public": true,
+        "limitBytes": 5242880
+      },
+      {
+        "name": "payment-proofs",
+        "public": false,
+        "limitBytes": 5242880
+      }
+    ]
+  },
+  "vercel": {
+    "project": "prj_J8Fao07yrACLGjiDtY3ftRcLkI2s",
+    "deployment": "dpl_CydWVY2Hnx8pPDuuGGDfRbK64Kb9",
+    "productionSha": "8e2a4f475333b1beb68063e6e060aa1247e2b90c",
+    "region": "sin1",
+    "node": "22.x",
+    "presentProductionKeys": [
+      "DATABASE_URL",
+      "DIRECT_URL",
+      "JWT_SECRET",
+      "SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_PRODUCT_IMAGES_BUCKET",
+      "SUPABASE_PAYMENT_PROOFS_BUCKET",
+      "STORAGE_APP_NAME"
+    ],
+    "productionPreviewDatabaseBindings": "DATABASE_URL and DIRECT_URL each one metadata record targeting both; values never decrypted",
+    "previewJwtSeparateMetadata": true,
+    "ssoProtection": "all_except_custom_domains",
+    "passwordProtection": false
+  },
+  "databaseBindingIdentity": "UNVERIFIED; no secret values inspected",
+  "advisors": {
+    "security": {
+      "rlsEnabledNoPolicy": 41,
+      "level": "INFO",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    "performance": {
+      "unindexedForeignKeys": 16,
+      "unusedIndexes": 8,
+      "level": "INFO"
+    }
+  },
+  "logs": "Vercel build/runtime log reads forbidden; no clean-log claim",
+  "productionReadOnlyHttp": [
+    {
+      "path": "/",
+      "status": 200,
+      "tlsVerified": true
+    },
+    {
+      "path": "/api/v1/health",
+      "status": 200,
+      "tlsVerified": true
+    }
+  ],
+  "latestReadOnlyAggregate": {
+    "expiryCandidates": 1,
+    "overdueReview": 0,
+    "paymentStatusMismatch": 0,
+    "negativeInventory": 0,
+    "overReservedInventory": 0,
+    "storageObjectPolicies": 0,
+    "anonUserSelectPrivilege": true,
+    "authenticatedUserSelectPrivilege": true,
+    "publicRlsNoPolicyStillDeniesRows": true
+  },
+  "githubRuleset": {
+    "id": 25111842,
+    "name": "Protect Main Branch",
+    "enforcement": "active",
+    "target": "branch",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "~DEFAULT_BRANCH"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "require_extra_approval_for_unattributed_changes": false,
+          "allowed_merge_methods": [
+            "squash"
+          ]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": false,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "unit-tests",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "healthNoRedirectRecheck": [
+    {
+      "host": "gheverhan.vercel.app",
+      "status": 200,
+      "redirectFollowed": false,
+      "tlsVerified": true,
+      "appHealthMatched": true
+    },
+    {
+      "host": "gheverhan-n2uqd6ijj-syauqi3.vercel.app",
+      "status": 302,
+      "redirectFollowed": false,
+      "tlsVerified": true
+    }
+  ],
+  "pr64Recheck": {
+    "sha": "341f2e91b1a12c1410f82acd05d91ac07343cabe",
+    "unit": "SUCCESS",
+    "integration": "SUCCESS",
+    "existingPreviewChecks": "SUCCESS; not used for mutation testing"
+  }
+}

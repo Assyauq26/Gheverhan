@@ -1,6 +1,13 @@
+// Fail closed even when Next CLI is invoked without npm scripts.
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'scripts/security/prepare-braces.mjs')], { stdio: 'inherit' });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  webpack(config, { isServer, dev }) {
+    if (!isServer && !dev) config.module.rules.push({ test: /next[\/]dist[\/]compiled[\/]react-dom[\/]cjs[\/]react-dom-client\.production\.js$/, use: [require.resolve('./scripts/webpack/react-runtime-backports-loader.cjs')] });
+    return config;
+  },
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: {

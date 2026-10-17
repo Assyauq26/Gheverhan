@@ -1,8 +1,9 @@
+import { verifyPaymentSynchronization } from "./payment-sync-browser";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync, createWriteStream } from "node:fs";
+import { existsSync, createWriteStream, readFileSync } from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
@@ -16,7 +17,7 @@ const dbUrl = new URL(target);
 if (!["127.0.0.1", "localhost", "[::1]"].includes(dbUrl.hostname) || dbUrl.pathname !== "/gheverhan_sprint1_test") throw new Error("Browser tests refuse production/non-local databases");
 const root = path.resolve(__dirname, "../..");
 if (!existsSync(path.join(root, ".next/BUILD_ID"))) throw new Error("Run npm run build before this production-server browser test");
-const artifactDir = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-product-browser-${process.pid}`;
+const artifactDir = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-operations-browser-${process.pid}`;
 const base = "http://localhost:3101";
 const secret = randomBytes(32).toString("hex");
 process.env.JWT_SECRET = secret;
@@ -26,7 +27,9 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 const db = new PrismaClient({ datasources: { db: { url: target } } });
 const prefix = randomUUID().slice(0, 8);
 let checks = 0;
-async function check(name: string, fn: () => Promise<void>) { await fn(); checks++; console.log(`PASS ${name}`); }
+let completed = false;
+const checkpoints: { label: string; status: string }[] = [];
+async function check(name: string, fn: () => Promise<void>) { try { await fn(); checks++; checkpoints.push({label:name,status:"PASS"}); console.log(`PASS ${name}`); } catch(error) { checkpoints.push({label:name,status:"FAILED"}); throw error; } }
 async function fixtureRole(name: string, permissions: string[]) {
   const role = await db.role.upsert({ where: { name }, create: { name, label: name }, update: {} });
   // Keep each isolated test role exact when another local suite ran first.
@@ -400,18 +403,32 @@ async function main() {
     await check("empty states and movement filter", async () => {
       await page.goto(`${base}/admin/orders?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada pesanan yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada varian yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory/${variant.id}?type=RETURN`); await expect(page.getByText("Barang diterima dan layak jual")).toBeVisible();
     });
+    await check("R20 buyer/admin payment labels, proof resubmission and overdue review", async () => {
+      await verifyPaymentSynchronization(browser!, db, base, bank.id, customerRole.id, fin, page, cookie, errors, png);
+    });
     await check("desktop/mobile operational pages have no overflow or browser exceptions", async () => {
       for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }
       assert.deepEqual(errors, []);
     });
     const captures = [{ width: 1360, height: 900, route: "/admin/inventory", file: "desktop-inventory.png" }, { width: 390, height: 844, route: `/admin/inventory/${variant.id}`, file: "mobile-inventory.png" }, { width: 1360, height: 900, route: `/admin/orders/${sale.order.id}`, file: "desktop-order.png" }, { width: 390, height: 844, route: `/admin/orders/${sale.order.id}`, file: "mobile-order.png" }];
     for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
+    completed = true;
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, orderId: sale.order.id, variantId: variant.id, database: "isolated local PostgreSQL", storage: "local proof contract double", synthetic: true }, null, 2));
     console.log(`PASS ${checks} operational browser/API/data-flow checks`);
   } finally {
+    try {
+    await writeFile(path.join(artifactDir, "validation-results.json"), JSON.stringify({
+      status: completed ? "PASS" : "FAILED", checks, checkpoints,
+      commitSha: execFileSync("git", ["rev-parse", "HEAD"], {cwd:root,encoding:"utf8"}).trim(),
+      nodeVersion: process.version, browserVersion: browser?.version(),
+      buildId: readFileSync(path.join(root,".next/BUILD_ID"),"utf8").trim(),
+      synthetic: true,
+    },null,2));
+    } finally {
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve())); await db.$disconnect();
+    }
   }
 }
 main().catch(err => { console.error(err); process.exitCode = 1; });

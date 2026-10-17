@@ -1,0 +1,13 @@
+{
+  "historicalMigrations": 5,
+  "lockTimeoutFailsSafely": true,
+  "failedAttemptLeavesNoPartialTables": true,
+  "backupRestoreLegacyRow": true,
+  "finalMigrations": 6,
+  "legacySessionsDefaultVersionZero": true,
+  "rlsEnabled": true,
+  "revocationForeignKeyCascades": true,
+  "newIndexesValid": true,
+  "restorePreservesVersionAndRevocation": true,
+  "result": "PASS"
+}

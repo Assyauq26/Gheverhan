@@ -11,3 +11,6 @@ export async function verifyPassword(
 ): Promise<boolean> {
   return bcrypt.compare(plain, hashed);
 }
+
+// Public dummy cost-10 hash used only to equalize credential-check work.
+export const DUMMY_PASSWORD_HASH = "$2a$10$/Wd7tnNmqH5h1b2JVxo27e/jMTAmaKIfSMDIywsZjSnQhVAneYDmm";

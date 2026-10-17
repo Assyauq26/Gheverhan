@@ -6,7 +6,7 @@ import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { getSellerDashboard } from "@/modules/admin/dashboard.service";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { formatIDR } from "@/lib/money";
-import { ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { orderDisplayStatus } from "@/lib/order-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   ArrowRight, ArrowUpRight, BarChart3, Boxes, CalendarDays, CheckCircle2,
@@ -170,10 +170,10 @@ async function DashboardContent({ user }: { user: AuthUser }) {
               {data.recent.map(order => <li key={order.id} className="relative flex items-center gap-3 px-4 py-3.5 md:grid md:grid-cols-[1.7fr_1.3fr_1.4fr_0.9fr_0.7fr] md:gap-4 md:px-5">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-zinc-100 text-zinc-700"><ShoppingBag size={23}/></span>
-                  <div className="min-w-0"><Link href={`/admin/orders/${order.id}`} className="block truncate text-xs font-bold hover:underline sm:text-sm">{order.orderNumber}</Link><span className="mt-1 block truncate text-xs text-zinc-500 md:hidden">{order.user.name}</span><span className="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-[10px] text-amber-700 md:hidden">{ORDER_STATUS_LABEL[order.status]}</span></div>
+                  <div className="min-w-0"><Link href={`/admin/orders/${order.id}`} className="block truncate text-xs font-bold hover:underline sm:text-sm">{order.orderNumber}</Link><span className="mt-1 block truncate text-xs text-zinc-500 md:hidden">{order.user.name}</span><span className="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-[10px] text-amber-700 md:hidden">{orderDisplayStatus(order.status, order.paymentStatus)}</span></div>
                 </div>
                 <span className="hidden truncate text-xs text-zinc-600 md:block">{order.user.name}</span>
-                <span className="hidden w-fit rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 md:inline-flex">{ORDER_STATUS_LABEL[order.status]}</span>
+                <span className="hidden w-fit rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 md:inline-flex">{orderDisplayStatus(order.status, order.paymentStatus)}</span>
                 <span className="whitespace-nowrap text-xs font-bold tabular-nums sm:text-sm">{formatIDR(order.total)}</span>
                 <Link href={`/admin/orders/${order.id}`} aria-label={`Lihat detail pesanan ${order.orderNumber}`} className="grid size-8 shrink-0 place-items-center rounded-lg text-zinc-600 hover:bg-zinc-100 md:w-fit md:px-3"><span className="hidden text-xs md:inline">Lihat detail</span><ChevronRight size={16} className="md:hidden"/></Link>
               </li>)}

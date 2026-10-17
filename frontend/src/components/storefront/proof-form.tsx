@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label } from "@/components/ui/input";
@@ -16,6 +18,8 @@ function SubmitBtn() {
 
 export function ProofForm({ orderId, amount }: { orderId: string; amount: number }) {
   const [state, action] = useFormState(submitProofAction, { ok: false } as any);
+  const router = useRouter();
+  useEffect(() => { if (state?.ok) router.refresh(); }, [state?.ok, router]);
   if (state?.ok) {
     return (
       <div className="rounded-2xl border border-success/40 bg-green-50 p-5 text-sm text-green-700" data-testid="proof-success">

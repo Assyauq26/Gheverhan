@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   return handle(async () => {
     const body = schema.parse(await req.json());
     const user = await authenticate(body.identifier, body.password);
-    await createSession(user.id, user.email);
+    await createSession(user.id, user.email, user.sessionVersion);
     return ok({ id: user.id, name: user.name, email: user.email });
   });
 }

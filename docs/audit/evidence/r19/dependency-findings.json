@@ -1,0 +1,853 @@
+{
+  "before": {
+    "critical": 2,
+    "high": 9,
+    "moderate": 7,
+    "total": 18
+  },
+  "after": {
+    "info": 0,
+    "low": 0,
+    "moderate": 5,
+    "high": 8,
+    "critical": 2,
+    "total": 15
+  },
+  "resolvedAdvisories": [
+    {
+      "id": "R19-DEP-009",
+      "package": "next",
+      "severity": "moderate",
+      "advisory": "GHSA-4jqv-mc3x-m676",
+      "version": "15.5.26",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": ">=15.0.0 <15.5.27",
+      "direct": true,
+      "reach": "Runtime server; perlu menilai advisory satu per satu, termasuk App Router.",
+      "candidate": "next@15.5.28",
+      "major": false,
+      "source": "frontend/package-lock.json:6892",
+      "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+      "patchedReleases": [
+        {
+          "package": "next",
+          "range": ">= 15.0.0, < 15.5.27",
+          "patched": "15.5.27"
+        },
+        {
+          "package": "next",
+          "range": ">= 16.0.0, < 16.3.8",
+          "patched": "16.3.8"
+        }
+      ],
+      "applicablePatchedVersions": [
+        "15.5.27"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "15.5.28"
+      ]
+    },
+    {
+      "id": "R19-DEP-010",
+      "package": "next",
+      "severity": "moderate",
+      "advisory": "GHSA-mcj8-r9mp-w47p",
+      "version": "15.5.26",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": ">=15.0.0 <15.5.27",
+      "direct": true,
+      "reach": "Runtime server; perlu menilai advisory satu per satu, termasuk App Router.",
+      "candidate": "next@15.5.28",
+      "major": false,
+      "source": "frontend/package-lock.json:6892",
+      "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+      "patchedReleases": [
+        {
+          "package": "next",
+          "range": ">= 16.0.0, < 16.3.8",
+          "patched": "16.3.8"
+        },
+        {
+          "package": "next",
+          "range": ">= 15.0.0, < 15.5.27",
+          "patched": "15.5.27"
+        }
+      ],
+      "applicablePatchedVersions": [
+        "15.5.27"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "15.5.28"
+      ]
+    },
+    {
+      "id": "R19-DEP-011",
+      "package": "postcss",
+      "severity": "moderate",
+      "advisory": "GHSA-qx2v-qp2m-jg93",
+      "version": "8.4.31,8.4.47",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": "<8.5.10",
+      "direct": true,
+      "reach": "Build/lint/CSS; tidak ditemukan endpoint yang menerima input CSS/glob pengguna. Production dependency tetap dinilai terpisah.",
+      "candidate": "next@15.5.28",
+      "major": false,
+      "source": "frontend/package-lock.json:6944",
+      "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+      "patchedReleases": [
+        {
+          "package": "postcss",
+          "range": "< 8.5.10",
+          "patched": "8.5.10"
+        }
+      ],
+      "applicablePatchedVersions": [
+        "8.5.10"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "8.5.23"
+      ]
+    },
+    {
+      "id": "R19-DEP-012",
+      "package": "postcss",
+      "severity": "high",
+      "advisory": "GHSA-6g55-p6wh-862q",
+      "version": "8.4.31,8.4.47",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": "<=8.5.11",
+      "direct": true,
+      "reach": "Build/lint/CSS; tidak ditemukan endpoint yang menerima input CSS/glob pengguna. Production dependency tetap dinilai terpisah.",
+      "candidate": "next@15.5.28",
+      "major": false,
+      "source": "frontend/package-lock.json:6944",
+      "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+      "patchedReleases": [
+        {
+          "package": "postcss",
+          "range": "<= 8.5.11",
+          "patched": "8.5.12"
+        }
+      ],
+      "applicablePatchedVersions": [
+        "8.5.12"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "8.5.23"
+      ]
+    },
+    {
+      "id": "R19-DEP-013",
+      "package": "postcss",
+      "severity": "moderate",
+      "advisory": "GHSA-fxqj-rqcc-2cmp",
+      "version": "8.4.31,8.4.47",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": "<=8.5.22",
+      "direct": true,
+      "reach": "Build/lint/CSS; tidak ditemukan endpoint yang menerima input CSS/glob pengguna. Production dependency tetap dinilai terpisah.",
+      "candidate": "next@15.5.28",
+      "major": false,
+      "source": "frontend/package-lock.json:6944",
+      "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q \u2014 attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+      "patchedReleases": [
+        {
+          "package": "postcss",
+          "range": "<= 8.5.22",
+          "patched": "8.5.23"
+        }
+      ],
+      "applicablePatchedVersions": [
+        "8.5.23"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "8.5.23"
+      ]
+    },
+    {
+      "id": "R19-DEP-014",
+      "package": "postcss",
+      "severity": "high",
+      "advisory": "GHSA-r28c-9q8g-f849",
+      "version": "8.4.31,8.4.47",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": "<=8.5.17",
+      "direct": true,
+      "reach": "Build/lint/CSS; tidak ditemukan endpoint yang menerima input CSS/glob pengguna. Production dependency tetap dinilai terpisah.",
+      "candidate": "next@15.5.28",
+      "major": false,
+      "source": "frontend/package-lock.json:6944",
+      "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+      "patchedReleases": [
+        {
+          "package": "postcss",
+          "range": "<= 8.5.17",
+          "patched": "8.5.18"
+        }
+      ],
+      "applicablePatchedVersions": [
+        "8.5.18"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "8.5.23"
+      ]
+    },
+    {
+      "id": "R19-DEP-025",
+      "package": "vitest",
+      "severity": "critical",
+      "advisory": "GHSA-9crc-q9x8-hgqq",
+      "version": "2.1.3",
+      "patched": "di luar range advisory; verifikasi kandidat",
+      "range": ">=2.0.0 <2.1.9",
+      "direct": true,
+      "reach": "Tooling; API/UI/debugger dimatikan, CI offline; advisory tetap terbuka.",
+      "candidate": "vitest@2.1.9",
+      "major": false,
+      "source": "frontend/package-lock.json:9687",
+      "title": "Vitest allows Remote Code Execution when accessing a malicious website while Vitest API server is listening",
+      "patchedReleases": [
+        {
+          "package": "vitest",
+          "range": ">= 1.0.0, < 1.6.1",
+          "patched": "1.6.1"
+        },
+        {
+          "package": "vitest",
+          "range": ">= 2.0.0, < 2.1.9",
+          "patched": "2.1.9"
+        },
+        {
+          "package": "vitest",
+          "range": ">= 3.0.0, < 3.0.5",
+          "patched": "3.0.5"
+        },
+        {
+          "package": "vitest",
+          "range": "<= 0.0.125",
+          "patched": null
+        }
+      ],
+      "applicablePatchedVersions": [
+        "2.1.9"
+      ],
+      "status": "RESOLVED_IN_AUDIT",
+      "afterVersions": [
+        "2.1.9"
+      ]
+    }
+  ],
+  "remaining": [
+    {
+      "package": "@next/eslint-plugin-next",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "15.5.28"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:1405",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "eslint-config-next",
+        "version": "14.2.35",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai fast-glob"
+    },
+    {
+      "package": "@vitest/mocker",
+      "advisory": "GHSA-82fw-gwwq-j7x9",
+      "severity": "moderate",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "4.1.11, 5.0.0-rc.2",
+      "direct": false,
+      "source": "frontend/package-lock.json:3452",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock"
+    },
+    {
+      "package": "@vitest/mocker",
+      "advisory": "transitive",
+      "severity": "moderate",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:3452",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai vite"
+    },
+    {
+      "package": "braces",
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "severity": "high",
+      "installed": [
+        "3.0.3"
+      ],
+      "patched": "Tidak tersedia di metadata",
+      "direct": false,
+      "source": "frontend/package-lock.json:3996",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns"
+    },
+    {
+      "package": "chokidar",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.6.0"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:4182",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai braces"
+    },
+    {
+      "package": "esbuild",
+      "advisory": "GHSA-67mh-4wv8-2f99",
+      "severity": "moderate",
+      "installed": [
+        "0.21.5"
+      ],
+      "patched": "0.25.0",
+      "direct": false,
+      "source": "frontend/package-lock.json:9646",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "esbuild enables any website to send any requests to the development server and read the response"
+    },
+    {
+      "package": "eslint-config-next",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "15.5.28"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:4956",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "eslint-config-next",
+        "version": "14.2.35",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai @next/eslint-plugin-next"
+    },
+    {
+      "package": "fast-glob",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.3.1"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:5383",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "eslint-config-next",
+        "version": "14.2.35",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai micromatch"
+    },
+    {
+      "package": "micromatch",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "4.0.8"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:6790",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai braces"
+    },
+    {
+      "package": "postcss-nested",
+      "advisory": "transitive",
+      "severity": "moderate",
+      "installed": [
+        "6.2.0"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:7481",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": true,
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai postcss-selector-parser"
+    },
+    {
+      "package": "postcss-selector-parser",
+      "advisory": "GHSA-rj75-hqrm-r3gf",
+      "severity": "moderate",
+      "installed": [
+        "6.1.4"
+      ],
+      "patched": "7.1.6",
+      "direct": false,
+      "source": "frontend/package-lock.json:7506",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion"
+    },
+    {
+      "package": "tailwindcss",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.4.14"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:8555",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai chokidar"
+    },
+    {
+      "package": "tailwindcss",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.4.14"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:8555",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai fast-glob"
+    },
+    {
+      "package": "tailwindcss",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.4.14"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:8555",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai micromatch"
+    },
+    {
+      "package": "tailwindcss",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.4.14"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:8555",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai postcss-nested"
+    },
+    {
+      "package": "tailwindcss",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "3.4.14"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:8555",
+      "reachability": "Build/lint/CSS; tidak ditemukan input CSS/glob pengguna pada endpoint. Rantai Tailwind tetap hadir pada audit production.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "tailwindcss",
+        "version": "4.3.3",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai postcss-selector-parser"
+    },
+    {
+      "package": "tinypool",
+      "advisory": "GHSA-5gmw-xhrv-c9v3",
+      "severity": "critical",
+      "installed": [
+        "1.1.1"
+      ],
+      "patched": "2.1.1",
+      "direct": false,
+      "source": "frontend/package-lock.json:8756",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Tinypool: Prototype Pollution gadget in worker options leads to Remote Code Execution"
+    },
+    {
+      "package": "tinypool",
+      "advisory": "GHSA-85c8-ppgw-ccpr",
+      "severity": "critical",
+      "installed": [
+        "1.1.1"
+      ],
+      "patched": "2.1.2",
+      "direct": false,
+      "source": "frontend/package-lock.json:8756",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Tinypool: Prototype Pollution Gadget to RCE in run() options"
+    },
+    {
+      "package": "vite",
+      "advisory": "GHSA-4w7w-66w2-5vf9",
+      "severity": "moderate",
+      "installed": [
+        "5.4.21"
+      ],
+      "patched": "6.4.2, 7.3.2, 8.0.5",
+      "direct": false,
+      "source": "frontend/package-lock.json:9172",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Vite Vulnerable to Path Traversal in Optimized Deps `.map` Handling"
+    },
+    {
+      "package": "vite",
+      "advisory": "GHSA-v6wh-96g9-6wx3",
+      "severity": "moderate",
+      "installed": [
+        "5.4.21"
+      ],
+      "patched": "6.4.3, 7.3.5, 8.0.16",
+      "direct": false,
+      "source": "frontend/package-lock.json:9172",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows"
+    },
+    {
+      "package": "vite",
+      "advisory": "GHSA-fx2h-pf6j-xcff",
+      "severity": "high",
+      "installed": [
+        "5.4.21"
+      ],
+      "patched": "6.4.3, 7.3.5, 8.0.16",
+      "direct": false,
+      "source": "frontend/package-lock.json:9172",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "vite: `server.fs.deny` bypass on Windows alternate paths"
+    },
+    {
+      "package": "vite",
+      "advisory": "transitive",
+      "severity": "high",
+      "installed": [
+        "5.4.21"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:9172",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai esbuild"
+    },
+    {
+      "package": "vite-node",
+      "advisory": "transitive",
+      "severity": "moderate",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": false,
+      "source": "frontend/package-lock.json:9232",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai vite"
+    },
+    {
+      "package": "vitest",
+      "advisory": "transitive",
+      "severity": "critical",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:9685",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai @vitest/mocker"
+    },
+    {
+      "package": "vitest",
+      "advisory": "GHSA-5xrq-8626-4rwp",
+      "severity": "critical",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "3.2.6, 4.1.0",
+      "direct": true,
+      "source": "frontend/package-lock.json:9685",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "When Vitest UI server is listening, arbitrary file can be read and executed"
+    },
+    {
+      "package": "vitest",
+      "advisory": "GHSA-82fw-gwwq-j7x9",
+      "severity": "moderate",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "4.1.11, 5.0.0-rc.2",
+      "direct": true,
+      "source": "frontend/package-lock.json:9685",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock"
+    },
+    {
+      "package": "vitest",
+      "advisory": "transitive",
+      "severity": "critical",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:9685",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai tinypool"
+    },
+    {
+      "package": "vitest",
+      "advisory": "transitive",
+      "severity": "critical",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:9685",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai vite"
+    },
+    {
+      "package": "vitest",
+      "advisory": "transitive",
+      "severity": "critical",
+      "installed": [
+        "2.1.9"
+      ],
+      "patched": "Lihat advisory dependency di bawah",
+      "direct": true,
+      "source": "frontend/package-lock.json:9685",
+      "reachability": "Tooling; API/UI/debugger off; eksekusi unit offline. Bukan bukti advisory selesai.",
+      "compatibility": "Major upgrade memerlukan review; tidak diterapkan otomatis.",
+      "proposedFix": {
+        "name": "vitest",
+        "version": "5.0.5",
+        "isSemVerMajor": true
+      },
+      "validation": "Build/typecheck/lint; 199 unit +25 containment offline; browser produk/operasi; gate final navigation terpisah.",
+      "status": "OPEN",
+      "title": "Rantai vite-node"
+    }
+  ]
+}

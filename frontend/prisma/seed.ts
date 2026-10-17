@@ -1,6 +1,9 @@
+import { assertSafeDatabaseOperation } from "../scripts/assert-safe-db-operation.mjs";
 import { PrismaClient, DiscountType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+// Guard direct tsx and prisma db seed before client construction.
+assertSafeDatabaseOperation();
 const prisma = new PrismaClient();
 
 const PERMISSIONS = [
@@ -334,8 +337,8 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
+  .catch(() => {
+    console.error("[database-safety] Seed failed. Inspect database configuration without exposing credentials.");
+    process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());

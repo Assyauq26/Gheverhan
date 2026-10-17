@@ -68,7 +68,9 @@ jobs:
           npm run prisma:deploy
 
       - name: Install isolated Chromium browser and dependencies
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install --with-deps chromium
+          node -e 'const { chromium } = require("@playwright/test"); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "SPRINT1_CHROMIUM_PATH=" + chromium.executablePath() + "\n");'
 
       - name: Check types, ESLint and production build
         run: |
@@ -104,15 +106,30 @@ jobs:
       - name: Chromium operations/payment proof and RBAC test with loopback storage double
         run: npm run test:e2e:operations
 
+      - name: Chromium regression for microtask replay of hydrated Flight content
+        id: hydration_replay
+        run: node --import tsx tests/integration/react-hydration-replay.ts
+
       - name: Chromium navigation and mobile responsiveness regression
         id: navigation
-        run: node --import tsx tests/integration/navigation-browser.ts
+        run: |
+          for iteration in $(seq 1 10); do
+            SPRINT1_ARTIFACT_DIR="/tmp/gheverhan-navigation-${GITHUB_RUN_ID}-${iteration}" \
+              node --import tsx tests/integration/navigation-browser.ts
+          done
+
+      - name: Build an identical-commit stability matrix, including partial failures
+        if: ${{ !cancelled() && steps.navigation.outcome != 'skipped' }}
+        run: node scripts/navigation-stability-matrix.mjs /tmp "gheverhan-navigation-${GITHUB_RUN_ID}-" "/tmp/gheverhan-stability-${GITHUB_RUN_ID}"
 
       - name: Retain synthetic navigation diagnostics, including failed runs
-        if: ${{ !cancelled() && steps.navigation.outcome != 'skipped' }}
+        if: ${{ !cancelled() && (steps.navigation.outcome != 'skipped' || steps.hydration_replay.outcome != 'skipped') }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24
         with:
           name: navigation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
-          path: /tmp/gheverhan-navigation-*/navigation-results.json
+          path: |
+            /tmp/gheverhan-navigation-*/navigation-results.json
+            /tmp/react-hydration-replay-*/hydration-replay-results.json
+            /tmp/gheverhan-stability-*/navigation-stability-matrix.*
           if-no-files-found: error
           retention-days: 7

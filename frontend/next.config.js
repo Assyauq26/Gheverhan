@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  webpack(config) {
-    config.module.rules.push({ test: /next[\/]dist[\/]compiled[\/]react-dom[\/]cjs[\/]react-dom-client\.production\.js$/, use: [require.resolve('./r19-ping-loader.cjs')] });
+  webpack(config, { isServer, dev }) {
+    if (!isServer && !dev) config.module.rules.push({ test: /next[\/]dist[\/]compiled[\/]react-dom[\/]cjs[\/]react-dom-client\.production\.js$/, use: [require.resolve('./scripts/webpack/react-runtime-backports-loader.cjs')] });
     return config;
   },
   eslint: { ignoreDuringBuilds: true },

@@ -1,0 +1,211 @@
+[
+  {
+    "path": "/shop",
+    "at": 136.69999999995343,
+    "stack": [
+      {
+        "tag": 5,
+        "type": "main",
+        "className": "container py-2 md:py-6"
+      },
+      {
+        "tag": 5,
+        "type": "div",
+        "className": "min-h-screen bg-white pb-24 md:pb-0"
+      },
+      {
+        "tag": 7,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 10,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "T",
+        "className": null
+      },
+      {
+        "tag": 1,
+        "type": "s",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "f",
+        "className": null
+      },
+      {
+        "tag": 1,
+        "type": "c",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "s",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "S",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "f",
+        "className": null
+      },
+      {
+        "tag": 1,
+        "type": "P",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "j",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "a",
+        "className": null
+      },
+      {
+        "tag": 10,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "M",
+        "className": null
+      },
+      {
+        "tag": 10,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "c",
+        "className": null
+      },
+      {
+        "tag": 27,
+        "type": "body",
+        "className": null
+      },
+      {
+        "tag": 27,
+        "type": "html",
+        "className": null
+      },
+      {
+        "tag": 7,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "__next_root_layout_boundary__",
+        "className": null
+      },
+      {
+        "tag": 1,
+        "type": "s",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "f",
+        "className": null
+      },
+      {
+        "tag": 1,
+        "type": "s",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "f",
+        "className": null
+      },
+      {
+        "tag": 0,
+        "type": "i",
+        "className": null
+      },
+      {
+        "tag": 10,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 10,
+        "type": null,
+        "className": null
+      },
+      {
+        "tag": 10,
+        "type": null,
+        "className": null
+      }
+    ],
+    "cursor": {
+      "name": "#comment",
+      "type": 8,
+      "value": "$~",
+      "id": null,
+      "className": null
+    },
+    "previous": null,
+    "next": {
+      "name": "TEMPLATE",
+      "type": 1,
+      "value": null,
+      "id": "B:0",
+      "className": null
+    },
+    "parent": {
+      "name": "MAIN",
+      "type": 1,
+      "value": null,
+      "id": "",
+      "className": "container py-2 md:py-6"
+    },
+    "parentHtml": "<main class=\"container py-2 md:py-6\"><!--$~--><template id=\"B:0\"></template><div class=\"space-y-6\" aria-label=\"Memuat halaman\" role=\"status\"><div class=\"h-10 w-2/3 motion-safe:animate-pulse rounded-xl bg-surface\"></div><div class=\"grid grid-cols-2 gap-4 md:grid-cols-4\"><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div><div class=\"space-y-3\"><div class=\"aspect-square motion-safe:animate-pulse rounded-2xl bg-surface\"></div><div class=\"h-4 w-4/5 motion-safe:animate-pulse rounded bg-surface\"></div><div class=\"h-4 w-1/2 motion-safe:animate-pulse rounded bg-surface\"></div></div></div></div><!--/$--></main>",
+    "mainChildren": [
+      {
+        "name": "#comment",
+        "type": 8,
+        "value": "$~",
+        "id": null,
+        "className": null
+      },
+      {
+        "name": "TEMPLATE",
+        "type": 1,
+        "value": null,
+        "id": "B:0",
+        "className": null
+      },
+      {
+        "name": "DIV",
+        "type": 1,
+        "value": null,
+        "id": "",
+        "className": "space-y-6"
+      },
+      {
+        "name": "#comment",
+        "type": 8,
+        "value": "/$",
+        "id": null,
+        "className": null
+      }
+    ]
+  }
+]

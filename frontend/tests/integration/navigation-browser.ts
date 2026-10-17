@@ -1,7 +1,7 @@
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { existsSync, createWriteStream } from 'node:fs';
+import { existsSync, createWriteStream, readFileSync } from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { PrismaClient } from '@prisma/client';
@@ -19,7 +19,13 @@ const artifacts = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-navigation
 const prefix = `nav2d-${randomUUID().slice(0, 8)}`;
 const secret = randomBytes(32).toString('hex'); process.env.JWT_SECRET = secret;
 let checks = 0;
-async function check(label: string, run: () => Promise<void>) { await run(); checks++; console.log(`PASS ${label}`); }
+let checkpoint = 'fixture-setup';
+const checkpoints: Array<{ label: string; status: 'PASS' | 'FAILED' }> = [];
+async function check(label: string, run: () => Promise<void>) {
+  checkpoint = label;
+  try { await run(); checks++; checkpoints.push({ label, status: 'PASS' }); console.log(`PASS ${label}`); }
+  catch (error) { checkpoints.push({ label, status: 'FAILED' }); throw error; }
+}
 async function main() {
   await mkdir(artifacts, { recursive: true });
   const role = await db.role.upsert({ where: { name: 'Admin' }, create: { name: 'Admin', label: 'Admin' }, update: {} });
@@ -28,13 +34,14 @@ async function main() {
     await db.rolePermission.upsert({ where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } }, create: { roleId: role.id, permissionId: permission.id }, update: {} });
   }
   const user = await db.user.create({ data: { id: prefix, name: 'Navigation Fixture', email: `${prefix}@example.test`, passwordHash: 'isolated-fixture', roles: { create: { roleId: role.id } } } });
-  for (let i = 0; i < 25; i++) await db.product.create({ data: { id: `${prefix}-${i}`, name: `${prefix} Product ${i}`, slug: `${prefix}-${i}`, status: 'PUBLISHED', basePrice: 100000, variants: { create: { id: `${prefix}-variant-${i}`, sku: `${prefix}-sku-${i}`, inventory: { create: { onHand: 10 } } } } } });
+  for (let i = 0; i < 25; i++) await db.product.create({ data: { id: `${prefix}-${i}`, name: `${prefix} Product ${i}`, slug: `${prefix}-${i}`, status: 'PUBLISHED', basePrice: 100000 + i * 1000, variants: { create: { id: `${prefix}-variant-${i}`, sku: `${prefix}-sku-${i}`, inventory: { create: { onHand: 10 } } } } } });
   const log = createWriteStream(path.join(artifacts, 'server.log'));
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '3116'], { cwd: root, env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.pipe(log); server.stderr.pipe(log);
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   const errors: string[] = [];
-  const browserErrors: Array<{ viewport: number; path: string; message: string; stack?: string }> = [];
+  const probeFlushes: Array<() => Promise<void>> = [];
+  const browserErrors: Array<{ viewport: number; checkpoint: string; path: string; message: string; stack?: string }> = [];
   const transport: Array<{ viewport: number; events: string[] }> = [];
   let browserVersion: string | undefined;
   let completed = false;
@@ -47,13 +54,17 @@ async function main() {
     }
     browser = await chromium.launch({ executablePath: process.env.SPRINT1_CHROMIUM_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
     browserVersion = browser.version();
-    for (const width of [390, 1360]) {
+    for (const width of [390, 768, 1024, 1360]) {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       await context.route('**/*', async route => {
         if (new URL(route.request().url()).hostname !== 'localhost') return route.abort();
         if (route.request().headers()['rsc'] === '1' && !route.request().headers()['next-router-prefetch']) await new Promise(resolve => setTimeout(resolve, 600));
         await route.continue();
       });
+      if (process.env.R19_PASSIVE_HYDRATION_PROBE === '1') {
+        const { installPassiveHydrationProbe } = await import('./passive-hydration-probe');
+        probeFlushes.push(await installPassiveHydrationProbe(context, artifacts, width));
+      }
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
       const page = await context.newPage();
       page.on('pageerror', e => {
@@ -65,7 +76,7 @@ async function main() {
         // This suite uses synthetic local fixtures only. Preserve the complete
         // React diagnostic and stack in local artifacts; the short console
         // summary above may truncate the useful part of a hydration failure.
-        browserErrors.push({ viewport: width, path: route, message, stack: e.stack });
+        browserErrors.push({ viewport: width, checkpoint, path: route, message, stack: e.stack });
         console.error('[browser-error] ' + safe);
       });
       // Read-only diagnostic: log RSC state without cookies, headers or query values.
@@ -151,6 +162,11 @@ async function main() {
         assert.ok(input && input.width >= 180, 'mobile search remains readable');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow');
         await page.screenshot({ path: path.join(artifacts, `${width}-inventory.png`), fullPage: true });
+        await page.getByRole('link', { name: 'Sebelumnya', exact: true }).click();
+        await expect(page.getByText('Halaman 1 dari 2')).toBeVisible();
+        await page.getByRole('link', { name: 'Berikutnya', exact: true }).click();
+        await expect(page.getByText('Halaman 2 dari 2')).toBeVisible();
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
       });
       await check(`${width}px: shop pagination exposes later catalog items`, async () => {
         await page.goto(`${base}/shop?q=${prefix}`);
@@ -177,6 +193,8 @@ async function main() {
         assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
         await page.goBack();
         await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();
+        await page.goForward(); await expect(page.getByText('Halaman 2 dari 3')).toBeVisible();
+        await page.goBack(); await expect(page.getByText('Halaman 1 dari 3')).toBeVisible();
         await page.goto(`${base}/shop?q=${prefix}&page=999`);
         await expect(page.getByText('Halaman 3 dari 3')).toBeVisible();
         await expect(page.getByText(`${prefix} Product 0`)).toBeVisible();
@@ -194,6 +212,81 @@ async function main() {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({ path: path.join(artifacts, `${width}-shop.png`), fullPage: true });
       });
+      await check(`${width}px: sorting, detail, wishlist and add-to-cart retain real server state`, async () => {
+        const fixtureIndex = [390, 768, 1024, 1360].indexOf(width);
+        const productId = `${prefix}-${fixtureIndex}`;
+        const variantId = `${prefix}-variant-${fixtureIndex}`;
+        await page.goto(`${base}/shop?q=${prefix}`);
+        await page.getByRole('link', { name: 'Harga Terendah', exact: true }).click();
+        await expect(page.getByTestId(/^product-card-/).first()).toHaveAttribute('data-testid', `product-card-${prefix}-0`);
+        assert.equal(new URL(page.url()).searchParams.get('sort'), 'price_asc');
+        assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
+        await page.getByRole('link', { name: 'Harga Tertinggi', exact: true }).click();
+        await expect(page.getByTestId(/^product-card-/).first()).toHaveAttribute('data-testid', `product-card-${prefix}-24`);
+        await page.getByRole('link', { name: 'Harga Terendah', exact: true }).click();
+        const card = page.getByTestId(`product-card-${productId}`);
+        await card.getByRole('link', { name: `${prefix} Product ${fixtureIndex}`, exact: true }).click();
+        await expect(page.getByRole('heading', { name: `${prefix} Product ${fixtureIndex}`, exact: true, level: 1 })).toBeVisible();
+        assert.equal(new URL(page.url()).pathname, `/product/${productId}`);
+        await page.goBack(); await expect(card).toBeVisible();
+        await card.getByTestId(`wishlist-toggle-${productId}`).click();
+        await expect.poll(() => db.wishlistItem.count({ where: { productId, wishlist: { userId: user.id } } })).toBe(1);
+        await page.getByTestId('header-wishlist').click();
+        await expect(page.getByTestId(`product-card-${productId}`)).toBeVisible();
+        await page.goto(`${base}/shop?q=${prefix}&sort=price_asc`);
+        await page.getByTestId(`quick-add-${variantId}`).click();
+        await expect.poll(() => db.cartItem.findFirst({ where: { variantId, cart: { userId: user.id } }, select: { quantity: true } }).then(item => item?.quantity)).toBe(1);
+        await page.getByTestId('header-cart').click();
+        await expect(page.getByRole('heading', { name: 'Keranjang', exact: true })).toBeVisible();
+        await expect(page.getByText(`${prefix} Product ${fixtureIndex}`, { exact: true })).toBeVisible();
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+      });
+      await check(`${width}px: keyboard and rapid navigation settle on the final destination`, async () => {
+        await page.goto(`${base}/admin`);
+        const products = page.getByTestId('adminnav-produk').filter({ visible: true });
+        const inventory = page.getByTestId('adminnav-inventori').filter({ visible: true });
+        await products.focus(); await products.press('Enter');
+        await expect(page.getByTestId('navigation-pending')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Produk', exact: true })).toBeVisible();
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+        await inventory.click(); await products.click(); await inventory.click();
+        await expect(page.getByRole('heading', { name: 'Inventori', exact: true })).toBeVisible();
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+        assert.equal(new URL(page.url()).pathname, '/admin/inventory');
+      });
+      await check(`${width}px: a failed RSC transport recovers and later links remain usable`, async () => {
+        await page.goto(`${base}/shop?q=${prefix}`);
+        let failedRsc = false;
+        const failOnce: Parameters<typeof context.route>[1] = async route => {
+          const request = route.request();
+          if (!failedRsc && request.headers()['rsc'] === '1' && !request.headers()['next-router-prefetch']) {
+            failedRsc = true; await route.abort('failed');
+          } else await route.fallback();
+        };
+        await context.route('**/shop?**', failOnce);
+        try {
+          await page.getByRole('link', { name: 'Harga Tertinggi', exact: true }).click();
+          await expect(page).toHaveURL(/[?&]sort=price_desc(?:&|$)/);
+          await expect(page.getByTestId(/^product-card-/).first()).toHaveAttribute('data-testid', `product-card-${prefix}-24`);
+          assert.equal(failedRsc, true, 'a real navigation RSC request was deliberately failed');
+          assert.equal(new URL(page.url()).searchParams.get('sort'), 'price_desc');
+          await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+        } finally { await context.unroute('**/shop?**', failOnce); }
+        await page.getByRole('link', { name: 'Harga Terendah', exact: true }).click();
+        await expect(page.getByTestId(/^product-card-/).first()).toHaveAttribute('data-testid', `product-card-${prefix}-0`);
+        await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+      });
+      await check(`${width}px: an anonymous admin request redirects to login`, async () => {
+        const anonymous = await browser!.newContext({ viewport: { width, height: 900 } });
+        try {
+          const login = await anonymous.newPage();
+          login.on('pageerror', error => { errors.push(`anonymous viewport=${width}px error=${error.message}`); browserErrors.push({ viewport: width, checkpoint, path: new URL(login.url()).pathname, message: error.message, stack: error.stack }); });
+          await login.goto(`${base}/admin`);
+          await expect(login).toHaveURL(/\/login\?redirectTo=/);
+          assert.equal(new URL(login.url()).searchParams.get('redirectTo'), '/admin');
+          await expect(login.getByRole('button', { name: 'Masuk', exact: true })).toBeVisible();
+        } finally { await anonymous.close(); }
+      });
       await context.close();
     }
     assert.deepEqual(errors, []);
@@ -203,14 +296,23 @@ async function main() {
     // Failed runs are the most valuable evidence. Save before closing contexts
     // and cleaning fixtures, without changing assertions, routing or timeouts.
     try {
+      for (const flush of probeFlushes) await flush();
       await writeFile(path.join(artifacts, 'navigation-results.json'), JSON.stringify({
-        status: completed ? 'PASS' : 'FAILED', checks, timings, browserVersion,
+        status: completed ? 'PASS' : 'FAILED', checks, checkpoints, timings, browserVersion,
+        commitSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+        viewports: [390, 768, 1024, 1360],
+        nodeVersion: process.version, buildId: readFileSync(path.join(root, '.next/BUILD_ID'), 'utf8').trim(),
+        passiveHydrationProbe: process.env.R19_PASSIVE_HYDRATION_PROBE === '1',
         browserErrors, transport,
         note: 'Synthetic 600 ms RSC response delay; feedback duration includes Playwright click dispatch. Not a live latency benchmark. External images deliberately blocked. Only paths and synthetic fixture diagnostics are retained; no request headers/cookies.',
       }, null, 2));
     } finally {
-      await browser?.close(); server.kill('SIGTERM'); await new Promise(resolve => server.once('exit', resolve)); log.end();
+      await browser?.close();
+      const exited = server.exitCode === null && server.signalCode === null ? new Promise(resolve => server.once('exit', resolve)) : Promise.resolve();
+      server.kill('SIGTERM'); await exited; log.end();
       // Owned fixtures only, on the explicitly guarded disposable local database.
+      await db.cart.deleteMany({ where: { userId: user.id } });
+      await db.wishlist.deleteMany({ where: { userId: user.id } });
       await db.inventory.deleteMany({ where: { variant: { productId: { startsWith: prefix } } } });
       await db.productVariant.deleteMany({ where: { productId: { startsWith: prefix } } });
       await db.product.deleteMany({ where: { id: { startsWith: prefix } } });

@@ -1,8 +1,8 @@
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync, createWriteStream } from "node:fs";
+import { existsSync, createWriteStream, readFileSync } from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
@@ -28,7 +28,9 @@ const db = new PrismaClient({ datasources: { db: { url: target } } });
 const prefix = randomUUID().slice(0, 8);
 const couponCode = `LIVE-${prefix}`.toUpperCase();
 let checks = 0;
-async function check(name: string, fn: () => Promise<void>) { await fn(); checks++; console.log(`PASS ${name}`); }
+let completed = false;
+const checkpoints: { label: string; status: string }[] = [];
+async function check(name: string, fn: () => Promise<void>) { try { await fn(); checks++; checkpoints.push({label:name,status:"PASS"}); console.log(`PASS ${name}`); } catch(error) { checkpoints.push({label:name,status:"FAILED"}); throw error; } }
 async function fixtureRole(name: string, permissions: string[]) {
   const role = await db.role.upsert({ where: { name }, create: { name, label: name }, update: {} });
   // These guarded local fixtures may be reused after the operations suite.
@@ -214,7 +216,7 @@ async function main() {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
     await check("R20 authenticated cart synchronization and rollback at four viewports", async () => {
-      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors);
+      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir);
     });
     await check("live checkout coupon is priced by server, shows errors, and updates shipping without creating orders", async () => {
       await db.coupon.create({ data: { code: couponCode, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });
@@ -322,9 +324,17 @@ async function main() {
       const captures = [{ width: 1360, height: 900, route: "/admin", file: "desktop.png" }, { width: 390, height: 844, route: `/admin/products/${product.id}`, file: "mobile.png" }, { width: 1360, height: 900, route: `/admin/products/${product.id}`, file: "desktop-product.png" }, { width: 390, height: 844, route: "/admin", file: "mobile-dashboard.png" }];
       for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
     }
+    completed = true;
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: false }, null, 2));
     console.log(`PASS ${checks} browser/data-flow checks; no production data or external storage used`);
   } finally {
+    await writeFile(path.join(artifactDir, "validation-results.json"), JSON.stringify({
+      status: completed ? "PASS" : "FAILED", checks, checkpoints,
+      commitSha: execFileSync("git", ["rev-parse", "HEAD"], {cwd:root,encoding:"utf8"}).trim(),
+      nodeVersion: process.version, browserVersion: browser?.version(),
+      buildId: readFileSync(path.join(root,".next/BUILD_ID"),"utf8").trim(),
+      synthetic: true,
+    },null,2));
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve()));

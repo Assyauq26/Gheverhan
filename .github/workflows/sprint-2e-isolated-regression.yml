@@ -105,9 +105,11 @@ jobs:
         run: npm run test:integration:refund-shipping
 
       - name: Chromium product media, upload and RBAC test with loopback storage double
+        id: product_browser
         run: npm run test:e2e:products
 
       - name: Chromium operations/payment proof and RBAC test with loopback storage double
+        id: operations_browser
         run: npm run test:e2e:operations
 
       - name: Chromium regression for microtask replay of hydrated Flight content
@@ -127,12 +129,15 @@ jobs:
         run: node scripts/navigation-stability-matrix.mjs /tmp "gheverhan-navigation-${GITHUB_RUN_ID}-" "/tmp/gheverhan-stability-${GITHUB_RUN_ID}"
 
       - name: Retain synthetic navigation diagnostics, including failed runs
-        if: ${{ !cancelled() && (steps.navigation.outcome != 'skipped' || steps.hydration_replay.outcome != 'skipped') }}
+        if: ${{ !cancelled() && (steps.product_browser.outcome != 'skipped' || steps.operations_browser.outcome != 'skipped' || steps.navigation.outcome != 'skipped' || steps.hydration_replay.outcome != 'skipped') }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24
         with:
           name: navigation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             /tmp/gheverhan-navigation-*/navigation-results.json
+            /tmp/gheverhan-product-browser-*/validation-results.json
+            /tmp/gheverhan-product-browser-*/cart-concurrency-*.json
+            /tmp/gheverhan-operations-browser-*/validation-results.json
             /tmp/gheverhan-navigation-*/*-dashboard.png
             /tmp/react-hydration-replay-*/hydration-replay-results.json
             /tmp/gheverhan-stability-*/navigation-stability-matrix.*

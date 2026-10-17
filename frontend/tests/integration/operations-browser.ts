@@ -1,9 +1,9 @@
 import { verifyPaymentSynchronization } from "./payment-sync-browser";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync, createWriteStream } from "node:fs";
+import { existsSync, createWriteStream, readFileSync } from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
@@ -27,7 +27,9 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 const db = new PrismaClient({ datasources: { db: { url: target } } });
 const prefix = randomUUID().slice(0, 8);
 let checks = 0;
-async function check(name: string, fn: () => Promise<void>) { await fn(); checks++; console.log(`PASS ${name}`); }
+let completed = false;
+const checkpoints: { label: string; status: string }[] = [];
+async function check(name: string, fn: () => Promise<void>) { try { await fn(); checks++; checkpoints.push({label:name,status:"PASS"}); console.log(`PASS ${name}`); } catch(error) { checkpoints.push({label:name,status:"FAILED"}); throw error; } }
 async function fixtureRole(name: string, permissions: string[]) {
   const role = await db.role.upsert({ where: { name }, create: { name, label: name }, update: {} });
   // Keep each isolated test role exact when another local suite ran first.
@@ -410,9 +412,17 @@ async function main() {
     });
     const captures = [{ width: 1360, height: 900, route: "/admin/inventory", file: "desktop-inventory.png" }, { width: 390, height: 844, route: `/admin/inventory/${variant.id}`, file: "mobile-inventory.png" }, { width: 1360, height: 900, route: `/admin/orders/${sale.order.id}`, file: "desktop-order.png" }, { width: 390, height: 844, route: `/admin/orders/${sale.order.id}`, file: "mobile-order.png" }];
     for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
+    completed = true;
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, orderId: sale.order.id, variantId: variant.id, database: "isolated local PostgreSQL", storage: "local proof contract double", synthetic: true }, null, 2));
     console.log(`PASS ${checks} operational browser/API/data-flow checks`);
   } finally {
+    await writeFile(path.join(artifactDir, "validation-results.json"), JSON.stringify({
+      status: completed ? "PASS" : "FAILED", checks, checkpoints,
+      commitSha: execFileSync("git", ["rev-parse", "HEAD"], {cwd:root,encoding:"utf8"}).trim(),
+      nodeVersion: process.version, browserVersion: browser?.version(),
+      buildId: readFileSync(path.join(root,".next/BUILD_ID"),"utf8").trim(),
+      synthetic: true,
+    },null,2));
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve())); await db.$disconnect();

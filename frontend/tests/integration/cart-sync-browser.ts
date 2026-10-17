@@ -5,7 +5,7 @@ import type { Browser } from '@playwright/test';
 import { expect } from '@playwright/test';
 import type { PrismaClient } from '@prisma/client';
 
-export async function verifyCartSynchronization(browser: Browser, db: PrismaClient, base: string, prefix: string, errors: string[]) {
+export async function verifyCartSynchronization(browser: Browser, db: PrismaClient, base: string, prefix: string, errors: string[], artifacts: string) {
  for (const width of [390, 768, 1024, 1360]) {
   const scope = `r20cart-${prefix}-${width}`;
   const email = `${scope}@example.test`;
@@ -128,7 +128,7 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
     await expect.poll(()=>transport.filter(event=>event.event==='response'&&event.status===200).length).toBe(2);
     await expect.poll(async ()=>(await state()).reduce((n,x)=>n+x.quantity,0)).toBe(5);
    } catch (error) {
-    await writeFile(path.join(process.env.SPRINT1_ARTIFACT_DIR!,`cart-concurrency-${width}.json`),JSON.stringify({width,expectedCount:5,actualCount:(await state()).reduce((n,x)=>n+x.quantity,0),clicks:await page.evaluate(()=>(window as unknown as {r20Clicks:string[]}).r20Clicks),transport},null,2));
+    await writeFile(path.join(artifacts,`cart-concurrency-${width}.json`),JSON.stringify({width,expectedCount:5,actualCount:(await state()).reduce((n,x)=>n+x.quantity,0),clicks:await page.evaluate(()=>(window as unknown as {r20Clicks:string[]}).r20Clicks),transport},null,2));
     throw error;
    }
    await badges(5);

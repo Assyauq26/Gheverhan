@@ -79,7 +79,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </details>
             </div>
           </div>
-          <AdminNav permissions={user.permissions} variant="compact" />
         </header>
 
         <main id="main-content" className="mx-auto min-w-0 max-w-[1500px] px-4 pb-28 pt-4 sm:px-6 md:px-6 md:pb-8 md:pt-6 lg:px-7">

@@ -1,0 +1,3 @@
+# R12 — Cross-PR Remediation Integration
+
+Combined feature validation only. Base is PR #45, overlays PR #40 (shared dev DB guard), PR #41 (voucher quota), PR #42 (Preview JWT), PR #44 (Preview DB CLI guard), PR #46 (Marketing SSR clock), including the one-line combined Marketing usage counter. CI must use disposable PostgreSQL, never shared Supabase. No merge to main or production, no schema migrations. PRs #37, #38, #39 excluded pending email provider / cron configuration / public git-history incident response. Require CI green, repeated Chromium stress and independent review before any production release.

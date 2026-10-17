@@ -9,37 +9,40 @@ export async function addToCartAction(variantId: string, quantity = 1) {
   return runAction(async () => {
     const user = await requireUser();
     const view = await cart.addItem(user.id, variantId, quantity);
-    // Keep the server-rendered cart badge correct after a quick add. The
-    // client action already receives the updated cart view, so quantity
-    // updates/removals below do not need another cache invalidation.
+    revalidatePath("/cart");
     revalidatePath("/(storefront)", "layout");
     return view;
   });
 }
 
-/**
- * Minimal mutation path for product-card quick add. It avoids the expensive
- * full user/RBAC lookup, cart-view query, and route revalidation. The client
- * owns the immediate optimistic badge update and only needs success/failure.
- */
+/** Locked increment plus a narrow authoritative count for both cart badges. */
 export async function quickAddToCartAction(variantId: string, quantity = 1) {
   return runAction(async () => {
     const user = await requireUserBasic();
     await cart.quickAddItem(user.id, variantId, quantity);
-    return { ok: true };
+    revalidatePath("/cart");
+    revalidatePath("/(storefront)", "layout");
+    const count = await cart.getCartCount(user.id);
+    return { count };
   });
 }
 
 export async function updateCartItemAction(itemId: string, quantity: number) {
   return runAction(async () => {
     const user = await requireUser();
-    return cart.updateItem(user.id, itemId, quantity);
+    const view = await cart.updateItem(user.id, itemId, quantity);
+    revalidatePath("/cart");
+    revalidatePath("/(storefront)", "layout");
+    return view;
   });
 }
 
 export async function removeCartItemAction(itemId: string) {
   return runAction(async () => {
     const user = await requireUser();
-    return cart.removeItem(user.id, itemId);
+    const view = await cart.removeItem(user.id, itemId);
+    revalidatePath("/cart");
+    revalidatePath("/(storefront)", "layout");
+    return view;
   });
 }

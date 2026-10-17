@@ -2,9 +2,12 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { signSession, verifySession } from "@/lib/auth/jwt";
+import { signSession, verifySessionClaims } from "@/lib/auth/jwt";
+import { activeSessionWhere, revokeSession, assertSessionRevocationAccess } from "./session-state";
 import { HttpError } from "@/lib/response";
 import { ADMIN_ROLES, type PermissionKey } from "@/lib/auth/permissions";
+
+const verifyRevocationAccess = cache(assertSessionRevocationAccess);
 
 const COOKIE = process.env.AUTH_COOKIE_NAME ?? "gh_session";
 
@@ -26,8 +29,12 @@ export interface AuthUser extends AuthUserBasic {
   cartCount: number;
 }
 
-export async function createSession(userId: string, email: string) {
-  const token = await signSession({ sub: userId, email });
+export async function createSession(userId: string, email: string, expectedVersion: number) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId, isActive: true, sessionVersion: expectedVersion }, select: { sessionVersion: true },
+  });
+  if (!user) throw new HttpError("Sesi tidak valid", 401);
+  const token = await signSession({ sub: userId, email, version: user.sessionVersion });
   const cookieStore = await cookies();
   cookieStore.set(COOKIE, token, {
     httpOnly: true,
@@ -40,7 +47,14 @@ export async function createSession(userId: string, email: string) {
 
 export async function destroySession() {
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
+  try {
+    const token = cookieStore.get(COOKIE)?.value;
+    const claims = token ? await verifySessionClaims(token) : null;
+    if (claims) await revokeSession(claims);
+  } finally {
+    // Delete locally even if the DB fails, but propagate failure to the caller.
+    cookieStore.set(COOKIE, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
+  }
 }
 
 export const getCurrentUserBasic = cache(async (): Promise<AuthUserBasic | null> => {
@@ -48,11 +62,13 @@ export const getCurrentUserBasic = cache(async (): Promise<AuthUserBasic | null>
   const token = cookieStore.get(COOKIE)?.value;
   if (!token) return null;
 
-  const payload = await verifySession(token);
+  const payload = await verifySessionClaims(token);
   if (!payload) return null;
 
+  await verifyRevocationAccess();
+
   const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
+    where: activeSessionWhere(payload),
     select: {
       id: true,
       name: true,
@@ -83,11 +99,13 @@ export const getStorefrontUserContext = cache(
     const token = cookieStore.get(COOKIE)?.value;
     if (!token) return null;
 
-    const payload = await verifySession(token);
+    const payload = await verifySessionClaims(token);
     if (!payload) return null;
 
+  await verifyRevocationAccess();
+
     const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: activeSessionWhere(payload),
       select: {
         id: true,
         name: true,
@@ -122,11 +140,13 @@ export const getCurrentUser = cache(async (includeCart = true): Promise<AuthUser
   const token = cookieStore.get(COOKIE)?.value;
   if (!token) return null;
 
-  const payload = await verifySession(token);
+  const payload = await verifySessionClaims(token);
   if (!payload) return null;
 
+  await verifyRevocationAccess();
+
   const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
+    where: activeSessionWhere(payload),
     select: {
       id: true,
       name: true,

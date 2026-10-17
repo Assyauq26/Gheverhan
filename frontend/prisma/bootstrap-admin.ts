@@ -1,7 +1,10 @@
+import { assertSafeDatabaseOperation } from "../scripts/assert-safe-db-operation.mjs";
 // Idempotent production bootstrap for the single-seller Admin / Seller account.
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+// Guard direct tsx and prisma db seed before client construction.
+assertSafeDatabaseOperation();
 const prisma = new PrismaClient();
 
 const PERMISSIONS = [
@@ -105,8 +108,8 @@ async function main() {
 }
 
 main()
-  .catch((error) => {
-    console.error("Admin bootstrap failed:", error);
+  .catch(() => {
+    console.error("[database-safety] Admin bootstrap failed. Verify configuration without exposing credentials.");
     process.exitCode = 1;
   })
   .finally(async () => {

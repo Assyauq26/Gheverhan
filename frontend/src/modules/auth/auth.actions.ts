@@ -33,7 +33,7 @@ export async function registerAction(_prev: unknown, formData: FormData) {
 
   const res = await runAction(async () => {
     const user = await registerCustomer(parsed.data);
-    await createSession(user.id, user.email);
+    await createSession(user.id, user.email, user.sessionVersion);
     return user;
   });
   if (!res.ok) return res;
@@ -62,7 +62,7 @@ export async function loginAction(_prev: unknown, formData: FormData) {
   if (!parsed.success) return { ok: false, error: parsed.error.errors[0].message };
   const res = await runAction(async () => {
     const user = await authenticate(parsed.data.identifier, parsed.data.password);
-    await createSession(user.id, user.email);
+    await createSession(user.id, user.email, user.sessionVersion);
     return user;
   });
   if (!res.ok) return res;
@@ -79,7 +79,8 @@ export async function forgotPasswordAction(_prev: unknown, formData: FormData) {
   if (!z.string().email().safeParse(email).success) {
     return { ok: false, error: "Email tidak valid" };
   }
-  await requestPasswordReset(email);
+  const res = await runAction(() => requestPasswordReset(email));
+  if (!res.ok) return res;
   return { ok: true, message: "Jika email terdaftar, tautan reset telah dikirim." };
 }
 

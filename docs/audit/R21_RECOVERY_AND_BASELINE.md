@@ -16,3 +16,5 @@ Tanggal 17 Oktober 2026 UTC. Status awal **NOT READY**. Keputusan pemilik: tidak
 Bukti aman metadata PR berada pada scratch R21; laporan akhir merujuk hasil per-SHA final. Tidak membaca dump PostgreSQL tracked (#39), secret values, customer rows, atau mengubah konfigurasi live.
 
 Recheck sebelum freeze: default branch GitHub main; ruleset aktif hanya unit-tests required dan0 approval, integration/browser belum mandatory. Kedua workflow #63 tetap historis SUCCESS; check aktual #64 dicatat di metadata recovery, bukan dipakai untuk qualification R21.
+
+Review lanjutan PR #61 menemukan P1 rate-limit lintas-environment yang masih berlaku pada kandidat dcdf77f. Temuan direproduksi lokal, kandidat dihentikan, lalu namespace global/identitas dan pemeriksaan privilege DELETE ditambahkan. Hasil parsial dcdf77f disimpan sebagai upaya yang superseded; source dan bukti SHA itu tidak diklaim sebagai kandidat akhir.

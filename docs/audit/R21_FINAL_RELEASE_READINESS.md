@@ -37,3 +37,7 @@ Tidak menggunakan green CI R20 sebagai bukti source R21. Full audit tetap exit1 
 Review source/Draft serta advisory mitigation; konfirmasi metadata non-rahasia target; tunjuk operator/backup recipient/finance verifier dan setujui RPO/RTO/window. Setelah paket konkret disetujui: konfigurasi dan deployment production tertutup, backup aman, migrasi auth, invalidasi sesi legacy, deployment aktif, scoped smoke/monitoring dan tindakan recovery/invalidation bila dibutuhkan. Semua adalah langkah masa depan; tidak ada approval diasumsikan dari instruksi mempersiapkan release.
 
 Rincian prosedur: R21_CONTROLLED_RELEASE_RUNBOOK.md. Database/recovery: R21_PRODUCTION_DATABASE_READINESS.md. Infrastruktur: R21_INFRASTRUCTURE_CONFIGURATION.md. Security/advisory: R21_SECURITY_HARDENING.md. Tidak ada project staging/server/layanan berbayar baru, real email/gateway, atau perubahan layanan live.
+
+## Kandidat pengganti setelah review P1
+
+Kualifikasi dcdf77f dihentikan dan hasil parsialnya diarsipkan, bukan bukti final. P1 kuota Preview menghabiskan kuota Production telah direproduksi lalu diperbaiki dengan namespace environment pada kedua bucket. Preflight hak DELETE juga diperketat. Kandidat baru wajib mengulang seluruh gate, dengan 233 unit, 25 containment, 9 mitigation dan 103 PostgreSQL (termasuk 12 auth dan 6 preflight), browser, recovery dan navigasi 10×44. Hasil final per-SHA dicatat dalam PR dan artifact lokal, bukan diwariskan dari SHA lama. Status tetap NOT READY sampai seluruh blocker production dan penerimaan risiko pemilik terpenuhi.

@@ -56,7 +56,7 @@ async function main() {
         (SELECT count(*)=5 AND bool_and(i.indisvalid AND i.indisready) FROM pg_catalog.pg_index i WHERE i.indrelid IN (to_regclass('public."SessionRevocation"'),to_regclass('public."AuthRateLimit"'))) AS indexes,
         (SELECT count(*)=1 AND bool_and(confdeltype='c' AND confupdtype='c' AND confrelid=to_regclass('public."User"')) FROM pg_catalog.pg_constraint WHERE conrelid=to_regclass('public."SessionRevocation"') AND contype='f') AS "foreignKey",
         (SELECT count(*)=2 AND bool_and(c.relrowsecurity AND NOT pg_catalog.row_security_active(c.oid)
-          AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE'))
+          AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
           FROM pg_catalog.pg_class c WHERE c.oid IN (to_regclass('public."SessionRevocation"'),to_regclass('public."AuthRateLimit"'))) AS trusted`;
             const settings = await tx.$queryRaw<{
                 role: string;

@@ -31,3 +31,13 @@ Residual: register409 dan reset provider-failure enumeration, limiter fixed-wind
 Server API/Action wrappers juga tidak lagi mencetak exception mentah. Log mempertahankan kelas error/kode yang diizinkan dan menghilangkan message/stack/cause/argumen SQL. Regresi menguji nilai sensitif, nama/kode tidak tepercaya, primitive, dan getter yang melempar. Tidak mengubah handler error browser/hydration.
 
 Profil maintenance dan read-only preflight menambah kontrol cutover tanpa staging. Main production lama menerbitkan JWT tanpa version; invalidasi legacy0→1 sebelum issuance R21 diuji lokal sebagai rencana yang menunggu approval, bukan perubahan live. Restore setelah token version1 pernah diterbitkan memerlukan strategi invalidasi lain yang aman; jangan menganggap increment+1 cukup.
+
+## P1: isolasi kuota autentikasi antar-environment
+
+Review bot PR #61 diverifikasi secara independen pada PostgreSQL disposable: tiga reset Preview memblokir identitas Production, dan 30 permintaan Preview menghabiskan kuota global Production. Bukti reproduksi sebelum patch: `evidence/r21/rate-limit-cross-environment-before.json`, source dcdf77f. Tidak ada email nyata atau database shared yang digunakan.
+
+`auth/rate-limit.ts` kini memberi namespace `auth:<realm>` pada bucket global dan hash identitas. Realm berasal hanya dari metadata server VERCEL_ENV/Netlify CONTEXT, stabil antar-instance dan SHA; metadata invalid/konflik ditolak 503 sebelum SQL. Tidak berasal dari request. Standalone production dan pengujian lokal mempunyai realm tersendiri. Preview tidak lagi menghabiskan kuota Production. Unit 3/3, PostgreSQL auth 12/12, preflight 6/6 dan TypeScript PASS sebelum pembekuan kandidat baru; seluruh gate diulang pada SHA baru.
+
+Perubahan key menyebabkan satu kali reset budget rate-limit saat rollout; bucket lama tetap kedaluwarsa sesuai retensi. Tidak mengubah token atau schema. Namespace bukan batas keamanan database/compute: kode Preview dengan credential database yang sama masih berisiko mengubah data langsung. Semua deployment penulis lama harus dihentikan/dilindungi saat cutover; rollback ke limiter tanpa namespace akan mengembalikan risiko P1.
+
+Preflight juga mewajibkan DELETE pada kedua tabel kontrol karena cleanup limiter menghapus revocation/counter kedaluwarsa. Uji role dengan SELECT/INSERT/UPDATE tanpa DELETE kini ditolak; setelah DELETE pada kedua tabel diberikan, preflight lulus. Tidak ada hak production yang diubah.

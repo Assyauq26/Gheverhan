@@ -129,6 +129,14 @@ test('trusted role needs every required privilege, not only SELECT', async () =>
         assert.equal(r.status, 1);
         assert.equal(r.data.ledgerMatches, true);
         assert.equal(r.data.schema.trusted, false);
+        await db.$executeRawUnsafe(`GRANT INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO "${role}"`);
+        const noCleanup = run(limited.toString());
+        assert.equal(noCleanup.status, 1);
+        assert.equal(noCleanup.data.schema.trusted, false);
+        await db.$executeRawUnsafe(`GRANT DELETE ON "AuthRateLimit", "SessionRevocation" TO "${role}"`);
+        const complete = run(limited.toString());
+        assert.equal(complete.status, 0);
+        assert.equal(complete.data.schema.trusted, true);
     }
     finally {
         await db.$executeRawUnsafe(`DROP OWNED BY "${role}"`);

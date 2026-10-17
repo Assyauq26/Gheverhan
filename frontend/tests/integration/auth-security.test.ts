@@ -180,3 +180,26 @@ test("controlled cutover can invalidate legacy version-zero JWTs once before ope
   assert.equal((await db.user.updateMany({where:{id:user.id,sessionVersion:0},data:{sessionVersion:1}})).count,0);
   assert.equal(await accepted(await jwt.signSession({sub:user.id,email:user.email,version:1})),true);
 });
+
+test("Preview cannot exhaust Production identity or global authentication quotas", async () => {
+  const previous={VERCEL_ENV:process.env.VERCEL_ENV,NETLIFY:process.env.NETLIFY,CONTEXT:process.env.CONTEXT};
+  const realNow=Date.now;const fixed=Math.floor(realNow()/60000)*60000+30000;
+  Date.now=()=>fixed;delete process.env.NETLIFY;delete process.env.CONTEXT;
+  try {
+    const identifier=`realm-${prefix}@example.test`;
+    process.env.VERCEL_ENV='preview';
+    for(let i=0;i<3;i++)await limits.enforceAuthRateLimit('reset',identifier);
+    process.env.VERCEL_ENV='production';await limits.enforceAuthRateLimit('reset',identifier);
+    process.env.VERCEL_ENV='preview';await assert.rejects(limits.enforceAuthRateLimit('reset',identifier),{status:429});
+    for(let i=0;i<30;i++)await limits.enforceAuthRateLimit('register',`${i}-realm-${prefix}@example.test`);
+    process.env.VERCEL_ENV='production';await limits.enforceAuthRateLimit('register',`prod-realm-${prefix}@example.test`);
+    const minute=Math.floor(fixed/60000);
+    assert.equal((await db.authRateLimit.findUniqueOrThrow({where:{bucket:`auth:preview:register:global:${minute}`}})).attempts,30);
+    assert.equal((await db.authRateLimit.findUniqueOrThrow({where:{bucket:`auth:production:register:global:${minute}`}})).attempts,1);
+    process.env.VERCEL_ENV='preview';await assert.rejects(limits.enforceAuthRateLimit('register',`excess-realm-${prefix}@example.test`),{status:429});
+  } finally {
+    Date.now=realNow;
+    for(const [key,value] of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value;}
+    await db.authRateLimit.deleteMany({where:{OR:['preview','production'].flatMap(realm=>['reset','register'].map(operation=>({bucket:{startsWith:`auth:${realm}:${operation}:`}})))}});
+  }
+});

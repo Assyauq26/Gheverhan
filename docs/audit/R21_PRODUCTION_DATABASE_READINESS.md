@@ -28,7 +28,7 @@ PG17.11 lokal: cluster55436 untuk fresh/application,55437 untuk upgrade lima→e
 - Default version0, RLS kedua tabel, lima indeks valid dan FK cascade diverifikasi.
 - Backup security mempertahankan version2 dan revocation. Drill tambahan streaming custom pg_dump ke CMS AES-256-GCM/RSA3072 dummy, tamper rejection, decrypt dan restore ke cluster lain PASS.
 - Setelah restore:11 auth +27 transaksi PASS, termasuk replay JWT yang dicabut tetap ditolak sebelum/sesudah backup. File private/key/dump dummy dihapus; tidak diunggah ke repo/CI.
-- `release:preflight` read-only diuji terhadap schema6, schema5, ledger ambigu/duplikat, konfigurasi kurang, remote identity tak terverifikasi dan role SELECT-only. Tidak membuat objek saat pemeriksaan. Ledger memeriksa checksum/nama unik/finished/recovery history; schema memeriksa default/tipe, RLS, indeks/FK dan privilege SELECT+INSERT+UPDATE satu per satu.
+- `release:preflight` read-only diuji terhadap schema6, schema5, ledger ambigu/duplikat, konfigurasi kurang, remote identity tak terverifikasi dan role SELECT-only. Tidak membuat objek saat pemeriksaan. Ledger memeriksa checksum/nama unik/finished/recovery history; schema memeriksa default/tipe, RLS, indeks/FK dan privilege SELECT+INSERT+UPDATE+DELETE satu per satu.
 
 Bukti sintetis disimpan pada `evidence/r21` dan hasil per-SHA final di CI/Draft serta `/workspace/scratch/r21/FINAL_RESULTS.md`. Hasil prequalification bukan pengganti final SHA.
 
@@ -64,3 +64,5 @@ Restore snapshot sebelum logout/reset dapat menghidupkan JWT, reset link, accoun
 Restore setelah transaksi finansial berlangsung juga memerlukan rekonsiliasi bank/proof/fulfillment/inventory/voucher/refund; jangan replay approval atau release stok secara buta. Ketidakpastian menghentikan fulfillment/traffic, bukan diatasi dengan menghapus catatan. Bila backup diambil setelah freeze/drain dan tidak ada business/auth write selanjutnya, recovery maintenance window jauh lebih terbatas; operator harus membuktikan kondisi itu.
 
 Setelah migrasi/recovery: ledger/checksum, objek/role/RLS/index/FK/default, session revocation/reset, pool/locks, idempotency dan stock/payment invariants diverifikasi sebelum membuka traffic. Backup nyata, storage coverage, role/identity, maintenance window dan eksekusi production membutuhkan persetujuan eksplisit.
+
+Setelah perbaikan namespace rate-limit, suite auth bertambah menjadi12 kasus. Restore drill final akan menjalankan12 auth +27 transaksi pada SHA baru; hasil11+27 di atas merupakan bukti awal, bukan gate final. Namespace tidak membutuhkan migration tambahan. Cleanup counter/revocation membutuhkan DELETE; role tanpa hak tersebut gagal preflight.

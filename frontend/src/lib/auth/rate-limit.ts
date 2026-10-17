@@ -10,6 +10,26 @@ const policies = {
   reset: { perIdentity: 3, windowMs: 60 * 60_000, global: 30 },
 } as const;
 
+/** Server deployment metadata only; never derive a quota realm from a request. */
+export function authRateLimitRealm(env: Record<string, string | undefined> = process.env) {
+  let realm: string | undefined;
+  if (env.VERCEL_ENV) {
+    if (!["production", "preview", "development"].includes(env.VERCEL_ENV)) {
+      throw new HttpError("Konfigurasi pembatas autentikasi tidak valid", 503);
+    }
+    realm = env.VERCEL_ENV;
+  }
+  if (env.NETLIFY === "true") {
+    const contexts = new Map([
+      ["production", "production"], ["deploy-preview", "preview"], ["branch-deploy", "preview"], ["dev", "development"],
+    ]);
+    const context = contexts.get(env.CONTEXT || "");
+    if (!context || (realm && realm !== context)) throw new HttpError("Konfigurasi pembatas autentikasi tidak valid", 503);
+    realm = context;
+  }
+  return realm || (env.GHEVERHAN_ISOLATED_TESTS === "1" ? "isolated-tests" : env.NODE_ENV === "development" ? "development" : "production");
+}
+
 /** Atomic PostgreSQL counter, shared by serverless instances. No raw identity/IP stored. */
 export async function consumeAuthBucket(bucket: string, limit: number, expiresAt: Date) {
   const rows = await prisma.$queryRaw<{ attempts: number }[]>`
@@ -22,10 +42,11 @@ export async function consumeAuthBucket(bucket: string, limit: number, expiresAt
 }
 
 export async function enforceAuthRateLimit(operation: AuthOperation, identifier: string) {
+  const namespace = `auth:${authRateLimitRealm()}`;
   const now = Date.now();
   const policy = policies[operation];
   const minute = Math.floor(now / 60_000);
-  const count = await consumeAuthBucket(`${operation}:global:${minute}`, policy.global, new Date((minute + 1) * 60_000));
+  const count = await consumeAuthBucket(`${namespace}:${operation}:global:${minute}`, policy.global, new Date((minute + 1) * 60_000));
   if (count === 1) {
     // Indexed, opportunistic retention cleanup. A DB error must fail closed.
     await prisma.authRateLimit.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
@@ -33,5 +54,5 @@ export async function enforceAuthRateLimit(operation: AuthOperation, identifier:
   }
   const identity = createHash("sha256").update(identifier.toLowerCase().trim()).digest("hex");
   const window = Math.floor(now / policy.windowMs);
-  await consumeAuthBucket(`${operation}:${identity}:${window}`, policy.perIdentity, new Date((window + 1) * policy.windowMs));
+  await consumeAuthBucket(`${namespace}:${operation}:${identity}:${window}`, policy.perIdentity, new Date((window + 1) * policy.windowMs));
 }

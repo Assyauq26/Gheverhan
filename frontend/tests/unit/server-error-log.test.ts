@@ -10,7 +10,7 @@ it('keeps diagnostic codes while excluding message, stack, cause and arbitrary f
 });
 it('does not turn attacker-controlled error names or codes into log fields', () => {
   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-  logServerFailure('action-error', { name: 'secret@example.test', code: 'secret-token', body: 'secret' });
+  logServerFailure('action-error', { name: 'secret@example.test', code: 'ERR_PRIVATE_SECRET', body: 'secret' });
   expect(log).toHaveBeenCalledWith('[action-error]', { type: 'Error' });
 });
 it('handles primitive errors and throwing getters without breaking failure handling', () => {

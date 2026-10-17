@@ -32,5 +32,24 @@ Diagnosis tetap pada #58; setelah dua akar runtime terbukti, satu branch fix
 merge/deploy production. Eksperimen detached hanya lokal: minimal streamed Link
 `4db8bdd`, shell besar `fc5fa95`, minimal tanpa bisnis `3bb4e36`, prefetch off
 `b932e44`, serta aplikasi dengan backport ping pertama `4c92ec1`.
-Eksperimen tidak digabung ke source aplikasi final; kode final hanya backport
+Eksperimen tidak digabung ke source aplikasi final; kode P0 hanya backport
 upstream terverifikasi, regresi, matriks, dan koreksi minimum lebar input tablet.
+Setelah gate P0 10/10, tindak lanjut P1 mengintegrasikan #37/#38 dan kontrol sesi
+serta limiter atomik; cakupan final dijelaskan di laporan security dan PR #61.
+
+
+## Pemeriksaan akses aktual dan referensi hasil akhir
+
+Production HTTPS200; exact Preview lama `gheverhan-j810hetwu-syauqi3.vercel.app`
+dan branch Preview #58 `gheverhan-git-test-remediation-r18-hydration-fai-ca4477-syauqi3.vercel.app`
+HTTPS200 dengan trust TLS aktif. Ini bukan bukti deploy SHA akhir #61.
+Domain plural `results-receiver.actions.githubusercontent.com` reachable (HTTP404
+pada root); download log GitHub berhasil, download storage artifact lama tetap403.
+Effective branch protection/workflow permissions GitHub403; Vercel project API
+pada koneksi Syauqi yang dipilih forbidden/auth error. Tidak mencoba akun lain,
+provider write, atau bypass. Pinned Chromium berhasil diunduh dari sumber resmi.
+
+Satu PR perbaikan [#61](https://github.com/Assyauq26/Gheverhan/pull/61) melanjutkan
+#58 dan mempertahankan seluruh commit; semua eksperimen dan WIP diagnosis tetap
+tersimpan lokal. Bukti baru berada di scratch persisten dan subset sintetis di
+`docs/audit/evidence/r19`. Tidak menyatakan artefak /tmp awal yang hilang tersedia.

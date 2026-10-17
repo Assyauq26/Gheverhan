@@ -20,7 +20,25 @@ juga dibuat saat gate gagal dan disimpan dalam artifact GitHub Actions.
 CI memakai executable Chromium hasil instalasi Playwright yang dipin, bukan
 berasumsi browser sistem sama. Bukti final berada pada artifact
 `navigation-diagnostics-<run_id>-<attempt>` dan check PR; matrix di dalam artifact
-adalah sumber hasil per-SHA. Hasil lokal kualifikasi dicatat setelah selesai.
+adalah sumber hasil per-SHA. Hasil gate akhir dicatat dengan SHA persis pada deskripsi PR #61 dan artifact/check terkait.
+Dokumen ini dibekukan sebelum gate agar penulisan hasil tidak mengubah SHA yang diuji.
+
+## Kualifikasi P0 yang selesai
+
+**10/10 PASS, 360/360 checkpoint**, SHA `4f057e4db7c167368ad47cd8ba1b56fb16739f52`,
+Node22.22.0, pinned Chromium153.0.8010.12, production build identik, tanpa probe.
+[Tabel sepuluh run](evidence/r19/QUALIFICATION_MATRIX.md) dan
+[JSON matriks + bukti tiap run](evidence/r19/qualification-matrix.json) tersimpan di repo.
+Kelompok ini dilakukan sebelum perubahan P1; **bukan gate SHA akhir PR**.
+
+## Gate akhir source gabungan
+
+CI checkout persis `pull_request.head.sha`; workflow mengulang sepuluh full run,
+berhenti pada kegagalan pertama, dan menulis matriks meskipun run parsial gagal.
+Generator memeriksa 9 checkpoint per viewport selain total 36. JSON/Markdown sintetis
+disimpan 7 hari; ringkasan hasil akhir dan SHA juga berada di deskripsi PR #61 agar
+status tetap dapat direview setelah artifact kedaluwarsa. Unduhan storage artifact lama
+masih 403; matriks dicetak ke log untuk menyediakan bukti lewat jalur log yang tersedia.
 
 ## Kelompok sebelum gate
 

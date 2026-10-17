@@ -50,3 +50,14 @@ Risiko tersisa: backport hanya menargetkan production App Router runtime yang
 checksum-nya diverifikasi. Upgrade Next harus menghapus atau memvalidasi ulang
 backport; development renderer tidak dinyatakan telah diperbaiki oleh loader ini.
 Semua eksperimen berada di worktree terpisah; build release tidak memuat probe.
+
+
+## Referensi fix dan validasi
+
+PR: [#61](https://github.com/Assyauq26/Gheverhan/pull/61). Commit kedua backport:
+`4f057e4db7c167368ad47cd8ba1b56fb16739f52`; kualifikasi 10/10 ×36 PASS pada commit
+tersebut. Pembaruan kompatibel Next15.5.28 tetap membawa source renderer yang identik
+(checksum guard lulus build). Gate source akhir setelah P1 wajib dipisahkan dan
+hasil per-SHA dirujuk melalui deskripsi PR/check, sesuai `R19_STABILITY_MATRIX.md`.
+Build/typecheck/lint dan regresi runtime lulus. Risiko maintenance backport tetap
+memerlukan review ketika dependency Next berubah; development renderer tidak tercakup.

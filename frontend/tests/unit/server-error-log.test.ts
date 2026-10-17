@@ -17,5 +17,8 @@ it('handles primitive errors and throwing getters without breaking failure handl
   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   logServerFailure('api-error', 'private token');
   logServerFailure('api-error', { get name() { throw new Error('private'); } });
-  expect(log.mock.calls).toEqual([['[api-error]',{ type:'Error' }],['[api-error]',{ type:'Error' }]]);
+  let names = 0, codes = 0;
+  logServerFailure('api-error', { get name() { return ++names === 1 ? 'Error' : 'private'; }, get code() { return ++codes === 1 ? 'P2002' : 'private'; } });
+  expect(names).toBe(1); expect(codes).toBe(1);
+  expect(log.mock.calls).toEqual([['[api-error]',{ type:'Error' }],['[api-error]',{ type:'Error' }],['[api-error]',{ type:'Error', code:'P2002' }]]);
 });

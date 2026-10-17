@@ -13,8 +13,10 @@ export function logServerFailure(context: 'api-error' | 'action-error', error: u
   try {
     if (error && typeof error === 'object') {
       const candidate = error as { name?: unknown; code?: unknown };
-      if (typeof candidate.name === 'string' && errorNames.has(candidate.name)) type = candidate.name;
-      if (typeof candidate.code === 'string' && (/^P\d{4}$/.test(candidate.code) || nodeCodes.has(candidate.code))) code = candidate.code;
+      const name = candidate.name;
+      if (typeof name === 'string' && errorNames.has(name)) type = name;
+      const candidateCode = candidate.code;
+      if (typeof candidateCode === 'string' && (/^P\d{4}$/.test(candidateCode) || nodeCodes.has(candidateCode))) code = candidateCode;
     }
   } catch { /* An exception with hostile getters still receives a generic event. */ }
   console.error(`[${context}]`, { type, ...(code ? { code } : {}) });

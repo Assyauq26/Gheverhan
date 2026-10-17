@@ -40,11 +40,15 @@ describe("admin visual navigation: permission and route invariants", () => {
     expect(screen.getByText("Lainnya")).not.toBeNull();
     expect(screen.queryByRole("link", { name: "Laporan" })).toBeNull();
   });
-  it("avoids stacking the contextual menu over the compact mobile home dashboard", () => {
-    const view = render(React.createElement(AdminNav, { permissions: full, variant: "compact" }));
-    expect(view.container.querySelector("nav")).toBeNull();
+  it("retains permission-filtered sidebar and mobile bottom navigation on product routes", () => {
     route.pathname = "/admin/products";
-    view.rerender(React.createElement(AdminNav, { permissions: full, variant: "compact" }));
-    expect(view.container.querySelector('nav[aria-label="Navigasi admin"]')).not.toBeNull();
+    const sidebar = render(React.createElement(AdminNav, { permissions: full }));
+    expect(sidebar.container.querySelectorAll('nav[aria-label="Navigasi admin"]')).toHaveLength(1);
+    expect(screen.getByTestId("adminnav-produk").getAttribute("aria-current")).toBe("page");
+    expect(sidebar.container.querySelector("nav")?.className).not.toContain("overflow-x-auto");
+    sidebar.unmount();
+    render(React.createElement(AdminMobileBottomNav, { permissions: full }));
+    expect(screen.getByTestId("adminnav-produk").getAttribute("aria-current")).toBe("page");
+    expect(screen.getByText("Lainnya")).not.toBeNull();
   });
 });

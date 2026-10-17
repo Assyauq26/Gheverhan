@@ -1,5 +1,6 @@
 // Netlify ignore: exit0 skips; exit1 proceeds. No credential inspection.
 const branches = new Set([
+  'fix/r21-production-hardening',
   'integration/r20-release-hardening-cart-sync',
   'security/r20-test-toolchain-upgrades',
 ]);

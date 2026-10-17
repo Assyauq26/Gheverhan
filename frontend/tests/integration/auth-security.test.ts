@@ -130,6 +130,7 @@ test("new security tables deny reads and writes to a role with no RLS policy", a
     await db.$executeRaw(Prisma.sql`GRANT SELECT, INSERT ON "AuthRateLimit", "SessionRevocation" TO ${identifier}`);
     await db.$transaction(async tx => {
       await tx.$executeRaw(Prisma.sql`SET LOCAL ROLE ${identifier}`);
+      await assert.rejects(state.assertSessionRevocationAccess(tx), { status: 503 });
       assert.equal(await tx.authRateLimit.count(), 0);
       assert.equal(await tx.sessionRevocation.count(), 0);
     });
@@ -141,4 +142,9 @@ test("new security tables deny reads and writes to a role with no RLS policy", a
     await db.$executeRaw(Prisma.sql`DROP OWNED BY ${identifier}`);
     await db.$executeRaw(Prisma.sql`DROP ROLE ${identifier}`);
   }
+});
+
+
+test("trusted server role can inspect revocations while RLS remains enabled", async () => {
+  await state.assertSessionRevocationAccess(db);
 });

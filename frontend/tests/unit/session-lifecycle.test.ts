@@ -8,7 +8,7 @@ vi.mock("react", () => ({ cache: (fn: unknown) => fn }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => ({ value: "synthetic-session" }), set: mocks.set }) }));
 vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique: mocks.findUnique } } }));
 vi.mock("@/lib/auth/jwt", () => ({ verifySessionClaims: async () => mocks.claims, signSession: mocks.sign }));
-vi.mock("@/lib/auth/session-state", () => ({ activeSessionWhere: vi.fn(), revokeSession: mocks.revoke }));
+vi.mock("@/lib/auth/session-state", () => ({ activeSessionWhere: vi.fn(), assertSessionRevocationAccess: vi.fn(), revokeSession: mocks.revoke }));
 import { createSession, destroySession } from "@/lib/auth/session";
 beforeEach(() => { vi.clearAllMocks(); mocks.revoke.mockResolvedValue(undefined); mocks.findUnique.mockResolvedValue({ sessionVersion: 2 }); mocks.sign.mockResolvedValue("synthetic-new-session"); });
 describe("session lifecycle", () => {

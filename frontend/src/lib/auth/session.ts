@@ -3,9 +3,11 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signSession, verifySessionClaims } from "@/lib/auth/jwt";
-import { activeSessionWhere, revokeSession } from "./session-state";
+import { activeSessionWhere, revokeSession, assertSessionRevocationAccess } from "./session-state";
 import { HttpError } from "@/lib/response";
 import { ADMIN_ROLES, type PermissionKey } from "@/lib/auth/permissions";
+
+const verifyRevocationAccess = cache(assertSessionRevocationAccess);
 
 const COOKIE = process.env.AUTH_COOKIE_NAME ?? "gh_session";
 
@@ -63,6 +65,8 @@ export const getCurrentUserBasic = cache(async (): Promise<AuthUserBasic | null>
   const payload = await verifySessionClaims(token);
   if (!payload) return null;
 
+  await verifyRevocationAccess();
+
   const user = await prisma.user.findUnique({
     where: activeSessionWhere(payload),
     select: {
@@ -97,6 +101,8 @@ export const getStorefrontUserContext = cache(
 
     const payload = await verifySessionClaims(token);
     if (!payload) return null;
+
+  await verifyRevocationAccess();
 
     const user = await prisma.user.findUnique({
       where: activeSessionWhere(payload),
@@ -136,6 +142,8 @@ export const getCurrentUser = cache(async (includeCart = true): Promise<AuthUser
 
   const payload = await verifySessionClaims(token);
   if (!payload) return null;
+
+  await verifyRevocationAccess();
 
   const user = await prisma.user.findUnique({
     where: activeSessionWhere(payload),

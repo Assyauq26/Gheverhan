@@ -45,7 +45,7 @@ function Metric({ label, value, description, href, tone, icon, testId }: {
  * Display an honest empty chart instead of invented daily order/sales figures. */
 function SalesPanel({ amount, count }: { amount: number; count: number }) {
   return (
-    <section className={`${panel} flex min-w-0 flex-col p-5 lg:p-6`} aria-label="Grafik penjualan">
+    <section id="dashboard-sales" className={`${panel} flex min-w-0 flex-col p-5 lg:p-6`} aria-label="Ringkasan penjualan">
       <div className="flex items-start justify-between gap-3">
         <div><h2 className="text-lg font-bold tracking-tight">Penjualan</h2><p className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">{formatIDR(amount)}</p><p className="mt-1 text-xs text-zinc-500">Dari {idNumber(count)} pesanan dengan pembayaran PAID · semua waktu</p></div>
         <span className="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-600">Semua waktu</span>
@@ -96,8 +96,8 @@ function StockOverview({ available, reserved, variants }: { available: number; r
   </section>;
 }
 
-function QuickAction({ href, label, icon, primary = false }: { href: string; label: string; icon: ReactNode; primary?: boolean }) {
-  return <Link href={href} prefetch={false} className={`flex min-h-[108px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-medium leading-snug transition hover:-translate-y-0.5 ${primary ? "bg-zinc-950 text-white shadow-lg hover:bg-zinc-800" : "bg-zinc-50 text-zinc-800 hover:bg-zinc-100"}`}>
+function QuickAction({ href, label, icon, primary = false, className = "" }: { href: string; label: string; icon: ReactNode; primary?: boolean; className?: string }) {
+  return <Link href={href} prefetch={false} className={`${className} flex min-h-[108px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-medium leading-snug transition hover:-translate-y-0.5 ${primary ? "bg-zinc-950 text-white shadow-lg hover:bg-zinc-800" : "bg-zinc-50 text-zinc-800 hover:bg-zinc-100"}`}>
     {icon}<span>{label}</span>
   </Link>;
 }
@@ -146,11 +146,12 @@ async function DashboardContent({ user }: { user: AuthUser }) {
       <div className="grid min-w-0 gap-4 xl:grid-cols-[1.3fr_1fr_0.75fr]">
         <section className={`${panel} min-w-0 p-4 sm:p-5`}>
           <h2 className="mb-4 text-lg font-bold">Aksi cepat</h2>
-          <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 xl:grid-cols-5">
             {canCreate && <QuickAction href="/admin/products/new" primary icon={<Plus size={28} strokeWidth={1.7}/>} label="Tambah Produk"/>}
             {has(PERMISSIONS.PRODUCT_READ) && <QuickAction href="/admin/products" icon={<Package size={27} strokeWidth={1.7}/>} label="Kelola Produk"/>}
             {canOrders && <QuickAction href="/admin/orders" icon={<ShoppingBag size={27} strokeWidth={1.7}/>} label="Kelola Pesanan"/>}
-            {canPromote && <QuickAction href="/admin/marketing" icon={<Tag size={27} strokeWidth={1.7}/>} label="Buat Promosi"/>}
+            {canPromote && <QuickAction href="/admin/marketing" icon={<Tag size={27} strokeWidth={1.7}/>} label="Buat Promosi" className="hidden xl:flex"/>}
+            {data.sales && <QuickAction href="/admin#dashboard-sales" icon={<BarChart3 size={27} strokeWidth={1.7}/>} label="Lihat Ringkasan"/>}
           </div>
         </section>
         {data.inventory && <div className="hidden xl:block"><StockOverview available={data.inventory.available} reserved={data.inventory.reserved} variants={data.inventory.variants}/></div>}

@@ -13,3 +13,14 @@ Tanggal: 17 Oktober 2026 (UTC). Status awal: **NOT READY**.
 - PR #59 dashboard/nav harus dipertahankan. Konflik potensial admin order detail #60/#61 wajib diselesaikan dengan mempertahankan review proof yang lewat deadline.
 
 Batas: seluruh mutation test hanya pada PostgreSQL loopback disposable. Main, production, shared Preview/Supabase, credential dan layanan live tidak diubah. Draft PR integrasi baru dibuat setelah hasil reviewable tersedia. Deployment staging tetap BLOCKED sampai database/JWT/storage/provider dummy yang terpisah dapat diverifikasi.
+
+
+## Perubahan kondisi saat eksekusi
+
+Review source di branch integrasi mempertahankan #59 dan menggabungkan #60/#61 tanpa history rewrite.
+Draft dependency #62 dibuat sebelum gangguan auth. Saat push integrasi, GitHub mengembalikan401
+Bad credentials; push gagal dan Draft integrasi belum terbentuk. Environment recheck revision31
+current/enforced, tanpa secret/outbound binding; ini bukan bukti credential GitHub siap. Tidak
+melakukan login interaktif, membaca nilai credential, mengganti key atau mencoba akun lain.
+Pekerjaan lokal tetap dilanjutkan. Publikasi/CI final menunggu pemulihan koneksi, bukan izin
+ulang untuk perubahan source yang telah diotorisasi.

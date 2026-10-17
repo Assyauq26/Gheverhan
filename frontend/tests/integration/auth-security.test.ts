@@ -77,6 +77,9 @@ test("password reset stores only a digest, atomically consumes once and revokes 
   assert.equal(await accepted(old), false);
   const updated = await db.user.findUniqueOrThrow({ where: { id: user.id } });
   assert.equal(updated.sessionVersion, 1);
+  const audits = await db.auditLog.findMany({ where: { userId: user.id, action: "auth.password.reset" } });
+  assert.equal(audits.length, 1);
+  assert.equal(audits[0].meta, null);
   assert.equal(await accepted(await jwt.signSession({ sub: user.id, email: user.email, version: updated.sessionVersion })), true);
   assert.equal((await auth.authenticate(user.email, "new-synthetic-password")).id, user.id);
 });
@@ -147,4 +150,22 @@ test("new security tables deny reads and writes to a role with no RLS policy", a
 
 test("trusted server role can inspect revocations while RLS remains enabled", async () => {
   await state.assertSessionRevocationAccess(db);
+});
+
+test("reset rolls back token consumption and session version when security audit persistence fails", async () => {
+  const user = await fixture();
+  await auth.requestPasswordReset(user.email);
+  const token = deliveredToken;
+  await db.$executeRawUnsafe(`CREATE FUNCTION r21_test_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit unavailable'; END $$`);
+  try {
+    await db.$executeRawUnsafe(`CREATE TRIGGER r21_test_audit_failure BEFORE INSERT ON "AuditLog" FOR EACH ROW WHEN (NEW.action = 'auth.password.reset') EXECUTE FUNCTION r21_test_audit_failure()`);
+    await assert.rejects(auth.resetPassword(token, "synthetic-new-password"));
+    assert.equal((await db.user.findUniqueOrThrow({where:{id:user.id}})).sessionVersion,0);
+    assert.equal((await db.passwordResetToken.findUniqueOrThrow({where:{token:createHash("sha256").update(token).digest("hex")}})).usedAt,null);
+  } finally {
+    await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS r21_test_audit_failure ON "AuditLog"`);
+    await db.$executeRawUnsafe(`DROP FUNCTION IF EXISTS r21_test_audit_failure()`);
+  }
+  await auth.resetPassword(token,"synthetic-new-password");
+  assert.equal((await db.user.findUniqueOrThrow({where:{id:user.id}})).sessionVersion,1);
 });

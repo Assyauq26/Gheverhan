@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signSession, verifySessionClaims } from "@/lib/auth/jwt";
 import { activeSessionWhere, revokeSession, assertSessionRevocationAccess } from "./session-state";
+import { writeAudit } from "@/modules/audit/audit.service";
 import { HttpError } from "@/lib/response";
 import { ADMIN_ROLES, type PermissionKey } from "@/lib/auth/permissions";
 
@@ -35,6 +36,7 @@ export async function createSession(userId: string, email: string, expectedVersi
   });
   if (!user) throw new HttpError("Sesi tidak valid", 401);
   const token = await signSession({ sub: userId, email, version: user.sessionVersion });
+  await writeAudit({ userId, action: "auth.session.created", entity: "User", entityId: userId });
   const cookieStore = await cookies();
   cookieStore.set(COOKIE, token, {
     httpOnly: true,
@@ -50,7 +52,11 @@ export async function destroySession() {
   try {
     const token = cookieStore.get(COOKIE)?.value;
     const claims = token ? await verifySessionClaims(token) : null;
-    if (claims) await revokeSession(claims);
+    if (claims) {
+      await revokeSession(claims);
+      // Revocation remains durable even if audit persistence subsequently fails.
+      await writeAudit({ userId: claims.sub, action: "auth.session.revoked", entity: "User", entityId: claims.sub });
+    }
   } finally {
     // Delete locally even if the DB fails, but propagate failure to the caller.
     cookieStore.set(COOKIE, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });

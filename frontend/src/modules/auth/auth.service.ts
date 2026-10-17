@@ -109,5 +109,6 @@ export async function resetPassword(token: string, newPassword: string) {
       where: { userId: record.userId, usedAt: null },
       data: { usedAt: new Date() },
     });
+    await writeAudit({ userId: record.userId, action: "auth.password.reset", entity: "User", entityId: record.userId }, tx);
   });
 }

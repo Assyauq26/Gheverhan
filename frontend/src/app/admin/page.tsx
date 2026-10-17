@@ -24,19 +24,19 @@ export default async function AdminDashboard() {
 const panel = "rounded-2xl border border-zinc-200/80 bg-white shadow-[0_3px_24px_rgba(18,18,18,0.025)]";
 const idNumber = (n: number) => new Intl.NumberFormat("id-ID").format(n);
 
-function Metric({ label, value, description, href, tone, icon, testId }: {
+function Metric({ label, value, description, href, tone, icon, testId, compactValue = false }: {
   label: string; value: string | number; description: ReactNode; href: string;
-  tone: string; icon: ReactNode; testId: string;
+  tone: string; icon: ReactNode; testId: string; compactValue?: boolean;
 }) {
   return (
     <Link href={href} prefetch={false} className={`${panel} group relative block min-w-0 px-4 py-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md sm:px-5 sm:py-5`}>
-      <div className="flex min-h-16 items-center gap-3 sm:min-h-11">
-        <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${tone}`}>{icon}</span>
-        <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-[11px] font-medium text-zinc-700 sm:text-sm">{label}</span>
-        <span className="ml-auto grid size-7 shrink-0 place-items-center rounded-full bg-zinc-50 text-zinc-500 transition group-hover:translate-x-0.5 group-hover:bg-zinc-100"><ChevronRight size={15}/></span>
+      <div className="flex min-h-14 items-center gap-2 pr-6 sm:min-h-12">
+        <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tone}`}>{icon}</span>
+        <span className="min-w-0 flex-1 break-words text-[11px] font-medium leading-tight text-zinc-700 sm:text-sm">{label}</span>
       </div>
-      <p data-testid={testId} className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] pl-[52px] text-[24px] font-bold leading-tight tracking-[-0.04em] text-zinc-950 sm:text-[29px]">{value}</p>
-      <p className="mt-2 min-w-0 break-words [overflow-wrap:anywhere] pl-[52px] text-[11px] leading-relaxed text-zinc-500 sm:text-xs">{description}</p>
+      <span className="absolute right-3 top-5 grid size-7 place-items-center rounded-full bg-zinc-50 text-zinc-500 transition group-hover:translate-x-0.5 group-hover:bg-zinc-100" aria-hidden="true"><ChevronRight size={15}/></span>
+      <p data-testid={testId} className={`mt-3 min-w-0 break-words font-bold leading-tight tracking-[-0.04em] text-zinc-950 ${compactValue ? "text-[clamp(18px,1.8vw,24px)]" : "text-[26px] sm:text-[29px]"}`}>{value}</p>
+      <p className="mt-2 min-w-0 break-words text-[11px] leading-relaxed text-zinc-500 sm:text-xs">{description}</p>
     </Link>
   );
 }
@@ -131,7 +131,7 @@ async function DashboardContent({ user }: { user: AuthUser }) {
           {data.products && <Metric label="Produk" value={idNumber(data.products.total)} description={<>{data.products.published} terbit · {data.products.drafts} draft · {data.products.archived} arsip</>} href="/admin/products" tone="bg-blue-50 text-blue-600" icon={<Package size={22}/>} testId="dashboard-products"/>}
           {data.inventory && <Metric label="Stok tersedia" value={idNumber(data.inventory.available)} description={<>{data.inventory.reserved} direservasi · {data.inventory.variants} varian</>} href="/admin/inventory" tone="bg-green-50 text-green-600" icon={<Boxes size={22}/>} testId="dashboard-stock"/>}
           {data.orders && <Metric label="Pesanan" value={idNumber(data.orders.total)} description={<>{data.orders.pending} menunggu pembayaran<br/>{data.orders.processing} diproses</>} href="/admin/orders" tone="bg-red-50 text-red-600" icon={<ShoppingBag size={22}/>} testId="dashboard-orders"/>}
-          {data.sales && <Metric label="Penjualan dibayar" value={formatIDR(data.sales.amount)} description={<>{data.sales.count} pesanan dengan pembayaran PAID</>} href="/admin/payments" tone="bg-violet-50 text-violet-700" icon={<Wallet size={22}/>} testId="dashboard-sales"/>}
+          {data.sales && <Metric label="Penjualan dibayar" value={formatIDR(data.sales.amount)} description={<>{data.sales.count} pesanan dengan pembayaran PAID</>} href="/admin/payments" tone="bg-violet-50 text-violet-700" icon={<Wallet size={22}/>} testId="dashboard-sales" compactValue/>}
         </div>
       </section>
 

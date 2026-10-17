@@ -230,7 +230,7 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PAID"); assert.equal(await db.orderStatusHistory.count({ where: { orderId: f.order.id, toStatus: "PAID" } }), 1); await invariant();
   });
   await t.test("two cancellations and sequential replay: exactly one release", async () => {
-    const f = await pending(); const results = await parallelOrder(f.order.id, [() => orders.transitionOrder(f.order.id, "CANCELLED", adminId), () => orders.transitionOrder(f.order.id, "CANCELLED", adminId)]);
+    const f = await pending(); await payments.rejectPayment(f.payment.id, adminId, "Bukti tidak cocok"); const results = await parallelOrder(f.order.id, [() => orders.transitionOrder(f.order.id, "CANCELLED", adminId), () => orders.transitionOrder(f.order.id, "CANCELLED", adminId)]);
     assert.equal(results.filter(r => r.status === "fulfilled").length, 2); await orders.transitionOrder(f.order.id, "CANCELLED", adminId);
     assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: f.payment.id } })).status, "EXPIRED"); await invariant();
   });
@@ -243,7 +243,7 @@ test("PostgreSQL transaction correctness", async t => {
   });
   await t.test("cancelled and expired orders cannot be approved or receive proofs", async () => {
     for (const status of ["CANCELLED", "EXPIRED"] as const) {
-      const f = await pending(); await orders.transitionOrder(f.order.id, status, adminId);
+      const f = await pending(); await payments.rejectPayment(f.payment.id, adminId, "Bukti tidak cocok"); await orders.transitionOrder(f.order.id, status, adminId);
       await assert.rejects(payments.approvePayment(f.payment.id, adminId), { status: 409 }); await assert.rejects(payments.submitConfirmation(f.b.id, f.order.id, proof), { status: 409 });
       assert.equal(await movements(f.p.variants[0].id, "SALE"), 0);
     } await invariant();
@@ -258,7 +258,7 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal(await movements(f.p.variants[0].id, "SALE"), 0); await invariant();
   });
   await t.test("a cancellation winner remains terminal for later approval", async () => {
-    const f = await pending(); await orders.transitionOrder(f.order.id, "CANCELLED", adminId);
+    const f = await pending(); await payments.rejectPayment(f.payment.id, adminId, "Bukti tidak cocok"); await orders.transitionOrder(f.order.id, "CANCELLED", adminId);
     await assert.rejects(payments.approvePayment(f.payment.id, adminId), { status: 409 });
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "CANCELLED");
     assert.equal(await movements(f.p.variants[0].id, "SALE"), 0); await invariant();
@@ -309,8 +309,8 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal((await db.paymentConfirmation.findFirstOrThrow({ where: { paymentId: f.payment.id } })).status, "SUBMITTED"); assert.equal(await movements(f.p.variants[0].id, "SALE"), 0); await invariant();
   });
   await t.test("cancel rollback restores reservation and lifecycle on DB failure", async () => {
-    const f = await pending(); await auditFailure(() => orders.transitionOrder(f.order.id, "CANCELLED", adminId));
-    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT"); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: f.payment.id } })).status, "WAITING_VERIFICATION"); assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0); await invariant();
+    const f = await pending(); await payments.rejectPayment(f.payment.id, adminId, "Bukti tidak cocok"); await auditFailure(() => orders.transitionOrder(f.order.id, "CANCELLED", adminId));
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT"); assert.equal((await db.payment.findUniqueOrThrow({ where: { id: f.payment.id } })).status, "REJECTED"); assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0); await invariant();
   });
   await t.test("reject/resubmit/approve and fulfillment preserve the existing happy path", async () => {
     const f = await pending(); await payments.rejectPayment(f.payment.id, adminId, "Upload again");
@@ -324,9 +324,32 @@ test("PostgreSQL transaction correctness", async t => {
     await orders.transitionOrder(f.order.id, "COMPLETED", adminId);
     assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "COMPLETED"); assert.equal(await movements(f.p.variants[0].id, "SALE"), 1); await invariant();
   });
-  await t.test("system expiry releases once and uses a valid nullable audit actor", async () => {
-    const f = await pending(); await db.order.update({ where: { id: f.order.id }, data: { expiresAt: new Date(0) } }); await assert.rejects(payments.approvePayment(f.payment.id, adminId), { status: 409 });
-    await orders.expireStaleOrders(); await orders.expireStaleOrders(); assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "EXPIRED"); assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1); await invariant();
+  await t.test("system expiry protects submitted proofs and releases after financial reconciliation", async () => {
+    const f = await pending();
+    const expiry = new Date(Date.now() - 60_000);
+    await db.paymentConfirmation.updateMany({ where: { paymentId: f.payment.id, status: "SUBMITTED" }, data: { createdAt: new Date(expiry.getTime() - 60_000) } });
+    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: expiry } });
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
+    assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0);
+    await payments.rejectPayment(f.payment.id, adminId, "Bukti transfer tidak cocok meskipun masuk sebelum tenggat");
+    await orders.expireStaleOrders(); await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "EXPIRED");
+    assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 1); await invariant();
+  });
+  await t.test("financial staff can approve proof submitted before expiry even if review is later", async () => {
+    const f = await pending();
+    const expiry = new Date(Date.now() - 60_000);
+    await db.paymentConfirmation.updateMany({ where: { paymentId: f.payment.id, status: "SUBMITTED" }, data: { createdAt: new Date(expiry.getTime() - 60_000) } });
+    await db.order.update({ where: { id: f.order.id }, data: { expiresAt: expiry } });
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PENDING_PAYMENT");
+    await payments.approvePayment(f.payment.id, adminId);
+    await orders.expireStaleOrders();
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.order.id } })).status, "PAID");
+    assert.equal(await movements(f.p.variants[0].id, "SALE"), 1);
+    assert.equal(await movements(f.p.variants[0].id, "RELEASE"), 0);
+    await invariant();
   });
   await t.test("adjustment versus reservation preserves the invariant under real row contention", async () => {
     const p = await product(); const row = await db.inventory.findUniqueOrThrow({ where: { variantId: p.variants[0].id } });

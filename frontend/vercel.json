@@ -5,5 +5,11 @@
       "path": "/api/internal/cron/expire-orders",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "integration/r20-release-hardening-cart-sync": false,
+      "security/r20-test-toolchain-upgrades": false
+    }
+  }
 }

@@ -1,5 +1,7 @@
 [build]
   base = "frontend"
+  # Skip unverified R20 Preview/branch deployments; leave main builds unchanged.
+  ignore = "node scripts/skip-unverified-r20-deploy.mjs"
   command = "npm run build"
   publish = ".next"
 

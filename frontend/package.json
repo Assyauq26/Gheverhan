@@ -65,10 +65,10 @@
     "eslint-config-next": "15.5.28",
     "jsdom": "25.0.1",
     "postcss": "8.5.23",
-    "tailwindcss": "3.4.14",
+    "tailwindcss": "3.4.19",
     "tsx": "4.23.15",
     "typescript": "5.6.3",
-    "vitest": "2.1.9",
+    "vitest": "4.1.11",
     "prisma": "5.22.0"
   },
   "overrides": {

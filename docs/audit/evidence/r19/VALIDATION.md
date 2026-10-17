@@ -13,7 +13,7 @@ Playwright1.63.0, pinned Chromium153.0.8010.12. DSN/cookie/bearer tidak disimpan
 | Hydration replay | PASS, zero errors | `node --import tsx tests/integration/react-hydration-replay.ts` |
 | Build/typecheck/lint/Prisma | PASS | scripts package.json; validate Prisma dengan target lokal |
 | Kualifikasi P0 lama | 10×36 PASS pada 4f057e4 | QUALIFICATION_MATRIX.md; tidak digabung ke gate final |
-| Gate HEAD akhir | Lihat SHA/matriks pada PR #61 | CI loop10 dan navigation-stability-matrix.mjs; satu kegagalan => FAILED |
+| Gate HEAD akhir setelah integrasi main #59 (44/run) | Lihat SHA/matriks pada PR #61 | CI loop10 dan navigation-stability-matrix.mjs; satu kegagalan => FAILED |
 
 Full audit tetap 2 Critical/8 High/5 Moderate; production-only 0 Critical/5 High/2 Moderate.
 Tidak ada tes keuangan, seed/reset/migrasi terhadap Supabase bersama atau production.

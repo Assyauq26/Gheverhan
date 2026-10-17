@@ -43,3 +43,17 @@ Cron auth diuji fail-closed dan proof preservation tetap dilindungi regression.
 PR sumber dipertahankan, tidak dibuat pengganti auth/cron yang duplikat.
 Tidak ada Supabase bersama yang dimigrasikan. Hasil gate akhir ada pada SHA persis
 PR #61 dan artifact CI; laporan ini tidak mencampur run source sebelum/sesudah P1.
+
+
+## Integrasi perubahan main yang baru terdeteksi
+
+Recheck sebelum gate akhir menemukan PR #59 sudah masuk main (`8e2a4f4`), sedangkan
+baseline awal R19 adalah `4f141dd`. R19 tidak menulis main. Source dashboard/nav/tests
+#59 dipertahankan melalui normal merge ke branch fix; konflik workflow diselesaikan
+dengan mempertahankan loop10, JSON gagal, dan screenshot dashboard sintetis #59.
+Skenario baru dijalankan pada empat viewport: final **44 checkpoint/run**, 11/viewport.
+Assertion KPI pada viewport tambahan 768/1024 mengikuti grid dua kolom sampai breakpoint
+xl1280; assertion asli 390 dan1360 tetap sama. Tidak mengurangi assertion asli mana pun.
+Gate awal `8fe5029` dihentikan karena basis berubah; hasilnya tidak digabung ke gate final.
+Hasil lint/type/build dan regresi source gabungan #59 harus diverifikasi ulang sebelum
+klaim final. SHA akhir dan hasil berada pada deskripsi/check PR #61.

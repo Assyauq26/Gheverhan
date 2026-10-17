@@ -133,6 +133,7 @@ jobs:
           name: navigation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             /tmp/gheverhan-navigation-*/navigation-results.json
+            /tmp/gheverhan-navigation-*/*-dashboard.png
             /tmp/react-hydration-replay-*/hydration-replay-results.json
             /tmp/gheverhan-stability-*/navigation-stability-matrix.*
           if-no-files-found: error

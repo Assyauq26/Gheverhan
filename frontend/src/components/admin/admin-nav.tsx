@@ -1,65 +1,107 @@
 "use client";
 
-import Link from "@/components/ui/navigation";
-import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import Link from "@/components/ui/navigation";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingBag,
-  CreditCard,
-  Truck,
-  Landmark,
-  Users,
-  ScrollText,
-  Megaphone,
+  Boxes, ChevronRight, CreditCard,
+  Landmark, LayoutGrid, Megaphone, Menu, Package, ScrollText,
+  ShoppingBag, Store, Truck, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 
-const items = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: null },
+const links = [
+  { href: "/admin", label: "Dashboard", icon: LayoutGrid, exact: true, permission: null },
   { href: "/admin/products", label: "Produk", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
-  { href: "/admin/categories", label: "Kategori", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
-  { href: "/admin/inventory", label: "Inventori", icon: Package, permission: PERMISSIONS.INVENTORY_READ },
-  { href: "/admin/marketing", label: "Marketing", icon: Megaphone, permission: PERMISSIONS.PROMOTION_UPDATE },
   { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag, permission: PERMISSIONS.ORDER_READ },
+  { href: "/admin/customers", label: "Pelanggan", icon: Users, permission: PERMISSIONS.CUSTOMER_READ },
+  { href: "/admin/marketing", label: "Marketing", display: "Promosi", icon: Megaphone, permission: PERMISSIONS.PROMOTION_UPDATE },
+  { href: "/admin/inventory", label: "Inventori", icon: Boxes, permission: PERMISSIONS.INVENTORY_READ },
+  { href: "/admin/categories", label: "Kategori", icon: LayoutGrid, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/payments", label: "Pembayaran", icon: CreditCard, permission: PERMISSIONS.PAYMENT_READ },
   { href: "/admin/shipping", label: "Pengiriman", icon: Truck, permission: PERMISSIONS.SHIPPING_READ },
   { href: "/admin/bank-accounts", label: "Rekening Bank", icon: Landmark, permission: PERMISSIONS.BANK_MANAGE },
-  { href: "/admin/customers", label: "Pelanggan", icon: Users, permission: PERMISSIONS.CUSTOMER_READ },
   { href: "/admin/audit", label: "Audit Log", icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
-];
+] as const;
+
+function allowed(permissions: string[], item: (typeof links)[number]) {
+  if (item.href === "/admin/marketing")
+    return permissions.includes(PERMISSIONS.PROMOTION_CREATE) || permissions.includes(PERMISSIONS.PROMOTION_UPDATE);
+  return !item.permission || permissions.includes(item.permission);
+}
+
+function activeLink(pathname: string, href: string, exact?: boolean) {
+  return exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+}
 
 export function AdminNav({ permissions }: { permissions: string[] }) {
   const pathname = usePathname();
-  const nav = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const element = nav.current;
-    const active = element?.querySelector<HTMLElement>('[aria-current="page"]');
-    // Scroll only the horizontal menu, never the document or the user's form.
-    if (element && active && element.scrollWidth > element.clientWidth) element.scrollLeft = active.offsetLeft - element.clientWidth / 2 + active.clientWidth / 2;
-  }, [pathname]);
+  const visible = links.filter(item => allowed(permissions, item));
   return (
-    <nav ref={nav} aria-label="Navigasi admin" className="no-scrollbar relative flex gap-1 overflow-x-auto overscroll-x-contain p-3 md:flex-col md:overflow-visible">
-      {items.filter(it => it.href === "/admin/marketing" ? permissions.includes(PERMISSIONS.PROMOTION_CREATE) || permissions.includes(PERMISSIONS.PROMOTION_UPDATE) : !it.permission || permissions.includes(it.permission)).map((it) => {
-        const active = it.exact ? pathname === it.href : pathname.startsWith(it.href);
+    <nav aria-label="Navigasi admin" className="flex flex-col gap-1 px-4 py-2">
+      {visible.map((item, index) => {
+        const active = activeLink(pathname, item.href, "exact" in item ? item.exact : false);
+        const Icon = item.icon;
         return (
-          <Link
-            key={it.href}
-            href={it.href}
-            prefetch={false}
-            aria-current={active ? "page" : undefined}
-            data-testid={`adminnav-${it.label.toLowerCase()}`}
-            className={cn(
-              "flex items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-              active ? "bg-white text-black" : "text-white/60 hover:bg-white/10 hover:text-white",
-            )}
-          >
-            <it.icon size={18} /> {it.label}
-          </Link>
+          <div key={item.href} className={cn(index === 6 && "mt-4 border-t border-line pt-4")}>
+            <Link
+              href={item.href}
+              prefetch={false}
+              aria-current={active ? "page" : undefined}
+              data-testid={`adminnav-${item.label.toLowerCase().replaceAll(" ", "-")}`}
+              className={cn(
+                "group flex min-h-11 items-center gap-3 whitespace-nowrap rounded-xl text-sm font-medium transition-colors",
+                "px-4 py-3",
+                active ? "bg-black font-semibold text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 hover:text-black",
+              )}
+            >
+              <Icon size={19} strokeWidth={active ? 2.25 : 1.9} aria-hidden="true" />
+              <span className="flex-1">{("display" in item && item.display) || item.label}</span>
+              {item.href !== "/admin" && <ChevronRight size={15} className={active ? "text-white/80" : "text-zinc-400"} aria-hidden="true" />}
+            </Link>
+          </div>
         );
       })}
+    </nav>
+  );
+}
+
+/** Five-icon mobile navigation shown in the supplied dashboard reference. */
+export function AdminMobileBottomNav({ permissions }: { permissions: string[] }) {
+  const pathname = usePathname();
+  const pinned = links.filter(item => ["/admin", "/admin/products", "/admin/orders", "/admin/inventory"].includes(item.href) && allowed(permissions, item));
+  const extra = links.filter(item => !pinned.some(p => p.href === item.href) && allowed(permissions, item));
+  return (
+    <nav aria-label="Navigasi bawah admin" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_32px_rgba(0,0,0,0.04)] backdrop-blur-lg md:hidden">
+      <div className="mx-auto flex w-full max-w-xl items-end justify-between gap-1">
+        {pinned.map(item => {
+          const active = activeLink(pathname, item.href, "exact" in item ? item.exact : false);
+          const Icon = item.icon;
+          return <Link key={item.href} href={item.href} prefetch={false}
+            data-testid={`adminnav-${item.label.toLowerCase()}`}
+            aria-current={active ? "page" : undefined}
+            className={cn("flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium transition-colors", active ? "bg-black text-white" : "text-zinc-500 hover:bg-zinc-100")}>
+            <Icon size={23} strokeWidth={active ? 2.2 : 1.9} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>;
+        })}
+        <details className="group relative min-w-0 flex-1">
+          <summary className="flex min-h-[58px] cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-medium text-zinc-500 hover:bg-zinc-100 [&::-webkit-details-marker]:hidden">
+            <Menu size={23} strokeWidth={1.9} aria-hidden="true" />
+            <span>Lainnya</span>
+          </summary>
+          <div className="absolute bottom-[calc(100%+18px)] right-0 w-60 max-h-[65vh] overflow-y-auto rounded-2xl border border-line bg-white p-2 shadow-2xl">
+            <div className="flex items-center justify-between px-3 py-2 text-sm font-semibold">Menu lainnya <Menu size={16} /></div>
+            {extra.map(item => {
+              const Icon = item.icon;
+              return <Link key={item.href} href={item.href} prefetch={false} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-zinc-700 hover:bg-zinc-100">
+                <Icon size={18} aria-hidden="true" />{("display" in item && item.display) || item.label}
+              </Link>;
+            })}
+            <Link href="/" className="mt-1 flex min-h-11 items-center gap-3 border-t border-line px-3 text-sm"><Store size={18}/> Buka toko</Link>
+          </div>
+        </details>
+      </div>
     </nav>
   );
 }

@@ -4,7 +4,7 @@ Gate final membutuhkan **10 consecutive full runs pada HEAD dan build identik**.
 Hasil baseline, probe, eksperimen minimal, kandidat, serta gate final tidak digabung.
 Satu kegagalan menggagalkan gate; loop berhenti dan seluruh JSON parsial dipertahankan.
 
-Setiap full run mencakup 390/768/1024/1360px dan 36 pemeriksaan:
+Setiap full run akhir mencakup 390/768/1024/1360px dan 44 pemeriksaan (36 pemeriksaan P0 +8 dashboard/admin #59):
 shop load/pagination/sort/search/history; dashboard/products/inventory pagination;
 keyboard/rapid navigation; product detail/wishlist/cart yang dibuktikan sampai DB;
 anonymous login redirect; deliberate RSC failure/recovery; delay RSC 600ms asli;
@@ -13,7 +13,7 @@ Tidak ada timeout yang diperbesar. Probe respons JS tidak boleh aktif pada gate.
 
 JSON tiap run mencatat commit SHA, Node, browser, build ID, viewport, checkpoint,
 status dan error. `frontend/scripts/navigation-stability-matrix.mjs` menolak jumlah
-selain 10, SHA/build/browser berbeda, urutan lompat, kurang dari 36 PASS, error,
+selain 10, SHA/build/browser berbeda, urutan lompat, kurang dari 44 PASS, error,
 Node unsupported, viewport kurang, atau profil diagnostik. Matriks JSON/Markdown
 juga dibuat saat gate gagal dan disimpan dalam artifact GitHub Actions.
 
@@ -35,7 +35,7 @@ Kelompok ini dilakukan sebelum perubahan P1; **bukan gate SHA akhir PR**.
 
 CI checkout persis `pull_request.head.sha`; workflow mengulang sepuluh full run,
 berhenti pada kegagalan pertama, dan menulis matriks meskipun run parsial gagal.
-Generator memeriksa 9 checkpoint per viewport selain total 36. JSON/Markdown sintetis
+Generator memeriksa 11 checkpoint per viewport selain total 36. JSON/Markdown sintetis
 disimpan 7 hari; ringkasan hasil akhir dan SHA juga berada di deskripsi PR #61 agar
 status tetap dapat direview setelah artifact kedaluwarsa. Unduhan storage artifact lama
 masih 403; matriks dicetak ke log untuk menyediakan bukti lewat jalur log yang tersedia.
@@ -58,3 +58,17 @@ Percobaan dengan port 3116 bertabrakan, fixture Promise tanpa protocol Flight,
 atau probe yang mengalami transform error ditandai tidak valid untuk inferensi
 aplikasi. Koreksi harness (selector h1 dan menunggu URL saat item sort sama)
 dipisahkan dari kegagalan aplikasi; assertion tidak dihapus atau dilonggarkan.
+
+
+## Integrasi perubahan main yang baru terdeteksi
+
+Recheck sebelum gate akhir menemukan PR #59 sudah masuk main (`8e2a4f4`), sedangkan
+baseline awal R19 adalah `4f141dd`. R19 tidak menulis main. Source dashboard/nav/tests
+#59 dipertahankan melalui normal merge ke branch fix; konflik workflow diselesaikan
+dengan mempertahankan loop10, JSON gagal, dan screenshot dashboard sintetis #59.
+Skenario baru dijalankan pada empat viewport: final **44 checkpoint/run**, 11/viewport.
+Assertion KPI pada viewport tambahan 768/1024 mengikuti grid dua kolom sampai breakpoint
+xl1280; assertion asli 390 dan1360 tetap sama. Tidak mengurangi assertion asli mana pun.
+Gate awal `8fe5029` dihentikan karena basis berubah; hasilnya tidak digabung ke gate final.
+Hasil lint/type/build dan regresi source gabungan #59 harus diverifikasi ulang sebelum
+klaim final. SHA akhir dan hasil berada pada deskripsi/check PR #61.

@@ -22,15 +22,15 @@ if (runs.some(r => r.sha !== sha)) problems.push('Every run must use the current
 if (new Set(runs.map(r => r.build)).size !== 1 || runs.some(r => !r.build)) problems.push('Every run must use one identifiable production build');
 if (new Set(runs.map(r => r.browser)).size !== 1 || runs.some(r => !r.browser)) problems.push('Every run must use one identifiable browser version');
 if (new Set(runs.map(r => r.node)).size !== 1 || runs.some(r => !/^v22\./.test(r.node || ''))) problems.push('Every run must use one supported Node 22 version');
-if (runs.some(r => r.status !== 'PASS' || r.checks !== 36 || r.passedCheckpoints !== 36 || r.pageErrors !== 0 || r.hydrationErrors !== 0 || r.diagnostic)) problems.push('All strict full runs must pass 36 checks with zero hydration errors and no diagnostic patches');
+if (runs.some(r => r.status !== 'PASS' || r.checks !== 44 || r.passedCheckpoints !== 44 || r.pageErrors !== 0 || r.hydrationErrors !== 0 || r.diagnostic)) problems.push('All strict full runs must pass 44 checks with zero hydration errors and no diagnostic patches');
 if (runs.some(r => JSON.stringify(r.viewports) !== '[390,768,1024,1360]')) problems.push('Every run must cover all four required viewports');
-if (runs.some(r => Object.values(r.viewportChecks).some(count => count !== 9))) problems.push('Each viewport must pass exactly nine checkpoints');
+if (runs.some(r => Object.values(r.viewportChecks).some(count => count !== 11))) problems.push('Each viewport must pass exactly eleven checkpoints');
 const result = { status: problems.length ? 'FAILED' : 'PASS', sha, problems, runs };
 await mkdir(output, { recursive: true });
 await writeFile(path.join(output, 'navigation-stability-matrix.json'), JSON.stringify(result, null, 2));
 const markdown = ['# R19 — Matriks stabilitas', '', `Gate: **${result.status}**. SHA: \`${sha}\`.`, '',
   '| Run | SHA | Node | Chromium | Viewport | Hasil | Pemeriksaan | Bukti |', '| --- | --- | --- | --- | --- | --- | --- | --- |',
-  ...runs.map(r => `| ${r.run} | ${r.sha} | ${r.node} | ${r.browser} | ${r.viewports?.join(', ')} | ${r.status} | ${r.checks}/36 | ${r.evidence} |`), '', ...problems.map(p => `- ${p}`), ''].join('\n');
+  ...runs.map(r => `| ${r.run} | ${r.sha} | ${r.node} | ${r.browser} | ${r.viewports?.join(', ')} | ${r.status} | ${r.checks}/44 | ${r.evidence} |`), '', ...problems.map(p => `- ${p}`), ''].join('\n');
 await writeFile(path.join(output, 'navigation-stability-matrix.md'), markdown);
 console.log(markdown);
 console.log(`Navigation stability gate: ${result.status}; ${runs.length}/10 runs on ${sha}`);

@@ -15,7 +15,7 @@ source gabungan: **199 unit +25 containment offline, 85 PostgreSQL bisnis/guard 
 16 product +20 operations browser, replay hydration pinned, typecheck/lint/build/Prisma PASS**.
 
 Gate akhir adalah **10 consecutive full runs pada HEAD akhir PR #61**, dengan satu build,
-Node/browser identik, 9 checkpoint per viewport dan nol page/hydration errors. Hasil
+Node/browser identik, 11 checkpoint per viewport (44 total) dan nol page/hydration errors. Hasil
 kualifikasi lama tidak menggantikan gate ini. Matriks akhir disimpan pada artifact/check
 `Sprint 2E isolated PostgreSQL and browser regression`, juga dicetak ke log dan diringkas
 dengan SHA persis di deskripsi PR. Checkout CI memakai PR head SHA, bukan synthetic merge.
@@ -33,4 +33,18 @@ Tidak ada klaim bahwa satu Preview lama atau check Vercel kuota-gagal memvalidas
 Source Next16 dan probe eksperimen bukan perilaku aplikasi release. Backport hanya
 production App Router; development renderer tidak dinyatakan diperbaiki oleh loader.
 Upgrade Next berikutnya harus memvalidasi ulang checksum atau menghapus backport saat
-upstream fix sudah tersedia. Main tetap `4f141dd9e7aec14cfceb9568dd136a40b9a833e4`.
+upstream fix sudah tersedia. Main tidak diubah oleh R19. Recheck menemukan PR #59 sudah digabung oleh pekerjaan lain: `8e2a4f4`; perubahan tersebut diintegrasikan ke branch fix dengan normal merge.
+
+
+## Integrasi perubahan main yang baru terdeteksi
+
+Recheck sebelum gate akhir menemukan PR #59 sudah masuk main (`8e2a4f4`), sedangkan
+baseline awal R19 adalah `4f141dd`. R19 tidak menulis main. Source dashboard/nav/tests
+#59 dipertahankan melalui normal merge ke branch fix; konflik workflow diselesaikan
+dengan mempertahankan loop10, JSON gagal, dan screenshot dashboard sintetis #59.
+Skenario baru dijalankan pada empat viewport: final **44 checkpoint/run**, 11/viewport.
+Assertion KPI pada viewport tambahan 768/1024 mengikuti grid dua kolom sampai breakpoint
+xl1280; assertion asli 390 dan1360 tetap sama. Tidak mengurangi assertion asli mana pun.
+Gate awal `8fe5029` dihentikan karena basis berubah; hasilnya tidak digabung ke gate final.
+Hasil lint/type/build dan regresi source gabungan #59 harus diverifikasi ulang sebelum
+klaim final. SHA akhir dan hasil berada pada deskripsi/check PR #61.

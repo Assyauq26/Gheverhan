@@ -104,6 +104,54 @@ async function main() {
         if (start) { rscEvents.push('failed ' + start.path + ' ' + (request.failure()?.errorText ?? 'unknown')); rsc.delete(request); }
       });
       await page.goto(`${base}/admin`); await page.waitForLoadState('networkidle');
+      await check(`${width}px: dashboard visual structure, responsive KPI grid and navigation`, async () => {
+        await expect(page.getByRole('region', { name: 'Sambutan dashboard' })).toBeVisible();
+        await expect(page.getByText('Selamat datang kembali,')).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Ringkasan penjualan' })).toBeVisible();
+        await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+        // Persist screenshot before geometry assertions so failures remain visually diagnosable.
+        await page.screenshot({ path: path.join(artifacts, `${width}-dashboard.png`), fullPage: true });
+        const rects = [];
+        for (const id of ['dashboard-products', 'dashboard-stock', 'dashboard-orders', 'dashboard-sales']) {
+          const metric = page.getByTestId(id);
+          await expect(metric).toBeVisible();
+          const rect = await metric.boundingBox();
+          assert.ok(rect && rect.width > 30 && rect.height > 15, `Visible KPI geometry required: ${id}`);
+          rects.push(rect);
+        }
+        const revenue = await page.getByTestId('dashboard-sales').evaluate(node => {
+          const style = getComputedStyle(node);
+          return { height: node.getBoundingClientRect().height, lineHeight: parseFloat(style.lineHeight) };
+        });
+        assert.ok(revenue.height <= revenue.lineHeight * 1.15, `Paid sales figure must not wrap across lines at ${width}px (height=${revenue.height}, lineHeight=${revenue.lineHeight})`);
+        if (width < 1280) {
+          assert.ok(Math.abs(rects[0].y - rects[1].y) <= 4, 'First mobile KPI row must align');
+          assert.ok(Math.abs(rects[2].y - rects[3].y) <= 4, `Second mobile KPI row must align (orders y=${rects[2].y}, sales y=${rects[3].y})`);
+          assert.ok(rects[2].y > rects[0].y + 40, 'Mobile KPI cards must form two rows');
+          if (width === 390) {
+            await expect(page.getByRole('heading', { name: 'Ringkasan Toko' })).toBeVisible();
+            await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeVisible();
+            await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeHidden();
+          } else {
+            await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeVisible();
+            await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeHidden();
+          }
+        } else {
+          assert.ok(Math.max(...rects.map(rect => rect.y)) - Math.min(...rects.map(rect => rect.y)) <= 4, 'Four desktop KPI cards must align in one row');
+          await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeVisible();
+          await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeHidden();
+        }
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Dashboard must not overflow viewport horizontally');
+        if (width === 390) {
+          await page.setViewportSize({ width: 768, height: 900 });
+          await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeVisible();
+          await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeHidden();
+          await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Tablet dashboard must not overflow');
+          await page.screenshot({ path: path.join(artifacts, '768-dashboard.png'), fullPage: true });
+          await page.setViewportSize({ width, height: 900 });
+        }
+      });
       await page.evaluate(() => { (window as unknown as { shellMarker: string }).shellMarker = 'preserved'; });
       await check(`${width}px: navigation has immediate feedback and preserves document`, async () => {
         const link = page.getByTestId('adminnav-produk').filter({ visible: true });
@@ -111,14 +159,29 @@ async function main() {
         await expect(page.getByTestId('navigation-pending')).toBeVisible();
         timings.push({ viewport: width, pendingFeedbackMs: performance.now()-start, imposedResponseDelayMs: 600 });
         await expect(page.getByRole('heading', { name: 'Produk', exact: true })).toBeVisible();
+        await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+        const bottomNav = page.locator('nav[aria-label="Navigasi bawah admin"]');
+        const sidebar = page.locator('aside[aria-label="Sidebar admin"]');
+        if (width === 390) {
+          await expect(bottomNav).toBeVisible();
+          await expect(sidebar).toBeHidden();
+          await page.setViewportSize({ width: 768, height: 900 });
+          await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+          await expect(sidebar).toBeVisible();
+          await expect(bottomNav).toBeHidden();
+          await page.setViewportSize({ width, height: 900 });
+        } else {
+          await expect(sidebar).toBeVisible();
+          await expect(bottomNav).toBeHidden();
+        }
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         assert.equal(await page.evaluate(() => (window as unknown as { shellMarker: string }).shellMarker), 'preserved');
       });
       await check(`${width}px: filters, pagination and history retain state without document reload`, async () => {
         await page.getByPlaceholder('Cari nama atau slug produk').fill(prefix);
         await page.getByRole('button', { name: 'Cari', exact: true }).click();
-        await expect(page.getByRole('search')).toHaveAttribute('aria-busy', 'true');
-        await expect(page.getByRole('search').getByRole('button', { name: 'Cari', exact: true })).toBeDisabled();
+        await expect(page.locator('main').getByRole('search')).toHaveAttribute('aria-busy', 'true');
+        await expect(page.locator('main').getByRole('search').getByRole('button', { name: 'Cari', exact: true })).toBeDisabled();
         await expect(page.getByText('25 produk · kelola katalog toko Gheverhan.')).toBeVisible();
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
@@ -157,6 +220,7 @@ async function main() {
         await expect(page.getByText('Halaman 2 dari 2')).toBeVisible();
         const active = page.getByTestId('adminnav-inventori').filter({ visible: true });
         await expect(active).toHaveAttribute('aria-current', 'page');
+        await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
         const box = await active.boundingBox(); assert.ok(box && box.x >= 0 && box.x+box.width <= width, 'active menu is in view');
         const input = await page.getByPlaceholder('Cari produk atau SKU').boundingBox();
         assert.ok(input && input.width >= 180, 'mobile search remains readable');
@@ -167,6 +231,14 @@ async function main() {
         await page.getByRole('link', { name: 'Berikutnya', exact: true }).click();
         await expect(page.getByText('Halaman 2 dari 2')).toBeVisible();
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
+      });
+      await check(`${width}px: other admin sections have no duplicate scrolling header menu`, async () => {
+        for (const adminRoute of ['/admin/orders', '/admin/marketing', '/admin/categories']) {
+          await page.goto(`${base}${adminRoute}`);
+          await expect(page.getByRole('banner')).toBeVisible();
+          await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${adminRoute} overflows at ${width}px`);
+        }
       });
       await check(`${width}px: shop pagination exposes later catalog items`, async () => {
         await page.goto(`${base}/shop?q=${prefix}`);

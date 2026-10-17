@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2, Loader2 } from "lucide-react";
@@ -35,12 +36,21 @@ function recalculate(lines: Line[]): View {
 
 export function CartClient({ initial }: { initial: View }) {
   const [view, setView] = useState(initial);
+  const router = useRouter();
+  const pendingRef = useRef(false);
+
+  useEffect(() => {
+    if (!pendingRef.current) {
+      setView(initial);
+      emitCartCount(initial.count);
+    }
+  }, [initial]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, start] = useTransition();
   const snapshots = useRef(new Map<string, View>());
 
   function update(id: string, qty: number) {
-    if (pendingId === id) return;
+    if (pendingRef.current) return;
     const line = view.lines.find((item) => item.id === id);
     if (!line) return;
     if (qty <= 0) return remove(id);
@@ -58,6 +68,7 @@ export function CartClient({ initial }: { initial: View }) {
 
     setView(optimistic);
     emitCartCount(optimistic.count);
+    pendingRef.current = true;
     setPendingId(id);
 
     start(async () => {
@@ -73,7 +84,9 @@ export function CartClient({ initial }: { initial: View }) {
         setView(snapshot);
         emitCartCount(snapshot.count);
       }
+      pendingRef.current = false;
       setPendingId(null);
+      if (res.ok) router.refresh();
     });
   }
 
@@ -122,7 +135,7 @@ export function CartClient({ initial }: { initial: View }) {
                   <p className="text-xs text-ink-muted">{l.variantLabel}</p>
                   {!l.inStock && <p className="text-xs font-semibold text-destructive">Stok tidak cukup</p>}
                 </div>
-                <button onClick={() => remove(l.id)} disabled={pendingId === l.id} className="text-ink-muted transition-opacity hover:text-destructive disabled:opacity-50" data-testid={`cart-remove-${l.id}`}>
+                <button onClick={() => remove(l.id)} disabled={pendingId !== null} className="text-ink-muted transition-opacity hover:text-destructive disabled:opacity-50" data-testid={`cart-remove-${l.id}`}>
                   {pendingId === l.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                 </button>
               </div>

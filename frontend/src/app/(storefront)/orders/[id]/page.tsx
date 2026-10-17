@@ -7,7 +7,7 @@ import { getOrderForUser } from "@/modules/orders/orders.service";
 import { formatIDR } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ORDER_STATUS_LABEL, orderBadgeVariant } from "@/lib/order-status";
+import { orderDisplayStatus, orderBadgeVariant, paymentDisplayStatus } from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Detail Pesanan", robots: { index: false } };
@@ -34,7 +34,7 @@ export default async function OrderDetailPage({ params }: OrderDetailRouteProps)
           <h1 className="font-display text-2xl font-black text-ink">{order.orderNumber}</h1>
           <p className="text-sm text-ink-muted">{new Date(order.createdAt).toLocaleString("id-ID")}</p>
         </div>
-        <Badge variant={orderBadgeVariant(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+        <Badge variant={orderBadgeVariant(order.status)}>{orderDisplayStatus(order.status, order.paymentStatus)}</Badge>
       </div>
 
       {needPayment && (
@@ -105,7 +105,7 @@ export default async function OrderDetailPage({ params }: OrderDetailRouteProps)
           <section className="rounded-2xl border border-line p-4">
             <h2 className="mb-2 flex items-center gap-2 font-display font-bold text-ink"><CreditCard size={18} /> Pembayaran</h2>
             <p className="text-sm text-ink-soft">Transfer Bank Manual</p>
-            <p className="text-sm">Status: <Badge variant={order.payment.status === "PAID" ? "success" : "warning"}>{order.payment.status}</Badge></p>
+            <p className="text-sm">Status: <Badge variant={order.payment.status === "PAID" ? "success" : "warning"}>{paymentDisplayStatus(order.payment.status)}</Badge></p>
           </section>
         )}
       </div>

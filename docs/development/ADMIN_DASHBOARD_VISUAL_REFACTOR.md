@@ -24,5 +24,11 @@ The hero photo is a compressed crop of the owner's supplied reference artwork an
 - Run unit/security, TypeScript, ESLint, build, isolated database/browser regression; do not waive preexisting hydration #418 failures.
 - Capture 390px/1360px screenshots and compare with reference before promoting from Draft PR.
 
+### Isolated browser visual evidence (2026-10-17)
+- The navigation/browser CI now captures `390-dashboard.png`, `768-dashboard.png`, and `1360-dashboard.png` from a **disposable, loopback-only PostgreSQL test instance**, with a signed isolated fixture session and synthetic user data.
+- Assert dashboard welcome hero, all four permitted KPI metrics, correct mobile 2×2 / desktop four-column geometry, sidebar/bottom-nav visibility, no redundant header nav, and no horizontal viewport overflow.
+- Images are published for a short period as the `pr59-dashboard-visual-evidence` GitHub Actions artifact; no server logs, production user session, real customer data, or secrets are uploaded.
+- These synthetic screenshots make the PR reviewable, but they **do not** demonstrate pixel-accurate fidelity on the authenticated Vercel Preview or establish the requested 90% resemblance. Owner review of actual mobile/desktop Preview remains mandatory before merge.
+
 ### Limitation on requested >=90% fidelity
 Structural, typography, spacing and interaction styling follow the supplied mockup closely. The reference's daily chart series, bestseller item photos and exact order row product/date fields cannot be reproduced accurately from the current dashboard service without new backend data. Those sections deliberately use truthful empty states. A quantified >=90% pixel-match must be checked from actual rendered browser screenshots; it is not claimed based on source review.

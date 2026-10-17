@@ -57,6 +57,8 @@ async function main() {
         await expect(page.getByText('Selamat datang kembali,')).toBeVisible();
         await expect(page.getByRole('region', { name: 'Ringkasan penjualan' })).toBeVisible();
         await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+        // Persist screenshot before geometry assertions so failures remain visually diagnosable.
+        await page.screenshot({ path: path.join(artifacts, `${width}-dashboard.png`), fullPage: true });
         const rects = [];
         for (const id of ['dashboard-products', 'dashboard-stock', 'dashboard-orders', 'dashboard-sales']) {
           const metric = page.getByTestId(id);
@@ -67,7 +69,7 @@ async function main() {
         }
         if (width === 390) {
           assert.ok(Math.abs(rects[0].y - rects[1].y) <= 4, 'First mobile KPI row must align');
-          assert.ok(Math.abs(rects[2].y - rects[3].y) <= 4, 'Second mobile KPI row must align');
+          assert.ok(Math.abs(rects[2].y - rects[3].y) <= 4, `Second mobile KPI row must align (orders y=${rects[2].y}, sales y=${rects[3].y})`);
           assert.ok(rects[2].y > rects[0].y + 40, 'Mobile KPI cards must form two rows');
           await expect(page.getByRole('heading', { name: 'Ringkasan Toko' })).toBeVisible();
           await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeVisible();
@@ -78,7 +80,6 @@ async function main() {
           await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeHidden();
         }
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Dashboard must not overflow viewport horizontally');
-        await page.screenshot({ path: path.join(artifacts, `${width}-dashboard.png`), fullPage: true });
         if (width === 390) {
           await page.setViewportSize({ width: 768, height: 900 });
           await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeVisible();

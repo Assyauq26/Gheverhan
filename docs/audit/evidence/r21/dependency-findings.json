@@ -30,7 +30,9 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": false,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
     },
     {
       "package": "braces",
@@ -68,7 +70,9 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": true,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
     },
     {
       "package": "chokidar",
@@ -91,7 +95,9 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": true,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
     },
     {
       "package": "eslint-config-next",
@@ -114,7 +120,9 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": false,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
     },
     {
       "package": "fast-glob",
@@ -139,7 +147,9 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": true,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
     },
     {
       "package": "micromatch",
@@ -162,7 +172,9 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": true,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
     },
     {
       "package": "tailwindcss",
@@ -187,7 +199,31 @@
       },
       "reachability": "Build/lint static source globs; no application request imports braces/Tailwind compiler",
       "mitigation": "Reviewed depth128 checksum-guarded patch before Next build/lint; official severity unchanged",
-      "ownerAcceptance": "PENDING"
+      "ownerAcceptance": "PENDING",
+      "includedInProductionAudit": true,
+      "executionBoundary": "Build/lint compiler only, despite some packages installed in production peer graph"
+    }
+  ],
+  "productionAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 5,
+    "critical": 0,
+    "total": 5
+  },
+  "remediated": [
+    {
+      "package": "postcss-selector-parser",
+      "previousVersion": "6.1.4",
+      "version": "7.1.6",
+      "vulnerableRange": "<7.1.6",
+      "severity": "moderate",
+      "advisory": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf",
+      "dependentModerate": "postcss-nested6.2.0",
+      "patchedVersion": "7.1.6",
+      "execution": "CSS build only",
+      "compatibility": "Explicit leaf major6-to7; Next/Tailwind/React/Prisma/Vitest unchanged; compiled CSS identical"
     }
   ]
 }

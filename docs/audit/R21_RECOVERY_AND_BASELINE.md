@@ -1,6 +1,6 @@
 # R21 — Recovery dan baseline
 
-Tanggal17 Oktober2026 UTC. Status awal **NOT READY**. Keputusan pemilik: tidak membuat staging terpisah; ketentuan staging R19/R20 dan R21_PRODUCTION_PREFLIGHT adalah catatan historis yang digantikan keputusan ini. Seluruh mutation test tetap lokal/disposable; risiko managed production tetap wajib dibuktikan atau diterima secara eksplisit.
+Tanggal 17 Oktober 2026 UTC. Status awal **NOT READY**. Keputusan pemilik: tidak membuat staging terpisah; ketentuan staging R19/R20 dan R21_PRODUCTION_PREFLIGHT adalah catatan historis yang digantikan keputusan ini. Seluruh mutation test tetap lokal/disposable; risiko managed production tetap wajib dibuktikan atau diterima secara eksplisit.
 
 - `git fetch --all --prune` berhasil. Main8e2a4f475333b1beb68063e6e060aa1247e2b90c memuat #59.
 - #60 OPEN Draft491a1dc; #61 OPENafb8b34; #62 OPEN Draftae9abac, base#61; #63 OPEN Draftd002623, base main; #64 OPEN Draft341f2e9, base main.
@@ -14,3 +14,5 @@ Tanggal17 Oktober2026 UTC. Status awal **NOT READY**. Keputusan pemilik: tidak m
 - Source memblokir automatic deployment branch R21 pada Vercel/Netlify sebelum push. Tidak membuat deployment/project/server baru. CI test tetap aktif.
 
 Bukti aman metadata PR berada pada scratch R21; laporan akhir merujuk hasil per-SHA final. Tidak membaca dump PostgreSQL tracked (#39), secret values, customer rows, atau mengubah konfigurasi live.
+
+Recheck sebelum freeze: default branch GitHub main; ruleset aktif hanya unit-tests required dan0 approval, integration/browser belum mandatory. Kedua workflow #63 tetap historis SUCCESS; check aktual #64 dicatat di metadata recovery, bukan dipakai untuk qualification R21.

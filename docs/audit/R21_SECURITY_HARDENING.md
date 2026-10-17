@@ -27,3 +27,7 @@ JWT HS256/issuer/audience/expiry, sessionVersion/revocation dan role/RLS guard t
 Regresi unit memeriksa no-cookie saat audit gagal, durable revocation/cookie deletion, serta metadata minimal. PostgreSQL menguji reset concurrent tepat satu sukses/audit, audit-trigger failure rollback lalu retry. Pengujian auth, transaksi finansial/stok, browser dan gate final diulang pada kandidat final; hasil lama bukan bukti HEAD baru.
 
 Residual: register409 dan reset provider-failure enumeration, limiter fixed-window/global availability, telemetry denial/retention dan operational alerting perlu review pemilik. Tidak mengirim email nyata atau mengubah UX onboarding tanpa desain yang disepakati. Exposure tracked PostgreSQL historis #39 tetap HOLD; tidak membaca snapshot, merotasi credential, atau rewrite history.
+
+Server API/Action wrappers juga tidak lagi mencetak exception mentah. Log mempertahankan kelas error/kode yang diizinkan dan menghilangkan message/stack/cause/argumen SQL. Regresi menguji nilai sensitif, nama/kode tidak tepercaya, primitive, dan getter yang melempar. Tidak mengubah handler error browser/hydration.
+
+Profil maintenance dan read-only preflight menambah kontrol cutover tanpa staging. Main production lama menerbitkan JWT tanpa version; invalidasi legacy0→1 sebelum issuance R21 diuji lokal sebagai rencana yang menunggu approval, bukan perubahan live. Restore setelah token version1 pernah diterbitkan memerlukan strategi invalidasi lain yang aman; jangan menganggap increment+1 cukup.

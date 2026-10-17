@@ -1,5 +1,7 @@
 # R21 — Production readiness preflight (read-only)
 
+> Catatan R21 terbaru: keputusan pemilik meniadakan staging terpisah. Ketentuan staging pada preflight historis ini telah digantikan oleh R21_CONTROLLED_RELEASE_RUNBOOK.md dan R21_FINAL_RELEASE_READINESS.md; observasi historis tetap dipertahankan.
+
 Date: 2026-10-17 (Asia/Jakarta). Status: **NOT READY**. This file records observed state; it does not authorize migration, merge, credential changes, provider configuration, or production deployment.
 
 ## Provenance

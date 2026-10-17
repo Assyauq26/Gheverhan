@@ -52,6 +52,43 @@ async function main() {
       await context.addCookies([{ name: 'gh_session', value: await signSession({ sub: user.id, email: user.email }), domain: 'localhost', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
       const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
       await page.goto(`${base}/admin`); await page.waitForLoadState('networkidle');
+      await check(`${width}px: dashboard visual structure, responsive KPI grid and navigation`, async () => {
+        await expect(page.getByRole('region', { name: 'Sambutan dashboard' })).toBeVisible();
+        await expect(page.getByText('Selamat datang kembali,')).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Ringkasan penjualan' })).toBeVisible();
+        await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+        const rects = [];
+        for (const id of ['dashboard-products', 'dashboard-stock', 'dashboard-orders', 'dashboard-sales']) {
+          const metric = page.getByTestId(id);
+          await expect(metric).toBeVisible();
+          const rect = await metric.boundingBox();
+          assert.ok(rect && rect.width > 30 && rect.height > 15, `Visible KPI geometry required: ${id}`);
+          rects.push(rect);
+        }
+        if (width === 390) {
+          assert.ok(Math.abs(rects[0].y - rects[1].y) <= 4, 'First mobile KPI row must align');
+          assert.ok(Math.abs(rects[2].y - rects[3].y) <= 4, 'Second mobile KPI row must align');
+          assert.ok(rects[2].y > rects[0].y + 40, 'Mobile KPI cards must form two rows');
+          await expect(page.getByRole('heading', { name: 'Ringkasan Toko' })).toBeVisible();
+          await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeVisible();
+          await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeHidden();
+        } else {
+          assert.ok(Math.max(...rects.map(rect => rect.y)) - Math.min(...rects.map(rect => rect.y)) <= 4, 'Four desktop KPI cards must align in one row');
+          await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeVisible();
+          await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeHidden();
+        }
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Dashboard must not overflow viewport horizontally');
+        await page.screenshot({ path: path.join(artifacts, `${width}-dashboard.png`), fullPage: true });
+        if (width === 390) {
+          await page.setViewportSize({ width: 768, height: 900 });
+          await expect(page.locator('aside[aria-label="Sidebar admin"]')).toBeVisible();
+          await expect(page.locator('nav[aria-label="Navigasi bawah admin"]')).toBeHidden();
+          await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Tablet dashboard must not overflow');
+          await page.screenshot({ path: path.join(artifacts, '768-dashboard.png'), fullPage: true });
+          await page.setViewportSize({ width, height: 900 });
+        }
+      });
       await page.evaluate(() => { (window as unknown as { shellMarker: string }).shellMarker = 'preserved'; });
       await check(`${width}px: navigation has immediate feedback and preserves document`, async () => {
         const link = page.getByTestId('adminnav-produk').filter({ visible: true });

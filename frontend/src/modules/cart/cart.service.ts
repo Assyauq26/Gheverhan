@@ -191,3 +191,10 @@ export async function removeItem(userId: string, itemId: string) {
   });
   return getCartView(userId);
 }
+
+
+/** Badge count without fetching product/media/pricing relations. */
+export async function getCartCount(userId: string) {
+  const total = await prisma.cartItem.aggregate({ where: { cart: { userId } }, _sum: { quantity: true } });
+  return total._sum.quantity ?? 0;
+}

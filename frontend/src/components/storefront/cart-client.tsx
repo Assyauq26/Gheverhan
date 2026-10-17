@@ -38,83 +38,68 @@ export function CartClient({ initial }: { initial: View }) {
   const [view, setView] = useState(initial);
   const router = useRouter();
   const pendingRef = useRef(false);
+  const currentView = useRef(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [, start] = useTransition();
 
   useEffect(() => {
     if (!pendingRef.current) {
+      currentView.current = initial;
       setView(initial);
       emitCartCount(initial.count);
     }
   }, [initial]);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, start] = useTransition();
-  const snapshots = useRef(new Map<string, View>());
 
-  function update(id: string, qty: number) {
+  function commit(next: View) {
+    currentView.current = next;
+    setView(next);
+    emitCartCount(next.count);
+  }
+
+  function mutate(id: string, optimistic: View, operation: () => ReturnType<typeof updateCartItemAction>) {
     if (pendingRef.current) return;
-    const line = view.lines.find((item) => item.id === id);
-    if (!line) return;
-    if (qty <= 0) return remove(id);
-    if (qty > line.availableStock) return;
-
-    const previous = view;
-    snapshots.current.set(id, previous);
-    const optimistic = recalculate(
-      view.lines.map((item) =>
-        item.id === id
-          ? { ...item, quantity: qty, lineTotal: item.unitPrice * qty, inStock: qty <= item.availableStock }
-          : item,
-      ),
-    );
-
-    setView(optimistic);
-    emitCartCount(optimistic.count);
+    const previous = currentView.current;
     pendingRef.current = true;
     setPendingId(id);
-
+    setError(null);
+    commit(optimistic);
     start(async () => {
-      const res = await updateCartItemAction(id, qty);
-      const snapshot = snapshots.current.get(id);
-      snapshots.current.delete(id);
-
-      if (res.ok && res.data) {
-        const serverView = res.data as View;
-        setView(serverView);
-        emitCartCount(serverView.count);
-      } else if (snapshot) {
-        setView(snapshot);
-        emitCartCount(snapshot.count);
+      try {
+        const res = await operation();
+        if (res.ok && res.data) commit(res.data as View);
+        else {
+          commit(previous);
+          setError(res.error || "Perubahan keranjang gagal. Coba lagi.");
+        }
+      } catch {
+        commit(previous);
+        setError("Koneksi terputus. Periksa keranjang sebelum mencoba lagi.");
+      } finally {
+        pendingRef.current = false;
+        setPendingId(null);
+        // A lost response can follow a committed write: reconcile with the server.
+        router.refresh();
       }
-      pendingRef.current = false;
-      setPendingId(null);
-      if (res.ok) router.refresh();
     });
   }
 
+  function update(id: string, qty: number) {
+    if (pendingRef.current) return;
+    const previous = currentView.current;
+    const line = previous.lines.find(item => item.id === id);
+    if (!line) return;
+    if (qty <= 0) return remove(id);
+    if (qty > line.availableStock) return;
+    const optimistic = recalculate(previous.lines.map(item => item.id === id
+      ? { ...item, quantity: qty, lineTotal: item.unitPrice * qty, inStock: qty <= item.availableStock }
+      : item));
+    mutate(id, optimistic, () => updateCartItemAction(id, qty));
+  }
+
   function remove(id: string) {
-    if (pendingId === id) return;
-    const previous = view;
-    snapshots.current.set(id, previous);
-    const optimistic = recalculate(view.lines.filter((line) => line.id !== id));
-
-    setView(optimistic);
-    emitCartCount(optimistic.count);
-    setPendingId(id);
-
-    start(async () => {
-      const res = await removeCartItemAction(id);
-      const snapshot = snapshots.current.get(id);
-      snapshots.current.delete(id);
-
-      if (res.ok && res.data) {
-        const serverView = res.data as View;
-        setView(serverView);
-        emitCartCount(serverView.count);
-      } else if (snapshot) {
-        setView(snapshot);
-        emitCartCount(snapshot.count);
-      }
-      setPendingId(null);
-    });
+    if (pendingRef.current) return;
+    mutate(id, recalculate(currentView.current.lines.filter(line => line.id !== id)), () => removeCartItemAction(id));
   }
 
   const shippingEstimate = 20000;
@@ -122,7 +107,8 @@ export function CartClient({ initial }: { initial: View }) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-4" data-testid="cart-lines" aria-live="polite">
+      <div className="space-y-4" data-testid="cart-lines" aria-live="polite" aria-busy={pendingId !== null}>
+        {error && <p role="alert" data-testid="cart-error" className="text-sm text-destructive">{error}</p>}
         {view.lines.map((l) => (
           <div key={l.id} className="flex gap-4 rounded-2xl border border-line p-3" data-testid={`cart-line-${l.id}`}>
             <Link href={`/product/${l.product.slug}`} className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface">
@@ -141,11 +127,11 @@ export function CartClient({ initial }: { initial: View }) {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 rounded-full border border-line px-1.5 py-1">
-                  <button onClick={() => update(l.id, l.quantity - 1)} disabled={pendingId === l.id || l.quantity <= 1} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface disabled:opacity-40" data-testid={`cart-dec-${l.id}`}>
+                  <button onClick={() => update(l.id, l.quantity - 1)} disabled={pendingId !== null || l.quantity <= 1} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface disabled:opacity-40" data-testid={`cart-dec-${l.id}`}>
                     <Minus size={14} />
                   </button>
-                  <span className="w-6 text-center text-sm font-semibold">{l.quantity}</span>
-                  <button onClick={() => update(l.id, l.quantity + 1)} disabled={pendingId === l.id || l.quantity >= l.availableStock} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface disabled:opacity-40" data-testid={`cart-inc-${l.id}`}>
+                  <span data-testid={`cart-quantity-${l.id}`} className="w-6 text-center text-sm font-semibold">{l.quantity}</span>
+                  <button onClick={() => update(l.id, l.quantity + 1)} disabled={pendingId !== null || l.quantity >= l.availableStock} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface disabled:opacity-40" data-testid={`cart-inc-${l.id}`}>
                     <Plus size={14} />
                   </button>
                 </div>

@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
+import { verifyCartSynchronization } from "./cart-sync-browser";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
@@ -211,6 +212,9 @@ async function main() {
     });
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
+    });
+    await check("R20 authenticated cart synchronization and rollback at four viewports", async () => {
+      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors);
     });
     await check("live checkout coupon is priced by server, shows errors, and updates shipping without creating orders", async () => {
       await db.coupon.create({ data: { code: couponCode, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });

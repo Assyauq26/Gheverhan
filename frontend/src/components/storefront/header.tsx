@@ -67,7 +67,7 @@ export function StorefrontHeader({
           <Link href="/cart" aria-label="Keranjang" data-testid="header-cart" className="relative flex h-11 w-11 items-center justify-center rounded-full hover:bg-surface">
             <ShoppingCart size={20} />
             {liveCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[10px] font-bold text-white ring-2 ring-white">
+              <span data-testid="header-cart-count" className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[10px] font-bold text-white ring-2 ring-white">
                 {liveCount}
               </span>
             )}

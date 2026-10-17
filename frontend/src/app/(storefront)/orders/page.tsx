@@ -7,7 +7,7 @@ import { formatIDR } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { ORDER_STATUS_LABEL, orderBadgeVariant } from "@/lib/order-status";
+import { orderDisplayStatus, orderBadgeVariant } from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pesanan Saya", robots: { index: false } };
@@ -36,7 +36,7 @@ export default async function OrdersPage() {
             <Link key={o.id} href={`/orders/${o.id}`} className="block rounded-2xl border border-line p-4 transition-colors hover:bg-surface" data-testid={`order-row-${o.orderNumber}`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-ink">{o.orderNumber}</span>
-                <Badge variant={orderBadgeVariant(o.status)}>{ORDER_STATUS_LABEL[o.status]}</Badge>
+                <Badge variant={orderBadgeVariant(o.status)}>{orderDisplayStatus(o.status, o.paymentStatus)}</Badge>
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex -space-x-3">

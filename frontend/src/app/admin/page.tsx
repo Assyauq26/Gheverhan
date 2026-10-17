@@ -97,7 +97,7 @@ function StockOverview({ available, reserved, variants }: { available: number; r
 }
 
 function QuickAction({ href, label, icon, primary = false, className = "" }: { href: string; label: string; icon: ReactNode; primary?: boolean; className?: string }) {
-  return <Link href={href} prefetch={false} className={`${className} flex min-h-[108px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-medium leading-snug transition hover:-translate-y-0.5 ${primary ? "bg-zinc-950 text-white shadow-lg hover:bg-zinc-800" : "bg-zinc-50 text-zinc-800 hover:bg-zinc-100"}`}>
+  return <Link href={href} prefetch={false} className={`${className || "flex"} min-h-[108px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-medium leading-snug transition hover:-translate-y-0.5 ${primary ? "bg-zinc-950 text-white shadow-lg hover:bg-zinc-800" : "bg-zinc-50 text-zinc-800 hover:bg-zinc-100"}`}>
     {icon}<span>{label}</span>
   </Link>;
 }

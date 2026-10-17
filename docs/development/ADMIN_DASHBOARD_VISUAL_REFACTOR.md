@@ -8,7 +8,7 @@ The hero photo is a compressed crop of the owner's supplied reference artwork an
 ### Existing behaviors explicitly preserved
 - `getSellerDashboard(user)` remains the only dashboard data service. No API, Prisma, authorization, schema, migration, payment, stock or other business logic modified.
 - KPI `data-testid` selectors `dashboard-products`, `dashboard-stock`, `dashboard-orders`, `dashboard-sales` remain.
-- The same admin navigation destinations and actual RBAC permission rules are preserved. Mobile `Lainnya` reveals existing less-frequent routes; no invented Reports or Settings destinations.
+- The same admin navigation destinations and actual RBAC permission rules are preserved. Desktop uses the permission-filtered sidebar; mobile uses the fixed bottom bar with `Lainnya` for existing less-frequent routes. The redundant horizontal header nav is removed on **all** admin routes (including product, order, inventory, marketing, and category pages); no invented Reports or Settings destinations.
 - The all-time selection is descriptive, not a fake time-filter; per-period filtering requires a separately approved backend project.
 - Notifications are icon/status indicators without misleading unread counts or invented notification actions.
 - Latest orders show the data the service actually exposes: ID, buyer, status, total. No invented order images/dates.
@@ -20,6 +20,7 @@ The hero photo is a compressed crop of the owner's supplied reference artwork an
 - 768px: balanced responsive spacing and persistent accessible navigation.
 - 1360px: white 238px sidebar; search, shop and account topbar; banner; 4 KPI cards; 2-column analytics; bottom rows.
 - Keep 44px minimum touch targets, readable text and keyboard focus.
+- Regression: assert the header contains **no duplicate horizontal navigation** after switching admin routes at 390px and 1360px and when resizing to 768px. Verify desktop sidebar and mobile bottom navigation remain accessible with the correct active route.
 - Run unit/security, TypeScript, ESLint, build, isolated database/browser regression; do not waive preexisting hydration #418 failures.
 - Capture 390px/1360px screenshots and compare with reference before promoting from Draft PR.
 

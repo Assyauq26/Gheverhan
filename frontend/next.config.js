@@ -1,3 +1,6 @@
+// Fail closed even when Next CLI is invoked without npm scripts.
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'scripts/security/prepare-braces.mjs')], { stdio: 'inherit' });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

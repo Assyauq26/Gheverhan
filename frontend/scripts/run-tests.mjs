@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { prepareBraces } from "./security/prepare-braces.mjs";
+
 const project = fileURLToPath(new URL("../", import.meta.url));
 
 /** Keep the supported npm test entrypoints away from Vitest's vulnerable APIs. */
@@ -38,6 +40,7 @@ function main() {
       throw new Error("Debugger-enabled test execution is prohibited");
     }
     args = buildVitestArgs(mode, filters);
+    prepareBraces({ verify: true });
   } catch (err) {
     console.error(`[test-containment] ${err.message}`);
     process.exitCode = 1;

@@ -1,4 +1,4 @@
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "Menunggu Pembayaran",
@@ -34,5 +34,28 @@ export function orderBadgeVariant(
       return "destructive";
     default:
       return "muted";
+  }
+}
+
+/** Customer-facing payment progress, without altering the financial/order state machine. */
+export function orderDisplayStatus(status: OrderStatus, paymentStatus?: PaymentStatus | null): string {
+  if (status === "PENDING_PAYMENT") {
+    if (paymentStatus === "WAITING_VERIFICATION") return "Menunggu Verifikasi Pembayaran";
+    if (paymentStatus === "REJECTED") return "Bukti Pembayaran Ditolak";
+  }
+  if (status === "PAID" && paymentStatus === "PAID") return "Pembayaran Berhasil";
+  if (status === "PROCESSING") return "Sedang Diproses";
+  if (status === "SHIPPED") return "Dalam Pengiriman";
+  return ORDER_STATUS_LABEL[status];
+}
+
+export function paymentDisplayStatus(status: PaymentStatus): string {
+  switch (status) {
+    case "WAITING_VERIFICATION": return "Menunggu Verifikasi Pembayaran";
+    case "PENDING_PAYMENT": return "Menunggu Pembayaran";
+    case "REJECTED": return "Bukti Pembayaran Ditolak";
+    case "PAID": return "Pembayaran Berhasil";
+    case "EXPIRED": return "Pembayaran Kedaluwarsa";
+    case "REFUNDED": return "Pembayaran Dikembalikan";
   }
 }

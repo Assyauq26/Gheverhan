@@ -26,6 +26,10 @@ export async function submitProofAction(_prev: unknown, formData: FormData) {
   return runAction(async () => {
     const user = await requireUser();
     await uploadPaymentProof(user.id, parsed.data, new Uint8Array(await file.arrayBuffer()), file.type);
+    revalidatePath("/orders");
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin");
+    revalidatePath(`/admin/orders/${parsed.data.orderId}`);
     revalidatePath(`/orders/${parsed.data.orderId}`);
     revalidatePath(`/checkout/payment/${parsed.data.orderId}`);
     return { submitted: true };

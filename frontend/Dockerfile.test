@@ -19,7 +19,7 @@ RUN --network=none \
 
 WORKDIR /app
 COPY --chown=node:node . .
-RUN ln -s /opt/deps/node_modules node_modules
+RUN --network=none ln -s /opt/deps/node_modules node_modules && node scripts/security/prepare-braces.mjs
 ENV CI=true GHEVERHAN_ISOLATED_TESTS=1 npm_config_cache=/tmp/npm-cache XDG_CACHE_HOME=/tmp/cache
 # Writable source/cache stay in tmpfs; dependencies and image remain read-only.
 CMD ["sh", "-c", "cp -R /app /tmp/project && cd /tmp/project && npm run test:ci"]

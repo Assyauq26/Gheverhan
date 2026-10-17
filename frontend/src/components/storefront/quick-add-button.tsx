@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { quickAddToCartAction } from "@/modules/cart/cart.actions";
-import { emitCartCountDelta } from "@/modules/cart/cart-events";
+import { emitCartCount, emitCartCountDelta } from "@/modules/cart/cart-events";
 
 const FEEDBACK_MS = 350;
 
@@ -18,6 +18,7 @@ export function QuickAddButton({
   disabled?: boolean;
   className?: string;
 }) {
+  const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState(false);
   const inFlightRef = useRef(false);
   const router = useRouter();
@@ -33,6 +34,7 @@ export function QuickAddButton({
     // 3. return to the bag after a short visual acknowledgement;
     // 4. keep the lightweight server mutation protected in the background.
     inFlightRef.current = true;
+    setError(null);
     setShowLoading(true);
     emitCartCountDelta(1);
 
@@ -48,11 +50,19 @@ export function QuickAddButton({
 
         if (!res.ok) {
           emitCartCountDelta(-1);
+          setError(res.error || "Gagal menambah produk");
+        } else if (res.data) {
+          emitCartCount(res.data.count);
         }
+      })
+      .catch(() => {
+        emitCartCountDelta(-1);
+        setError("Koneksi terputus. Periksa keranjang.");
       })
       .finally(() => {
         inFlightRef.current = false;
         setShowLoading(false);
+        router.refresh();
       });
   }
 
@@ -63,12 +73,14 @@ export function QuickAddButton({
       disabled={disabled || !variantId}
       aria-label="Tambah ke keranjang"
       aria-busy={showLoading}
+      title={error || undefined}
       data-testid={`quick-add-${variantId ?? "none"}`}
       className={cn(
         "flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-ink shadow-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-40",
         className,
       )}
     >
+      {error && <span role="alert" className="sr-only">{error}</span>}
       {showLoading ? (
         <Loader2 size={21} className="animate-spin" />
       ) : (

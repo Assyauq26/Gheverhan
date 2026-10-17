@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, forwardRef, useContext, useState, useTransition, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import NextLink from "next/link";
+import NextLink, { useLinkStatus } from "next/link";
 import { useRouter } from "next/navigation";
 
 const NavigationContext = createContext<{
@@ -26,16 +26,28 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
 export function useNavigation() { return useContext(NavigationContext); }
 
-/** Keep Next prefetch and native modified-click behavior; add transition feedback. */
+/**
+ * Native Next.js link navigation is the source of truth for anchor clicks.
+ * IMPORTANT: Never call preventDefault()/router.push() from onNavigate.
+ * Doing both has led to aborted RSC transitions and intermittent stale pages.
+ *
+ * Link-level pending feedback comes from Next's own useLinkStatus hook, so the
+ * loading indicator cannot become stuck due to a competing transition.
+ */
+function NativeLinkPendingFeedback() {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <span role="status" aria-live="polite" data-testid="navigation-pending"
+      className="pointer-events-none fixed inset-x-0 top-0 z-50 block h-1 bg-black">
+      <span className="sr-only">Memuat halaman…</span>
+    </span>
+  ) : null;
+}
+
 const NavigationLink = forwardRef<HTMLAnchorElement, ComponentPropsWithoutRef<typeof NextLink>>(function NavigationLink({ children, onNavigate, ...props }, ref) {
-  const navigation = useNavigation();
-  const pending = navigation?.pending && navigation.destination === props.href;
-  return <NextLink {...props} ref={ref} aria-busy={pending || undefined} data-pending={pending || undefined} onNavigate={event => {
-    // Existing custom navigation handlers retain control of their own event.
-    if (onNavigate) { onNavigate(event); return; }
-    if (!navigation || typeof props.href !== "string" || props.replace) return;
-    event.preventDefault();
-    if (!pending) navigation.navigate(props.href, props.scroll);
-  }}>{children}</NextLink>;
+  return <NextLink {...props} ref={ref} onNavigate={onNavigate}>
+    {children}
+    <NativeLinkPendingFeedback />
+  </NextLink>;
 });
 export default NavigationLink;

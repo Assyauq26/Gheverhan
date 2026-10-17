@@ -1,0 +1,9 @@
+{
+  "status": "REPRODUCED",
+  "previewRequestsPerIdentity": 3,
+  "productionIdentityBlocked": true,
+  "previewGlobalRequests": 30,
+  "productionGlobalBlocked": true,
+  "synthetic": true,
+  "sourceSha": "dcdf77f15632a9caeb1439d393167d64157f1fc9"
+}

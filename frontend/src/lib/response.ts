@@ -1,3 +1,4 @@
+import { logServerFailure } from "./server-error-log";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
@@ -23,7 +24,7 @@ export function handle(
     if (err instanceof HttpError) {
       return fail(err.message, err.status);
     }
-    console.error("[api-error]", err);
+    logServerFailure("api-error", err);
     return fail("Terjadi kesalahan pada server", 500);
   });
 }

@@ -57,12 +57,15 @@ export function PurchasePanel({
     if (!selected) return;
     setError(null);
     start(async () => {
+      try {
       const res = await addToCartAction(selected.id, qty);
       if (res.unauthorized) return router.push("/login?redirectTo=/cart");
       if (!res.ok) return setError(res.error ?? "Gagal menambah ke keranjang");
       setDone(true);
       setTimeout(() => setDone(false), 1500);
-      router.refresh();
+      } catch {
+        setError("Koneksi terputus. Periksa keranjang sebelum mencoba lagi.");
+      } finally { router.refresh(); }
     });
   }
 

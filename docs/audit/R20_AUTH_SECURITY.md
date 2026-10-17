@@ -22,3 +22,18 @@ Tinjauan kode/upstream menunjukkan checksum dan backport diperlukan serta tetap 
 Tindak lanjut: review enumeration/timing, login/reset concurrency, token expiry, register,
 logout dan environment binding; jangan menganggap key Preview/production terpisah hanya
 karena issuer/audience berbeda. Trusted role efektif wajib diverifikasi pada staging terisolasi.
+
+## R20-AUTH-02 · Medium · Shortcut biaya password membedakan akun
+
+`auth.service.ts:authenticate` sebelumnya menolak unknown/inactive sebelum bcrypt,
+sehingga biaya verifikasi dapat membedakan jenis akun. Kini ketiganya menjalankan
+satu bcrypt cost10 dan memberi denial401 generik; tidak mengklaim latency jaringan
+konstan. Limiter global/identifier tetap dieksekusi lebih dulu, termasuk DB fail-closed.
+Regresi `auth-credential-work.test.ts` menguji unknown, inactive, wrong password dan
+limiter unavailable tanpa membaca data identity setelah DB limiter gagal.
+
+Registrasi masih memberi409 untuk email/telepon duplikat, sesuai UX sebelumnya;
+reset provider failure dapat membedakan hasil dari unknown account. Pencegahan
+semua enumeration memerlukan persetujuan desain onboarding/verifikasi email atau
+outbox yang merespons generik tanpa mengklaim delivery palsu. Ini dicatat terbuka,
+bukan diklaim selesai hanya karena biaya bcrypt disetarakan. Tidak mengirim email nyata.

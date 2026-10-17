@@ -1,7 +1,7 @@
 import { enforceAuthRateLimit } from "@/lib/auth/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { hashPassword, verifyPassword, DUMMY_PASSWORD_HASH } from "@/lib/auth/password";
 import { HttpError } from "@/lib/response";
 import { writeAudit } from "@/modules/audit/audit.service";
 import { randomBytes, createHash } from "crypto";
@@ -64,9 +64,8 @@ export async function authenticate(identifier: string, password: string) {
   const user = await prisma.user.findFirst({
     where: { OR: [{ email: value }, { phone: identifier.trim() }] },
   });
-  if (!user || !user.isActive) throw new HttpError("Email/No HP atau password salah", 401);
-  const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) throw new HttpError("Email/No HP atau password salah", 401);
+  const valid = await verifyPassword(password, user?.isActive ? user.passwordHash : DUMMY_PASSWORD_HASH);
+  if (!user || !user.isActive || !valid) throw new HttpError("Email/No HP atau password salah", 401);
   return user;
 }
 

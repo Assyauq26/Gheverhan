@@ -48,6 +48,7 @@ jobs:
       - name: Checkout only application and tests without persisted Git credentials
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           sparse-checkout: frontend
 
@@ -68,7 +69,9 @@ jobs:
           npm run prisma:deploy
 
       - name: Install isolated Chromium browser and dependencies
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install --with-deps chromium
+          node -e 'const { chromium } = require("@playwright/test"); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "SPRINT1_CHROMIUM_PATH=" + chromium.executablePath() + "\n");'
 
       - name: Check types, ESLint and production build
         run: |
@@ -82,6 +85,15 @@ jobs:
         run: |
           mkdir -p node_modules/server-only
           echo 'module.exports = {};' > node_modules/server-only/index.js
+
+      - name: Direct database entrypoint safety in a disposable local schema
+        run: node --import tsx --test tests/integration/database-entrypoints.test.ts
+
+      - name: Real PostgreSQL session revocation, reset and atomic auth limits
+        run: node --import tsx --test tests/integration/auth-security.test.ts
+
+      - name: Real PostgreSQL concurrent cart increments and first-cart creation
+        run: node --import tsx --test tests/integration/cart-concurrency.test.ts
 
       - name: Real PostgreSQL product lifecycle and concurrency
         run: npm run test:integration:products
@@ -98,18 +110,31 @@ jobs:
       - name: Chromium operations/payment proof and RBAC test with loopback storage double
         run: npm run test:e2e:operations
 
-      - name: Chromium navigation and mobile responsiveness regression
-        run: node --import tsx tests/integration/navigation-browser.ts
-        env:
-          SPRINT1_ARTIFACT_DIR: .artifacts/navigation
+      - name: Chromium regression for microtask replay of hydrated Flight content
+        id: hydration_replay
+        run: node --import tsx tests/integration/react-hydration-replay.ts
 
-      - name: Upload synthetic visual evidence for owner review
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Chromium navigation and mobile responsiveness regression
+        id: navigation
+        run: |
+          for iteration in $(seq 1 10); do
+            SPRINT1_ARTIFACT_DIR="/tmp/gheverhan-navigation-${GITHUB_RUN_ID}-${iteration}" \
+              node --import tsx tests/integration/navigation-browser.ts
+          done
+
+      - name: Build an identical-commit stability matrix, including partial failures
+        if: ${{ !cancelled() && steps.navigation.outcome != 'skipped' }}
+        run: node scripts/navigation-stability-matrix.mjs /tmp "gheverhan-navigation-${GITHUB_RUN_ID}-" "/tmp/gheverhan-stability-${GITHUB_RUN_ID}"
+
+      - name: Retain synthetic navigation diagnostics, including failed runs
+        if: ${{ !cancelled() && (steps.navigation.outcome != 'skipped' || steps.hydration_replay.outcome != 'skipped') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24
         with:
-          name: pr59-dashboard-visual-evidence
+          name: navigation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            frontend/.artifacts/navigation/*-dashboard.png
-            frontend/.artifacts/navigation/navigation-results.json
-          if-no-files-found: warn
+            /tmp/gheverhan-navigation-*/navigation-results.json
+            /tmp/gheverhan-navigation-*/*-dashboard.png
+            /tmp/react-hydration-replay-*/hydration-replay-results.json
+            /tmp/gheverhan-stability-*/navigation-stability-matrix.*
+          if-no-files-found: error
           retention-days: 7

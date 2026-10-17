@@ -59,14 +59,14 @@ async function main() {
         await expect(page.getByTestId('navigation-pending')).toBeVisible();
         timings.push({ viewport: width, pendingFeedbackMs: performance.now()-start, imposedResponseDelayMs: 600 });
         await expect(page.getByRole('heading', { name: 'Produk', exact: true })).toBeVisible();
-        await expect(page.locator('header nav')).toHaveCount(0);
+        await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
         const bottomNav = page.locator('nav[aria-label="Navigasi bawah admin"]');
         const sidebar = page.locator('aside[aria-label="Sidebar admin"]');
         if (width === 390) {
           await expect(bottomNav).toBeVisible();
           await expect(sidebar).toBeHidden();
           await page.setViewportSize({ width: 768, height: 900 });
-          await expect(page.locator('header nav')).toHaveCount(0);
+          await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
           await expect(sidebar).toBeVisible();
           await expect(bottomNav).toBeHidden();
           await page.setViewportSize({ width, height: 900 });
@@ -101,7 +101,7 @@ async function main() {
         await expect(page.getByText('Halaman 2 dari 2')).toBeVisible();
         const active = page.getByTestId('adminnav-inventori').filter({ visible: true });
         await expect(active).toHaveAttribute('aria-current', 'page');
-        await expect(page.locator('header nav')).toHaveCount(0);
+        await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
         const box = await active.boundingBox(); assert.ok(box && box.x >= 0 && box.x+box.width <= width, 'active menu is in view');
         const input = await page.getByPlaceholder('Cari produk atau SKU').boundingBox();
         assert.ok(input && input.width >= 180, 'mobile search remains readable');
@@ -111,8 +111,8 @@ async function main() {
       await check(`${width}px: other admin sections have no duplicate scrolling header menu`, async () => {
         for (const adminRoute of ['/admin/orders', '/admin/marketing', '/admin/categories']) {
           await page.goto(`${base}${adminRoute}`);
-          await expect(page.locator('header')).toBeVisible();
-          await expect(page.locator('header nav')).toHaveCount(0);
+          await expect(page.getByRole('banner')).toBeVisible();
+          await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${adminRoute} overflows at ${width}px`);
         }
       });

@@ -30,7 +30,7 @@ function Metric({ label, value, description, href, tone, icon, testId }: {
 }) {
   return (
     <Link href={href} prefetch={false} className={`${panel} group relative block min-w-0 px-4 py-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md sm:px-5 sm:py-5`}>
-      <div className="flex items-center gap-3">
+      <div className="flex min-h-16 items-center gap-3 sm:min-h-11">
         <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${tone}`}>{icon}</span>
         <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-[11px] font-medium text-zinc-700 sm:text-sm">{label}</span>
         <span className="ml-auto grid size-7 shrink-0 place-items-center rounded-full bg-zinc-50 text-zinc-500 transition group-hover:translate-x-0.5 group-hover:bg-zinc-100"><ChevronRight size={15}/></span>

@@ -17,7 +17,7 @@ const dbUrl = new URL(target);
 if (!["127.0.0.1", "localhost", "[::1]"].includes(dbUrl.hostname) || dbUrl.pathname !== "/gheverhan_sprint1_test") throw new Error("Browser tests refuse production/non-local databases");
 const root = path.resolve(__dirname, "../..");
 if (!existsSync(path.join(root, ".next/BUILD_ID"))) throw new Error("Run npm run build before this production-server browser test");
-const artifactDir = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-product-browser-${process.pid}`;
+const artifactDir = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-operations-browser-${process.pid}`;
 const base = "http://localhost:3101";
 const secret = randomBytes(32).toString("hex");
 process.env.JWT_SECRET = secret;
@@ -416,6 +416,7 @@ async function main() {
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, orderId: sale.order.id, variantId: variant.id, database: "isolated local PostgreSQL", storage: "local proof contract double", synthetic: true }, null, 2));
     console.log(`PASS ${checks} operational browser/API/data-flow checks`);
   } finally {
+    try {
     await writeFile(path.join(artifactDir, "validation-results.json"), JSON.stringify({
       status: completed ? "PASS" : "FAILED", checks, checkpoints,
       commitSha: execFileSync("git", ["rev-parse", "HEAD"], {cwd:root,encoding:"utf8"}).trim(),
@@ -423,9 +424,11 @@ async function main() {
       buildId: readFileSync(path.join(root,".next/BUILD_ID"),"utf8").trim(),
       synthetic: true,
     },null,2));
+    } finally {
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve())); await db.$disconnect();
+    }
   }
 }
 main().catch(err => { console.error(err); process.exitCode = 1; });

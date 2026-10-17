@@ -328,6 +328,7 @@ async function main() {
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: false }, null, 2));
     console.log(`PASS ${checks} browser/data-flow checks; no production data or external storage used`);
   } finally {
+    try {
     await writeFile(path.join(artifactDir, "validation-results.json"), JSON.stringify({
       status: completed ? "PASS" : "FAILED", checks, checkpoints,
       commitSha: execFileSync("git", ["rev-parse", "HEAD"], {cwd:root,encoding:"utf8"}).trim(),
@@ -335,11 +336,13 @@ async function main() {
       buildId: readFileSync(path.join(root,".next/BUILD_ID"),"utf8").trim(),
       synthetic: true,
     },null,2));
+    } finally {
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve()));
     await db.coupon.deleteMany({ where: { code: couponCode } });
     await db.$disconnect();
+    }
   }
 }
 main().catch(err => { console.error(err); process.exitCode = 1; });

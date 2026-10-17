@@ -100,3 +100,16 @@ jobs:
 
       - name: Chromium navigation and mobile responsiveness regression
         run: node --import tsx tests/integration/navigation-browser.ts
+        env:
+          SPRINT1_ARTIFACT_DIR: .artifacts/navigation
+
+      - name: Upload synthetic visual evidence for owner review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr59-dashboard-visual-evidence
+          path: |
+            frontend/.artifacts/navigation/*-dashboard.png
+            frontend/.artifacts/navigation/navigation-results.json
+          if-no-files-found: warn
+          retention-days: 7

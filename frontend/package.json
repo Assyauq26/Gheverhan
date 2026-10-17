@@ -29,7 +29,8 @@
     "test:integration:refund-shipping": "node --disable-proto=throw --import tsx --test tests/integration/order-refund-shipping.test.ts",
     "test:e2e:operations": "node --import tsx tests/integration/operations-browser.ts",
     "security:prepare": "node scripts/security/prepare-braces.mjs",
-    "security:verify": "node scripts/security/prepare-braces.mjs --verify"
+    "security:verify": "node scripts/security/prepare-braces.mjs --verify",
+    "release:preflight": "node --import tsx scripts/release/preflight.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -169,3 +169,14 @@ test("reset rolls back token consumption and session version when security audit
   await auth.resetPassword(token,"synthetic-new-password");
   assert.equal((await db.user.findUniqueOrThrow({where:{id:user.id}})).sessionVersion,1);
 });
+
+test("controlled cutover can invalidate legacy version-zero JWTs once before opening auth traffic", async () => {
+  const user = await fixture();
+  const identity = process.env.VERCEL_ENV === "preview" ? ["gheverhan-preview", "gheverhan-web-preview"] : ["gheverhan", "gheverhan-web"];
+  const legacy = await new SignJWT({email:user.email}).setProtectedHeader({alg:"HS256"}).setSubject(user.id).setIssuer(identity[0]).setAudience(identity[1]).setExpirationTime("1h").sign(new TextEncoder().encode(process.env.JWT_SECRET));
+  assert.equal(await accepted(legacy),true);
+  assert.equal((await db.user.updateMany({where:{id:user.id,sessionVersion:0},data:{sessionVersion:1}})).count,1);
+  assert.equal(await accepted(legacy),false);
+  assert.equal((await db.user.updateMany({where:{id:user.id,sessionVersion:0},data:{sessionVersion:1}})).count,0);
+  assert.equal(await accepted(await jwt.signSession({sub:user.id,email:user.email,version:1})),true);
+});

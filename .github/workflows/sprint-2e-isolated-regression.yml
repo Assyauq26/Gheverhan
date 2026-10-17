@@ -34,6 +34,7 @@ jobs:
           --health-retries 15
     env:
       CI: "true"
+      MAINTENANCE_MODE: "0"
       GHEVERHAN_ISOLATED_TESTS: "1"
       SPRINT1_TEST_DATABASE_URL: postgresql://gheverhan_test:isolated-local-only@127.0.0.1:5432/gheverhan_sprint1_test
       DATABASE_URL: postgresql://gheverhan_test:isolated-local-only@127.0.0.1:5432/gheverhan_sprint1_test
@@ -85,12 +86,16 @@ jobs:
         run: |
           mkdir -p node_modules/server-only
           echo 'module.exports = {};' > node_modules/server-only/index.js
+          git show HEAD:frontend/next-env.d.ts > next-env.d.ts
 
       - name: Direct database entrypoint safety in a disposable local schema
         run: node --import tsx --test tests/integration/database-entrypoints.test.ts
 
       - name: Real PostgreSQL session revocation, reset and atomic auth limits
         run: node --import tsx --test tests/integration/auth-security.test.ts
+
+      - name: Read-only release preflight rejects legacy schema, missing configuration and insufficient privileges
+        run: node --import tsx --test tests/integration/release-preflight.test.ts
 
       - name: Real PostgreSQL concurrent cart increments and first-cart creation
         run: node --import tsx --test tests/integration/cart-concurrency.test.ts

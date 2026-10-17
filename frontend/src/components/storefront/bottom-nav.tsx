@@ -62,7 +62,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
             <span className="relative flex shrink-0 items-center justify-center">
               <Icon size={20} strokeWidth={active ? 2.2 : 2} />
               {item.badgeKey && liveCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-black ring-1 ring-black/10">
+                <span data-testid="bottom-cart-count" className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-black ring-1 ring-black/10">
                   {liveCount}
                 </span>
               )}

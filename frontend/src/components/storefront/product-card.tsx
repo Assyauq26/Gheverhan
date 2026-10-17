@@ -62,13 +62,15 @@ export function ProductCard({
             </div>
           )}
 
-          {!featured && (
-            <div className="absolute right-2 top-2 z-10">
-              <WishlistButton productId={product.id} initialActive={wishlisted} />
-            </div>
-          )}
         </div>
       </Link>
+      {/* A button must never be nested in a link: invalid interactive HTML
+          can yield unpredictable click/hydration behavior in Chromium. */}
+      {!featured && (
+        <div className="absolute right-3.5 top-3.5 z-10">
+          <WishlistButton productId={product.id} initialActive={wishlisted} />
+        </div>
+      )}
 
       <div className="px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />

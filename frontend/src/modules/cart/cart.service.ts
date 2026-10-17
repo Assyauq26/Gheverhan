@@ -1,4 +1,5 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { effectivePrice } from "@/lib/money";
 import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
@@ -11,14 +12,28 @@ function validateQuantity(quantity: number, allowRemoval = false) {
   }
 }
 
-async function findCart(userId: string) {
-  return prisma.cart.findUnique({ where: { userId } });
+/** The parent-cart lock is also used by checkout before it consumes lines.
+ * Native INSERT/ON CONFLICT handles simultaneous first adds without a
+ * read/create race. Lock before reading quantities, not just before the write.
+ */
+async function lockCart(tx: Prisma.TransactionClient, userId: string, create: boolean) {
+  const rows = create
+    ? await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        INSERT INTO "Cart" ("id", "userId", "updatedAt") VALUES (${randomUUID()}, ${userId}, NOW())
+        ON CONFLICT ("userId") DO UPDATE SET "updatedAt" = "Cart"."updatedAt"
+        RETURNING "id"
+      `)
+    : await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT "id" FROM "Cart" WHERE "userId" = ${userId} FOR UPDATE
+      `);
+  return rows[0] ?? null;
 }
 
 export async function getOrCreateCart(userId: string) {
-  const existing = await findCart(userId);
-  if (existing) return existing;
-  return prisma.cart.create({ data: { userId } });
+  return prisma.$transaction(async tx => {
+    const cart = await lockCart(tx, userId, true);
+    return tx.cart.findUniqueOrThrow({ where: { id: cart!.id } });
+  });
 }
 
 /** Server-authoritative unit price for a variant. */
@@ -114,102 +129,72 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
   return { cartId: cart.id, lines, subtotal, count };
 }
 
-export async function addItem(userId: string, variantId: string, quantity = 1) {
+async function incrementItem(userId: string, variantId: string, quantity: number) {
   validateQuantity(quantity);
-  const cart = await getOrCreateCart(userId);
-  const variant = await prisma.productVariant.findUnique({
-    where: { id: variantId, product: { status: "PUBLISHED" } },
-    include: { inventory: true },
+  await prisma.$transaction(async tx => {
+    const cart = await lockCart(tx, userId, true);
+    const variant = await tx.productVariant.findUnique({
+      where: { id: variantId, product: { status: "PUBLISHED" } },
+      select: { id: true, inventory: { select: { onHand: true, reserved: true } } },
+    });
+    if (!variant) throw new HttpError("Varian tidak ditemukan", 404);
+    const existing = await tx.cartItem.findUnique({
+      where: { cartId_variantId: { cartId: cart!.id, variantId } },
+      select: { quantity: true },
+    });
+    const desired = (existing?.quantity ?? 0) + quantity;
+    const stock = variant.inventory ? available(variant.inventory.onHand, variant.inventory.reserved) : 0;
+    if (desired > stock) throw new HttpError("Stok tidak mencukupi", 409);
+    await tx.cartItem.upsert({
+      where: { cartId_variantId: { cartId: cart!.id, variantId } },
+      create: { cartId: cart!.id, variantId, quantity },
+      update: { quantity: desired },
+    });
   });
-  if (!variant) throw new HttpError("Varian tidak ditemukan", 404);
+}
 
-  const existing = await prisma.cartItem.findUnique({
-    where: { cartId_variantId: { cartId: cart.id, variantId } },
-  });
-  const desired = (existing?.quantity ?? 0) + quantity;
-  const stock = variant.inventory
-    ? available(variant.inventory.onHand, variant.inventory.reserved)
-    : 0;
-  if (desired > stock) throw new HttpError("Stok tidak mencukupi", 409);
-
-  await prisma.cartItem.upsert({
-    where: { cartId_variantId: { cartId: cart.id, variantId } },
-    create: { cartId: cart.id, variantId, quantity },
-    update: { quantity: desired },
-  });
+export async function addItem(userId: string, variantId: string, quantity = 1) {
+  await incrementItem(userId, variantId, quantity);
   return getCartView(userId);
 }
 
-/**
- * Latency-sensitive cart mutation used by the product-card quick-add button.
- * It intentionally returns no cart view: the client updates its badge
- * optimistically, while the server only performs the validation + mutation.
- */
+/** Same locked increment as regular add, without the full cart-view query. */
 export async function quickAddItem(userId: string, variantId: string, quantity = 1) {
-  validateQuantity(quantity);
-  const cart = await prisma.cart.upsert({
-    where: { userId },
-    create: { userId },
-    update: {},
-    select: { id: true },
-  });
-
-  // These reads are independent and can share one network round-trip to the
-  // database from the application runtime.
-  const [variant, existing] = await Promise.all([
-    prisma.productVariant.findUnique({
-      where: { id: variantId, product: { status: "PUBLISHED" } },
-      select: {
-        id: true,
-        inventory: { select: { onHand: true, reserved: true } },
-      },
-    }),
-    prisma.cartItem.findUnique({
-      where: { cartId_variantId: { cartId: cart.id, variantId } },
-      select: { quantity: true },
-    }),
-  ]);
-
-  if (!variant) throw new HttpError("Varian tidak ditemukan", 404);
-
-  const desired = (existing?.quantity ?? 0) + quantity;
-  const stock = variant.inventory
-    ? available(variant.inventory.onHand, variant.inventory.reserved)
-    : 0;
-  if (desired > stock) throw new HttpError("Stok tidak mencukupi", 409);
-
-  await prisma.cartItem.upsert({
-    where: { cartId_variantId: { cartId: cart.id, variantId } },
-    create: { cartId: cart.id, variantId, quantity },
-    update: { quantity: desired },
-  });
+  await incrementItem(userId, variantId, quantity);
 }
 
 export async function updateItem(userId: string, itemId: string, quantity: number) {
   validateQuantity(quantity, true);
-  const cart = await findCart(userId);
-  if (!cart) throw new HttpError("Keranjang tidak ditemukan", 404);
-
-  const item = await prisma.cartItem.findFirst({
-    where: { id: itemId, cartId: cart.id },
-    include: { variant: { include: { inventory: true } } },
+  await prisma.$transaction(async tx => {
+    const cart = await lockCart(tx, userId, false);
+    if (!cart) throw new HttpError("Keranjang tidak ditemukan", 404);
+    const item = await tx.cartItem.findFirst({
+      where: { id: itemId, cartId: cart.id },
+      include: { variant: { include: { inventory: true } } },
+    });
+    if (!item) throw new HttpError("Item tidak ditemukan", 404);
+    if (quantity <= 0) {
+      await tx.cartItem.delete({ where: { id: itemId } });
+      return;
+    }
+    const stock = item.variant.inventory ? available(item.variant.inventory.onHand, item.variant.inventory.reserved) : 0;
+    if (quantity > stock) throw new HttpError("Stok tidak mencukupi", 409);
+    await tx.cartItem.update({ where: { id: itemId }, data: { quantity } });
   });
-  if (!item) throw new HttpError("Item tidak ditemukan", 404);
-  if (quantity <= 0) {
-    await prisma.cartItem.delete({ where: { id: itemId } });
-    return getCartView(userId);
-  }
-  const stock = item.variant.inventory
-    ? available(item.variant.inventory.onHand, item.variant.inventory.reserved)
-    : 0;
-  if (quantity > stock) throw new HttpError("Stok tidak mencukupi", 409);
-  await prisma.cartItem.update({ where: { id: itemId }, data: { quantity } });
   return getCartView(userId);
 }
 
 export async function removeItem(userId: string, itemId: string) {
-  const cart = await findCart(userId);
-  if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
-  await prisma.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } });
+  await prisma.$transaction(async tx => {
+    const cart = await lockCart(tx, userId, false);
+    if (cart) await tx.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } });
+  });
   return getCartView(userId);
+}
+
+
+/** Badge count without fetching product/media/pricing relations. */
+export async function getCartCount(userId: string) {
+  const total = await prisma.cartItem.aggregate({ where: { cart: { userId } }, _sum: { quantity: true } });
+  return total._sum.quantity ?? 0;
 }

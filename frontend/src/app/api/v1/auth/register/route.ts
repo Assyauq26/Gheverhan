@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
     const body = schema.parse(await req.json());
     const user = await registerCustomer(body);
-    await createSession(user.id, user.email);
+    await createSession(user.id, user.email, user.sessionVersion);
     return ok({ id: user.id, name: user.name, email: user.email }, 201);
   });
 }

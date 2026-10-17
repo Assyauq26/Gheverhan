@@ -5,6 +5,8 @@ import { mkdtempSync } from "fs";
 
 export default defineConfig({
   cacheDir: mkdtempSync(path.join(os.tmpdir(), "gheverhan-vitest-")),
+  // Vite8 uses Oxc; Next must retain jsx:preserve in the application tsconfig.
+  oxc: { jsx: { runtime: "automatic" } },
   server: {
     host: "127.0.0.1",
     cors: false,
@@ -16,13 +18,11 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts"],
     api: false,
     ui: false,
-    // Vitest 2 requires a browser name even when Browser Mode is disabled.
-    browser: { enabled: false, name: "chromium" },
+    browser: { enabled: false },
     maxWorkers: 2,
-    minWorkers: 1,
     pool: "forks",
-    // Vitest 2 builds worker arguments independently of the parent process.
-    poolOptions: { forks: { execArgv: ["--disable-proto=throw"] } },
+    // Vitest4 forwards these arguments to every forked worker.
+    execArgv: ["--disable-proto=throw"],
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },

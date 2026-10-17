@@ -80,6 +80,7 @@ model User {
   phone        String?  @unique
   passwordHash String
   isActive     Boolean  @default(true)
+  sessionVersion Int @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -95,6 +96,7 @@ model User {
   recentlyViewed  RecentlyViewed[]
   auditLogs       AuditLog[]
   resetTokens     PasswordResetToken[]
+  revokedSessions SessionRevocation[]
 }
 
 model PasswordResetToken {
@@ -641,4 +643,21 @@ model AuditLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@index([entity, entityId])
+}
+
+// Only the trusted server database role may access these tables (RLS default deny).
+model SessionRevocation {
+  tokenHash String @id
+  userId String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  bucket String @id
+  attempts Int
+  expiresAt DateTime
+  @@index([expiresAt])
 }

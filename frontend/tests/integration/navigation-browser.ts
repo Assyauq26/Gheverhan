@@ -65,8 +65,8 @@ async function main() {
       await check(`${width}px: filters, pagination and history retain state without document reload`, async () => {
         await page.getByPlaceholder('Cari nama atau slug produk').fill(prefix);
         await page.getByRole('button', { name: 'Cari', exact: true }).click();
-        await expect(page.getByRole('search')).toHaveAttribute('aria-busy', 'true');
-        await expect(page.getByRole('search').getByRole('button', { name: 'Cari', exact: true })).toBeDisabled();
+        await expect(page.locator('main').getByRole('search')).toHaveAttribute('aria-busy', 'true');
+        await expect(page.locator('main').getByRole('search').getByRole('button', { name: 'Cari', exact: true })).toBeDisabled();
         await expect(page.getByText('25 produk · kelola katalog toko Gheverhan.')).toBeVisible();
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));

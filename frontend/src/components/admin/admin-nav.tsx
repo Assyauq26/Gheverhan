@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "@/components/ui/navigation";
 import {
@@ -35,42 +34,30 @@ function activeLink(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 }
 
-export function AdminNav({ permissions, variant = "sidebar" }: { permissions: string[]; variant?: "sidebar" | "compact" }) {
+export function AdminNav({ permissions }: { permissions: string[] }) {
   const pathname = usePathname();
-  const nav = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const node = nav.current;
-    const active = node?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (node && active && node.scrollWidth > node.clientWidth)
-      node.scrollLeft = active.offsetLeft - node.clientWidth / 2 + active.clientWidth / 2;
-  }, [pathname]);
-
   const visible = links.filter(item => allowed(permissions, item));
-  const compact = variant === "compact";
-  if (compact && pathname === "/admin") return null;
   return (
-    <nav ref={nav} aria-label="Navigasi admin" className={cn(
-      compact ? "no-scrollbar flex gap-1.5 overflow-x-auto border-b border-line bg-white px-4 py-2.5" : "flex flex-col gap-1 px-4 py-2",
-    )}>
+    <nav aria-label="Navigasi admin" className="flex flex-col gap-1 px-4 py-2">
       {visible.map((item, index) => {
         const active = activeLink(pathname, item.href, "exact" in item ? item.exact : false);
         const Icon = item.icon;
         return (
-          <div key={item.href} className={cn(!compact && index === 6 && "mt-4 border-t border-line pt-4")}>
+          <div key={item.href} className={cn(index === 6 && "mt-4 border-t border-line pt-4")}>
             <Link
               href={item.href}
               prefetch={false}
               aria-current={active ? "page" : undefined}
-              {...(!compact ? { "data-testid": `adminnav-${item.label.toLowerCase().replaceAll(" ", "-")}` } : {})}
+              data-testid={`adminnav-${item.label.toLowerCase().replaceAll(" ", "-")}`}
               className={cn(
                 "group flex min-h-11 items-center gap-3 whitespace-nowrap rounded-xl text-sm font-medium transition-colors",
-                compact ? "px-3 py-2" : "px-4 py-3",
-                active ? (compact ? "bg-black text-white" : "bg-black font-semibold text-white shadow-sm") : "text-zinc-700 hover:bg-zinc-100 hover:text-black",
+                "px-4 py-3",
+                active ? "bg-black font-semibold text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 hover:text-black",
               )}
             >
               <Icon size={19} strokeWidth={active ? 2.25 : 1.9} aria-hidden="true" />
               <span className="flex-1">{("display" in item && item.display) || item.label}</span>
-              {!compact && item.href !== "/admin" && <ChevronRight size={15} className={active ? "text-white/80" : "text-zinc-400"} aria-hidden="true" />}
+              {item.href !== "/admin" && <ChevronRight size={15} className={active ? "text-white/80" : "text-zinc-400"} aria-hidden="true" />}
             </Link>
           </div>
         );

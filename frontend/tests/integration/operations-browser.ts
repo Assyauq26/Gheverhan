@@ -1,3 +1,4 @@
+import { verifyPaymentSynchronization } from "./payment-sync-browser";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
@@ -399,6 +400,9 @@ async function main() {
     });
     await check("empty states and movement filter", async () => {
       await page.goto(`${base}/admin/orders?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada pesanan yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory?q=NONEXISTENT-${prefix}`); await expect(page.getByText("Tidak ada varian yang sesuai")).toBeVisible(); await page.goto(`${base}/admin/inventory/${variant.id}?type=RETURN`); await expect(page.getByText("Barang diterima dan layak jual")).toBeVisible();
+    });
+    await check("R20 buyer/admin payment labels, proof resubmission and overdue review", async () => {
+      await verifyPaymentSynchronization(browser!, db, base, bank.id, customerRole.id, fin, page, cookie, errors, png);
     });
     await check("desktop/mobile operational pages have no overflow or browser exceptions", async () => {
       for (const viewport of [{ width: 1360, height: 900 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) { await page.setViewportSize(viewport); for (const route of ["/admin/inventory", `/admin/inventory/${variant.id}`, "/admin/orders", `/admin/orders/${sale.order.id}`]) { await page.goto(`${base}${route}`); await page.waitForLoadState("networkidle"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${viewport.width}`); } }

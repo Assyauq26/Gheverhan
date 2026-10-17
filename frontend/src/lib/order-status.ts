@@ -43,6 +43,9 @@ export function orderDisplayStatus(status: OrderStatus, paymentStatus?: PaymentS
     if (paymentStatus === "WAITING_VERIFICATION") return "Menunggu Verifikasi Pembayaran";
     if (paymentStatus === "REJECTED") return "Bukti Pembayaran Ditolak";
   }
+  if (status === "PAID" && paymentStatus === "PAID") return "Pembayaran Berhasil";
+  if (status === "PROCESSING") return "Sedang Diproses";
+  if (status === "SHIPPED") return "Dalam Pengiriman";
   return ORDER_STATUS_LABEL[status];
 }
 

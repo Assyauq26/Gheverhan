@@ -1,3 +1,4 @@
+import { paymentDisplayStatus } from "@/lib/order-status";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Clock, Copy } from "lucide-react";
@@ -69,7 +70,7 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm text-ink-soft">Total Pembayaran</span>
               <Badge variant={isWaiting ? "warning" : "muted"}>
-                {isWaiting ? "Menunggu Verifikasi" : payment.status === "REJECTED" ? "Ditolak" : "Menunggu Pembayaran"}
+                {paymentDisplayStatus(payment.status)}
               </Badge>
             </div>
             <p className="mt-1 font-display text-3xl font-black text-ink" data-testid="payment-amount">{formatIDR(payment.amount)}</p>
@@ -88,7 +89,7 @@ export default async function PaymentPage({ params }: PaymentRouteProps) {
           {isWaiting ? (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-warning/40 bg-amber-50 p-8 text-center" data-testid="payment-waiting">
               <Clock size={40} className="text-warning" />
-              <h2 className="font-display text-lg font-bold text-ink">Menunggu Verifikasi</h2>
+              <h2 className="font-display text-lg font-bold text-ink">{paymentDisplayStatus(payment.status)}</h2>
               <p className="text-sm text-ink-soft">Bukti transfer kamu sedang diperiksa admin (maks 1x24 jam).</p>
               <Button asChild variant="outline"><Link href={`/orders/${order.id}`}>Lihat Status Pesanan</Link></Button>
             </div>

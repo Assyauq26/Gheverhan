@@ -1,3 +1,4 @@
+import { enforceAuthRateLimit } from "@/lib/auth/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
@@ -13,6 +14,7 @@ export async function registerCustomer(input: {
   password: string;
 }) {
   const email = input.email.toLowerCase().trim();
+  await enforceAuthRateLimit("register", email);
   const phone = input.phone?.trim() || null;
 
   try {
@@ -58,6 +60,7 @@ export async function registerCustomer(input: {
 
 export async function authenticate(identifier: string, password: string) {
   const value = identifier.toLowerCase().trim();
+  await enforceAuthRateLimit("login", value);
   const user = await prisma.user.findFirst({
     where: { OR: [{ email: value }, { phone: identifier.trim() }] },
   });
@@ -72,14 +75,10 @@ const tokenDigest = (token: string) => createHash("sha256").update(token).digest
 export async function requestPasswordReset(email: string) {
   // Check configuration BEFORE account lookup, so an unconfigured provider
   // cannot silently claim that mail has been sent to existing accounts.
+  await enforceAuthRateLimit("reset", email);
   const config = resetMailConfig();
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (!user || !user.isActive) return; // keep the form response identical for unknown emails
-  const createdSince = new Date(Date.now() - 60 * 60 * 1000);
-  const recent = await prisma.passwordResetToken.count({
-    where: { userId: user.id, createdAt: { gte: createdSince } },
-  });
-  if (recent >= 3) return; // per-account throttle; add global/IP rate limiting before wider rollout
   const token = randomBytes(32).toString("hex");
   const record = await prisma.passwordResetToken.create({
     data: { userId: user.id, token: tokenDigest(token), expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
@@ -95,6 +94,7 @@ export async function requestPasswordReset(email: string) {
 
 export async function resetPassword(token: string, newPassword: string) {
   if (!/^[0-9a-f]{64}$/i.test(token)) throw new HttpError("Token reset tidak valid atau kedaluwarsa", 400);
+  await enforceAuthRateLimit("resetConfirm", tokenDigest(token));
   const record = await prisma.passwordResetToken.findUnique({ where: { token: tokenDigest(token) } });
   if (!record) throw new HttpError("Token reset tidak valid atau kedaluwarsa", 400);
   const hash = await hashPassword(newPassword);
@@ -105,7 +105,7 @@ export async function resetPassword(token: string, newPassword: string) {
       data: { usedAt: new Date() },
     });
     if (consumed.count !== 1) throw new HttpError("Token reset tidak valid atau kedaluwarsa", 400);
-    await tx.user.update({ where: { id: record.userId, isActive: true }, data: { passwordHash: hash } });
+    await tx.user.update({ where: { id: record.userId, isActive: true }, data: { passwordHash: hash, sessionVersion: { increment: 1 } } });
     await tx.passwordResetToken.updateMany({
       where: { userId: record.userId, usedAt: null },
       data: { usedAt: new Date() },

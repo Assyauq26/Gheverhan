@@ -12,6 +12,7 @@ for (const name of files) {
   runs.push({ run: Number(name.slice(prefix.length)), sha: data.commitSha, node: data.nodeVersion,
     browser: data.browserVersion, build: data.buildId, viewports: data.viewports, status: data.status,
     checks: data.checks, pageErrors: data.browserErrors?.length, passedCheckpoints: data.checkpoints?.filter(c => c.status === 'PASS').length, hydrationErrors: data.browserErrors?.filter(e => /418|hydration/i.test(e.message)).length,
+    viewportChecks: Object.fromEntries([390,768,1024,1360].map(width => [width, data.checkpoints?.filter(c => c.status === 'PASS' && c.label?.startsWith(`${width}px:`)).length])),
     diagnostic: Boolean(data.passiveHydrationProbe || data.hydrationProbe || data.diagnosticContinueAfterFailure), evidence: file });
 }
 const problems = [];
@@ -23,6 +24,7 @@ if (new Set(runs.map(r => r.browser)).size !== 1 || runs.some(r => !r.browser)) 
 if (new Set(runs.map(r => r.node)).size !== 1 || runs.some(r => !/^v22\./.test(r.node || ''))) problems.push('Every run must use one supported Node 22 version');
 if (runs.some(r => r.status !== 'PASS' || r.checks !== 36 || r.passedCheckpoints !== 36 || r.pageErrors !== 0 || r.hydrationErrors !== 0 || r.diagnostic)) problems.push('All strict full runs must pass 36 checks with zero hydration errors and no diagnostic patches');
 if (runs.some(r => JSON.stringify(r.viewports) !== '[390,768,1024,1360]')) problems.push('Every run must cover all four required viewports');
+if (runs.some(r => Object.values(r.viewportChecks).some(count => count !== 9))) problems.push('Each viewport must pass exactly nine checkpoints');
 const result = { status: problems.length ? 'FAILED' : 'PASS', sha, problems, runs };
 await mkdir(output, { recursive: true });
 await writeFile(path.join(output, 'navigation-stability-matrix.json'), JSON.stringify(result, null, 2));
@@ -30,5 +32,6 @@ const markdown = ['# R19 — Matriks stabilitas', '', `Gate: **${result.status}*
   '| Run | SHA | Node | Chromium | Viewport | Hasil | Pemeriksaan | Bukti |', '| --- | --- | --- | --- | --- | --- | --- | --- |',
   ...runs.map(r => `| ${r.run} | ${r.sha} | ${r.node} | ${r.browser} | ${r.viewports?.join(', ')} | ${r.status} | ${r.checks}/36 | ${r.evidence} |`), '', ...problems.map(p => `- ${p}`), ''].join('\n');
 await writeFile(path.join(output, 'navigation-stability-matrix.md'), markdown);
+console.log(markdown);
 console.log(`Navigation stability gate: ${result.status}; ${runs.length}/10 runs on ${sha}`);
 if (problems.length) process.exitCode = 1;

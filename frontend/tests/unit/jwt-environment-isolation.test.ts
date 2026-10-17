@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { decodeJwt, SignJWT } from "jose";
-import { signSession, verifySession } from "@/lib/auth/jwt";
+import { signSession, verifySession, verifySessionClaims } from "@/lib/auth/jwt";
 
 const secret = "jwt-test-secret-only-do-not-use-live-32-bytes";
 
@@ -61,5 +61,22 @@ describe("environment-bound session JWTs", () => {
       "JWT_SECRET is not configured",
     );
     expect(await verifySession("not-a-jwt")).toBeNull();
+  });
+});
+
+
+describe("strict session claim validation", () => {
+  it.each([{ email: 12 }, { email: "a@example.test", ver: -1 }, { email: "a@example.test", ver: 1.5 }, { email: "a@example.test", ver: "1" }, { email: "a@example.test", jti: "" }])("rejects malformed signed claims %#", async claims => {
+    vi.stubEnv("JWT_SECRET", secret); vi.stubEnv("VERCEL_ENV", "production");
+    const token = await new SignJWT(claims).setProtectedHeader({ alg: "HS256" }).setSubject("fixture").setIssuer("gheverhan").setAudience("gheverhan-web").setExpirationTime("1h").sign(new TextEncoder().encode(secret));
+    expect(await verifySessionClaims(token)).toBeNull();
+  });
+  it("requires expiration and rejects expired signatures", async () => {
+    vi.stubEnv("JWT_SECRET", secret); vi.stubEnv("VERCEL_ENV", "production");
+    for (const expired of [false, true]) {
+      let builder = new SignJWT({ email: "a@example.test" }).setProtectedHeader({ alg: "HS256" }).setSubject("fixture").setIssuer("gheverhan").setAudience("gheverhan-web");
+      if (expired) builder = builder.setExpirationTime(1);
+      expect(await verifySessionClaims(await builder.sign(new TextEncoder().encode(secret)))).toBeNull();
+    }
   });
 });

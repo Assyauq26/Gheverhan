@@ -5,7 +5,7 @@ vi.mock('server-only', () => ({}));
 // Identity behavior is tested here; actual request isolation is covered by HTTP/RBAC tests.
 vi.mock('react', () => ({ cache: (fn: unknown) => fn }));
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => ({ value: 'signed-session-fixture' }) }) }));
-vi.mock('@/lib/auth/jwt', () => ({ verifySession: async () => ({ sub: 'staff' }), signSession: vi.fn() }));
+vi.mock('@/lib/auth/jwt', () => ({ verifySessionClaims: async () => ({ sub: 'staff', version: 0, tokenHash: 'fixture-digest', expiresAt: new Date(Date.now() + 60000) }), signSession: vi.fn() }));
 vi.mock('@/lib/prisma', () => ({ prisma: db }));
 import { getCurrentUser } from '@/lib/auth/session';
 beforeEach(() => {

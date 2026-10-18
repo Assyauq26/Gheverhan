@@ -666,6 +666,23 @@ async function main() {
         const savedState = await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"));
         assert.ok(savedState && JSON.parse(savedState).challengeId === initialChallenge.id);
         assert.equal(savedState.includes("password"), false);
+        await page.evaluate(() => {
+          const k = "gheverhan.registration.otp.v1";
+          const saved = JSON.parse(sessionStorage.getItem(k) || "{}");
+          saved.expiresAt = Date.now() + 1200;
+          sessionStorage.setItem(k, JSON.stringify(saved));
+        });
+        await db.pendingRegistration.update({ where: { email: retryEmail }, data: { sentAt: new Date(Date.now() - 70_000) } });
+        const successfulResend = page.getByTestId("registration-resend");
+        await successfulResend.evaluate((el: HTMLButtonElement) => { el.disabled = false; });
+        await successfulResend.click();
+        await expect(page.getByText("Kode OTP baru telah dikirim ke email Anda.")).toBeVisible();
+        await page.waitForTimeout(1500);
+        await page.reload();
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
+        await expect(page.getByTestId("verify-registration-form").locator('input[name="challengeId"]')).toHaveValue(initialChallenge.id);
+        const restored = await page.evaluate(() => JSON.parse(sessionStorage.getItem("gheverhan.registration.otp.v1") || "{}").expiresAt);
+        assert.ok(typeof restored === "number" && restored > Date.now());
         await db.pendingRegistration.update({ where: { email: retryEmail }, data: { sentAt: new Date(Date.now() - 70_000) } });
         failMail = true;
         try {
@@ -722,10 +739,19 @@ async function main() {
       await page.getByTestId("login-password").fill("wrong-password");
       await page.getByTestId("auth-submit").click();
       await expect(page.getByTestId("login-error")).toContainText("salah");
+      // Pending registration from a different user must not leak after login
+      // redirects to /cart instead of /account.
+      await page.evaluate(() => sessionStorage.setItem("gheverhan.registration.otp.v1", JSON.stringify({
+        email: "another-person@example.test",
+        challengeId: "00000000-0000-4000-8000-000000000001",
+        resendAvailableAt: Date.now() + 60_000,
+        expiresAt: Date.now() + 600_000,
+      })));
       await page.getByTestId("login-identifier").fill(dummyPhone(0));
       await page.getByTestId("login-password").fill(password);
       await page.getByTestId("auth-submit").click();
       await page.waitForURL(base + "/cart");
+      await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"))).toBeNull();
     });
     await check(
       "forgot password validates input and keeps a neutral response for an unknown account",

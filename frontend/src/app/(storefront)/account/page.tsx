@@ -4,7 +4,6 @@ import { Package, Heart, MapPin, ShieldCheck, ChevronRight } from "lucide-react"
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { LogoutButton } from "@/components/storefront/logout-button";
-import { RegistrationOtpCleanup } from "@/components/auth/registration-otp-cleanup";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +24,6 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <RegistrationOtpCleanup />
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-xl font-bold text-white">
           {user.name.charAt(0).toUpperCase()}

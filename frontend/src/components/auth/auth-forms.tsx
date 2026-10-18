@@ -316,6 +316,28 @@ function RegistrationOtpStep({
       // Storage may be disabled; the live verification form remains usable.
     }
   }, [resendState.ok, resendState.restartRequired, resendState.resendAvailableAt, email, challengeId, onRestart]);
+  const preserveInterruptedResend = () => {
+    // If the email is sent but the response is lost, preserve the same challenge.
+    // Only the server can validate the new code, expiration and cooldown.
+    try {
+      const raw = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
+      if (!raw) return;
+      const stored: unknown = JSON.parse(raw);
+      if (!validPersistedOtp(stored)) return;
+      if (stored.email !== email || stored.challengeId !== challengeId) return;
+      const now = Date.now();
+      window.sessionStorage.setItem(
+        REGISTRATION_OTP_STORAGE_KEY,
+        JSON.stringify({
+          ...stored,
+          expiresAt: now + REGISTRATION_OTP_TTL_MS,
+          resendAvailableAt: now + 60_000,
+        }),
+      );
+    } catch {
+      // Unavailable browser storage does not block resending.
+    }
+  };
   return (
     <div className="auth-content">
       <Heading title="Verifikasi email">
@@ -349,7 +371,7 @@ function RegistrationOtpStep({
         <Feedback error={state.error} id="verify-registration-error" />
         <Submit label="Verifikasi & Buat Akun" />
       </form>
-      <form action={resendAction} className="auth-resend-form">
+      <form action={resendAction} onSubmit={preserveInterruptedResend} className="auth-resend-form">
         <input type="hidden" name="email" value={email} />
         <input type="hidden" name="challengeId" value={challengeId} />
         <ResendSubmit

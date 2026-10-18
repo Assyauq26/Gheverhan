@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AdminMobileBottomNav, AdminNav } from "@/components/admin/admin-nav";
 import { LogoutButton } from "@/components/storefront/logout-button";
+import { RegistrationOtpCleanup } from "@/components/auth/registration-otp-cleanup";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { Bell, ChevronDown, Search, Store } from "lucide-react";
 
@@ -22,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-[#fafafa] text-zinc-950 md:flex">
+      <RegistrationOtpCleanup />
       <aside className="sticky top-0 hidden h-screen w-[238px] shrink-0 flex-col justify-between overflow-y-auto border-r border-zinc-200 bg-white pb-5 md:flex" aria-label="Sidebar admin">
         <div>
           <div className="px-7 pb-7 pt-6">

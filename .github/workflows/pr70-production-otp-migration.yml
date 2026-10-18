@@ -1,0 +1,228 @@
+name: PR70 Production OTP Prisma Migration (manual and approval gated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Read-only preflight first; apply performs the reviewed OTP migration"
+        required: true
+        type: choice
+        default: preflight
+        options:
+          - preflight
+          - apply
+      project_ref:
+        description: "Type the exact Production Supabase project ref"
+        required: true
+        type: string
+      apply_confirmation:
+        description: "For apply only: APPLY_PR70_OTP_NO_BACKUP"
+        required: false
+        type: string
+      writer_freeze_confirmed:
+        description: "For apply only: YES after current/old Preview writers are controlled"
+        required: false
+        type: string
+      resend_delivery_confirmed:
+        description: "For apply only: YES after Resend domain and inbox delivery test"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-prisma-migration
+  cancel-in-progress: false
+
+jobs:
+  validate-request:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check manual main-only invocation and written authorization
+        shell: bash
+        env:
+          OPERATION: ${{ inputs.operation }}
+          PROJECT_REF: ${{ inputs.project_ref }}
+          APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+          WRITER_FREEZE: ${{ inputs.writer_freeze_confirmed }}
+          RESEND_DELIVERY: ${{ inputs.resend_delivery_confirmed }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]] || exit 1
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || { echo 'STOP: manual dispatch must target main'; exit 1; }
+          [[ "$PROJECT_REF" == 'bztprltkevacidcpjaam' ]] || { echo 'STOP: Supabase project mismatch'; exit 1; }
+          [[ "$OPERATION" == 'preflight' || "$OPERATION" == 'apply' ]] || exit 1
+          if [[ "$OPERATION" == 'apply' ]]; then
+            [[ "$APPLY_CONFIRMATION" == 'APPLY_PR70_OTP_NO_BACKUP' ]] || { echo 'STOP: apply confirmation missing'; exit 1; }
+            [[ "$WRITER_FREEZE" == 'YES' ]] || { echo 'STOP: Preview and live writer freeze not attested'; exit 1; }
+            [[ "$RESEND_DELIVERY" == 'YES' ]] || { echo 'STOP: verified Resend inbox delivery not attested'; exit 1; }
+          fi
+
+  production-prisma:
+    needs: validate-request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Must be configured IN ADVANCE in GitHub Settings -> Environments:
+    # required independent reviewer(s), forbid self-review, restrict branches to main,
+    # two environment-only secrets, and approval acknowledgement variable.
+    environment:
+      name: gheverhan-production-db-migration
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    env:
+      CI: 'true'
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+      APPROVAL_CONFIGURED: ${{ vars.PRODUCTION_MIGRATION_APPROVAL_CONFIGURED }}
+      EXPECTED_PR70_SHA: b1e38ce3086ee85df5fd01e609cc5e89e3db949f
+    steps:
+      - name: Fail closed if protected Environment is not acknowledged
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || exit 1
+          [[ "$APPROVAL_CONFIGURED" == 'yes' ]] || { echo 'STOP: Environment protection and reviewer acknowledgement missing'; exit 1; }
+          [[ -n "$DATABASE_URL" && -n "$DIRECT_URL" ]] || { echo 'STOP: environment-only database secrets missing'; exit 1; }
+
+      - name: Checkout frozen reviewed application source (not mutable main)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: b1e38ce3086ee85df5fd01e609cc5e89e3db949f
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install reviewed lockfile dependencies without lifecycle scripts
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_PR70_SHA" ]] || { echo 'STOP: source SHA changed'; exit 1; }
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/@prisma/engines/scripts/postinstall.js
+          npm run prisma:generate
+
+      - name: Create ephemeral read-only ledger and schema checker
+        run: |
+          cat > .pr70-production-check.mjs <<'NODE'
+          import { PrismaClient } from '@prisma/client';
+          import { createHash } from 'node:crypto';
+          import { readdir, readFile } from 'node:fs/promises';
+          import path from 'node:path';
+
+          const ref = 'bztprltkevacidcpjaam';
+          const otp = '20261018150000_registration_email_otp';
+          const otpHash = 'eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e';
+          const phase = process.argv[2];
+          const ensure = (yes, message) => { if (!yes) throw new Error(message); };
+
+          function validateConnection(name, requireDirect) {
+            let url;
+            try { url = new URL(process.env[name] || ''); }
+            catch { throw new Error('Invalid PostgreSQL ' + name); }
+            ensure(['postgres:', 'postgresql:'].includes(url.protocol), 'Invalid PostgreSQL scheme in ' + name);
+            const direct = url.hostname === `db.${ref}.supabase.co`;
+            const pooled = url.hostname.endsWith('.pooler.supabase.com') &&
+              decodeURIComponent(url.username).endsWith('.' + ref);
+            ensure(direct || pooled, name + ' does not target approved Supabase project');
+            ensure(url.pathname === '/postgres', name + ' does not target postgres database');
+            ensure((url.searchParams.get('schema') || 'public') === 'public', name + ' does not target public schema');
+            ensure(!requireDirect || direct || (pooled && url.port !== '6543'),
+              'DIRECT_URL cannot use transaction pooler');
+            return url;
+          }
+
+          async function main() {
+            ensure(phase === 'before' || phase === 'after', 'Invalid check phase');
+            ensure(process.env.GITHUB_REF === 'refs/heads/main', 'Migration must be dispatched from main');
+            ensure(process.env.APPROVAL_CONFIGURED === 'yes', 'Protected approval not acknowledged');
+            ensure(process.env.VERCEL_ENV !== 'preview', 'Preview cannot migrate Production');
+            validateConnection('DATABASE_URL', false);
+            validateConnection('DIRECT_URL', true);
+            const dir = 'prisma/migrations';
+            const migrations = (await readdir(dir)).filter(x => /^\d{14}_/.test(x)).sort();
+            ensure(migrations.length === 7 && migrations[6] === otp, 'Unexpected migration source set');
+            const hashes = new Map();
+            for (const name of migrations) {
+              hashes.set(name, createHash('sha256').update(await readFile(path.join(dir, name, 'migration.sql'))).digest('hex'));
+            }
+            ensure(hashes.get(otp) === otpHash, 'OTP migration source checksum mismatch');
+
+            const db = new PrismaClient();
+            try {
+              const facts = await db.$transaction(async tx => {
+                await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+                await tx.$executeRaw`SET LOCAL statement_timeout = '5s'`;
+                const ledger = await tx.$queryRaw`
+                  SELECT migration_name, checksum, finished_at IS NOT NULL AS finished,
+                         rolled_back_at IS NOT NULL AS rolled_back
+                  FROM public._prisma_migrations ORDER BY migration_name`;
+                const schema = await tx.$queryRaw`
+                  SELECT to_regclass('public."PendingRegistration"') IS NOT NULL AS pending,
+                    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+                    AND table_name='User' AND column_name='emailVerifiedAt'
+                    AND data_type='timestamp without time zone' AND is_nullable='YES') AS verified_at`;
+                const role = await tx.$queryRaw`
+                  SELECT current_database() AS database, current_user AS role`;
+                return { ledger, schema: schema[0], role: role[0] };
+              }, { timeout: 10000 });
+              ensure(facts.role.database === 'postgres', 'Unexpected database identity');
+              const seen = new Set(facts.ledger.map(x => x.migration_name));
+              ensure(seen.size === facts.ledger.length &&
+                facts.ledger.every(x => x.finished && !x.rolled_back && hashes.get(x.migration_name) === x.checksum),
+                'Invalid Prisma migration history/checksum');
+              if (phase === 'before') {
+                ensure(facts.ledger.length === 6 && !seen.has(otp) &&
+                  migrations.filter(x => !seen.has(x)).join() === otp,
+                  'Not exactly one approved pending Prisma migration');
+                ensure(!facts.schema.pending && !facts.schema.verified_at,
+                  'OTP objects already exist: stop for drift inspection');
+              } else {
+                ensure(facts.ledger.length === 7 && migrations.every(x => seen.has(x)),
+                  'OTP migration not recorded by Prisma');
+                ensure(facts.schema.pending && facts.schema.verified_at,
+                  'Expected OTP schema missing');
+                const post = await db.$queryRaw`
+                  SELECT (SELECT relrowsecurity FROM pg_class WHERE oid = to_regclass('public."PendingRegistration"')) AS rls,
+                  (SELECT count(*) = 3 AND bool_and(indisvalid AND indisready)
+                    FROM pg_index WHERE indrelid=to_regclass('public."PendingRegistration"')) AS indexes,
+                  (has_table_privilege(current_user, 'public."PendingRegistration"', 'SELECT') AND
+                  has_table_privilege(current_user, 'public."PendingRegistration"', 'INSERT') AND
+                  has_table_privilege(current_user, 'public."PendingRegistration"', 'UPDATE') AND
+                  has_table_privilege(current_user, 'public."PendingRegistration"', 'DELETE')) AS operator_access,
+                  EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='PendingRegistration') AS has_policies`;
+                ensure(post[0]?.rls && post[0]?.indexes && post[0]?.operator_access && !post[0]?.has_policies,
+                  'OTP indexes, RLS, role access, or policy check failed');
+              }
+              console.log('PASS: PR70 Prisma ' + phase + ' check (ledger, source checksums, schema/roles; no credential values printed)');
+            } finally {
+              await db.$disconnect();
+            }
+          }
+          main().catch(() => {
+            console.error('BLOCKED: PR70 checker failed; do not retry migration without diagnosis');
+            process.exitCode = 1;
+          });
+          NODE
+
+      - name: Preflight against Production Prisma ledger (read-only)
+        run: node .pr70-production-check.mjs before
+
+      - name: Apply ONLY reviewed OTP migration with Prisma CLI
+        if: ${{ inputs.operation == 'apply' }}
+        run: npm run prisma:deploy
+
+      - name: Postcheck ledger, RLS, indexes, and application schema
+        if: ${{ inputs.operation == 'apply' }}
+        run: node .pr70-production-check.mjs after
+
+      - name: Delete temporary checker
+        if: always()
+        run: rm -f .pr70-production-check.mjs

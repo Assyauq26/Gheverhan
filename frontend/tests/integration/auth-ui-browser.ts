@@ -227,21 +227,13 @@ async function main() {
       assert.equal(await db.user.count({ where: { email } }), 0);
     });
     await check(
-      "password visibility, successful registration, pending and duplicate-submit prevention",
+      "password visibility, OTP required before user creation, and pending prevention",
       async () => {
         await page.getByTestId("register-terms").check();
-        const toggle = page.getByRole("button", { name: "Tampilkan password" });
-        await toggle.click();
-        await expect(page.getByTestId("register-password")).toHaveAttribute(
-          "type",
-          "text",
-        );
-        await page
-          .getByRole("button", { name: "Sembunyikan password" })
-          .click();
-        await expect(page.getByTestId("register-password")).toHaveValue(
-          password,
-        );
+        await page.getByRole("button", { name: "Tampilkan password" }).first().click();
+        await expect(page.getByTestId("register-password")).toHaveAttribute("type", "text");
+        await page.getByRole("button", { name: "Sembunyikan password" }).first().click();
+        await expect(page.getByTestId("register-password")).toHaveValue(password);
         let submissions = 0;
         await page.route("**/register", async (route) => {
           if (route.request().method() === "POST") {
@@ -252,21 +244,29 @@ async function main() {
         });
         await page.getByTestId("auth-submit").click();
         await expect(page.getByTestId("auth-submit")).toBeDisabled();
-        await expect(page.getByTestId("auth-submit")).toHaveAttribute(
-          "aria-busy",
-          "true",
-        );
+        await expect(page.getByTestId("auth-submit")).toHaveAttribute("aria-busy", "true");
         await page.evaluate(() => {
-          (
-            document.querySelector(
-              '[data-testid="auth-submit"]',
-            ) as HTMLButtonElement
-          ).click();
+          (document.querySelector('[data-testid="auth-submit"]') as HTMLButtonElement).click();
         });
-        await page.waitForURL(base + "/account");
-        assert.equal(submissions, 1);
-        assert.equal(await db.user.count({ where: { email } }), 1);
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
         await page.unroute("**/register");
+        assert.equal(submissions, 1);
+        assert.equal(await db.user.count({ where: { email } }), 0);
+        assert.equal(await db.pendingRegistration.count({ where: { email } }), 1);
+        const code = capturedOtp.get(email);
+        assert.ok(code, "local email sink captured code");
+        await page.getByTestId("register-otp").fill(code === "000000" ? "111111" : "000000");
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("verify-registration-error")).toContainText("salah");
+        assert.equal(await db.user.count({ where: { email } }), 0);
+        await page.getByTestId("register-otp").fill(code);
+        await page.getByTestId("auth-submit").click();
+        await page.waitForURL(base + "/account");
+        assert.equal(await db.user.count({ where: { email } }), 1);
+        const created = await db.user.findUniqueOrThrow({ where: { email } });
+        assert.ok(created.emailVerifiedAt);
+        assert.equal(created.phone, "+6281234567890");
+        assert.equal(await db.pendingRegistration.count({ where: { email } }), 0);
       },
     );
     await check(
@@ -276,6 +276,8 @@ async function main() {
         await page.getByTestId("register-name").fill("Dummy Kedua");
         await page.getByTestId("register-email").fill(email);
         await page.getByTestId("register-password").fill(password);
+        await page.getByTestId("register-confirm-password").fill(password);
+        await page.getByTestId("register-phone").fill("081234567891");
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
         await expect(page.getByTestId("register-error")).toHaveText(
@@ -309,11 +311,9 @@ async function main() {
             .evaluate((el: HTMLInputElement) => el.validity.typeMismatch),
           true,
         );
-        await page.getByTestId("forgot-email").fill(email);
+        await page.getByTestId("forgot-email").fill("unknown-" + randomUUID() + "@example.test");
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("forgot-error")).toContainText(
-          "belum tersedia",
-        );
+        await expect(page.getByTestId("forgot-message")).toContainText("Jika email terdaftar");
       },
     );
     await check(

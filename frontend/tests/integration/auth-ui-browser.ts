@@ -1,6 +1,6 @@
 /** Browser regression: real Server Actions, synthetic data, disposable PostgreSQL only. */
 import assert from "node:assert/strict";
-import { randomUUID, randomBytes, createHash } from "node:crypto";
+import { randomUUID, randomBytes, createHash, randomInt } from "node:crypto";
 import { spawn, execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -23,6 +23,9 @@ const evidence = process.env.SPRINT1_ARTIFACT_DIR || "/tmp/gheverhan-auth-ui";
 const checkpoints: string[] = [],
   errors: string[] = [];
 const geometry: unknown[] = [];
+const phoneSeed = String(randomInt(1_000_000, 10_000_000));
+const dummyPhone = (index: number) => "0812" + phoneSeed + index;
+let failMail = false;
 const capturedOtp = new Map<string, string>();
 const viewportSizes = [
   [360, 800],
@@ -43,18 +46,25 @@ async function main() {
   await new Promise<void>((resolve) => probe.close(() => resolve()));
   const mailSink = createHttpServer(async (req, res) => {
     if (req.url !== "/emails" || req.method !== "POST") {
-      res.writeHead(404); res.end(); return;
+      res.writeHead(404);
+      res.end();
+      return;
     }
     const parts: Buffer[] = [];
     for await (const chunk of req) parts.push(Buffer.from(chunk));
-    const body = JSON.parse(Buffer.concat(parts).toString("utf8")) as { to: string[]; text: string };
+    const body = JSON.parse(Buffer.concat(parts).toString("utf8")) as {
+      to: string[];
+      text: string;
+    };
     const code = body.text.match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
     assert.ok(code, "OTP sent only to isolated local sink");
     capturedOtp.set(body.to[0], code);
-    res.writeHead(200, { "Content-Type": "application/json" });
+    res.writeHead(failMail ? 503 : 200, { "Content-Type": "application/json" });
     res.end("{}");
   });
-  await new Promise<void>((resolve) => mailSink.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) =>
+    mailSink.listen(0, "127.0.0.1", resolve),
+  );
   const sinkAddress = mailSink.address();
   assert.ok(sinkAddress && typeof sinkAddress !== "string");
   const server = spawn(
@@ -78,7 +88,8 @@ async function main() {
         RESEND_API_KEY: "isolated-otp-key",
         PASSWORD_RESET_FROM: "Gheverhan <test@example.test>",
         PASSWORD_RESET_BASE_URL: "https://example.test",
-        REGISTRATION_OTP_TEST_SINK: "http://127.0.0.1:" + sinkAddress.port + "/emails",
+        REGISTRATION_OTP_TEST_SINK:
+          "http://127.0.0.1:" + sinkAddress.port + "/emails",
       },
       stdio: "ignore",
     },
@@ -137,6 +148,31 @@ async function main() {
             );
             const form = page.getByTestId(name + "-form");
             await expect(form).toBeVisible();
+            const home = page.getByRole("link", {
+              name: "Kembali ke Beranda",
+              exact: true,
+            });
+            await expect(home).toHaveAttribute("href", "/");
+            const homeBox = await home.boundingBox();
+            assert.ok(
+              homeBox &&
+                homeBox.x >= 0 &&
+                homeBox.y >= 0 &&
+                homeBox.height >= 44,
+            );
+            assert.equal(
+              await page
+                .locator(".auth-ui a")
+                .evaluateAll((links) =>
+                  links.every(
+                    (link) =>
+                      !getComputedStyle(link).textDecorationLine.includes(
+                        "underline",
+                      ),
+                  ),
+                ),
+              true,
+            );
             const input = page.getByTestId(
               name === "login" ? "login-identifier" : "register-name",
             );
@@ -177,6 +213,131 @@ async function main() {
         }
       },
     );
+    await check(
+      "REST registration cannot bypass OTP or field validation and rejects foreign Origin",
+      async () => {
+        const api = await browser!.newContext();
+        const email = `api-${randomUUID()}@example.test`;
+        const data = {
+          name: "Dummy API",
+          email,
+          phone: dummyPhone(1),
+          password: "dummy-api-password",
+          confirmPassword: "dummy-api-password",
+          terms: true,
+        };
+        const post = (route: string, body: unknown, origin = base) =>
+          api.request.post(base + "/api/v1/auth/register" + route, {
+            data: body,
+            headers: { Origin: origin },
+          });
+        try {
+          assert.equal(
+            (await post("", data, "https://foreign.invalid")).status(),
+            403,
+          );
+          for (const patch of [
+            { phone: "" },
+            { confirmPassword: "" },
+            { confirmPassword: "wrong" },
+            { terms: false },
+          ]) {
+            assert.equal((await post("", { ...data, ...patch })).status(), 422);
+          }
+          assert.equal(
+            await db.pendingRegistration.count({ where: { email } }),
+            0,
+          );
+          assert.equal((await post("", data)).status(), 202);
+          assert.equal(await db.user.count({ where: { email } }), 0);
+          assert.equal(
+            (await api.cookies()).some((c) => c.name === "gh_session"),
+            false,
+          );
+          assert.equal((await post("/resend", { email })).status(), 429);
+          const code = capturedOtp.get(email)!;
+          assert.ok(code);
+          assert.equal(
+            (
+              await post("/verify", {
+                email,
+                otp: code === "000000" ? "111111" : "000000",
+              })
+            ).status(),
+            400,
+          );
+          assert.equal(await db.user.count({ where: { email } }), 0);
+          assert.equal(
+            (await post("/verify", { email, otp: code })).status(),
+            201,
+          );
+          assert.ok(
+            (await db.user.findUniqueOrThrow({ where: { email } }))
+              .emailVerifiedAt,
+          );
+          assert.equal(
+            (await api.cookies()).some((c) => c.name === "gh_session"),
+            true,
+          );
+          assert.equal(
+            (await post("/verify", { email, otp: code })).status(),
+            400,
+          );
+          const expired = {
+            ...data,
+            email: `expired-${randomUUID()}@example.test`,
+            phone: dummyPhone(2),
+          };
+          assert.equal((await post("", expired)).status(), 202);
+          await db.pendingRegistration.update({
+            where: { email: expired.email },
+            data: { expiresAt: new Date(Date.now() - 1000) },
+          });
+          assert.equal(
+            (
+              await post("/verify", {
+                email: expired.email,
+                otp: capturedOtp.get(expired.email),
+              })
+            ).status(),
+            400,
+          );
+          assert.equal(
+            await db.user.count({ where: { email: expired.email } }),
+            0,
+          );
+          failMail = true;
+          const failed = {
+            ...data,
+            email: `mailfail-${randomUUID()}@example.test`,
+            phone: dummyPhone(3),
+          };
+          assert.equal((await post("", failed)).status(), 503);
+          assert.equal(
+            await db.pendingRegistration.count({
+              where: { email: failed.email },
+            }),
+            0,
+          );
+          assert.equal(
+            (
+              await post("/verify", {
+                email: failed.email,
+                otp: capturedOtp.get(failed.email),
+              })
+            ).status(),
+            400,
+          );
+          assert.equal(
+            await db.user.count({ where: { email: failed.email } }),
+            0,
+          );
+        } finally {
+          failMail = false;
+          await api.close();
+        }
+      },
+    );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(base + "/register");
     const email = `auth-ui-${randomUUID()}@example.test`,
@@ -185,7 +346,7 @@ async function main() {
     await page.getByTestId("register-email").fill(email);
     await page.getByTestId("register-password").fill(password);
     await page.getByTestId("register-confirm-password").fill(password);
-    await page.getByTestId("register-phone").fill("081234567890");
+    await page.getByTestId("register-phone").fill(dummyPhone(0));
     await check(
       "legal links preserve registration fields and do not consent",
       async () => {
@@ -209,6 +370,52 @@ async function main() {
         }
       },
     );
+    await check(
+      "required phone and confirmation reject browser and forged form submissions",
+      async () => {
+        await page.getByTestId("register-terms").check();
+        for (const [id, message] of [
+          ["register-phone", "Nomor HP"],
+          ["register-confirm-password", "Konfirmasi password"],
+        ]) {
+          const field = page.getByTestId(id);
+          const previous = await field.inputValue();
+          await field.fill("");
+          await page.getByTestId("auth-submit").click();
+          assert.equal(
+            await field.evaluate(
+              (el: HTMLInputElement) => el.validity.valueMissing,
+            ),
+            true,
+          );
+          await field.evaluate((el: HTMLInputElement) => {
+            el.required = false;
+          });
+          await page.getByTestId("auth-submit").click();
+          await expect(page.getByTestId("register-error")).toContainText(
+            message,
+          );
+          await expect(page.getByTestId("register-terms")).toBeChecked();
+          await field.fill(previous);
+          await field.evaluate((el: HTMLInputElement) => {
+            el.required = true;
+          });
+        }
+        await page
+          .getByTestId("register-confirm-password")
+          .fill("different-password");
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("register-error")).toContainText(
+          "tidak sama",
+        );
+        assert.equal(
+          await db.pendingRegistration.count({ where: { email } }),
+          0,
+        );
+        await page.getByTestId("register-confirm-password").fill(password);
+        await page.getByTestId("register-terms").uncheck();
+      },
+    );
     await check("client and server both reject missing terms", async () => {
       await page.getByTestId("auth-submit").click();
       assert.equal(
@@ -230,10 +437,21 @@ async function main() {
       "password visibility, OTP required before user creation, and pending prevention",
       async () => {
         await page.getByTestId("register-terms").check();
-        await page.getByRole("button", { name: "Tampilkan password" }).first().click();
-        await expect(page.getByTestId("register-password")).toHaveAttribute("type", "text");
-        await page.getByRole("button", { name: "Sembunyikan password" }).first().click();
-        await expect(page.getByTestId("register-password")).toHaveValue(password);
+        await page
+          .getByRole("button", { name: "Tampilkan password" })
+          .first()
+          .click();
+        await expect(page.getByTestId("register-password")).toHaveAttribute(
+          "type",
+          "text",
+        );
+        await page
+          .getByRole("button", { name: "Sembunyikan password" })
+          .first()
+          .click();
+        await expect(page.getByTestId("register-password")).toHaveValue(
+          password,
+        );
         let submissions = 0;
         await page.route("**/register", async (route) => {
           if (route.request().method() === "POST") {
@@ -244,20 +462,61 @@ async function main() {
         });
         await page.getByTestId("auth-submit").click();
         await expect(page.getByTestId("auth-submit")).toBeDisabled();
-        await expect(page.getByTestId("auth-submit")).toHaveAttribute("aria-busy", "true");
+        await expect(page.getByTestId("auth-submit")).toHaveAttribute(
+          "aria-busy",
+          "true",
+        );
         await page.evaluate(() => {
-          (document.querySelector('[data-testid="auth-submit"]') as HTMLButtonElement).click();
+          (
+            document.querySelector(
+              '[data-testid="auth-submit"]',
+            ) as HTMLButtonElement
+          ).click();
         });
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
         await page.unroute("**/register");
         assert.equal(submissions, 1);
         assert.equal(await db.user.count({ where: { email } }), 0);
-        assert.equal(await db.pendingRegistration.count({ where: { email } }), 1);
+        assert.equal(
+          await db.pendingRegistration.count({ where: { email } }),
+          1,
+        );
+        await expect(page.getByTestId("register-otp")).toBeFocused();
+        await expect(page.getByTestId("registration-resend")).toBeDisabled();
+        for (const [width, height] of viewportSizes) {
+          await page.setViewportSize({ width, height });
+          assert.equal(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth > innerWidth,
+            ),
+            false,
+          );
+          await page.screenshot({
+            path: path.join(evidence, `registration-otp-${width}.png`),
+            fullPage: true,
+          });
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
         const code = capturedOtp.get(email);
         assert.ok(code, "local email sink captured code");
-        await page.getByTestId("register-otp").fill(code === "000000" ? "111111" : "000000");
+        const resend = page.getByTestId("registration-resend");
+        await resend.evaluate((el: HTMLButtonElement) => {
+          el.disabled = false;
+        });
+        await resend.click();
+        await expect(
+          page.getByTestId("registration-resend-error"),
+        ).toContainText("60 detik");
+        assert.equal(capturedOtp.get(email), code);
+        await page
+          .getByTestId("register-otp")
+          .fill(code === "000000" ? "111111" : "000000");
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("verify-registration-error")).toContainText("salah");
+        await expect(
+          page.getByTestId("verify-registration-error"),
+        ).toContainText("salah");
         assert.equal(await db.user.count({ where: { email } }), 0);
         await page.getByTestId("register-otp").fill(code);
         await page.getByTestId("auth-submit").click();
@@ -265,8 +524,11 @@ async function main() {
         assert.equal(await db.user.count({ where: { email } }), 1);
         const created = await db.user.findUniqueOrThrow({ where: { email } });
         assert.ok(created.emailVerifiedAt);
-        assert.equal(created.phone, "+6281234567890");
-        assert.equal(await db.pendingRegistration.count({ where: { email } }), 0);
+        assert.equal(created.phone, "+62" + dummyPhone(0).slice(1));
+        assert.equal(
+          await db.pendingRegistration.count({ where: { email } }),
+          0,
+        );
       },
     );
     await check(
@@ -277,7 +539,7 @@ async function main() {
         await page.getByTestId("register-email").fill(email);
         await page.getByTestId("register-password").fill(password);
         await page.getByTestId("register-confirm-password").fill(password);
-        await page.getByTestId("register-phone").fill("081234567891");
+        await page.getByTestId("register-phone").fill(dummyPhone(4));
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
         await expect(page.getByTestId("register-error")).toHaveText(
@@ -295,12 +557,13 @@ async function main() {
       await page.getByTestId("login-password").fill("wrong-password");
       await page.getByTestId("auth-submit").click();
       await expect(page.getByTestId("login-error")).toContainText("salah");
+      await page.getByTestId("login-identifier").fill(dummyPhone(0));
       await page.getByTestId("login-password").fill(password);
       await page.getByTestId("auth-submit").click();
       await page.waitForURL(base + "/cart");
     });
     await check(
-      "forgot password reports unavailable delivery and never sends real email",
+      "forgot password validates input and keeps a neutral response for an unknown account",
       async () => {
         await page.goto(base + "/forgot-password");
         await page.getByTestId("forgot-email").fill("not-an-email");
@@ -311,9 +574,13 @@ async function main() {
             .evaluate((el: HTMLInputElement) => el.validity.typeMismatch),
           true,
         );
-        await page.getByTestId("forgot-email").fill("unknown-" + randomUUID() + "@example.test");
+        await page
+          .getByTestId("forgot-email")
+          .fill("unknown-" + randomUUID() + "@example.test");
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("forgot-message")).toContainText("Jika email terdaftar");
+        await expect(page.getByTestId("forgot-message")).toContainText(
+          "Jika email terdaftar",
+        );
       },
     );
     await check(
@@ -403,6 +670,19 @@ async function main() {
           );
           await expect(p.locator(".legal-notice")).toBeVisible();
           assert.equal(await p.locator(".legal-sections section").count(), 19);
+          assert.equal(
+            await p
+              .locator(".legal-page a")
+              .evaluateAll((links) =>
+                links.every(
+                  (link) =>
+                    !getComputedStyle(link).textDecorationLine.includes(
+                      "underline",
+                    ),
+                ),
+              ),
+            true,
+          );
           for (const width of [390, 1440]) {
             await p.setViewportSize({ width, height: 900 });
             await p.screenshot({
@@ -412,12 +692,60 @@ async function main() {
           }
         }
         await p.goto(base + "/");
+        assert.equal(
+          await p
+            .locator(".storefront-root a")
+            .evaluateAll((links) =>
+              links.every(
+                (link) =>
+                  !getComputedStyle(link).textDecorationLine.includes(
+                    "underline",
+                  ),
+              ),
+            ),
+          true,
+        );
+        const footerLink = p.locator('footer a[href="/syarat-ketentuan"]');
+        await footerLink.hover();
+        await expect(footerLink).toHaveCSS("color", "rgb(37, 99, 235)");
+        await footerLink.evaluate((el) =>
+          el.addEventListener("click", (event) => event.preventDefault(), {
+            once: true,
+          }),
+        );
+        await p.mouse.down();
+        try {
+          await expect(footerLink).toHaveCSS("color", "rgb(29, 78, 216)");
+        } finally {
+          await p.mouse.up();
+        }
+        await p.keyboard.press("Tab");
+        await footerLink.focus();
+        assert.notEqual(
+          await footerLink.evaluate((el) => getComputedStyle(el).outlineStyle),
+          "none",
+        );
         await expect(
           p.locator('footer a[href="/syarat-ketentuan"]'),
         ).toBeVisible();
         await expect(
           p.locator('footer a[href="/kebijakan-privasi"]'),
         ).toBeVisible();
+        for (const width of [390, 1440]) {
+          await p.setViewportSize({ width, height: 900 });
+          await p.screenshot({
+            path: path.join(evidence, `storefront-links-${width}.png`),
+            fullPage: true,
+          });
+        }
+        await p.goto(base + "/cart");
+        const darkLink = p.locator("a.bg-black.text-white").first();
+        await darkLink.hover();
+        await expect(darkLink).toHaveCSS("background-color", "rgb(31, 41, 55)");
+        assert.equal(
+          await darkLink.evaluate((el) => getComputedStyle(el).color),
+          "rgb(255, 255, 255)",
+        );
         await anon.close();
       },
     );

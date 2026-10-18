@@ -104,7 +104,7 @@ export function PurchasePanel({
         <div>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">Ukuran</p>
-            <button className="text-xs font-semibold text-ink-soft underline">Panduan Ukuran</button>
+            <button className="text-xs font-semibold text-ink-soft hover:text-primary focus-visible:text-primary active:text-blue-800">Panduan Ukuran</button>
           </div>
           <div className="flex flex-wrap gap-2">
             {sizes.map((s) => (

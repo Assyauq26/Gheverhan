@@ -59,7 +59,10 @@ it("legal links open separately and do not implicitly consent or discard the for
   expect(
     (screen.getByTestId("register-phone") as HTMLInputElement).required,
   ).toBe(true);
-  expect((screen.getByTestId("register-confirm-password") as HTMLInputElement).required).toBe(true);
+  expect(
+    (screen.getByTestId("register-confirm-password") as HTMLInputElement)
+      .required,
+  ).toBe(true);
 });
 it("pending submit is disabled and server errors are exposed to assistive technology", () => {
   form.pending = true;
@@ -79,4 +82,16 @@ it("pending submit is disabled and server errors are exposed to assistive techno
     (screen.getByTestId("whatsapp-login") as HTMLButtonElement).disabled,
   ).toBe(true);
   expect(screen.getByText(/Segera hadir/)).toBeTruthy();
+});
+
+it("registration retains typed values and explicit consent when an action requests native form reset", () => {
+  render(createElement(RegisterForm));
+  const email = screen.getByLabelText("Email") as HTMLInputElement;
+  fireEvent.change(email, { target: { value: "dummy@example.test" } });
+  const terms = screen.getByTestId("register-terms") as HTMLInputElement;
+  fireEvent.click(terms);
+  expect(terms.checked).toBe(true);
+  (screen.getByTestId("register-form") as HTMLFormElement).reset();
+  expect(terms.checked).toBe(true);
+  expect(email.value).toBe("dummy@example.test");
 });

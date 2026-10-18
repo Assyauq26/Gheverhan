@@ -209,13 +209,13 @@ export function CheckoutClient({
         {quote?.key === quoteKey && quote.status === "error" && (
           <div className="space-y-1 text-sm text-destructive" role="alert" data-testid="checkout-quote-error">
             <p>{quote.message}</p>
-            <button type="button" className="underline" onClick={() => setRetry(value => value + 1)}>Coba lagi</button>
+            <button type="button" className="font-semibold text-primary hover:text-blue-700 focus-visible:text-blue-700 active:text-blue-800" onClick={() => setRetry(value => value + 1)}>Coba lagi</button>
           </div>
         )}
         {changedQuote && <p className="text-sm text-destructive" role="alert" data-testid="checkout-price-changed">
-          Harga atau ongkir berubah. <a href="/checkout" className="underline">Muat ulang checkout</a> untuk mengonfirmasi total terbaru.
+          Harga atau ongkir berubah. <a href="/checkout" className="font-semibold text-primary hover:text-blue-700 focus-visible:text-blue-700 active:text-blue-800">Muat ulang checkout</a> untuk mengonfirmasi total terbaru.
         </p>}
-        {state?.ok === false && state?.error && <p className="text-sm text-destructive" data-testid="checkout-error">{state.error} <a href="/checkout" className="underline">Muat ulang checkout untuk konfirmasi ulang</a></p>}
+        {state?.ok === false && state?.error && <p className="text-sm text-destructive" data-testid="checkout-error">{state.error} <a href="/checkout" className="font-semibold text-primary hover:text-blue-700 focus-visible:text-blue-700 active:text-blue-800">Muat ulang checkout untuk konfirmasi ulang</a></p>}
         <PlaceOrderBtn disabled={!canSubmit} />
         <p className="text-center text-[11px] text-ink-muted">Ringkasan dihitung oleh server. Total akan diverifikasi ulang saat pesanan dibuat.</p>
       </div>

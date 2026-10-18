@@ -11,7 +11,8 @@
       "integration/r20-release-hardening-cart-sync": false,
       "security/r20-test-toolchain-upgrades": false,
       "fix/r21-production-hardening": false,
-      "feat/auth-ui-legal-pages": false
+      "feat/auth-ui-legal-pages": false,
+      "feat/registration-email-otp-and-storefront-links": false
     }
   }
 }

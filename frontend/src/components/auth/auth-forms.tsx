@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, type ComponentPropsWithoutRef } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+} from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,7 +19,14 @@ import {
   resendRegistrationAction,
 } from "@/modules/auth/auth.actions";
 
-type FormState = { ok: boolean; error?: string; message?: string; email?: string; step?: string };
+type FormState = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  email?: string;
+  step?: string;
+  resendAvailableAt?: number;
+};
 const initialState: FormState = { ok: false };
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -210,83 +222,253 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     </div>
   );
 }
-function ResendSubmit() {
+function ResendSubmit({ availableAt }: { availableAt: number }) {
   const { pending } = useFormStatus();
-  return <button type="submit" className="auth-resend-button" disabled={pending}>
-    {pending ? "Mengirim..." : "Kirim ulang kode OTP"}
-  </button>;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const remaining = Math.max(0, Math.ceil((availableAt - now) / 1000));
+  return (
+    <button
+      type="submit"
+      className="auth-resend-button"
+      disabled={pending || remaining > 0}
+      aria-busy={pending}
+      data-testid="registration-resend"
+    >
+      {pending
+        ? "Mengirim..."
+        : remaining > 0
+          ? `Kirim ulang dalam ${remaining} detik`
+          : "Kirim ulang kode OTP"}
+    </button>
+  );
 }
-function RegistrationOtpStep({ email }: { email: string }) {
+function RegistrationOtpStep({
+  email,
+  availableAt,
+  onRestart,
+}: {
+  email: string;
+  availableAt: number;
+  onRestart: () => void;
+}) {
   const [state, action] = useFormState<FormState, FormData>(
-    verifyRegistrationAction, initialState,
+    verifyRegistrationAction,
+    initialState,
   );
   const [resendState, resendAction] = useFormState<FormState, FormData>(
-    resendRegistrationAction, initialState,
+    resendRegistrationAction,
+    initialState,
   );
   return (
     <div className="auth-content">
-      <Heading title="Verifikasi email">Masukkan kode OTP 6 angka yang dikirim ke {email}.</Heading>
-      <form action={action} className="auth-form" data-testid="verify-registration-form">
+      <Heading title="Verifikasi email">
+        Masukkan kode OTP 6 angka yang dikirim ke {email}.
+      </Heading>
+      <form
+        action={action}
+        className="auth-form"
+        data-testid="verify-registration-form"
+        aria-describedby="register-otp-note verify-registration-error"
+      >
         <input type="hidden" name="email" value={email} />
-        <Field id="register-otp" label="Kode OTP 6 angka" name="otp" icon="mail"
-          autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}"
-          maxLength={6} required data-testid="register-otp" />
-        <p className="auth-otp-note">Kode berlaku 10 menit dengan maksimal 5 percobaan.</p>
+        <Field
+          id="register-otp"
+          label="Kode OTP 6 angka"
+          name="otp"
+          icon="mail"
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          pattern="[0-9]{6}"
+          maxLength={6}
+          required
+          autoFocus
+          aria-describedby="register-otp-note verify-registration-error"
+          data-testid="register-otp"
+        />
+        <p className="auth-otp-note" id="register-otp-note">
+          Kode berlaku 10 menit dengan maksimal 5 percobaan.
+        </p>
         <Feedback error={state.error} id="verify-registration-error" />
         <Submit label="Verifikasi & Buat Akun" />
       </form>
       <form action={resendAction} className="auth-resend-form">
         <input type="hidden" name="email" value={email} />
-        <ResendSubmit />
+        <ResendSubmit
+          availableAt={resendState.resendAvailableAt ?? availableAt}
+        />
       </form>
       <Feedback error={resendState.error} id="registration-resend-error" />
-      {resendState.message && <p role="status" className="auth-success">{resendState.message}</p>}
-      <p className="auth-switch"><a href="/register">Ubah data pendaftaran</a></p>
+      {resendState.message && (
+        <p role="status" className="auth-success">
+          {resendState.message}
+        </p>
+      )}
+      <p className="auth-switch">
+        <button
+          type="button"
+          className="auth-resend-button"
+          onClick={onRestart}
+        >
+          Ubah data pendaftaran
+        </button>
+      </p>
     </div>
   );
 }
 export function RegisterForm() {
-  const [state, action] = useFormState<FormState, FormData>(registerAction, initialState);
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <RegistrationForm
+      key={attempt}
+      onRestart={() => setAttempt((value) => value + 1)}
+    />
+  );
+}
+function RegistrationForm({ onRestart }: { onRestart: () => void }) {
+  const [state, action] = useFormState<FormState, FormData>(
+    registerAction,
+    initialState,
+  );
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  if (state.step === "verify" && state.email) return <RegistrationOtpStep email={state.email} />;
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    // React's delegated reset event can be suppressed while a Server Action is pending.
+    // Cancel the native reset on this form so failed validation cannot discard consent/input.
+    const preserveInput = (event: Event) => event.preventDefault();
+    form.addEventListener("reset", preserveInput);
+    return () => form.removeEventListener("reset", preserveInput);
+  }, [state.step]);
+  if (state.step === "verify" && state.email)
+    return (
+      <RegistrationOtpStep
+        email={state.email}
+        availableAt={state.resendAvailableAt ?? 0}
+        onRestart={onRestart}
+      />
+    );
   return (
     <div className="auth-content">
-      <Heading title="Daftar akun">Buat akun baru untuk mulai belanja di Gheverhan.</Heading>
-      <form action={action} className="auth-form" data-testid="register-form" aria-describedby="register-error">
-        <Field id="register-name" label="Nama lengkap" name="name" icon="user-round"
-          required minLength={2} autoComplete="name" data-testid="register-name" />
-        <Field id="register-email" label="Email" name="email" type="email" icon="mail"
-          required autoComplete="email" autoCapitalize="none" data-testid="register-email" />
-        <Field id="register-phone" label="Nomor HP (wajib)" name="phone" type="tel"
-          icon="phone" required inputMode="tel" autoComplete="tel" data-testid="register-phone" />
-        <Field id="register-password" label="Password" name="password" icon="lock-keyhole"
-          password required minLength={6} autoComplete="new-password"
-          onChange={(event) => setPassword(event.target.value)} data-testid="register-password" />
-        <Field id="register-confirm-password" label="Konfirmasi password"
-          name="confirmPassword" icon="lock-keyhole" password required minLength={6}
-          autoComplete="new-password" onChange={(event) => setConfirm(event.target.value)}
-          data-testid="register-confirm-password" />
-        {confirm && password !== confirm && <p className="auth-inline-error" role="status">
-          Konfirmasi password tidak sama.
-        </p>}
+      <Heading title="Daftar akun">
+        Buat akun baru untuk mulai belanja di Gheverhan.
+      </Heading>
+      <form
+        action={action}
+        className="auth-form"
+        data-testid="register-form"
+        ref={formRef}
+        aria-describedby="register-error"
+      >
+        <Field
+          id="register-name"
+          label="Nama lengkap"
+          name="name"
+          icon="user-round"
+          required
+          minLength={2}
+          autoComplete="name"
+          data-testid="register-name"
+        />
+        <Field
+          id="register-email"
+          label="Email"
+          name="email"
+          type="email"
+          icon="mail"
+          required
+          autoComplete="email"
+          autoCapitalize="none"
+          data-testid="register-email"
+        />
+        <Field
+          id="register-phone"
+          label="Nomor HP (wajib)"
+          name="phone"
+          type="tel"
+          icon="phone"
+          required
+          inputMode="tel"
+          autoComplete="tel"
+          data-testid="register-phone"
+        />
+        <Field
+          id="register-password"
+          label="Password"
+          name="password"
+          icon="lock-keyhole"
+          password
+          required
+          minLength={6}
+          autoComplete="new-password"
+          onChange={(event) => setPassword(event.target.value)}
+          data-testid="register-password"
+        />
+        <Field
+          id="register-confirm-password"
+          label="Konfirmasi password"
+          name="confirmPassword"
+          icon="lock-keyhole"
+          password
+          required
+          minLength={6}
+          autoComplete="new-password"
+          onChange={(event) => setConfirm(event.target.value)}
+          data-testid="register-confirm-password"
+        />
+        {confirm && password !== confirm && (
+          <p className="auth-inline-error" role="status">
+            Konfirmasi password tidak sama.
+          </p>
+        )}
         <div className="auth-terms">
           <Label htmlFor="register-terms" className="auth-terms-check">
-            <Checkbox id="register-terms" name="terms" value="1" required data-testid="register-terms" />
-            <span className="auth-sr-only">Saya setuju dengan Syarat &amp; Ketentuan dan Kebijakan Privasi</span>
+            <Checkbox
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              id="register-terms"
+              name="terms"
+              value="1"
+              required
+              data-testid="register-terms"
+            />
+            <span className="auth-sr-only">
+              Saya setuju dengan Syarat &amp; Ketentuan dan Kebijakan Privasi
+            </span>
           </Label>
           <p>
             Saya setuju dengan{" "}
-            <Link href="/syarat-ketentuan" target="_blank" rel="noopener noreferrer">Syarat &amp; Ketentuan</Link>
-            {" "}dan{" "}
-            <Link href="/kebijakan-privasi" target="_blank" rel="noopener noreferrer">Kebijakan Privasi</Link>.
+            <Link
+              href="/syarat-ketentuan"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Syarat &amp; Ketentuan
+            </Link>{" "}
+            dan{" "}
+            <Link
+              href="/kebijakan-privasi"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Kebijakan Privasi
+            </Link>
+            .
           </p>
         </div>
         <Feedback error={state.error} id="register-error" />
         <Submit label="Kirim Kode OTP" />
       </form>
       <SocialButtons />
-      <p className="auth-switch">Sudah punya akun? <Link href="/login">Masuk</Link></p>
+      <p className="auth-switch">
+        Sudah punya akun? <Link href="/login">Masuk</Link>
+      </p>
     </div>
   );
 }

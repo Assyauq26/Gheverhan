@@ -117,6 +117,12 @@ jobs:
         id: operations_browser
         run: npm run test:e2e:operations
 
+      - name: Chromium auth UI and public legal regression on dummy PostgreSQL
+        id: auth_ui_browser
+        env:
+          SPRINT1_ARTIFACT_DIR: /tmp/gheverhan-auth-ui-${{ github.run_id }}
+        run: node --import tsx tests/integration/auth-ui-browser.ts
+
       - name: Chromium regression for microtask replay of hydrated Flight content
         id: hydration_replay
         run: node --import tsx tests/integration/react-hydration-replay.ts
@@ -134,7 +140,7 @@ jobs:
         run: node scripts/navigation-stability-matrix.mjs /tmp "gheverhan-navigation-${GITHUB_RUN_ID}-" "/tmp/gheverhan-stability-${GITHUB_RUN_ID}"
 
       - name: Retain synthetic navigation diagnostics, including failed runs
-        if: ${{ !cancelled() && (steps.product_browser.outcome != 'skipped' || steps.operations_browser.outcome != 'skipped' || steps.navigation.outcome != 'skipped' || steps.hydration_replay.outcome != 'skipped') }}
+        if: ${{ !cancelled() && (steps.product_browser.outcome != 'skipped' || steps.operations_browser.outcome != 'skipped' || steps.navigation.outcome != 'skipped' || steps.hydration_replay.outcome != 'skipped' || steps.auth_ui_browser.outcome != 'skipped') }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24
         with:
           name: navigation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
@@ -146,5 +152,7 @@ jobs:
             /tmp/gheverhan-navigation-*/*-dashboard.png
             /tmp/react-hydration-replay-*/hydration-replay-results.json
             /tmp/gheverhan-stability-*/navigation-stability-matrix.*
+            /tmp/gheverhan-auth-ui-*/auth-ui-results.json
+            /tmp/gheverhan-auth-ui-*/*.png
           if-no-files-found: error
           retention-days: 7

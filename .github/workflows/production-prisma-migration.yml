@@ -1,0 +1,235 @@
+name: Production Prisma Migration (manual and approval gated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "preflight performs read-only checks; apply runs the exact R21 migration"
+        required: true
+        type: choice
+        default: preflight
+        options:
+          - preflight
+          - apply
+      project_ref:
+        description: "Type bztprltkevacidcpjaam to confirm the database target"
+        required: true
+        type: string
+      apply_confirmation:
+        description: "For apply only, type APPLY_R21_AUTH_SESSION_MIGRATION"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-prisma-migration
+  cancel-in-progress: false
+
+jobs:
+  validate-request:
+    name: Validate operator intent without credentials
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Restrict run context and require exact confirmation
+        shell: bash
+        env:
+          OPERATION: ${{ inputs.operation }}
+          PROJECT_REF: ${{ inputs.project_ref }}
+          APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" || "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Only a manual dispatch on main is allowed."
+            exit 1
+          fi
+          if [[ "$PROJECT_REF" != "bztprltkevacidcpjaam" ]]; then
+            echo "::error::Target project reference mismatch."
+            exit 1
+          fi
+          if [[ "$OPERATION" != "preflight" && "$OPERATION" != "apply" ]]; then
+            exit 1
+          fi
+          if [[ "$OPERATION" == "apply" && "$APPLY_CONFIRMATION" != "APPLY_R21_AUTH_SESSION_MIGRATION" ]]; then
+            echo "::error::Exact write confirmation is required."
+            exit 1
+          fi
+
+  production-prisma:
+    name: Protected Production Prisma migration
+    needs: validate-request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # IMPORTANT: create this GitHub Environment BEFORE merging this PR.
+    # Set required reviewers and restrict deployment branches to main.
+    # An environment name in YAML alone does NOT enable human approval.
+    environment:
+      name: gheverhan-production-db-migration
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    env:
+      CI: "true"
+      EXPECTED_SUPABASE_REF: bztprltkevacidcpjaam
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+      APPROVAL_CONFIGURED: ${{ vars.PRODUCTION_MIGRATION_APPROVAL_CONFIGURED }}
+    steps:
+      - name: Fail closed if environment approval configuration or DB secrets are missing
+        run: |
+          set -euo pipefail
+          if [[ "$APPROVAL_CONFIGURED" != "yes" ]]; then
+            echo "::error::GitHub Environment reviewer and main-branch restrictions must be confirmed by an operator."
+            exit 1
+          fi
+          if [[ -z "$DATABASE_URL" || -z "$DIRECT_URL" ]]; then
+            echo "::error::Missing environment-scoped database credentials."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            exit 1
+          fi
+
+      - name: Checkout immutable approved application source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: d5882c88fa9cc398b2a1cb458b502a2c92cf382b
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked dependencies and Prisma engine
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/@prisma/engines/scripts/postinstall.js
+          npm run prisma:generate
+
+      - name: Create read-only, fail-closed migration checker on runner
+        run: |
+          cat > .r21-production-migration-check.cjs <<'NODE'
+          'use strict';
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+          const { PrismaClient } = require('@prisma/client');
+          const target = 'bztprltkevacidcpjaam';
+          const pending = '20261017000000_auth_session_controls';
+          const stage = process.argv[2];
+          function ensure(ok, message) {
+            if (!ok) throw new Error('BLOCKED: ' + message);
+          }
+          function validateUrl(value, key) {
+            ensure(Boolean(value), key + ' is missing');
+            let u;
+            try { u = new URL(value); } catch { throw new Error('BLOCKED: invalid ' + key); }
+            ensure(['postgres:', 'postgresql:'].includes(u.protocol), key + ' must use PostgreSQL');
+            const host = u.hostname.toLowerCase();
+            const direct = host === 'db.' + target + '.supabase.co';
+            const pooler = host.endsWith('.pooler.supabase.com') &&
+              decodeURIComponent(u.username).endsWith('.' + target);
+            ensure(direct || pooler, key + ' targets an unexpected Supabase project');
+            ensure(u.pathname === '/postgres', key + ' must use the postgres database');
+            ensure((u.searchParams.get('schema') || 'public') === 'public', key + ' must use public schema');
+            return u;
+          }
+          async function main() {
+            ensure(stage === 'before' || stage === 'after', 'invalid checker phase');
+            ensure(process.env.GITHUB_REF === 'refs/heads/main', 'must run on main');
+            ensure(process.env.EXPECTED_SUPABASE_REF === target, 'project mismatch');
+            ensure(process.env.APPROVAL_CONFIGURED === 'yes', 'approval configuration missing');
+            ensure(process.env.VERCEL_ENV !== 'preview', 'never migrate from Vercel Preview');
+            validateUrl(process.env.DATABASE_URL, 'DATABASE_URL');
+            validateUrl(process.env.DIRECT_URL, 'DIRECT_URL');
+            const dirs = fs.readdirSync(path.join(process.cwd(), 'prisma/migrations'))
+              .filter(name => /^\d{14}_/.test(name)).sort();
+            ensure(dirs.length === 6 && dirs.includes(pending), 'unexpected local migration set');
+            const checksums = new Map(dirs.map(name => [name,
+              crypto.createHash('sha256').update(fs.readFileSync(
+                path.join(process.cwd(), 'prisma/migrations', name, 'migration.sql'))).digest('hex')]));
+            const db = new PrismaClient();
+            try {
+              const facts = await db.$transaction(async tx => {
+                await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+                const ledger = await tx.$queryRawUnsafe(
+                  'SELECT migration_name, checksum, finished_at IS NOT NULL AS finished, ' +
+                  'rolled_back_at IS NOT NULL AS rolled_back FROM public."_prisma_migrations"');
+                const schema = await tx.$queryRawUnsafe(
+                  'SELECT to_regclass(\'public."SessionRevocation"\') IS NOT NULL AS revocation, ' +
+                  'to_regclass(\'public."AuthRateLimit"\') IS NOT NULL AS limiter, ' +
+                  'EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=\'public\' ' +
+                  'AND table_name=\'User\' AND column_name=\'sessionVersion\' ' +
+                  'AND data_type=\'integer\' AND is_nullable=\'NO\' ' +
+                  'AND column_default IN (\'0\', \'0::integer\')) AS version');
+                const privileges = await tx.$queryRawUnsafe(
+                  'SELECT current_user AS role, current_database() AS database');
+                return { ledger, schema: schema[0], privileges: privileges[0] };
+              }, { timeout: 10000 });
+              ensure(facts.privileges.database === 'postgres', 'unexpected database name');
+              ensure(facts.ledger.every(r => !r.rolled_back && r.finished &&
+                checksums.get(r.migration_name) === r.checksum), 'Prisma migration ledger mismatch');
+              ensure(new Set(facts.ledger.map(r => r.migration_name)).size === facts.ledger.length,
+                'duplicate migration ledger entries');
+              const names = new Set(facts.ledger.map(r => r.migration_name));
+              if (stage === 'before') {
+                ensure(facts.ledger.length === 5 && !names.has(pending) &&
+                  dirs.filter(name => !names.has(name)).join() === pending,
+                  'expected exactly one pending R21 migration');
+                ensure(!facts.schema.revocation && !facts.schema.limiter && !facts.schema.version,
+                  'R21 objects already exist or schema differs');
+              } else {
+                ensure(facts.ledger.length === 6 && dirs.every(name => names.has(name)),
+                  'R21 migration is not fully recorded');
+                ensure(facts.schema.revocation && facts.schema.limiter && facts.schema.version,
+                  'R21 schema missing');
+                const extended = await db.$queryRawUnsafe(
+                  'SELECT (SELECT count(*) = 5 AND bool_and(i.indisvalid AND i.indisready) ' +
+                  'FROM pg_catalog.pg_index i WHERE i.indrelid IN ' +
+                  '(to_regclass(\'public."SessionRevocation"\'), to_regclass(\'public."AuthRateLimit"\'))) AS indexes, ' +
+                  '(SELECT count(*) = 1 AND bool_and(confdeltype = \'c\' AND confupdtype = \'c\' ' +
+                  'AND confrelid = to_regclass(\'public."User"\')) ' +
+                  'FROM pg_catalog.pg_constraint ' +
+                  'WHERE conrelid = to_regclass(\'public."SessionRevocation"\') AND contype = \'f\') AS foreign_key, ' +
+                  '(SELECT count(*) = 2 AND bool_and(c.relrowsecurity ' +
+                  'AND NOT pg_catalog.row_security_active(c.oid) ' +
+                  'AND has_table_privilege(c.oid,\'SELECT\') ' +
+                  'AND has_table_privilege(c.oid,\'INSERT\') ' +
+                  'AND has_table_privilege(c.oid,\'UPDATE\') ' +
+                  'AND has_table_privilege(c.oid,\'DELETE\')) FROM pg_catalog.pg_class c ' +
+                  'WHERE c.oid IN (to_regclass(\'public."SessionRevocation"\'), ' +
+                  'to_regclass(\'public."AuthRateLimit"\'))) AS trusted');
+                ensure(extended[0].indexes && extended[0].foreign_key && extended[0].trusted,
+                  'index, foreign key, RLS or application role privilege check failed');
+              }
+              console.log('PASS: R21 ' + stage +
+                ' check; correct Supabase target, Prisma ledger, schema and access verified');
+            } finally {
+              await db.$disconnect();
+            }
+          }
+          main().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
+
+      - name: Verify target and migration ledger without writes
+        run: node .r21-production-migration-check.cjs before
+
+      - name: Apply exactly the approved R21 Prisma migration
+        if: ${{ inputs.operation == 'apply' }}
+        run: npm run prisma:deploy
+
+      - name: Verify resulting Prisma ledger, schema, RLS and role privileges
+        if: ${{ inputs.operation == 'apply' }}
+        run: node .r21-production-migration-check.cjs after
+
+      - name: Remove temporary checker
+        if: always()
+        run: rm -f .r21-production-migration-check.cjs

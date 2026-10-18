@@ -6,7 +6,10 @@ import { HttpError } from "@/lib/response";
 import { writeAudit } from "@/modules/audit/audit.service";
 import { randomBytes, createHash } from "crypto";
 import { resetMailConfig, sendPasswordResetEmail } from "./password-reset-email";
-i
+
+import { registrationMailConfig, sendRegistrationOtpEmail } from "./registration-otp-email";
+import { normalizeRegistrationPhone, generateRegistrationOtp, hashRegistrationOtp, compareRegistrationOtp } from "./registration-otp";
+
 const REGISTRATION_TTL_MS = 10 * 60_000;
 const REGISTRATION_RESEND_MS = 60_000;
 const REGISTRATION_MAX_ATTEMPTS = 5;

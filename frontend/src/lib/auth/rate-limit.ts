@@ -52,6 +52,7 @@ export async function enforceAuthRateLimit(operation: AuthOperation, identifier:
     // Indexed, opportunistic retention cleanup. A DB error must fail closed.
     await prisma.authRateLimit.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
     await prisma.sessionRevocation.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
+    await prisma.pendingRegistration.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
   }
   const identity = createHash("sha256").update(identifier.toLowerCase().trim()).digest("hex");
   const window = Math.floor(now / policy.windowMs);

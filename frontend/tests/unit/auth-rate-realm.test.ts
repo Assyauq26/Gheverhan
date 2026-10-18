@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ query:vi.fn(), cleanup:vi.fn() }));
-vi.mock('@/lib/prisma',()=>({prisma:{$queryRaw:mocks.query,authRateLimit:{deleteMany:mocks.cleanup},sessionRevocation:{deleteMany:mocks.cleanup}}}));
+vi.mock('@/lib/prisma',()=>({prisma:{$queryRaw:mocks.query,authRateLimit:{deleteMany:mocks.cleanup},sessionRevocation:{deleteMany:mocks.cleanup},pendingRegistration:{deleteMany:mocks.cleanup}}}));
 import { authRateLimitRealm, enforceAuthRateLimit } from '@/lib/auth/rate-limit';
 beforeEach(()=>{vi.clearAllMocks();mocks.query.mockResolvedValue([{attempts:1}]);mocks.cleanup.mockResolvedValue({count:0});});
 afterEach(()=>vi.unstubAllEnvs());

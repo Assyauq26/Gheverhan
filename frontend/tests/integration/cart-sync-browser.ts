@@ -5,7 +5,7 @@ import type { Browser } from '@playwright/test';
 import { expect } from '@playwright/test';
 import type { PrismaClient } from '@prisma/client';
 
-export async function verifyCartSynchronization(browser: Browser, db: PrismaClient, base: string, prefix: string, errors: string[], artifacts: string) {
+export async function verifyCartSynchronization(browser: Browser, db: PrismaClient, base: string, prefix: string, errors: string[], artifacts: string, emailCodes: Map<string, string>) {
  for (const width of [390, 768, 1024, 1360]) {
   const scope = `r20cart-${prefix}-${width}`;
   const email = `${scope}@example.test`;
@@ -22,7 +22,15 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
    await page.getByTestId('register-name').fill('Synthetic Cart Buyer');
    await page.getByTestId('register-email').fill(email);
    await page.getByTestId('register-password').fill(password);
+   await page.getByTestId('register-confirm-password').fill(password);
+   await page.getByTestId('register-phone').fill('0812345' + String(width) + '01');
    await page.getByTestId('register-terms').check();
+   await page.getByTestId('auth-submit').click();
+   await expect(page.getByTestId('verify-registration-form')).toBeVisible();
+   assert.equal(await db.user.count({ where: { email } }), 0, 'account is not created before OTP');
+   const otp = emailCodes.get(email);
+   assert.ok(otp, 'OTP must arrive only at localhost test mail sink');
+   await page.getByTestId('register-otp').fill(otp);
    await page.getByTestId('auth-submit').click();
    await expect(page).toHaveURL(`${base}/account`);
    const user = await db.user.findUniqueOrThrow({ where: { email }, select: { id: true } }); userId=user.id;
@@ -144,6 +152,7 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
    console.log(`PASS ${width}px R20 cart: register/login/logout replay,3→2,checkout/history,badges,quantity,failed mutations,concurrent add; no reload`);
   } finally {
    await ctx.close();
+   await db.pendingRegistration.deleteMany({where:{email}});
    const user=await db.user.findUnique({where:{email},select:{id:true}});
    if(user){await db.auditLog.deleteMany({where:{userId:user.id}});await db.cart.deleteMany({where:{userId:user.id}});await db.user.delete({where:{id:user.id}});}
    const ids=products.map(p=>p.id);

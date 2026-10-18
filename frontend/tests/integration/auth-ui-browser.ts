@@ -857,6 +857,10 @@ async function main() {
           await darkLink.evaluate((el) => getComputedStyle(el).color),
           "rgb(255, 255, 255)",
         );
+        await p.keyboard.press("Tab");
+        await darkLink.focus();
+        await expect(darkLink).toHaveCSS("outline-color", "rgb(37, 99, 235)");
+        await expect(darkLink).toHaveCSS("outline-style", "solid");
         await anon.close();
       },
     );

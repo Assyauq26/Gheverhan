@@ -696,15 +696,18 @@ async function main() {
         } finally {
           failMail = false;
         }
+        // Three requests already consumed this email's hourly registration quota.
+        // A restart may use an independent test identity, never bypass the limiter.
+        const freshEmail = `new-recovery-${randomUUID()}@example.test`;
         await page.getByTestId("register-name").fill("Dummy Resend Recovery");
-        await page.getByTestId("register-email").fill(retryEmail);
-        await page.getByTestId("register-phone").fill(dummyPhone(6));
+        await page.getByTestId("register-email").fill(freshEmail);
+        await page.getByTestId("register-phone").fill(dummyPhone(7));
         await page.getByTestId("register-password").fill(password);
         await page.getByTestId("register-confirm-password").fill(password);
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
         await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        assert.equal(await db.pendingRegistration.count({ where: { email: retryEmail } }), 1);
+        assert.equal(await db.pendingRegistration.count({ where: { email: freshEmail } }), 1);
         await page.getByRole("button", { name: "Ubah data pendaftaran" }).click();
         await expect(page.getByTestId("register-form")).toBeVisible();
         assert.equal(await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1")), null);

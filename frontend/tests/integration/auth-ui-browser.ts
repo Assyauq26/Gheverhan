@@ -629,6 +629,8 @@ async function main() {
           page.getByTestId("verify-registration-error"),
         ).toContainText("salah");
         assert.equal(await db.user.count({ where: { email } }), 0);
+        await page.reload();
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
         await page.getByTestId("register-otp").fill(code);
         await page.getByTestId("auth-submit").click();
         await page.waitForURL(base + "/account");
@@ -684,6 +686,9 @@ async function main() {
         await page.getByTestId("auth-submit").click();
         await expect(page.getByTestId("verify-registration-form")).toBeVisible();
         assert.equal(await db.pendingRegistration.count({ where: { email: retryEmail } }), 1);
+        await page.getByRole("button", { name: "Ubah data pendaftaran" }).click();
+        await expect(page.getByTestId("register-form")).toBeVisible();
+        assert.equal(await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1")), null);
       },
     );
     await check(

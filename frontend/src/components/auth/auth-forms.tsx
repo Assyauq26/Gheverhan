@@ -35,6 +35,7 @@ type PersistedRegistrationOtp = {
   challengeId: string;
   resendAvailableAt: number;
   expiresAt: number;
+  verificationSubmitted?: boolean;
 };
 const REGISTRATION_OTP_STORAGE_KEY = "gheverhan.registration.otp.v1";
 const REGISTRATION_OTP_TTL_MS = 10 * 60_000;
@@ -51,7 +52,8 @@ function validPersistedOtp(value: unknown): value is PersistedRegistrationOtp {
     Number.isFinite(item.resendAvailableAt) &&
     typeof item.expiresAt === "number" &&
     item.expiresAt > now &&
-    item.expiresAt <= now + REGISTRATION_OTP_TTL_MS + 60_000
+    item.expiresAt <= now + REGISTRATION_OTP_TTL_MS + 60_000 &&
+    (item.verificationSubmitted === undefined || typeof item.verificationSubmitted === "boolean")
   );
 }
 const initialState: FormState = { ok: false };
@@ -316,6 +318,31 @@ function RegistrationOtpStep({
       // Storage may be disabled; the live verification form remains usable.
     }
   }, [resendState.ok, resendState.restartRequired, resendState.resendAvailableAt, email, challengeId, onRestart]);
+  useEffect(() => {
+    if (!state.error) return;
+    try {
+      const saved = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
+      if (!saved) return;
+      const item: unknown = JSON.parse(saved);
+      if (!validPersistedOtp(item) || item.email !== email || item.challengeId !== challengeId) return;
+      // A rejected OTP must remain recoverable after reload, even if the same error repeats.
+      window.sessionStorage.setItem(REGISTRATION_OTP_STORAGE_KEY, JSON.stringify({ ...item, verificationSubmitted: false }));
+    } catch {
+      // The active form remains usable when storage is unavailable.
+    }
+  }, [state, email, challengeId]);
+  const markVerificationSubmitted = () => {
+    try {
+      const saved = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
+      if (!saved) return;
+      const item: unknown = JSON.parse(saved);
+      if (!validPersistedOtp(item) || item.email !== email || item.challengeId !== challengeId) return;
+      // A successful Server Action redirects without returning a success state.
+      window.sessionStorage.setItem(REGISTRATION_OTP_STORAGE_KEY, JSON.stringify({ ...item, verificationSubmitted: true }));
+    } catch {
+      // Verification still works when storage is disabled.
+    }
+  };
   return (
     <div className="auth-content">
       <Heading title="Verifikasi email">
@@ -323,6 +350,7 @@ function RegistrationOtpStep({
       </Heading>
       <form
         action={action}
+        onSubmit={markVerificationSubmitted}
         className="auth-form"
         data-testid="verify-registration-form"
         aria-describedby="register-otp-note verify-registration-error"
@@ -411,7 +439,7 @@ function RegistrationForm({
       const saved = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
       if (!saved) return;
       const item: unknown = JSON.parse(saved);
-      if (validPersistedOtp(item)) {
+      if (validPersistedOtp(item) && !item.verificationSubmitted) {
         setActiveOtp(item);
       } else {
         window.sessionStorage.removeItem(REGISTRATION_OTP_STORAGE_KEY);

@@ -6,9 +6,14 @@ export function normalizeRegistrationPhone(input: string): string {
   const compact = input.trim().replace(/[\s().-]/g, "");
   const normalized = compact.startsWith("0")
     ? "+62" + compact.slice(1)
-    : compact.startsWith("62") ? "+" + compact : compact;
+    : compact.startsWith("62")
+      ? "+" + compact
+      : compact;
   if (!/^\+[1-9]\d{7,14}$/.test(normalized)) {
-    throw new HttpError("Nomor HP wajib diisi dalam format valid, mis. 081234567890.", 400);
+    throw new HttpError(
+      "Nomor HP wajib diisi dalam format valid, mis. 081234567890.",
+      400,
+    );
   }
   return normalized;
 }
@@ -18,13 +23,26 @@ export function generateRegistrationOtp(): string {
 }
 function secret(): string {
   const value = process.env.JWT_SECRET;
-  if (!value || value.length < 16) throw new HttpError("Layanan autentikasi belum dikonfigurasi.", 503);
+  if (!value || value.length < 16)
+    throw new HttpError("Layanan autentikasi belum dikonfigurasi.", 503);
   return value;
 }
 export function hashRegistrationOtp(email: string, code: string): string {
-  return createHmac("sha256", secret()).update("register:").update(email.toLowerCase().trim()).update(":").update(code).digest("hex");
+  return createHmac("sha256", secret())
+    .update("register:")
+    .update(email.toLowerCase().trim())
+    .update(":")
+    .update(code)
+    .digest("hex");
 }
-export function compareRegistrationOtp(email: string, code: string, hash: string): boolean {
+export function compareRegistrationOtp(
+  email: string,
+  code: string,
+  hash: string,
+): boolean {
   if (!/^[a-f0-9]{64}$/.test(hash)) return false;
-  return timingSafeEqual(Buffer.from(hashRegistrationOtp(email, code), "hex"), Buffer.from(hash, "hex"));
+  return timingSafeEqual(
+    Buffer.from(hashRegistrationOtp(email, code), "hex"),
+    Buffer.from(hash, "hex"),
+  );
 }

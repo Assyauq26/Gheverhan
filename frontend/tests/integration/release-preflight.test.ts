@@ -154,3 +154,24 @@ test('database and direct URLs must identify the same database and public schema
         assert.equal(r.data.databaseIdentity, false);
     }
 });
+
+
+test('preflight rejects missing OTP fields and wrong index targets despite matching counts', async () => {
+    await db.$executeRaw`ALTER TABLE "PendingRegistration" RENAME COLUMN "codeHash" TO "codeHash_missing"`;
+    try {
+        const missing = run();
+        assert.equal(missing.status, 1);
+        assert.equal(missing.data.schema.pendingColumns, false);
+    } finally { await db.$executeRaw`ALTER TABLE "PendingRegistration" RENAME COLUMN "codeHash_missing" TO "codeHash"`; }
+    await db.$executeRaw`DROP INDEX "PendingRegistration_expiresAt_idx"`;
+    await db.$executeRaw`CREATE INDEX "otp_wrong_target_test" ON "PendingRegistration"("name")`;
+    try {
+        const wrong = run();
+        assert.equal(wrong.status, 1);
+        assert.equal(wrong.data.schema.pendingIndexes, false);
+    } finally {
+        await db.$executeRaw`DROP INDEX "otp_wrong_target_test"`;
+        await db.$executeRaw`CREATE INDEX "PendingRegistration_expiresAt_idx" ON "PendingRegistration"("expiresAt")`;
+    }
+    assert.equal(run().status, 0);
+});

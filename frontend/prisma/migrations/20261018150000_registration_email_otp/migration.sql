@@ -1,3 +1,6 @@
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
 -- Database-first migration, must be approved/applied before deploying the OTP app.
 -- Existing customers are preserved. Only newly verified registrations set emailVerifiedAt.
 ALTER TABLE "User" ADD COLUMN "emailVerifiedAt" TIMESTAMP(3);
@@ -17,3 +20,5 @@ CREATE UNIQUE INDEX "PendingRegistration_email_key" ON "PendingRegistration"("em
 CREATE INDEX "PendingRegistration_expiresAt_idx" ON "PendingRegistration"("expiresAt");
 ALTER TABLE "PendingRegistration" ENABLE ROW LEVEL SECURITY;
 -- No public policies or grants; service role permissions require separate review.
+
+COMMIT;

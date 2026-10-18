@@ -97,6 +97,9 @@ jobs:
       - name: Read-only release preflight rejects legacy schema, missing configuration and insufficient privileges
         run: node --import tsx --test tests/integration/release-preflight.test.ts
 
+      - name: Registration migration lock failure and recovery on disposable PostgreSQL
+        run: node --import tsx --test tests/integration/registration-migration.test.ts
+
       - name: Real PostgreSQL concurrent cart increments and first-cart creation
         run: node --import tsx --test tests/integration/cart-concurrency.test.ts
 

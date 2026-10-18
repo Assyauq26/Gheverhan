@@ -81,6 +81,7 @@ model User {
   passwordHash String
   isActive     Boolean  @default(true)
   sessionVersion Int @default(0)
+  emailVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -97,6 +98,22 @@ model User {
   auditLogs       AuditLog[]
   resetTokens     PasswordResetToken[]
   revokedSessions SessionRevocation[]
+}
+
+// Pending customer registration: no User/session until the email OTP is verified.
+model PendingRegistration {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  phone        String
+  passwordHash String
+  codeHash     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  sentAt       DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {

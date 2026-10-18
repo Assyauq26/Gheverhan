@@ -643,6 +643,50 @@ async function main() {
       },
     );
     await check(
+      "OTP survives reload and failed resend returns to fresh registration",
+      async () => {
+        const retryEmail = `resend-recovery-${randomUUID()}@example.test`;
+        await page.goto(base + "/register");
+        await page.getByTestId("register-name").fill("Dummy Resend Recovery");
+        await page.getByTestId("register-email").fill(retryEmail);
+        await page.getByTestId("register-phone").fill(dummyPhone(6));
+        await page.getByTestId("register-password").fill(password);
+        await page.getByTestId("register-confirm-password").fill(password);
+        await page.getByTestId("register-terms").check();
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
+        const initialChallenge = await db.pendingRegistration.findUniqueOrThrow({ where: { email: retryEmail } });
+        await page.reload();
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
+        await expect(page.getByTestId("verify-registration-form").locator('input[name="challengeId"]')).toHaveValue(initialChallenge.id);
+        const savedState = await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"));
+        assert.ok(savedState && JSON.parse(savedState).challengeId === initialChallenge.id);
+        assert.equal(savedState.includes("password"), false);
+        await db.pendingRegistration.update({ where: { email: retryEmail }, data: { sentAt: new Date(Date.now() - 70_000) } });
+        failMail = true;
+        try {
+          const resend = page.getByTestId("registration-resend");
+          await resend.evaluate((el: HTMLButtonElement) => { el.disabled = false; });
+          await resend.click();
+          await expect(page.getByTestId("register-form")).toBeVisible();
+          await expect(page.getByTestId("register-error")).toContainText("Pengiriman ulang OTP gagal");
+          assert.equal(await db.pendingRegistration.count({ where: { email: retryEmail } }), 0);
+          assert.equal(await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1")), null);
+        } finally {
+          failMail = false;
+        }
+        await page.getByTestId("register-name").fill("Dummy Resend Recovery");
+        await page.getByTestId("register-email").fill(retryEmail);
+        await page.getByTestId("register-phone").fill(dummyPhone(6));
+        await page.getByTestId("register-password").fill(password);
+        await page.getByTestId("register-confirm-password").fill(password);
+        await page.getByTestId("register-terms").check();
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
+        assert.equal(await db.pendingRegistration.count({ where: { email: retryEmail } }), 1);
+      },
+    );
+    await check(
       "duplicate contact is not exposed before inbox proof and cannot overwrite an account",
       async () => {
         await page.goto(base + "/register");

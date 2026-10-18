@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSession, destroySession } from "@/lib/auth/session";
 import {
   requestRegistrationOtp,
+  REGISTRATION_OTP_DELIVERY_FAILURE,
   verifyRegistrationOtp,
   resendRegistrationOtp,
   authenticate,
@@ -76,7 +77,12 @@ export async function resendRegistrationAction(
   const result = await runAction(() =>
     resendRegistrationOtp(parsed.data.email, parsed.data.challengeId),
   );
-  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.ok)
+    return {
+      ok: false,
+      error: result.error,
+      restartRequired: result.error === REGISTRATION_OTP_DELIVERY_FAILURE,
+    };
   return {
     ok: true,
     message: "Kode OTP baru telah dikirim ke email Anda.",

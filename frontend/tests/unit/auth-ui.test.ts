@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 const form = vi.hoisted(() => ({
   pending: false,
@@ -12,17 +12,24 @@ const form = vi.hoisted(() => ({
     challengeId?: string;
     resendAvailableAt?: number;
   },
+  resendFn: vi.fn(),
+  resend: { ok: false, restartRequired: false } as {
+    ok: boolean;
+    error?: string;
+    resendAvailableAt?: number;
+    restartRequired?: boolean;
+  },
 }));
 vi.mock("react-dom", async (original) => ({
   ...(await original<typeof import("react-dom")>()),
-  useFormState: () => [form.state, undefined],
+  useFormState: (action: unknown) => [action === form.resendFn ? form.resend : form.state, undefined],
   useFormStatus: () => ({ pending: form.pending }),
 }));
 vi.mock("@/modules/auth/auth.actions", () => ({
   loginAction: vi.fn(),
   registerAction: vi.fn(),
   verifyRegistrationAction: vi.fn(),
-  resendRegistrationAction: vi.fn(),
+  resendRegistrationAction: form.resendFn,
   forgotPasswordAction: vi.fn(),
   resetPasswordAction: vi.fn(),
 }));
@@ -31,6 +38,8 @@ afterEach(() => {
   cleanup();
   form.pending = false;
   form.state = { ok: false, error: undefined };
+  form.resend = { ok: false, restartRequired: false };
+  window.sessionStorage.clear();
 });
 it("password toggle preserves entered credentials and remains a non-submit control", () => {
   render(createElement(LoginForm, { redirectTo: "/cart" }));
@@ -127,4 +136,41 @@ it("OTP verification and resend carry the initiating generation without resubmit
   expect(screen.getByTestId("register-otp").getAttribute("autocomplete")).toBe(
     "one-time-code",
   );
+});
+
+it("registration OTP survives reload using session-only challenge metadata, never passwords or OTP codes", async () => {
+  const challengeId = "00000000-0000-4000-8000-000000000001";
+  form.state = {
+    ok: true,
+    step: "verify",
+    email: "reload@example.test",
+    challengeId,
+    resendAvailableAt: Date.now() + 60_000,
+  };
+  const first = render(createElement(RegisterForm));
+  await waitFor(() => {
+    expect(JSON.parse(window.sessionStorage.getItem("gheverhan.registration.otp.v1") || "{}").challengeId).toBe(challengeId);
+  });
+  const raw = window.sessionStorage.getItem("gheverhan.registration.otp.v1") || "";
+  expect(raw).not.toContain("password");
+  expect(raw).not.toContain("otpCode");
+  first.unmount();
+  form.state = { ok: false };
+  render(createElement(RegisterForm));
+  await waitFor(() => expect(screen.getByTestId("verify-registration-form")).toBeTruthy());
+  const hidden = screen.getByTestId("verify-registration-form").querySelector<HTMLInputElement>('input[name="challengeId"]');
+  expect(hidden?.value).toBe(challengeId);
+  expect(screen.queryByTestId("register-password")).toBeNull();
+});
+
+it("expired stored OTP metadata is discarded rather than restored", async () => {
+  window.sessionStorage.setItem("gheverhan.registration.otp.v1", JSON.stringify({
+    email: "expired@example.test",
+    challengeId: "00000000-0000-4000-8000-000000000001",
+    resendAvailableAt: 0,
+    expiresAt: Date.now() - 1000,
+  }));
+  render(createElement(RegisterForm));
+  await waitFor(() => expect(window.sessionStorage.getItem("gheverhan.registration.otp.v1")).toBeNull());
+  expect(screen.getByTestId("register-form")).toBeTruthy();
 });

@@ -31,6 +31,7 @@ import {
   registrationVerificationSchema,
 } from "./registration-schema";
 
+export const REGISTRATION_OTP_DELIVERY_FAILURE = "OTP tidak dapat dikirim. Coba lagi nanti.";
 const REGISTRATION_TTL_MS = 10 * 60_000;
 const REGISTRATION_RESEND_MS = 60_000;
 const REGISTRATION_MAX_ATTEMPTS = 5;
@@ -61,7 +62,7 @@ async function deliverRegistrationOtp(
     await prisma.pendingRegistration.deleteMany({
       where: { id: challengeId, email, codeHash: reservation },
     });
-    throw new HttpError("OTP tidak dapat dikirim. Coba lagi nanti.", 503);
+    throw new HttpError(REGISTRATION_OTP_DELIVERY_FAILURE, 503);
   }
   return {
     email,

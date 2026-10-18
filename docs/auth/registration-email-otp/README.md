@@ -80,3 +80,12 @@ Referensi foto pemilik digunakan untuk posisi Kembali ke Beranda dan konsistensi
 - Test: registration-otp.test.ts (unit+integration), registration-migration.test.ts, auth-ui-browser.ts, auth-ui.test.ts, release-preflight.test.ts; workflow sprint-2e-isolated-regression.yml.
 
 Status: siap ditinjau sebagai source setelah kedua CI final PASS; **tetap Draft, belum diizinkan merge/deploy**. Review migrasi/checksum, trusted role dan sender email production merupakan prasyarat operasional. Editor admin legal dan OAuth tetap di luar scope ini.
+
+
+## Final review lanjutan
+
+Review terhadap kandidat2740e7f menemukan respons konflik email/phone yang dapat dipakai untuk account enumeration sebelum inbox diverifikasi (Medium). Pemeriksaan tersebut kini ditunda sampai OTP valid; request untuk kontak baru maupun existing mengikuti reservasi, pengiriman, cooldown dan respons challenge yang sama. Konflik unique index dikembalikan sebagai pesan umum sesudah proof, tanpa mengidentifikasi field. Tidak pernah menimpa akun existing. Pemilik inbox masih bisa mengetahui bahwa data registrasinya berbenturan setelah proof; ini feedback penyelesaian, bukan klaim nomor HP sudah diverifikasi. Kuota email/global tetap berlaku terhadap pengiriman untuk alamat existing.
+
+Regresi tambahan membuktikan dua email yang memakai phone sama hanya menghasilkan satu akun/customer/cart/wishlist/audit ketika verifikasi paralel; kegagalan insert audit menggulung balik User, Customer, Cart, Wishlist, UserRole serta konsumsi pending. Sesudah penyebab gagal dilepas pada database dummy, OTP yang sama dapat menyelesaikan transaksi sekali. Suite OTP menjadi15 kasus, total integration120; hasil pada SHA final dicatat di PR sesudah CI selesai.
+
+Lihat [gate Production dan urutan cutover](FINAL_REVIEW_AND_RELEASE_GATE.md). PR tetap Draft selama identity/role aplikasi, backup/recovery, email dan approval migration belum terbukti.

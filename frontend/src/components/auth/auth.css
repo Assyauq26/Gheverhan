@@ -259,7 +259,7 @@
 }
 .auth-ui :is(.auth-switch, .auth-terms) a {
   color: hsl(var(--ink));
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 2px;
 }
 .auth-ui .auth-switch a[href="/register"] {

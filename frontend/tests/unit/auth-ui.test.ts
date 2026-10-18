@@ -14,6 +14,8 @@ vi.mock("react-dom", async (original) => ({
 vi.mock("@/modules/auth/auth.actions", () => ({
   loginAction: vi.fn(),
   registerAction: vi.fn(),
+  verifyRegistrationAction: vi.fn(),
+  resendRegistrationAction: vi.fn(),
   forgotPasswordAction: vi.fn(),
   resetPasswordAction: vi.fn(),
 }));
@@ -56,7 +58,8 @@ it("legal links open separately and do not implicitly consent or discard the for
   expect(email.value).toBe("dummy@example.test");
   expect(
     (screen.getByTestId("register-phone") as HTMLInputElement).required,
-  ).toBe(false);
+  ).toBe(true);
+  expect((screen.getByTestId("register-confirm-password") as HTMLInputElement).required).toBe(true);
 });
 it("pending submit is disabled and server errors are exposed to assistive technology", () => {
   form.pending = true;

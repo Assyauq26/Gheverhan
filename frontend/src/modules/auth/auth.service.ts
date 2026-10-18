@@ -121,17 +121,6 @@ export async function verifyRegistrationOtp(emailInput: string, otp: string) {
   }
 }
 
-arget.includes("phone")) {
-        throw new HttpError("No. HP sudah terdaftar", 409);
-      }
-      if (target.includes("email")) {
-        throw new HttpError("Email sudah terdaftar", 409);
-      }
-    }
-    throw err;
-  }
-}
-
 export async function authenticate(identifier: string, password: string) {
   const value = identifier.toLowerCase().trim();
   await enforceAuthRateLimit("login", value);

@@ -8,6 +8,7 @@ Baseline PR #70: `ebb1fff74890c0775e41c6772f2bd32004613b95`. Main saat recovery:
 |---|---|
 | Dua request bersamaan lolos pemeriksaan cooldown lalu saling menimpa upsert | Reservasi awal memakai unique email/CAS untuk row lama. Regresi terhadap service baseline menghasilkan dua sukses; kandidat harus tepat satu. |
 | Hash OTP langsung aktif sebelum respons provider; kode dapat dipakai walau email akhirnya gagal | Reservasi acak `sending:...` tidak dapat diverifikasi. HMAC diaktifkan dengan CAS hanya sesudah delivery sukses. Regresi baseline menunjukkan verifikasi diterima saat delivery masih tertahan; kandidat menolaknya untuk request dan resend. |
+| OTP hanya terikat email, sehingga request pengganti dapat memverifikasi password/data berbeda pada layar lama | Challenge UUID acak per pendaftaran, dirotasi ketika data diganti dan ikut dalam HMAC. Verify/resend form/API wajib membawa challenge asal. Reproduksi terhadap5ffac3d berhasil membuat akun ber-password pengganti; regresi kandidat menolak kode terbaru pada challenge lama. |
 | Snapshot kredensial dibaca sebelum transaksi verifikasi | `SELECT ... FOR UPDATE`, cek expiry/attempts setelah memperoleh lock, konsumsi pending + User/customer/cart/wishlist/audit dalam satu transaksi pendek. Tidak menahan transaksi ketika hashing/password atau mengirim email. |
 | Kontrak validasi API/form terpisah | `registration-schema.ts` dipakai service, Server Actions dan ketiga endpoint registrasi; terms boolean eksplisit, phone/confirmation wajib, email ternormalisasi. Password baru dibatasi 72 byte agar tidak terpotong diam-diam oleh bcrypt; password akun lama tidak diubah. |
 | Nomor baru disimpan +62, login sebelumnya mencocokkan format persis | Pertahankan prioritas pencocokan akun lama, lalu fallback nomor ternormalisasi. Semua alias format memakai kuota login yang sama; 10 percobaan salah dengan variasi spasi tetap mengunci format +62. |
@@ -18,16 +19,16 @@ Baseline PR #70: `ebb1fff74890c0775e41c6772f2bd32004613b95`. Main saat recovery:
 
 ## Kontrak dan kontrol
 
-- Request registrasi REST mengembalikan202 + verificationRequired, tanpa User atau cookie session. Form berpindah ke langkah OTP. Verifikasi yang sukses membuat User dan `emailVerifiedAt`, baru kemudian membuat session. Replay ditolak di form maupun API.
-- OTP 6 angka, TTL 10 menit, maksimum 5 percobaan pada challenge, resend minimal 60 detik. Register+resend berbagi batas 3/identity/jam dan 30 global/menit; konfirmasi 12/identity/jam dan 240 global/menit sesuai kebijakan branch awal. Counter salah tetap commit meskipun respons ditolak.
-- OTP disimpan sebagai HMAC-SHA256 dengan domain register dan JWT_SECRET; password sebagai bcrypt. Tidak mengirim kode/hash/password kembali lewat API/action atau artifact. Marker pengiriman berisi nonce, bukan OTP. Gagal kirim menghapus hanya reservasi yang cocok; marker yang belum diaktifkan tetap tidak bisa diverifikasi bila cleanup/database gagal.
+- Request registrasi REST mengembalikan202 + verificationRequired + challengeId, tanpa User atau cookie session. Form berpindah ke langkah OTP. Verifikasi yang sukses membuat User dan `emailVerifiedAt`, baru kemudian membuat session. Replay ditolak di form maupun API.
+- OTP 6 angka, TTL 10 menit, maksimum 5 percobaan pada challenge, resend minimal 60 detik. Register+resend berbagi batas 3/identity/jam dan 30 global/menit; konfirmasi 12/identity/jam dan 240 global/menit sesuai kebijakan branch awal. Counter salah tetap commit meskipun respons ditolak. Guard challenge memiliki kuota tersendiri; ID yang tidak dikenal ditolak sebelum menyentuh kuota email, sehingga tidak dapat mengunci challenge pengguna hanya dengan mengetahui email.
+- OTP disimpan sebagai HMAC-SHA256 dengan domain register, email, challenge UUID dan JWT_SECRET; password sebagai bcrypt. Tidak mengirim kode/hash/password kembali lewat API/action atau artifact. Marker pengiriman berisi nonce, bukan OTP. Gagal kirim menghapus hanya reservasi yang cocok; marker yang belum diaktifkan tetap tidak bisa diverifikasi bila cleanup/database gagal.
 - Endpoint baru memakai assertMutationOrigin. Browser lintas Origin ditolak; klien non-browser tanpa Origin tetap mengikuti helper yang sudah ada.
 - Akun lama dengan phone/emailVerifiedAt null tetap dapat login. Tidak ada perubahan JWT/sessionVersion/revocation, logout, reset-password, RBAC, order/payment/stok.
 - Email OTP membuktikan akses inbox saat registrasi, bukan identitas hukum atau kepemilikan nomor HP. Nomor HP belum diverifikasi untuk WhatsApp. Google/WhatsApp tetap nonaktif.
 
 ## Migration dan readiness
 
-Migration: `20261018150000_registration_email_otp` (ketujuh). Menambah nullable `User.emailVerifiedAt` serta `PendingRegistration` (unique email, expiry index, primary key dan RLS tanpa policy publik). Tidak backfill verified timestamp atau mewajibkan phone bagi akun lama; pending tidak memiliki FK ke User karena akun belum ada.
+Migration: `20261018150000_registration_email_otp` (ketujuh). Menambah nullable `User.emailVerifiedAt` serta `PendingRegistration` (unique email, expiry index, primary key dan RLS tanpa policy publik). PendingRegistration.id memakai UUID dari aplikasi/Prisma (kolom SQL tetap TEXT, tidak perlu migration kedelapan). Tidak backfill verified timestamp atau mewajibkan phone bagi akun lama; pending tidak memiliki FK ke User karena akun belum ada.
 
 Migration baru di PR ini diberi BEGIN/COMMIT, lock_timeout 5s dan statement_timeout 30s. Penambahan nullable column bersifat metadata, tetapi ALTER TABLE tetap memerlukan lock eksklusif singkat. Seluruh SQL harus diterapkan oleh operator terpercaya sebelum source OTP aktif. Preflight memeriksa ledger/checksum, kolom/index dan hak CRUD/RLS; tidak menjalankan migrasi otomatis saat startup.
 
@@ -36,7 +37,7 @@ Checksum kandidat: `eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539e
 
 **Perubahan checksum hanya untuk migration baru dalam Draft PR ini.** Sebelum release, pastikan versi awal belum diaplikasikan pada database target/shared. Jika sudah, hentikan cutover dan review rekonsiliasi migration; jangan menimpa ledger atau checksum history. Tidak memeriksa/mengubah database production dalam pekerjaan ini.
 
-Drill PostgreSQL17 disposable: fresh 7 migrations; upgrade6→7 mempertahankan akun legacy (phone/timestamp null); tahan lock User sehingga migration gagal pada batas 5s; seluruh DDL rollback; tandai kegagalan lokal sebagai rolled-back sesudah membuktikan rollback; deploy ulang dan retry no-op menghasilkan 7 migration aktif. Prisma 5 dapat menutupi pesan lock timeout dengan pesan transaksi aborted saat mencoba menulis kegagalan; periksa kondisi skema/ledger dan log PostgreSQL, bukan hanya pesan CLI. Resolve pada production memerlukan keputusan operator dan izin khusus, bukan langkah otomatis.
+Drill PostgreSQL17 disposable: fresh 7 migrations; upgrade6→7 mempertahankan akun legacy (phone/timestamp null); tahan lock User sehingga migration gagal pada batas 5s; seluruh DDL rollback; tandai kegagalan lokal sebagai rolled-back sesudah membuktikan rollback; deploy ulang dan retry no-op menghasilkan 7 migration aktif. Prisma 5 dapat menutupi pesan lock timeout dengan pesan transaksi aborted saat mencoba menulis kegagalan; periksa kondisi skema/ledger dan log PostgreSQL, bukan hanya pesan CLI. Pending dari prototype tanpa challenge binding harus memulai ulang pendaftaran; tidak mengubah atau mencabut sesi akun lama. Resolve pada production memerlukan keputusan operator dan izin khusus, bukan langkah otomatis.
 
 Rollback aplikasi ke alur registrasi lama akan membuka registrasi tanpa OTP; jangan melakukannya sebagai fallback diam-diam. Utamakan maintenance tertutup dan roll-forward yang tetap menghormati revocation serta kebijakan OTP. Tidak drop tabel/kolom atau mengubah data live.
 
@@ -48,13 +49,13 @@ Kesiapan sender production, identitas database, role efektif dan penerapan migra
 
 ## Validasi
 
-Node.js 22.22.0, PostgreSQL 17.11 disposable sendiri, Chromium 153.0.8010.12; tidak menggunakan data/credential production. Unit memakai container network-none/read-only/uid1000/cap-drop dan batas resource.
+Node.js 22.22.0, PostgreSQL 17.11 disposable sendiri, Chromium 153.0.8010.12; tidak menggunakan data/credential production. Unit memakai container network-none/read-only/uid1000/cap-drop dan batas resource. Suite lifecycle OTP membuat database lokal unik sendiri agar counter global nyata tidak tercampur dengan suite browser; tidak menghapus atau menaikkan batas rate limit aplikasi.
 
-- 241 unit, 25 containment, 9 mitigation PASS.
-- 12 auth/security PostgreSQL, 11 OTP/phone security, 7 preflight dan 1 migration recovery PASS.
-- 11 kelompok browser PASS: REST tidak bypass OTP, required phone/confirmation/terms client+server, state form saat error, OTP salah/expired/replay, resend API/cooldown form, email gagal, session hanya sesudah OTP, duplicate email, login email/nomor lokal, logout, reset/revocation, legal/footer, link hover/focus/active serta CTA contrast.
+- 243 unit, 25 containment, 9 mitigation PASS.
+- 12 auth/security PostgreSQL, 13 OTP/phone security, 7 preflight dan 1 migration recovery PASS.
+- 11 kelompok browser PASS: REST tidak bypass OTP, required phone/confirmation/terms client+server, state form saat error, OTP salah/expired/replay dan penolakan challenge lama/asing/hilang, resend API sukses/cooldown form, email gagal, session hanya sesudah OTP, duplicate email, login email/nomor lokal, logout, reset/revocation, legal/footer, link hover/focus/active serta CTA contrast.
 - 8 viewport 360×800,375×812,390×844,430×932,768×1024,1024×768,1440×900,1920×1080 untuk login/register dan OTP; tidak ada horizontal overflow atau console/page error. Kembali ke Beranda visible dan target 44px. Link legal tetap membuka tab terpisah tanpa implicit consent.
-- TypeScript, ESLint dan production build PASS sebelum freeze; verifikasi diulang pada HEAD final/CI. Hasil final per SHA dan tautan kedua workflow dicatat di PR agar tidak mengklaim hasil SHA lama sebagai bukti source baru.
+- TypeScript, ESLint dan production build PASS sebelum freeze; verifikasi diulang pada HEAD final/CI. Hasil final per SHA dan tautan kedua workflow dicatat di PR agar tidak mengklaim hasil SHA lama sebagai bukti source baru. SHA5ffac3d bukan final: source dibekukan ulang setelah perbaikan challenge binding.
 - CI mempertahankan seluruh gate product/cart, operations/payment, PostgreSQL, hydration dan navigasi 10×44; menambah lifecycle OTP dan migration recovery. Test gagal tidak dihapus/dilewati.
 
 RCA pengujian: validasi form menemukan reset consent native yang harus dibatalkan lewat listener native (synthetic handler saja tidak cukup pada runtime saat ini). Pemeriksaan hover semula membaca warna awal transisi; kini menunggu warna target, tanpa mengubah ekspektasi. Drift fixture telepon antarrun dihindari dengan nomor dummy acak, bukan menghapus data shared. Pemeriksaan lock tidak bergantung pada pesan Prisma yang menutupi error awal, tetapi juga deadline, rollback dan retry.

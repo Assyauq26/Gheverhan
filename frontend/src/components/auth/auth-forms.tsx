@@ -366,7 +366,7 @@ function RegistrationOtpStep({
         <button
           type="button"
           className="auth-resend-button"
-          onClick={onRestart}
+          onClick={() => onRestart()}
         >
           Ubah data pendaftaran
         </button>

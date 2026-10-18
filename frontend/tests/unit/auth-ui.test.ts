@@ -174,16 +174,3 @@ it("expired stored OTP metadata is discarded rather than restored", async () => 
   await waitFor(() => expect(window.sessionStorage.getItem("gheverhan.registration.otp.v1")).toBeNull());
   expect(screen.getByTestId("register-form")).toBeTruthy();
 });
-
-it("completed verification marker prevents replay of the old OTP screen on another registration visit", async () => {
-  window.sessionStorage.setItem("gheverhan.registration.otp.v1", JSON.stringify({
-    email: "done@example.test",
-    challengeId: "00000000-0000-4000-8000-000000000001",
-    resendAvailableAt: 0,
-    expiresAt: Date.now() + 60_000,
-    verificationSubmitted: true,
-  }));
-  render(createElement(RegisterForm));
-  await waitFor(() => expect(window.sessionStorage.getItem("gheverhan.registration.otp.v1")).toBeNull());
-  expect(screen.getByTestId("register-form")).toBeTruthy();
-});

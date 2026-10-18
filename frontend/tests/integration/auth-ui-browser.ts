@@ -634,6 +634,8 @@ async function main() {
         await page.getByTestId("register-otp").fill(code);
         await page.getByTestId("auth-submit").click();
         await page.waitForURL(base + "/account");
+        // The authenticated account page confirms success before discarding the OTP challenge.
+        await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"))).toBeNull();
         assert.equal(await db.user.count({ where: { email } }), 1);
         const created = await db.user.findUniqueOrThrow({ where: { email } });
         assert.ok(created.emailVerifiedAt);

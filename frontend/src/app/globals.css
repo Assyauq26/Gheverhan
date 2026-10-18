@@ -52,6 +52,15 @@
     opacity: 1;
     animation: fade-up 0.18s ease-out both;
   }
+  .storefront-root a {
+    text-decoration: none;
+    transition: color 150ms ease, background-color 150ms ease;
+  }
+  .storefront-root a:hover,
+  .storefront-root a:focus-visible,
+  .storefront-root a[aria-current="page"],
+  .storefront-root a[data-active="true"] { color: #2563eb; }
+  .storefront-root a:active { color: #1d4ed8; }
   a[data-pending="true"] { opacity: 0.6; }
   a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 }

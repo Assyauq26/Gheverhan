@@ -91,9 +91,10 @@
 .legal-contact a {
   text-decoration: underline;
 }
-.legal-document a:hover {
-  color: hsl(var(--ink-muted));
-}
+.legal-page a { text-decoration: none; transition: color 150ms ease; }
+.legal-page a:hover,
+.legal-page a:focus-visible { color: #2563eb; }
+.legal-page a:active { color: #1d4ed8; }
 .legal-sections section {
   scroll-margin-top: 24px;
   margin: 0 0 32px;

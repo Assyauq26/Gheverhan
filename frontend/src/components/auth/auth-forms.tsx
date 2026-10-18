@@ -10,9 +10,11 @@ import {
   registerAction,
   forgotPasswordAction,
   resetPasswordAction,
+  verifyRegistrationAction,
+  resendRegistrationAction,
 } from "@/modules/auth/auth.actions";
 
-type FormState = { ok: boolean; error?: string; message?: string };
+type FormState = { ok: boolean; error?: string; message?: string; email?: string; step?: string };
 const initialState: FormState = { ok: false };
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -208,106 +210,83 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     </div>
   );
 }
-export function RegisterForm() {
+function ResendSubmit() {
+  const { pending } = useFormStatus();
+  return <button type="submit" className="auth-resend-button" disabled={pending}>
+    {pending ? "Mengirim..." : "Kirim ulang kode OTP"}
+  </button>;
+}
+function RegistrationOtpStep({ email }: { email: string }) {
   const [state, action] = useFormState<FormState, FormData>(
-    registerAction,
-    initialState,
+    verifyRegistrationAction, initialState,
+  );
+  const [resendState, resendAction] = useFormState<FormState, FormData>(
+    resendRegistrationAction, initialState,
   );
   return (
     <div className="auth-content">
-      <Heading title="Daftar akun">
-        Buat akun baru untuk mulai belanja di Gheverhan.
-      </Heading>
-      <form
-        action={action}
-        className="auth-form"
-        data-testid="register-form"
-        aria-describedby="register-error"
-      >
-        <Field
-          id="register-name"
-          label="Nama lengkap"
-          name="name"
-          icon="user-round"
-          required
-          minLength={2}
-          autoComplete="name"
-          data-testid="register-name"
-        />
-        <Field
-          id="register-email"
-          label="Email"
-          name="email"
-          type="email"
-          icon="mail"
-          required
-          autoComplete="email"
-          autoCapitalize="none"
-          data-testid="register-email"
-        />
-        <Field
-          id="register-password"
-          label="Password"
-          name="password"
-          icon="lock-keyhole"
-          password
-          required
-          minLength={6}
-          autoComplete="new-password"
-          data-testid="register-password"
-        />
-        <details className="auth-optional-phone">
-          <summary>Tambahkan nomor HP (opsional)</summary>
-          <Field
-            id="register-phone"
-            label="No. HP (opsional)"
-            name="phone"
-            type="tel"
-            icon="phone"
-            autoComplete="tel"
-            data-testid="register-phone"
-          />
-        </details>
+      <Heading title="Verifikasi email">Masukkan kode OTP 6 angka yang dikirim ke {email}.</Heading>
+      <form action={action} className="auth-form" data-testid="verify-registration-form">
+        <input type="hidden" name="email" value={email} />
+        <Field id="register-otp" label="Kode OTP 6 angka" name="otp" icon="mail"
+          autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}"
+          maxLength={6} required data-testid="register-otp" />
+        <p className="auth-otp-note">Kode berlaku 10 menit dengan maksimal 5 percobaan.</p>
+        <Feedback error={state.error} id="verify-registration-error" />
+        <Submit label="Verifikasi & Buat Akun" />
+      </form>
+      <form action={resendAction} className="auth-resend-form">
+        <input type="hidden" name="email" value={email} />
+        <ResendSubmit />
+      </form>
+      <Feedback error={resendState.error} id="registration-resend-error" />
+      {resendState.message && <p role="status" className="auth-success">{resendState.message}</p>}
+      <p className="auth-switch"><a href="/register">Ubah data pendaftaran</a></p>
+    </div>
+  );
+}
+export function RegisterForm() {
+  const [state, action] = useFormState<FormState, FormData>(registerAction, initialState);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  if (state.step === "verify" && state.email) return <RegistrationOtpStep email={state.email} />;
+  return (
+    <div className="auth-content">
+      <Heading title="Daftar akun">Buat akun baru untuk mulai belanja di Gheverhan.</Heading>
+      <form action={action} className="auth-form" data-testid="register-form" aria-describedby="register-error">
+        <Field id="register-name" label="Nama lengkap" name="name" icon="user-round"
+          required minLength={2} autoComplete="name" data-testid="register-name" />
+        <Field id="register-email" label="Email" name="email" type="email" icon="mail"
+          required autoComplete="email" autoCapitalize="none" data-testid="register-email" />
+        <Field id="register-phone" label="Nomor HP (wajib)" name="phone" type="tel"
+          icon="phone" required inputMode="tel" autoComplete="tel" data-testid="register-phone" />
+        <Field id="register-password" label="Password" name="password" icon="lock-keyhole"
+          password required minLength={6} autoComplete="new-password"
+          onChange={(event) => setPassword(event.target.value)} data-testid="register-password" />
+        <Field id="register-confirm-password" label="Konfirmasi password"
+          name="confirmPassword" icon="lock-keyhole" password required minLength={6}
+          autoComplete="new-password" onChange={(event) => setConfirm(event.target.value)}
+          data-testid="register-confirm-password" />
+        {confirm && password !== confirm && <p className="auth-inline-error" role="status">
+          Konfirmasi password tidak sama.
+        </p>}
         <div className="auth-terms">
           <Label htmlFor="register-terms" className="auth-terms-check">
-            <Checkbox
-              id="register-terms"
-              name="terms"
-              value="1"
-              required
-              data-testid="register-terms"
-            />
-            <span className="auth-sr-only">
-              Saya setuju dengan Syarat &amp; Ketentuan dan Kebijakan Privasi
-            </span>
+            <Checkbox id="register-terms" name="terms" value="1" required data-testid="register-terms" />
+            <span className="auth-sr-only">Saya setuju dengan Syarat &amp; Ketentuan dan Kebijakan Privasi</span>
           </Label>
           <p>
             Saya setuju dengan{" "}
-            <Link
-              href="/syarat-ketentuan"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Syarat &amp; Ketentuan
-            </Link>{" "}
-            dan{" "}
-            <Link
-              href="/kebijakan-privasi"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Kebijakan Privasi
-            </Link>
-            .
+            <Link href="/syarat-ketentuan" target="_blank" rel="noopener noreferrer">Syarat &amp; Ketentuan</Link>
+            {" "}dan{" "}
+            <Link href="/kebijakan-privasi" target="_blank" rel="noopener noreferrer">Kebijakan Privasi</Link>.
           </p>
         </div>
-        <Feedback error={state?.error} id="register-error" />
-        <Submit label="Daftar" />
+        <Feedback error={state.error} id="register-error" />
+        <Submit label="Kirim Kode OTP" />
       </form>
       <SocialButtons />
-      <p className="auth-switch">
-        Sudah punya akun? <Link href="/login">Masuk</Link>
-      </p>
+      <p className="auth-switch">Sudah punya akun? <Link href="/login">Masuk</Link></p>
     </div>
   );
 }

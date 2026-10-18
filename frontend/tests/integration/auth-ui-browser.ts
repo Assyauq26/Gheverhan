@@ -643,7 +643,7 @@ async function main() {
       },
     );
     await check(
-      "duplicate email exposes original server feedback",
+      "duplicate contact is not exposed before inbox proof and cannot overwrite an account",
       async () => {
         await page.goto(base + "/register");
         await page.getByTestId("register-name").fill("Dummy Kedua");
@@ -653,8 +653,11 @@ async function main() {
         await page.getByTestId("register-phone").fill(dummyPhone(4));
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("register-error")).toHaveText(
-          "Email sudah terdaftar",
+        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
+        await page.getByTestId("register-otp").fill(capturedOtp.get(email)!);
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("verify-registration-error")).toHaveText(
+          "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
         );
         assert.equal(await db.user.count({ where: { email } }), 1);
       },

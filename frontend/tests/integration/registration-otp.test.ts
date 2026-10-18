@@ -164,7 +164,13 @@ test("email verification is required before account exists; bad OTP cannot creat
   await assert.rejects(verify(data.email, otp), {
     status: 400,
   });
-  await assert.rejects(start(data), { status: 409 });
+  const duplicate = await start(data);
+  assert.ok(duplicate.challengeId);
+  await assert.rejects(verify(data.email, codes.get(data.email)!), {
+    status: 409,
+    message: "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
+  });
+  assert.equal(await db.user.count({ where: { email: data.email } }), 1);
 });
 test("cooldown, expiry and five invalid attempts fail closed", async () => {
   const data = input(2);
@@ -469,4 +475,68 @@ test("missing or foreign challenge cannot verify, resend, or lock the current ch
     current.challengeId,
   );
   assert.ok(user.emailVerifiedAt);
+});
+
+
+test("shared phone remains private before OTP and concurrent verification commits only one account", async () => {
+  const first = input(30);
+  const second = { ...input(31), phone: first.phone };
+  await start(first);
+  await start(second);
+  const result = await Promise.allSettled([
+    verify(first.email, codes.get(first.email)!),
+    verify(second.email, codes.get(second.email)!),
+  ]);
+  assert.equal(result.filter((x) => x.status === "fulfilled").length, 1);
+  const failure = result.find((x) => x.status === "rejected");
+  assert.equal(failure?.status === "rejected" && failure.reason.status, 409);
+  assert.equal(
+    failure?.status === "rejected" && failure.reason.message,
+    "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
+  );
+  const accounts = await db.user.findMany({
+    where: { email: { in: [first.email, second.email] } },
+  });
+  assert.equal(accounts.length, 1);
+  const winner = accounts[0];
+  assert.equal(await db.customer.count({ where: { userId: winner.id } }), 1);
+  assert.equal(await db.cart.count({ where: { userId: winner.id } }), 1);
+  assert.equal(await db.wishlist.count({ where: { userId: winner.id } }), 1);
+  assert.equal(await db.auditLog.count({
+    where: { userId: winner.id, action: "auth.register.verified" },
+  }), 1);
+  // A phone conflict is not exposed by initiating registration either.
+  const third = { ...input(32), phone: first.phone };
+  assert.ok((await start(third)).challengeId);
+  assert.equal(await db.user.count({ where: { email: third.email } }), 0);
+});
+
+test("audit failure rolls back User, Customer, Cart, Wishlist, role and pending consumption", async () => {
+  const data = input(33);
+  await db.role.upsert({
+    where: { name: "Customer" },
+    create: { name: "Customer", label: "Customer" },
+    update: {},
+  });
+  await start(data);
+  const snapshot = async () => Promise.all([
+    db.user.count(), db.customer.count(), db.cart.count(),
+    db.wishlist.count(), db.userRole.count(), db.auditLog.count(),
+  ]);
+  const before = await snapshot();
+  // This client can only target the unique local disposable database created above.
+  await db.$executeRawUnsafe(`CREATE FUNCTION otp_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'dummy audit failure'; END $$`);
+  await db.$executeRawUnsafe(`CREATE TRIGGER otp_reject_audit BEFORE INSERT ON "AuditLog" FOR EACH ROW EXECUTE FUNCTION otp_reject_audit()`);
+  try {
+    await assert.rejects(verify(data.email, codes.get(data.email)!));
+    assert.deepEqual(await snapshot(), before);
+    assert.equal(await db.pendingRegistration.count({ where: { email: data.email } }), 1);
+    assert.equal(await db.user.count({ where: { email: data.email } }), 0);
+  } finally {
+    await db.$executeRawUnsafe(`DROP TRIGGER otp_reject_audit ON "AuditLog"`);
+    await db.$executeRawUnsafe(`DROP FUNCTION otp_reject_audit()`);
+  }
+  const user = await verify(data.email, codes.get(data.email)!);
+  assert.ok(user.emailVerifiedAt);
+  assert.equal(await db.userRole.count({ where: { userId: user.id } }), 1);
 });

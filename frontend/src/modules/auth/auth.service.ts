@@ -77,17 +77,8 @@ export async function requestRegistrationOtp(input: unknown) {
   const phone = normalizeRegistrationPhone(data.phone);
   const config = registrationMailConfig();
   await enforceAuthRateLimit("register", email);
-  const duplicate = await prisma.user.findFirst({
-    where: { OR: [{ email }, { phone }] },
-    select: { email: true },
-  });
-  if (duplicate)
-    throw new HttpError(
-      duplicate.email === email
-        ? "Email sudah terdaftar"
-        : "No. HP sudah terdaftar",
-      409,
-    );
+  // Do not expose existing email/phone before inbox verification. The unique
+  // constraints arbitrate conflicts atomically only after a valid OTP.
   const current = await prisma.pendingRegistration.findUnique({
     where: { email },
   });
@@ -273,13 +264,8 @@ export async function verifyRegistrationOtp(
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      const target = Array.isArray(err.meta?.target)
-        ? err.meta.target.map(String)
-        : [];
       throw new HttpError(
-        target.includes("phone")
-          ? "No. HP sudah terdaftar"
-          : "Email sudah terdaftar",
+        "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
         409,
       );
     }

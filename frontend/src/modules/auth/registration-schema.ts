@@ -35,9 +35,11 @@ export const registrationSchema = z
 
 export const registrationVerificationSchema = z.object({
   email: registrationEmailSchema,
+  challengeId: z.string().uuid("Sesi pendaftaran tidak valid. Daftar kembali."),
   otp: z.string().regex(/^\d{6}$/, "Kode OTP harus berisi 6 angka."),
 });
 
 export const registrationResendSchema = registrationVerificationSchema.pick({
   email: true,
+  challengeId: true,
 });

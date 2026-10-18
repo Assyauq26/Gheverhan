@@ -102,7 +102,7 @@ model User {
 
 // Pending customer registration: no User/session until the email OTP is verified.
 model PendingRegistration {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   email        String   @unique
   name         String
   phone        String

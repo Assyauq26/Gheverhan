@@ -226,11 +226,27 @@ async function main() {
           confirmPassword: "dummy-api-password",
           terms: true,
         };
-        const post = (route: string, body: unknown, origin = base) =>
-          api.request.post(base + "/api/v1/auth/register" + route, {
-            data: body,
-            headers: { Origin: origin },
-          });
+        const challenges = new Map<string, string>();
+        const post = async (
+          route: string,
+          body: Record<string, unknown>,
+          origin = base,
+        ) => {
+          const payload = route
+            ? { challengeId: challenges.get(String(body.email)), ...body }
+            : body;
+          const response = await api.request.post(
+            base + "/api/v1/auth/register" + route,
+            { data: payload, headers: { Origin: origin } },
+          );
+          if (!route && response.status() === 202) {
+            const json = await response.json();
+            assert.equal(typeof json.data.challengeId, "string");
+            assert.equal(json.data.otp, undefined);
+            challenges.set(json.data.email, json.data.challengeId);
+          }
+          return response;
+        };
         try {
           assert.equal(
             (await post("", data, "https://foreign.invalid")).status(),
@@ -255,8 +271,46 @@ async function main() {
             false,
           );
           assert.equal((await post("/resend", { email })).status(), 429);
-          const code = capturedOtp.get(email)!;
+          let code = capturedOtp.get(email)!;
           assert.ok(code);
+          assert.equal(
+            (
+              await post("/verify", {
+                email,
+                otp: code,
+                challengeId: undefined,
+              })
+            ).status(),
+            422,
+          );
+          assert.equal(
+            (
+              await post("/verify", {
+                email,
+                otp: code,
+                challengeId: randomUUID(),
+              })
+            ).status(),
+            400,
+          );
+          assert.equal(
+            (
+              await post("/resend", { email, challengeId: randomUUID() })
+            ).status(),
+            400,
+          );
+          const oldCode = code;
+          await db.pendingRegistration.update({
+            where: { email },
+            data: { sentAt: new Date(Date.now() - 70_000) },
+          });
+          assert.equal((await post("/resend", { email })).status(), 200);
+          code = capturedOtp.get(email)!;
+          assert.notEqual(code, oldCode);
+          assert.equal(
+            (await post("/verify", { email, otp: oldCode })).status(),
+            400,
+          );
           assert.equal(
             (
               await post("/verify", {
@@ -282,6 +336,43 @@ async function main() {
           assert.equal(
             (await post("/verify", { email, otp: code })).status(),
             400,
+          );
+          const replaced = {
+            ...data,
+            email: `generation-${randomUUID()}@example.test`,
+            phone: dummyPhone(5),
+          };
+          assert.equal((await post("", replaced)).status(), 202);
+          const firstGeneration = challenges.get(replaced.email)!;
+          await db.pendingRegistration.update({
+            where: { email: replaced.email },
+            data: { sentAt: new Date(Date.now() - 70_000) },
+          });
+          assert.equal(
+            (
+              await post("", {
+                ...replaced,
+                name: "Different applicant",
+                password: "changed-password",
+                confirmPassword: "changed-password",
+              })
+            ).status(),
+            202,
+          );
+          assert.notEqual(challenges.get(replaced.email), firstGeneration);
+          assert.equal(
+            (
+              await post("/verify", {
+                email: replaced.email,
+                otp: capturedOtp.get(replaced.email),
+                challengeId: firstGeneration,
+              })
+            ).status(),
+            400,
+          );
+          assert.equal(
+            await db.user.count({ where: { email: replaced.email } }),
+            0,
           );
           const expired = {
             ...data,
@@ -324,6 +415,7 @@ async function main() {
               await post("/verify", {
                 email: failed.email,
                 otp: capturedOtp.get(failed.email),
+                challengeId: randomUUID(),
               })
             ).status(),
             400,
@@ -501,6 +593,25 @@ async function main() {
         await page.setViewportSize({ width: 390, height: 844 });
         const code = capturedOtp.get(email);
         assert.ok(code, "local email sink captured code");
+        const challenge = await db.pendingRegistration.findUniqueOrThrow({
+          where: { email },
+        });
+        const hidden = page
+          .getByTestId("verify-registration-form")
+          .locator('input[name="challengeId"]');
+        await expect(hidden).toHaveValue(challenge.id);
+        await page.getByTestId("register-otp").fill(code);
+        await hidden.evaluate((el: HTMLInputElement, replacement: string) => {
+          el.value = replacement;
+        }, randomUUID());
+        await page.getByTestId("auth-submit").click();
+        await expect(
+          page.getByTestId("verify-registration-error"),
+        ).toContainText("Sesi pendaftaran");
+        assert.equal(await db.user.count({ where: { email } }), 0);
+        await hidden.evaluate((el: HTMLInputElement, original: string) => {
+          el.value = original;
+        }, challenge.id);
         const resend = page.getByTestId("registration-resend");
         await resend.evaluate((el: HTMLButtonElement) => {
           el.disabled = false;

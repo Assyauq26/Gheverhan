@@ -13,7 +13,11 @@ export async function POST(req: Request) {
       throw new HttpError("Layanan autentikasi belum dikonfigurasi", 503);
     }
     const input = registrationVerificationSchema.parse(await req.json());
-    const user = await verifyRegistrationOtp(input.email, input.otp);
+    const user = await verifyRegistrationOtp(
+      input.email,
+      input.otp,
+      input.challengeId,
+    );
     await createSession(user.id, user.email, user.sessionVersion);
     return ok({ id: user.id, name: user.name, email: user.email }, 201);
   });

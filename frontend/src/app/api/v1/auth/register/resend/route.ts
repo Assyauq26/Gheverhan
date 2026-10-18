@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   return handle(async () => {
     assertMutationOrigin(req);
     const data = registrationResendSchema.parse(await req.json());
-    await resendRegistrationOtp(data.email);
+    await resendRegistrationOtp(data.email, data.challengeId);
     return ok({ message: "Kode OTP telah dikirim." });
   });
 }

@@ -3,6 +3,7 @@ import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { spawnSync } from "node:child_process";
 
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("Local PostgreSQL test DSN required");
@@ -14,13 +15,22 @@ if (
 ) {
   throw new Error("Refusing to test OTP against a non-disposable database");
 }
-process.env.DATABASE_URL = target;
-process.env.DIRECT_URL = target;
+const suffix = randomUUID().replaceAll("-", "");
+const databaseName = "otp_lifecycle_" + suffix;
+assert.match(databaseName, /^otp_lifecycle_[a-f0-9]+$/);
+const isolated = new URL(target);
+isolated.pathname = "/" + databaseName;
+const admin = new PrismaClient({ datasources: { db: { url: target } } });
+const db = new PrismaClient({
+  datasources: { db: { url: isolated.toString() } },
+});
+let created = false;
+process.env.DATABASE_URL = isolated.toString();
+process.env.DIRECT_URL = isolated.toString();
 process.env.JWT_SECRET = "disposable-registration-otp-secret-only";
 process.env.RESEND_API_KEY = "dummy-only-test-mail-key";
 process.env.PASSWORD_RESET_FROM = "Gheverhan <test@example.test>";
-const db = new PrismaClient({ datasources: { db: { url: target } } });
-const suffix = randomUUID().replaceAll("-", "");
+delete process.env.REGISTRATION_OTP_TEST_SINK;
 const domain = suffix + ".example.test";
 const codes = new Map<string, string>();
 const originalFetch = globalThis.fetch;
@@ -28,6 +38,18 @@ let svc: typeof import("../../src/modules/auth/auth.service");
 let client: typeof import("../../src/modules/auth/registration-otp");
 let shared: PrismaClient;
 let phoneSeq = 1000;
+const challenges = new Map<string, string>();
+async function start(data: unknown) {
+  const result = await svc.requestRegistrationOtp(data);
+  challenges.set(result.email, result.challengeId);
+  return result;
+}
+const verify = (email: string, code: string) =>
+  svc.verifyRegistrationOtp(email, code, challenges.get(email)!);
+const resend = (email: string) =>
+  svc.resendRegistrationOtp(email, challenges.get(email)!);
+const generation = "00000000-0000-4000-8000-000000000001";
+
 function input(n: number) {
   return {
     name: "Pengguna Tes",
@@ -39,6 +61,18 @@ function input(n: number) {
   };
 }
 before(async () => {
+  await admin.$executeRawUnsafe(`CREATE DATABASE "${databaseName}"`);
+  created = true;
+  const migration = spawnSync(
+    process.execPath,
+    ["node_modules/prisma/build/index.js", "migrate", "deploy"],
+    { env: process.env, encoding: "utf8", timeout: 25000 },
+  );
+  assert.equal(
+    migration.status,
+    0,
+    "Disposable OTP schema must migrate before service tests",
+  );
   svc = await import("../../src/modules/auth/auth.service");
   client = await import("../../src/modules/auth/registration-otp");
   shared = (await import("../../src/lib/prisma")).prisma;
@@ -53,15 +87,14 @@ before(async () => {
 });
 after(async () => {
   globalThis.fetch = originalFetch;
-  await db.pendingRegistration.deleteMany({
-    where: { email: { endsWith: "@" + domain } },
-  });
-  await db.auditLog.deleteMany({
-    where: { user: { email: { endsWith: "@" + domain } } },
-  });
-  await db.user.deleteMany({ where: { email: { endsWith: "@" + domain } } });
   await shared?.$disconnect();
   await db.$disconnect();
+  try {
+    if (created)
+      await admin.$executeRawUnsafe(`DROP DATABASE "${databaseName}"`);
+  } finally {
+    await admin.$disconnect();
+  }
 });
 test("phone normalization and unguessable keyed OTP digest", () => {
   assert.equal(
@@ -77,20 +110,24 @@ test("phone normalization and unguessable keyed OTP digest", () => {
   });
   const code = client.generateRegistrationOtp();
   assert.match(code, /^\d{6}$/);
-  const hash = client.hashRegistrationOtp("test@example.test", code);
+  const hash = client.hashRegistrationOtp(
+    "test@example.test",
+    code,
+    generation,
+  );
   assert.match(hash, /^[0-9a-f]{64}$/);
   assert.equal(
-    client.compareRegistrationOtp("test@example.test", code, hash),
+    client.compareRegistrationOtp("test@example.test", code, hash, generation),
     true,
   );
   assert.equal(
-    client.compareRegistrationOtp("other@example.test", code, hash),
+    client.compareRegistrationOtp("other@example.test", code, hash, generation),
     false,
   );
 });
 test("email verification is required before account exists; bad OTP cannot create account", async () => {
   const data = input(1);
-  await svc.requestRegistrationOtp(data);
+  await start(data);
   assert.equal(await db.user.count({ where: { email: data.email } }), 0);
   const pending = await db.pendingRegistration.findUniqueOrThrow({
     where: { email: data.email },
@@ -100,10 +137,7 @@ test("email verification is required before account exists; bad OTP cannot creat
   const otp = codes.get(data.email)!;
   assert.ok(otp);
   await assert.rejects(
-    svc.verifyRegistrationOtp(
-      data.email,
-      otp === "000000" ? "111111" : "000000",
-    ),
+    verify(data.email, otp === "000000" ? "111111" : "000000"),
     { status: 400 },
   );
   assert.equal(
@@ -114,7 +148,7 @@ test("email verification is required before account exists; bad OTP cannot creat
     ).attempts,
     1,
   );
-  const user = await svc.verifyRegistrationOtp(data.email, otp);
+  const user = await verify(data.email, otp);
   assert.equal(user.email, data.email);
   assert.ok(user.emailVerifiedAt);
   assert.equal(user.phone, client.normalizeRegistrationPhone(data.phone));
@@ -127,20 +161,20 @@ test("email verification is required before account exists; bad OTP cannot creat
     await db.pendingRegistration.count({ where: { email: data.email } }),
     0,
   );
-  await assert.rejects(svc.verifyRegistrationOtp(data.email, otp), {
+  await assert.rejects(verify(data.email, otp), {
     status: 400,
   });
-  await assert.rejects(svc.requestRegistrationOtp(data), { status: 409 });
+  await assert.rejects(start(data), { status: 409 });
 });
 test("cooldown, expiry and five invalid attempts fail closed", async () => {
   const data = input(2);
-  await svc.requestRegistrationOtp(data);
-  await assert.rejects(svc.resendRegistrationOtp(data.email), { status: 429 });
+  await start(data);
+  await assert.rejects(resend(data.email), { status: 429 });
   await db.pendingRegistration.update({
     where: { email: data.email },
     data: { sentAt: new Date(Date.now() - 70_000) },
   });
-  await svc.resendRegistrationOtp(data.email);
+  await resend(data.email);
   assert.equal(
     (
       await db.pendingRegistration.findUniqueOrThrow({
@@ -152,31 +186,30 @@ test("cooldown, expiry and five invalid attempts fail closed", async () => {
   const code = codes.get(data.email)!;
   const wrong = code === "000000" ? "111111" : "000000";
   for (let i = 0; i < 5; i++) {
-    await assert.rejects(svc.verifyRegistrationOtp(data.email, wrong), {
+    await assert.rejects(verify(data.email, wrong), {
       status: 400,
     });
   }
-  await assert.rejects(svc.verifyRegistrationOtp(data.email, code), {
+  await assert.rejects(verify(data.email, code), {
     status: 400,
   });
   assert.equal(await db.user.count({ where: { email: data.email } }), 0);
   const next = input(3);
-  await svc.requestRegistrationOtp(next);
+  await start(next);
   await db.pendingRegistration.update({
     where: { email: next.email },
     data: { expiresAt: new Date(Date.now() - 1000) },
   });
-  await assert.rejects(
-    svc.verifyRegistrationOtp(next.email, codes.get(next.email)!),
-    { status: 400 },
-  );
+  await assert.rejects(verify(next.email, codes.get(next.email)!), {
+    status: 400,
+  });
   assert.equal(await db.user.count({ where: { email: next.email } }), 0);
 });
 test("failed email delivery leaves no usable pending challenge", async () => {
   const data = input(4);
   globalThis.fetch = async () => new Response("unavailable", { status: 503 });
   try {
-    await assert.rejects(svc.requestRegistrationOtp(data), { status: 503 });
+    await assert.rejects(start(data), { status: 503 });
     assert.equal(
       await db.pendingRegistration.count({ where: { email: data.email } }),
       0,
@@ -205,7 +238,7 @@ test("all registration callers require phone, confirmation and explicit consent"
     { terms: false },
     { password: "é".repeat(40), confirmPassword: "é".repeat(40) },
   ]) {
-    await assert.rejects(svc.requestRegistrationOtp({ ...data, ...patch }));
+    await assert.rejects(start({ ...data, ...patch }));
   }
   assert.equal(
     await db.pendingRegistration.count({ where: { email: data.email } }),
@@ -216,41 +249,35 @@ test("all registration callers require phone, confirmation and explicit consent"
 
 test("parallel initial requests reserve once and cannot overwrite the winner", async () => {
   const data = input(11);
-  const results = await Promise.allSettled([
-    svc.requestRegistrationOtp(data),
-    svc.requestRegistrationOtp(data),
-  ]);
+  const results = await Promise.allSettled([start(data), start(data)]);
   assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
   const failure = results.find((x) => x.status === "rejected");
   assert.equal(failure?.status === "rejected" && failure.reason.status, 429);
-  const user = await svc.verifyRegistrationOtp(
-    data.email,
-    codes.get(data.email)!,
-  );
+  const user = await verify(data.email, codes.get(data.email)!);
   assert.ok(user.emailVerifiedAt);
 });
 
 test("parallel resend rotates once, invalidates old code, and only one verifier wins", async () => {
   const data = input(12);
-  await svc.requestRegistrationOtp(data);
+  await start(data);
   const oldCode = codes.get(data.email)!;
   await db.pendingRegistration.update({
     where: { email: data.email },
     data: { sentAt: new Date(Date.now() - 70_000) },
   });
   const sent = await Promise.allSettled([
-    svc.resendRegistrationOtp(data.email),
-    svc.resendRegistrationOtp(data.email),
+    resend(data.email),
+    resend(data.email),
   ]);
   assert.equal(sent.filter((x) => x.status === "fulfilled").length, 1);
   const code = codes.get(data.email)!;
   assert.notEqual(code, oldCode);
-  await assert.rejects(svc.verifyRegistrationOtp(data.email, oldCode), {
+  await assert.rejects(verify(data.email, oldCode), {
     status: 400,
   });
   const verified = await Promise.allSettled([
-    svc.verifyRegistrationOtp(data.email, code),
-    svc.verifyRegistrationOtp(data.email, code),
+    verify(data.email, code),
+    verify(data.email, code),
   ]);
   assert.equal(verified.filter((x) => x.status === "fulfilled").length, 1);
   assert.equal(await db.user.count({ where: { email: data.email } }), 1);
@@ -258,13 +285,11 @@ test("parallel resend rotates once, invalidates old code, and only one verifier 
 
 test("parallel wrong attempts persist exactly five failures and lock out the right OTP", async () => {
   const data = input(13);
-  await svc.requestRegistrationOtp(data);
+  await start(data);
   const code = codes.get(data.email)!;
   const wrong = code === "000000" ? "111111" : "000000";
   const results = await Promise.allSettled(
-    Array.from({ length: 7 }, () =>
-      svc.verifyRegistrationOtp(data.email, wrong),
-    ),
+    Array.from({ length: 7 }, () => verify(data.email, wrong)),
   );
   assert.ok(results.every((x) => x.status === "rejected"));
   assert.equal(
@@ -275,7 +300,7 @@ test("parallel wrong attempts persist exactly five failures and lock out the rig
     ).attempts,
     5,
   );
-  await assert.rejects(svc.verifyRegistrationOtp(data.email, code), {
+  await assert.rejects(verify(data.email, code), {
     status: 400,
   });
   assert.equal(await db.user.count({ where: { email: data.email } }), 0);
@@ -284,10 +309,10 @@ test("parallel wrong attempts persist exactly five failures and lock out the rig
 test("OTP cannot be verified while failed delivery is in flight, including resend", async () => {
   const savedFetch = globalThis.fetch;
   try {
-    for (const resend of [false, true]) {
-      const data = input(resend ? 15 : 14);
-      if (resend) {
-        await svc.requestRegistrationOtp(data);
+    for (const isResend of [false, true]) {
+      const data = input(isResend ? 15 : 14);
+      if (isResend) {
+        await start(data);
         await db.pendingRegistration.update({
           where: { email: data.email },
           data: { sentAt: new Date(Date.now() - 70_000) },
@@ -308,13 +333,15 @@ test("OTP cannot be verified while failed delivery is in flight, including resen
         await blocked;
         return new Response("{}", { status: 503 });
       };
-      const operation = resend
-        ? svc.resendRegistrationOtp(data.email)
-        : svc.requestRegistrationOtp(data);
+      const operation = isResend ? resend(data.email) : start(data);
       const rejected = assert.rejects(operation, { status: 503 });
       try {
         await arrived;
-        await assert.rejects(svc.verifyRegistrationOtp(data.email, code), {
+        const pending = await db.pendingRegistration.findUniqueOrThrow({
+          where: { email: data.email },
+        });
+        challenges.set(data.email, pending.id);
+        await assert.rejects(verify(data.email, code), {
           status: 400,
         });
         assert.equal(await db.user.count({ where: { email: data.email } }), 0);
@@ -370,4 +397,76 @@ test("phone formatting aliases cannot evade the shared login brute-force limit",
     });
   }
   await assert.rejects(svc.authenticate(phone, data.password), { status: 429 });
+});
+
+test("a newer registration cannot verify different credentials in an older email OTP screen", async () => {
+  const data = input(18);
+  const first = await start(data);
+  await db.pendingRegistration.update({
+    where: { email: data.email },
+    data: { sentAt: new Date(Date.now() - 70_000) },
+  });
+  const changed = {
+    ...data,
+    name: "Different applicant",
+    password: "different-test-password",
+    confirmPassword: "different-test-password",
+  };
+  const second = await start(changed);
+  assert.notEqual(first.challengeId, second.challengeId);
+  const code = codes.get(data.email)!;
+  await assert.rejects(
+    svc.verifyRegistrationOtp(data.email, code, first.challengeId),
+    { status: 400 },
+  );
+  await assert.rejects(
+    svc.resendRegistrationOtp(data.email, first.challengeId),
+    { status: 400 },
+  );
+  assert.equal(await db.user.count({ where: { email: data.email } }), 0);
+  const pending = await db.pendingRegistration.findUniqueOrThrow({
+    where: { email: data.email },
+  });
+  assert.equal(pending.id, second.challengeId);
+  assert.equal(pending.attempts, 0);
+  const user = await svc.verifyRegistrationOtp(
+    data.email,
+    code,
+    second.challengeId,
+  );
+  assert.equal(user.name, changed.name);
+  const { verifyPassword } = await import("../../src/lib/auth/password");
+  assert.equal(await verifyPassword(changed.password, user.passwordHash), true);
+});
+
+test("missing or foreign challenge cannot verify, resend, or lock the current challenge", async () => {
+  const data = input(19);
+  const current = await start(data);
+  const code = codes.get(data.email)!;
+  await assert.rejects(svc.verifyRegistrationOtp(data.email, code, ""));
+  await assert.rejects(svc.resendRegistrationOtp(data.email, ""));
+  for (let n = 0; n < 13; n++) {
+    await assert.rejects(
+      svc.verifyRegistrationOtp(data.email, code, randomUUID()),
+      { status: 400 },
+    );
+  }
+  await assert.rejects(svc.resendRegistrationOtp(data.email, randomUUID()), {
+    status: 400,
+  });
+  assert.equal(await db.user.count({ where: { email: data.email } }), 0);
+  assert.equal(
+    (
+      await db.pendingRegistration.findUniqueOrThrow({
+        where: { email: data.email },
+      })
+    ).attempts,
+    0,
+  );
+  const user = await svc.verifyRegistrationOtp(
+    data.email,
+    code,
+    current.challengeId,
+  );
+  assert.ok(user.emailVerifiedAt);
 });

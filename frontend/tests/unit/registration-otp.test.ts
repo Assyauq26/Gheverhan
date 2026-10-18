@@ -1,5 +1,9 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { registrationSchema } from "@/modules/auth/registration-schema";
+import {
+  registrationSchema,
+  registrationVerificationSchema,
+  registrationResendSchema,
+} from "@/modules/auth/registration-schema";
 import {
   compareRegistrationOtp,
   hashRegistrationOtp,
@@ -14,6 +18,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
+const generation = "00000000-0000-4000-8000-000000000001";
 const valid = {
   name: "Dummy",
   email: " Dummy@Example.test ",
@@ -40,22 +45,37 @@ it("shares the registration contract: required phone/confirmation/consent and no
 });
 it("keys OTP hashes to signing configuration, purpose and normalized email", () => {
   vi.stubEnv("JWT_SECRET", "dummy-key-for-registration-only");
-  const digest = hashRegistrationOtp("Dummy@Example.test", "012345");
-  expect(compareRegistrationOtp("dummy@example.test", "012345", digest)).toBe(
-    true,
+  const digest = hashRegistrationOtp(
+    "Dummy@Example.test",
+    "012345",
+    generation,
   );
-  expect(compareRegistrationOtp("other@example.test", "012345", digest)).toBe(
-    false,
-  );
+  expect(
+    compareRegistrationOtp("dummy@example.test", "012345", digest, generation),
+  ).toBe(true);
+  expect(
+    compareRegistrationOtp("other@example.test", "012345", digest, generation),
+  ).toBe(false);
   expect(
     compareRegistrationOtp(
       "dummy@example.test",
       "012345",
       "sending:reservation",
+      generation,
+    ),
+  ).toBe(false);
+  expect(
+    compareRegistrationOtp(
+      "dummy@example.test",
+      "012345",
+      digest,
+      "other-generation",
     ),
   ).toBe(false);
   vi.stubEnv("JWT_SECRET", "");
-  expect(() => hashRegistrationOtp("dummy@example.test", "012345")).toThrow();
+  expect(() =>
+    hashRegistrationOtp("dummy@example.test", "012345", generation),
+  ).toThrow();
 });
 it("rejects an email sink on hosted/remote databases before any network request", async () => {
   const fetchMock = vi.fn();
@@ -99,4 +119,23 @@ it("fails closed without email configuration and on rejected provider responses"
   ).rejects.toMatchObject({ status: 503 });
   expect(fetchMock.mock.calls[0][0]).toBe("https://api.resend.com/emails");
   expect(fetchMock.mock.calls[0][1].redirect).toBe("error");
+});
+
+it("verification and resend require the initiating challenge, including valid email/code", () => {
+  const data = {
+    email: "dummy@example.test",
+    otp: "012345",
+    challengeId: generation,
+  };
+  expect(registrationVerificationSchema.safeParse(data).success).toBe(true);
+  expect(registrationResendSchema.safeParse(data).success).toBe(true);
+  for (const challengeId of [undefined, "", "not-a-challenge"]) {
+    expect(
+      registrationVerificationSchema.safeParse({ ...data, challengeId })
+        .success,
+    ).toBe(false);
+    expect(
+      registrationResendSchema.safeParse({ ...data, challengeId }).success,
+    ).toBe(false);
+  }
 });

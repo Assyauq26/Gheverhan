@@ -4,7 +4,14 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 const form = vi.hoisted(() => ({
   pending: false,
-  state: { ok: false, error: undefined as string | undefined },
+  state: { ok: false } as {
+    ok: boolean;
+    error?: string;
+    email?: string;
+    step?: string;
+    challengeId?: string;
+    resendAvailableAt?: number;
+  },
 }));
 vi.mock("react-dom", async (original) => ({
   ...(await original<typeof import("react-dom")>()),
@@ -94,4 +101,30 @@ it("registration retains typed values and explicit consent when an action reques
   (screen.getByTestId("register-form") as HTMLFormElement).reset();
   expect(terms.checked).toBe(true);
   expect(email.value).toBe("dummy@example.test");
+});
+
+it("OTP verification and resend carry the initiating generation without resubmitting credentials", () => {
+  const challengeId = "00000000-0000-4000-8000-000000000001";
+  form.state = {
+    ok: true,
+    step: "verify",
+    email: "dummy@example.test",
+    challengeId,
+    resendAvailableAt: Date.now() + 60_000,
+  };
+  render(createElement(RegisterForm));
+  const fields = document.querySelectorAll<HTMLInputElement>(
+    'input[name="challengeId"]',
+  );
+  expect(fields.length).toBe(2);
+  expect(Array.from(fields).every((field) => field.value === challengeId)).toBe(
+    true,
+  );
+  expect(screen.queryByTestId("register-password")).toBeNull();
+  expect(
+    (screen.getByTestId("registration-resend") as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(screen.getByTestId("register-otp").getAttribute("autocomplete")).toBe(
+    "one-time-code",
+  );
 });

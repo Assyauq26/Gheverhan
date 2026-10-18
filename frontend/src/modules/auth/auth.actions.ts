@@ -32,6 +32,7 @@ export async function registerAction(_prev: unknown, formData: FormData) {
     ok: true,
     step: "verify",
     email: result.data!.email,
+    challengeId: result.data!.challengeId,
     resendAvailableAt: result.data!.resendAvailableAt,
     message:
       "Kode OTP telah dikirim. Masukkan 6 angka dari email Anda (berlaku 10 menit).",
@@ -54,6 +55,7 @@ export async function verifyRegistrationAction(
     const user = await verifyRegistrationOtp(
       parsed.data.email,
       parsed.data.otp,
+      parsed.data.challengeId,
     );
     await createSession(user.id, user.email, user.sessionVersion);
     return user;
@@ -72,7 +74,7 @@ export async function resendRegistrationAction(
   if (!parsed.success)
     return { ok: false, error: parsed.error.errors[0].message };
   const result = await runAction(() =>
-    resendRegistrationOtp(parsed.data.email),
+    resendRegistrationOtp(parsed.data.email, parsed.data.challengeId),
   );
   if (!result.ok) return { ok: false, error: result.error };
   return {

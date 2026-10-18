@@ -10,6 +10,13 @@ export async function POST(req: Request) {
     assertMutationOrigin(req);
     const data = registrationSchema.parse(await req.json());
     const result = await requestRegistrationOtp(data);
-    return ok({ email: result.email, verificationRequired: true }, 202);
+    return ok(
+      {
+        email: result.email,
+        challengeId: result.challengeId,
+        verificationRequired: true,
+      },
+      202,
+    );
   });
 }

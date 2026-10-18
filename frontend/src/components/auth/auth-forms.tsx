@@ -24,6 +24,7 @@ type FormState = {
   error?: string;
   message?: string;
   email?: string;
+  challengeId?: string;
   step?: string;
   resendAvailableAt?: number;
 };
@@ -248,10 +249,12 @@ function ResendSubmit({ availableAt }: { availableAt: number }) {
 }
 function RegistrationOtpStep({
   email,
+  challengeId,
   availableAt,
   onRestart,
 }: {
   email: string;
+  challengeId: string;
   availableAt: number;
   onRestart: () => void;
 }) {
@@ -275,6 +278,7 @@ function RegistrationOtpStep({
         aria-describedby="register-otp-note verify-registration-error"
       >
         <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="challengeId" value={challengeId} />
         <Field
           id="register-otp"
           label="Kode OTP 6 angka"
@@ -297,6 +301,7 @@ function RegistrationOtpStep({
       </form>
       <form action={resendAction} className="auth-resend-form">
         <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="challengeId" value={challengeId} />
         <ResendSubmit
           availableAt={resendState.resendAvailableAt ?? availableAt}
         />
@@ -346,10 +351,11 @@ function RegistrationForm({ onRestart }: { onRestart: () => void }) {
     form.addEventListener("reset", preserveInput);
     return () => form.removeEventListener("reset", preserveInput);
   }, [state.step]);
-  if (state.step === "verify" && state.email)
+  if (state.step === "verify" && state.email && state.challengeId)
     return (
       <RegistrationOtpStep
         email={state.email}
+        challengeId={state.challengeId}
         availableAt={state.resendAvailableAt ?? 0}
         onRestart={onRestart}
       />

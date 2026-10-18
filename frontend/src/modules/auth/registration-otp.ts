@@ -27,22 +27,29 @@ function secret(): string {
     throw new HttpError("Layanan autentikasi belum dikonfigurasi.", 503);
   return value;
 }
-export function hashRegistrationOtp(email: string, code: string): string {
+export function hashRegistrationOtp(
+  email: string,
+  code: string,
+  challengeId: string,
+): string {
   return createHmac("sha256", secret())
     .update("register:")
     .update(email.toLowerCase().trim())
     .update(":")
     .update(code)
+    .update(":")
+    .update(challengeId)
     .digest("hex");
 }
 export function compareRegistrationOtp(
   email: string,
   code: string,
   hash: string,
+  challengeId: string,
 ): boolean {
   if (!/^[a-f0-9]{64}$/.test(hash)) return false;
   return timingSafeEqual(
-    Buffer.from(hashRegistrationOtp(email, code), "hex"),
+    Buffer.from(hashRegistrationOtp(email, code, challengeId), "hex"),
     Buffer.from(hash, "hex"),
   );
 }

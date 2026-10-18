@@ -5,6 +5,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createServer } from "node:net";
+import { createServer as createHttpServer } from "node:http";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 const target = new URL(
@@ -22,6 +23,7 @@ const evidence = process.env.SPRINT1_ARTIFACT_DIR || "/tmp/gheverhan-auth-ui";
 const checkpoints: string[] = [],
   errors: string[] = [];
 const geometry: unknown[] = [];
+const capturedOtp = new Map<string, string>();
 const viewportSizes = [
   [360, 800],
   [375, 812],
@@ -39,6 +41,22 @@ async function main() {
     probe.listen(3170, "127.0.0.1", resolve);
   });
   await new Promise<void>((resolve) => probe.close(() => resolve()));
+  const mailSink = createHttpServer(async (req, res) => {
+    if (req.url !== "/emails" || req.method !== "POST") {
+      res.writeHead(404); res.end(); return;
+    }
+    const parts: Buffer[] = [];
+    for await (const chunk of req) parts.push(Buffer.from(chunk));
+    const body = JSON.parse(Buffer.concat(parts).toString("utf8")) as { to: string[]; text: string };
+    const code = body.text.match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
+    assert.ok(code, "OTP sent only to isolated local sink");
+    capturedOtp.set(body.to[0], code);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end("{}");
+  });
+  await new Promise<void>((resolve) => mailSink.listen(0, "127.0.0.1", resolve));
+  const sinkAddress = mailSink.address();
+  assert.ok(sinkAddress && typeof sinkAddress !== "string");
   const server = spawn(
     process.execPath,
     [
@@ -57,7 +75,10 @@ async function main() {
         DIRECT_URL: target.toString(),
         NEXT_PUBLIC_BASE_URL: base,
         MAINTENANCE_MODE: "0",
-        RESEND_API_KEY: "",
+        RESEND_API_KEY: "isolated-otp-key",
+        PASSWORD_RESET_FROM: "Gheverhan <test@example.test>",
+        PASSWORD_RESET_BASE_URL: "https://example.test",
+        REGISTRATION_OTP_TEST_SINK: "http://127.0.0.1:" + sinkAddress.port + "/emails",
       },
       stdio: "ignore",
     },
@@ -163,6 +184,8 @@ async function main() {
     await page.getByTestId("register-name").fill("Pengguna Dummy");
     await page.getByTestId("register-email").fill(email);
     await page.getByTestId("register-password").fill(password);
+    await page.getByTestId("register-confirm-password").fill(password);
+    await page.getByTestId("register-phone").fill("081234567890");
     await check(
       "legal links preserve registration fields and do not consent",
       async () => {
@@ -425,6 +448,7 @@ async function main() {
       ),
     );
     await browser?.close();
+    await new Promise<void>((resolve) => mailSink.close(() => resolve()));
     server.kill("SIGTERM");
     await new Promise<void>((resolve) => {
       if (server.exitCode !== null) resolve();

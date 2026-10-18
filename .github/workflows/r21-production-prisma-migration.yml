@@ -1,0 +1,71 @@
+name: R21 controlled production Prisma migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type MIGRATE_R21_AUTH after reviewing the production database freeze and release checklist'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-prod-db-schema
+  cancel-in-progress: false
+
+jobs:
+  prisma-migration:
+    if: >-
+      github.repository == 'Assyauq26/Gheverhan' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'MIGRATE_R21_AUTH'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-db-migration
+    env:
+      CI: 'true'
+      DATABASE_URL: ${{ secrets.GHEVERHAN_PROD_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.GHEVERHAN_PROD_DIRECT_URL }}
+      VERCEL_ENV: production
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout pinned source without persisting credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Pin R21 migration files
+        shell: bash
+        run: |
+          git -C .. diff --exit-code d5882c88fa9cc398b2a1cb458b502a2c92cf382b HEAD -- \
+            frontend/prisma/migrations frontend/prisma/schema.prisma \
+            frontend/package.json frontend/package-lock.json \
+            frontend/scripts/assert-safe-db-operation.mjs
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Prepare locked Prisma dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/@prisma/engines/scripts/postinstall.js
+          npm run prisma:generate
+
+      - name: Check production project and Prisma ledger (read-only)
+        run: node scripts/release/check-production-db.cjs before
+
+      - name: Apply exactly the reviewed Prisma migrations
+        run: npm run prisma:deploy
+
+      - name: Validate schema and Prisma ledger (read-only)
+        if: success()
+        run: node scripts/release/check-production-db.cjs after

@@ -1,0 +1,309 @@
+{
+  "description": "Geometry of reviewed UI before source freeze; final per-SHA browser proof is in CI/PR. No pixel similarity percentage claimed.",
+  "geometry": [
+    {
+      "route": "login",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 312,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 324.875,
+        "width": 312,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 312,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 435.25,
+        "width": 312,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 327,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 324.875,
+        "width": 327,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 327,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 435.25,
+        "width": 327,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 342,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 324.875,
+        "width": 342,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 342,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 435.25,
+        "width": 342,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 382,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 324.875,
+        "width": 382,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 182.875,
+        "width": 382,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 430.875,
+        "width": 382,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "inputBox": {
+        "x": 152,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 152,
+        "y": 315.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "inputBox": {
+        "x": 152,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 152,
+        "y": 421.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "inputBox": {
+        "x": 280,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 280,
+        "y": 315.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "inputBox": {
+        "x": 280,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 280,
+        "y": 421.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "inputBox": {
+        "x": 488,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 488,
+        "y": 315.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "inputBox": {
+        "x": 488,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 488,
+        "y": 421.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "inputBox": {
+        "x": 728,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 728,
+        "y": 315.671875,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "inputBox": {
+        "x": 728,
+        "y": 173.671875,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 728,
+        "y": 421.671875,
+        "width": 464,
+        "height": 44
+      }
+    }
+  ]
+}

@@ -1,16 +1,23 @@
 import Link from "next/link";
-
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+import "@/components/auth/lumen/styles.css";
+import "@/components/auth/auth.css";
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <header className="container flex items-center justify-center py-6">
-        <Link href="/" className="font-display text-2xl font-extrabold tracking-tight">
+    <div className="auth-ui" data-theme="light">
+      <header className="auth-header">
+        <Link
+          href="/"
+          aria-label="Gheverhan — beranda"
+          className="auth-wordmark"
+        >
           Gheverhan
         </Link>
       </header>
-      <main className="container flex flex-1 items-center justify-center py-6">
-        <div className="w-full max-w-md">{children}</div>
-      </main>
+      <main className="auth-main">{children}</main>
     </div>
   );
 }

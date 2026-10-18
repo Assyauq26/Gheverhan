@@ -10,7 +10,8 @@
     "deploymentEnabled": {
       "integration/r20-release-hardening-cart-sync": false,
       "security/r20-test-toolchain-upgrades": false,
-      "fix/r21-production-hardening": false
+      "fix/r21-production-hardening": false,
+      "feat/auth-ui-legal-pages": false
     }
   }
 }

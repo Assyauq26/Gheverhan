@@ -1,0 +1,445 @@
+/** Browser regression: real Server Actions, synthetic data, disposable PostgreSQL only. */
+import assert from "node:assert/strict";
+import { randomUUID, randomBytes, createHash } from "node:crypto";
+import { spawn, execFileSync } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { createServer } from "node:net";
+import { PrismaClient } from "@prisma/client";
+import { chromium, expect } from "@playwright/test";
+const target = new URL(
+  process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid",
+);
+assert.equal(process.env.GHEVERHAN_ISOLATED_TESTS, "1");
+assert.ok(["127.0.0.1", "localhost"].includes(target.hostname));
+assert.equal(target.pathname, "/gheverhan_sprint1_test");
+const db = new PrismaClient({
+  datasources: { db: { url: target.toString() } },
+});
+const root = process.cwd(),
+  base = "http://localhost:3170";
+const evidence = process.env.SPRINT1_ARTIFACT_DIR || "/tmp/gheverhan-auth-ui";
+const checkpoints: string[] = [],
+  errors: string[] = [];
+const geometry: unknown[] = [];
+const viewportSizes = [
+  [360, 800],
+  [375, 812],
+  [390, 844],
+  [430, 932],
+  [768, 1024],
+  [1024, 768],
+  [1440, 900],
+  [1920, 1080],
+];
+async function main() {
+  const probe = createServer();
+  await new Promise<void>((resolve, reject) => {
+    probe.once("error", reject);
+    probe.listen(3170, "127.0.0.1", resolve);
+  });
+  await new Promise<void>((resolve) => probe.close(() => resolve()));
+  const server = spawn(
+    process.execPath,
+    [
+      path.join(root, "node_modules/next/dist/bin/next"),
+      "start",
+      "-H",
+      "127.0.0.1",
+      "-p",
+      "3170",
+    ],
+    {
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        DATABASE_URL: target.toString(),
+        DIRECT_URL: target.toString(),
+        NEXT_PUBLIC_BASE_URL: base,
+        MAINTENANCE_MODE: "0",
+        RESEND_API_KEY: "",
+      },
+      stdio: "ignore",
+    },
+  );
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  let passed = false;
+  try {
+    await mkdir(evidence, { recursive: true });
+    let ready = false;
+    for (let i = 0; i < 100; i++) {
+      try {
+        ready = (await fetch(base + "/api/v1/health")).ok;
+      } catch {}
+      if (ready) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.ok(ready);
+    browser = await chromium.launch({
+      executablePath: process.env.SPRINT1_CHROMIUM_PATH,
+      headless: true,
+      args: ["--no-sandbox"],
+    });
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    await context.route("**/*", (route) => {
+      const u = new URL(route.request().url());
+      return ["localhost", "127.0.0.1"].includes(u.hostname)
+        ? route.continue()
+        : route.abort("blockedbyclient");
+    });
+    const page = await context.newPage();
+    page.setDefaultTimeout(10000);
+    page.setDefaultNavigationTimeout(20000);
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
+    });
+    async function check(label: string, fn: () => Promise<void>) {
+      await fn();
+      checkpoints.push(label);
+      console.log("PASS", label);
+    }
+    await check(
+      "all eight viewports: geometry, labels, native keyboard and logo order",
+      async () => {
+        for (const [width, height] of viewportSizes) {
+          await page.setViewportSize({ width, height });
+          for (const name of ["login", "register"]) {
+            await page.goto(base + "/" + name);
+            assert.equal(
+              await page.evaluate(
+                () => document.documentElement.scrollWidth > innerWidth,
+              ),
+              false,
+            );
+            const form = page.getByTestId(name + "-form");
+            await expect(form).toBeVisible();
+            const input = page.getByTestId(
+              name === "login" ? "login-identifier" : "register-name",
+            );
+            const inputBox = await input.boundingBox();
+            const submitBox = await page
+              .getByTestId("auth-submit")
+              .boundingBox();
+            assert.equal(inputBox?.height, 44);
+            assert.equal(submitBox?.height, 44);
+            geometry.push({
+              route: name,
+              viewport: { width, height },
+              inputBox,
+              submitBox,
+            });
+            await page.screenshot({
+              path: path.join(evidence, `${name}-${width}.png`),
+              fullPage: true,
+            });
+            const google = await page.getByTestId("google-login").boundingBox(),
+              whatsapp = await page.getByTestId("whatsapp-login").boundingBox();
+            assert.ok(google && whatsapp);
+            assert.ok(
+              width < 640
+                ? whatsapp.y > google.y
+                : Math.abs(whatsapp.y - google.y) < 1,
+            );
+            await expect(page.getByTestId("google-login")).toBeDisabled();
+            await expect(page.getByTestId("whatsapp-login")).toBeDisabled();
+            await page.keyboard.press("Tab");
+            assert.notEqual(
+              await page.evaluate(
+                () => getComputedStyle(document.activeElement!).outlineStyle,
+              ),
+              "none",
+            );
+          }
+        }
+      },
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(base + "/register");
+    const email = `auth-ui-${randomUUID()}@example.test`,
+      password = "Dummy-Only-Password-421";
+    await page.getByTestId("register-name").fill("Pengguna Dummy");
+    await page.getByTestId("register-email").fill(email);
+    await page.getByTestId("register-password").fill(password);
+    await check(
+      "legal links preserve registration fields and do not consent",
+      async () => {
+        for (const [name, route] of [
+          ["Syarat & Ketentuan", "syarat-ketentuan"],
+          ["Kebijakan Privasi", "kebijakan-privasi"],
+        ]) {
+          const popupPromise = context.waitForEvent("page");
+          await page.getByRole("link", { name, exact: true }).click();
+          const popup = await popupPromise;
+          await popup.waitForLoadState();
+          assert.equal(new URL(popup.url()).pathname, "/" + route);
+          await expect(popup.locator("h1")).toHaveText(name);
+          assert.equal(
+            await popup.locator(".legal-sections section").count(),
+            19,
+          );
+          await popup.close();
+          await expect(page.getByTestId("register-email")).toHaveValue(email);
+          await expect(page.getByTestId("register-terms")).not.toBeChecked();
+        }
+      },
+    );
+    await check("client and server both reject missing terms", async () => {
+      await page.getByTestId("auth-submit").click();
+      assert.equal(
+        await page
+          .getByTestId("register-terms")
+          .evaluate((el: HTMLInputElement) => el.validity.valueMissing),
+        true,
+      );
+      await page
+        .getByTestId("register-terms")
+        .evaluate((el: HTMLInputElement) => (el.required = false));
+      await page.getByTestId("auth-submit").click();
+      await expect(page.getByTestId("register-error")).toContainText(
+        "menyetujui",
+      );
+      assert.equal(await db.user.count({ where: { email } }), 0);
+    });
+    await check(
+      "password visibility, successful registration, pending and duplicate-submit prevention",
+      async () => {
+        await page.getByTestId("register-terms").check();
+        const toggle = page.getByRole("button", { name: "Tampilkan password" });
+        await toggle.click();
+        await expect(page.getByTestId("register-password")).toHaveAttribute(
+          "type",
+          "text",
+        );
+        await page
+          .getByRole("button", { name: "Sembunyikan password" })
+          .click();
+        await expect(page.getByTestId("register-password")).toHaveValue(
+          password,
+        );
+        let submissions = 0;
+        await page.route("**/register", async (route) => {
+          if (route.request().method() === "POST") {
+            submissions++;
+            await new Promise((r) => setTimeout(r, 350));
+          }
+          await route.continue();
+        });
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("auth-submit")).toBeDisabled();
+        await expect(page.getByTestId("auth-submit")).toHaveAttribute(
+          "aria-busy",
+          "true",
+        );
+        await page.evaluate(() => {
+          (
+            document.querySelector(
+              '[data-testid="auth-submit"]',
+            ) as HTMLButtonElement
+          ).click();
+        });
+        await page.waitForURL(base + "/account");
+        assert.equal(submissions, 1);
+        assert.equal(await db.user.count({ where: { email } }), 1);
+        await page.unroute("**/register");
+      },
+    );
+    await check(
+      "duplicate email exposes original server feedback",
+      async () => {
+        await page.goto(base + "/register");
+        await page.getByTestId("register-name").fill("Dummy Kedua");
+        await page.getByTestId("register-email").fill(email);
+        await page.getByTestId("register-password").fill(password);
+        await page.getByTestId("register-terms").check();
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("register-error")).toHaveText(
+          "Email sudah terdaftar",
+        );
+        assert.equal(await db.user.count({ where: { email } }), 1);
+      },
+    );
+    await check("logout, invalid login and safe login redirect", async () => {
+      await page.goto(base + "/account");
+      await page.getByTestId("logout-btn").click();
+      await page.waitForURL(base + "/");
+      await page.goto(base + "/login?redirectTo=/cart");
+      await page.getByTestId("login-identifier").fill(email);
+      await page.getByTestId("login-password").fill("wrong-password");
+      await page.getByTestId("auth-submit").click();
+      await expect(page.getByTestId("login-error")).toContainText("salah");
+      await page.getByTestId("login-password").fill(password);
+      await page.getByTestId("auth-submit").click();
+      await page.waitForURL(base + "/cart");
+    });
+    await check(
+      "forgot password reports unavailable delivery and never sends real email",
+      async () => {
+        await page.goto(base + "/forgot-password");
+        await page.getByTestId("forgot-email").fill("not-an-email");
+        await page.getByTestId("auth-submit").click();
+        assert.equal(
+          await page
+            .getByTestId("forgot-email")
+            .evaluate((el: HTMLInputElement) => el.validity.typeMismatch),
+          true,
+        );
+        await page.getByTestId("forgot-email").fill(email);
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("forgot-error")).toContainText(
+          "belum tersedia",
+        );
+      },
+    );
+    await check(
+      "reset password rejects invalid token, consumes local token once and revokes old session",
+      async () => {
+        const user = await db.user.findUniqueOrThrow({ where: { email } });
+        const oldSession = (await context.cookies()).find(
+          (c) => c.name === "gh_session",
+        );
+        assert.ok(oldSession);
+        const token = randomBytes(32).toString("hex");
+        await db.passwordResetToken.create({
+          data: {
+            userId: user.id,
+            token: createHash("sha256").update(token).digest("hex"),
+            expiresAt: new Date(Date.now() + 60000),
+          },
+        });
+        await page.goto(base + "/reset-password?token=invalid-dummy-token");
+        await page.getByTestId("reset-password").fill("new-dummy-password");
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("reset-error")).toBeVisible();
+        const expired = randomBytes(32).toString("hex");
+        await db.passwordResetToken.create({
+          data: {
+            userId: user.id,
+            token: createHash("sha256").update(expired).digest("hex"),
+            expiresAt: new Date(Date.now() - 60000),
+          },
+        });
+        await page.goto(base + "/reset-password?token=" + expired);
+        await page.getByTestId("reset-password").fill("expiry-must-fail");
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("reset-error")).toBeVisible();
+        assert.equal(
+          (await db.user.findUniqueOrThrow({ where: { email } }))
+            .sessionVersion,
+          user.sessionVersion,
+        );
+        await page.goto(base + "/reset-password?token=" + token);
+        await page.getByTestId("reset-password").fill("new-dummy-password");
+        await page.getByTestId("auth-submit").click();
+        await page.waitForURL(base + "/login");
+        assert.equal(
+          (await db.user.findUniqueOrThrow({ where: { email } }))
+            .sessionVersion,
+          user.sessionVersion + 1,
+        );
+        const revokedContext = await browser!.newContext();
+        await revokedContext.addCookies([oldSession]);
+        const revokedPage = await revokedContext.newPage();
+        await revokedPage.goto(base + "/account");
+        await revokedPage.waitForURL(/\/login\?redirectTo=/);
+        await expect(revokedPage.getByTestId("login-form")).toBeVisible();
+        await revokedContext.close();
+        await page.goto(base + "/reset-password?token=" + token);
+        await page.getByTestId("reset-password").fill("replay-must-fail");
+        await page.getByTestId("auth-submit").click();
+        await expect(page.getByTestId("reset-error")).toBeVisible();
+        assert.equal(
+          (await db.user.findUniqueOrThrow({ where: { email } }))
+            .sessionVersion,
+          user.sessionVersion + 1,
+        );
+        await page.goto(base + "/login");
+        await page.getByTestId("login-identifier").fill(email);
+        await page.getByTestId("login-password").fill("new-dummy-password");
+        await page.getByTestId("auth-submit").click();
+        await page.waitForURL(base + "/account");
+      },
+    );
+    await check(
+      "anonymous legal routes have canonical/SEO/draft metadata and footer entry points",
+      async () => {
+        const anon = await context.browser()!.newContext();
+        const p = await anon.newPage();
+        for (const route of ["syarat-ketentuan", "kebijakan-privasi"]) {
+          const response = await p.goto(base + "/" + route);
+          assert.equal(response?.status(), 200);
+          await expect(p.locator('link[rel="canonical"]')).toHaveAttribute(
+            "href",
+            "https://gheverhan.store/" + route,
+          );
+          await expect(p.locator('meta[name="robots"]')).toHaveAttribute(
+            "content",
+            /noindex/,
+          );
+          await expect(p.locator(".legal-notice")).toBeVisible();
+          assert.equal(await p.locator(".legal-sections section").count(), 19);
+          for (const width of [390, 1440]) {
+            await p.setViewportSize({ width, height: 900 });
+            await p.screenshot({
+              path: path.join(evidence, `${route}-${width}.png`),
+              fullPage: true,
+            });
+          }
+        }
+        await p.goto(base + "/");
+        await expect(
+          p.locator('footer a[href="/syarat-ketentuan"]'),
+        ).toBeVisible();
+        await expect(
+          p.locator('footer a[href="/kebijakan-privasi"]'),
+        ).toBeVisible();
+        await anon.close();
+      },
+    );
+    assert.deepEqual(errors, []);
+    passed = true;
+    await context.close();
+  } finally {
+    await writeFile(
+      path.join(evidence, "auth-ui-results.json"),
+      JSON.stringify(
+        {
+          status: passed ? "PASS" : "FAILED",
+          checkpoints,
+          geometry,
+          errors,
+          commitSha: execFileSync("git", ["rev-parse", "HEAD"], {
+            encoding: "utf8",
+          }).trim(),
+          nodeVersion: process.version,
+          browserVersion: browser?.version(),
+          buildId: (
+            await readFile(path.join(root, ".next/BUILD_ID"), "utf8")
+          ).trim(),
+          synthetic: true,
+        },
+        null,
+        2,
+      ),
+    );
+    await browser?.close();
+    server.kill("SIGTERM");
+    await new Promise<void>((resolve) => {
+      if (server.exitCode !== null) resolve();
+      else {
+        server.once("exit", () => resolve());
+        setTimeout(() => {
+          server.kill("SIGKILL");
+          resolve();
+        }, 5000).unref();
+      }
+    });
+    await db.$disconnect();
+  }
+}
+main().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

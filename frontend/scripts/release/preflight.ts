@@ -49,15 +49,21 @@ async function main() {
                 indexes: boolean;
                 foreignKey: boolean;
                 trusted: boolean;
+                pending: boolean;
+                verifiedAt: boolean;
+                pendingIndexes: boolean;
             }[]> `
         SELECT to_regclass('public."SessionRevocation"') IS NOT NULL AS revocation,
         to_regclass('public."AuthRateLimit"') IS NOT NULL AS limiter,
+        to_regclass('public."PendingRegistration"') IS NOT NULL AS pending,
+        EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='emailVerifiedAt' AND data_type='timestamp without time zone') AS "verifiedAt",
+        (SELECT count(*)=3 AND bool_and(i.indisvalid AND i.indisready) FROM pg_catalog.pg_index i WHERE i.indrelid=to_regclass('public."PendingRegistration"')) AS "pendingIndexes",
         EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='sessionVersion' AND data_type='integer' AND is_nullable='NO' AND column_default IN ('0','0::integer')) AS version,
         (SELECT count(*)=5 AND bool_and(i.indisvalid AND i.indisready) FROM pg_catalog.pg_index i WHERE i.indrelid IN (to_regclass('public."SessionRevocation"'),to_regclass('public."AuthRateLimit"'))) AS indexes,
         (SELECT count(*)=1 AND bool_and(confdeltype='c' AND confupdtype='c' AND confrelid=to_regclass('public."User"')) FROM pg_catalog.pg_constraint WHERE conrelid=to_regclass('public."SessionRevocation"') AND contype='f') AS "foreignKey",
-        (SELECT count(*)=2 AND bool_and(c.relrowsecurity AND NOT pg_catalog.row_security_active(c.oid)
+        (SELECT count(*)=3 AND bool_and(c.relrowsecurity AND NOT pg_catalog.row_security_active(c.oid)
           AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
-          FROM pg_catalog.pg_class c WHERE c.oid IN (to_regclass('public."SessionRevocation"'),to_regclass('public."AuthRateLimit"'))) AS trusted`;
+          FROM pg_catalog.pg_class c WHERE c.oid IN (to_regclass('public."SessionRevocation"'),to_regclass('public."AuthRateLimit"'),to_regclass('public."PendingRegistration"'))) AS trusted`;
             const settings = await tx.$queryRaw<{
                 role: string;
                 version: string;
@@ -70,7 +76,7 @@ async function main() {
         const active = facts.ledger.filter(row => !row.rolled_back);
         const ledgerMatches = active.length === expectedLedger.size && new Set(active.map(row => row.migration_name)).size === expectedLedger.size && active.every(row => row.finished) &&
             facts.ledger.every(row => expectedLedger.get(row.migration_name) === row.checksum);
-        const schemaReady = facts.schema.revocation && facts.schema.limiter && facts.schema.version && facts.schema.indexes && facts.schema.foreignKey && facts.schema.trusted;
+        const schemaReady = facts.schema.revocation && facts.schema.limiter && facts.schema.version && facts.schema.indexes && facts.schema.foreignKey && facts.schema.trusted && facts.schema.pending && facts.schema.verifiedAt && facts.schema.pendingIndexes;
         const maintenanceMode = ['0', '1'].includes(env.MAINTENANCE_MODE || '') ? env.MAINTENANCE_MODE : 'UNCONFIGURED';
         const configReady = maintenanceMode !== 'UNCONFIGURED' && Object.values(presence).every(Boolean) && (env.JWT_SECRET?.length || 0) >= 16;
         console.log(JSON.stringify({ status: ledgerMatches && schemaReady && configReady ? 'PASS' : 'BLOCKED',

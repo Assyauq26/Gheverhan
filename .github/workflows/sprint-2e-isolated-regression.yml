@@ -117,6 +117,9 @@ jobs:
         id: operations_browser
         run: npm run test:e2e:operations
 
+      - name: Registration email OTP lifecycle on disposable PostgreSQL
+        run: node --import tsx --test tests/integration/registration-otp.test.ts
+
       - name: Chromium auth UI and public legal regression on dummy PostgreSQL
         id: auth_ui_browser
         env:

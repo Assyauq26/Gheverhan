@@ -89,6 +89,7 @@ export async function assertRegistrationIdentityAvailable(
 
 function challengeMetadata(
   pending: PendingRegistration,
+  serverReceivedAt: number,
 ): RegistrationChallenge {
   const now = Date.now();
   return {
@@ -97,6 +98,7 @@ function challengeMetadata(
     expiresAt: pending.expiresAt.getTime(),
     resendAvailableAt: pending.sentAt.getTime() + REGISTRATION_RESEND_MS,
     serverNow: now,
+    serverReceivedAt,
     status: pending.codeHash.startsWith("sending:")
       ? "sending"
       : pending.attempts >= REGISTRATION_MAX_ATTEMPTS
@@ -114,6 +116,7 @@ async function deliverRegistrationOtp(
   reservation: string,
   challengeId: string,
   config: ReturnType<typeof registrationMailConfig>,
+  serverReceivedAt: number,
 ): Promise<RegistrationChallenge> {
   try {
     // Recheck immediately before delivery, including on resends.
@@ -146,7 +149,7 @@ async function deliverRegistrationOtp(
     const live = await prisma.pendingRegistration.findUniqueOrThrow({
       where: { id: challengeId },
     });
-    return challengeMetadata(live);
+    return challengeMetadata(live, serverReceivedAt);
   } catch (error) {
     await prisma.pendingRegistration.deleteMany({
       where: { id: challengeId, email, codeHash: reservation },
@@ -162,6 +165,7 @@ async function deliverRegistrationOtp(
 
 /** Validate conflicts before touching pending state or calling the mail provider. */
 export async function requestRegistrationOtp(input: unknown) {
+  const serverReceivedAt = Date.now();
   const data = registrationSchema.parse(input);
   const { email } = data;
   const phone = normalizeRegistrationPhone(data.phone);
@@ -216,7 +220,14 @@ export async function requestRegistrationOtp(input: unknown) {
       throw error;
     }
   }
-  return deliverRegistrationOtp(email, code, reservation, challengeId, config);
+  return deliverRegistrationOtp(
+    email,
+    code,
+    reservation,
+    challengeId,
+    config,
+    serverReceivedAt,
+  );
 }
 
 async function registrationChallenge(
@@ -244,19 +255,21 @@ export async function getRegistrationChallenge(
   emailInput: string,
   challengeInput: string,
 ) {
+  const serverReceivedAt = Date.now();
   const { email, challengeId } = registrationResendSchema.parse({
     email: emailInput,
     challengeId: challengeInput,
   });
   const pending = await registrationChallenge(email, challengeId, true);
   await assertRegistrationIdentityAvailable(prisma, email, pending.phone);
-  return challengeMetadata(pending);
+  return challengeMetadata(pending, serverReceivedAt);
 }
 
 export async function resendRegistrationOtp(
   emailInput: string,
   challengeInput: string,
 ) {
+  const serverReceivedAt = Date.now();
   const { email, challengeId } = registrationResendSchema.parse({
     email: emailInput,
     challengeId: challengeInput,
@@ -294,7 +307,14 @@ export async function resendRegistrationOtp(
   });
   if (saved.count !== 1)
     throw new HttpError("Tunggu 60 detik sebelum meminta OTP baru.", 429);
-  return deliverRegistrationOtp(email, code, reservation, challengeId, config);
+  return deliverRegistrationOtp(
+    email,
+    code,
+    reservation,
+    challengeId,
+    config,
+    serverReceivedAt,
+  );
 }
 
 export async function verifyRegistrationOtp(

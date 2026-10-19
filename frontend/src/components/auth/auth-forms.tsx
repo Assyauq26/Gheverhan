@@ -26,6 +26,7 @@ import {
   readRegistration,
   registrationFields,
   rememberRegistration,
+  timedRegistration,
 } from "./registration-state";
 import {
   REGISTRATION_CONFLICT,
@@ -272,8 +273,13 @@ function RegistrationForm({
   restartReason?: string;
   restartCode?: RegistrationFailure;
 }) {
+  const registerWithClock = useCallback(
+    (_prev: FormState, formData: FormData) =>
+      timedRegistration(() => registerAction(undefined, formData)),
+    [],
+  );
   const [state, action] = useFormState<FormState, FormData>(
-    registerAction,
+    registerWithClock,
     initialState,
   );
   const [password, setPassword] = useState("");
@@ -297,9 +303,8 @@ function RegistrationForm({
     setRecoveryError(false);
     void (async () => {
       try {
-        const result = await registrationStatusAction(
-          undefined,
-          registrationFields(saved),
+        const result = await timedRegistration(() =>
+          registrationStatusAction(undefined, registrationFields(saved)),
         );
         if (cancelled) return;
         const live = asChallenge(result);

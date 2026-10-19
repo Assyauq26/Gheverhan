@@ -265,6 +265,7 @@ test("new challenge metadata and reload status use database deadlines, not anoth
   assert.equal(result.expiresAt, row.expiresAt.getTime());
   assert.equal(result.resendAvailableAt, row.sentAt.getTime() + 60_000);
   assert.ok(result.serverNow <= Date.now());
+  assert.ok(result.serverReceivedAt! <= result.serverNow);
   assert.equal(result.status, "active");
   const expiresAt = new Date(Date.now() + 25_000);
   await db.pendingRegistration.update({
@@ -281,6 +282,7 @@ test("new challenge metadata and reload status use database deadlines, not anoth
       "expiresAt",
       "resendAvailableAt",
       "serverNow",
+      "serverReceivedAt",
       "status",
     ].sort(),
   );

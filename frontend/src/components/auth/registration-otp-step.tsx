@@ -17,6 +17,8 @@ import {
   formatOtpTime,
   registrationFields,
   rememberRegistration,
+  registrationNow,
+  timedRegistration,
 } from "./registration-state";
 import {
   registrationStatusAction,
@@ -50,8 +52,7 @@ export function RegistrationOtpStep({
   const busy = useRef(false);
   const mounted = useRef(false);
   const [verified, setVerified] = useState(false);
-  const [now, setNow] = useState(initial.serverNow);
-  const offset = useRef(initial.serverNow - Date.now());
+  const [now, setNow] = useState(() => registrationNow(initial));
   const input = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const autoSubmitted = useRef("");
@@ -63,11 +64,15 @@ export function RegistrationOtpStep({
     };
   }, []);
   useEffect(() => {
-    offset.current = challenge.serverNow - Date.now();
-    setNow(challenge.serverNow);
-    const timer = setInterval(() => setNow(Date.now() + offset.current), 1000);
+    const anchor = registrationNow(challenge);
+    const startedAt = performance.now();
+    setNow(anchor);
+    const timer = setInterval(
+      () => setNow(anchor + performance.now() - startedAt),
+      1000,
+    );
     return () => clearInterval(timer);
-  }, [challenge.serverNow]);
+  }, [challenge]);
   const adopt = useCallback((value: unknown) => {
     if (!mounted.current) return false;
     const next = asChallenge(value);
@@ -78,9 +83,8 @@ export function RegistrationOtpStep({
   }, []);
   const recover = useCallback(async () => {
     try {
-      const result = await registrationStatusAction(
-        undefined,
-        registrationFields(initial),
+      const result = await timedRegistration(() =>
+        registrationStatusAction(undefined, registrationFields(initial)),
       );
       if (!mounted.current) return false;
       if (adopt(result)) {
@@ -209,9 +213,9 @@ export function RegistrationOtpStep({
     setPending("resend");
     setFeedback({});
     try {
-      const result = await resendRegistrationAction(
-        undefined,
-        new FormData(event.currentTarget),
+      const data = new FormData(event.currentTarget);
+      const result = await timedRegistration(() =>
+        resendRegistrationAction(undefined, data),
       );
       if (!mounted.current) return;
       if (result.ok && adopt(result)) {

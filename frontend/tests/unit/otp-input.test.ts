@@ -11,7 +11,11 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { OtpInput } from "@/components/auth/otp-input";
 import { RegistrationOtpStep } from "@/components/auth/registration-otp-step";
-import { formatOtpTime } from "@/components/auth/registration-state";
+import {
+  asChallenge,
+  formatOtpTime,
+  timedRegistration,
+} from "@/components/auth/registration-state";
 import type { RegistrationChallenge } from "@/modules/auth/registration-contract";
 const mock = vi.hoisted(() => ({
   verify: vi.fn(),
@@ -478,4 +482,89 @@ it("a resend response arriving after navigation cannot overwrite another account
     JSON.parse(sessionStorage.getItem("gheverhan.registration.otp.v1")!),
   ).toEqual(next);
   expect(restart).not.toHaveBeenCalled();
+});
+
+it("delayed resend accounts for transport time without counting provider processing twice or trusting the device wall clock", async () => {
+  vi.useFakeTimers();
+  const sent = Date.now();
+  const serverReceivedAt = sent + 7200000;
+  let release!: (value: unknown) => void;
+  mock.resend.mockReset().mockReturnValue(
+    new Promise((resolve) => {
+      release = resolve;
+    }),
+  );
+  render(
+    createElement(RegistrationOtpStep, {
+      initial: { ...challenge(), resendAvailableAt: sent - 1 },
+      onRestart: vi.fn(),
+    }),
+  );
+  fireEvent.click(screen.getByTestId("registration-resend"));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(10_000);
+  });
+  await act(async () => {
+    release({
+      ok: true,
+      ...challenge(),
+      serverReceivedAt,
+      serverNow: serverReceivedAt + 8000,
+      expiresAt: serverReceivedAt + 608_000,
+      resendAvailableAt: serverReceivedAt + 60_000,
+    });
+  });
+  expect(screen.getByTestId("otp-expiry").textContent).toContain("09:59");
+  expect(screen.getByTestId("registration-resend").textContent).toContain(
+    "51 detik",
+  );
+  vi.setSystemTime(Date.now() + 86400000);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(screen.getByTestId("otp-expiry").textContent).toContain("09:58");
+  expect(mock.verify).not.toHaveBeenCalled();
+});
+
+it("a calibrated response keeps elapsed time before React mounts and never rewrites database deadlines", async () => {
+  vi.useFakeTimers();
+  const received = Date.now() + 3600000;
+  const metadata = {
+    ...challenge(),
+    serverReceivedAt: received,
+    serverNow: received + 1000,
+    expiresAt: received + 3000,
+    resendAvailableAt: received + 2000,
+  };
+  let release!: (value: typeof metadata) => void;
+  const response = timedRegistration(
+    () =>
+      new Promise<typeof metadata>((resolve) => {
+        release = resolve;
+      }),
+  );
+  await vi.advanceTimersByTimeAsync(4000);
+  release(metadata);
+  const observed = await response;
+  expect(observed.expiresAt).toBe(metadata.expiresAt);
+  expect(observed.resendAvailableAt).toBe(metadata.resendAvailableAt);
+  expect(observed.serverNow).toBe(metadata.serverNow);
+  await vi.advanceTimersByTimeAsync(3000);
+  render(
+    createElement(RegistrationOtpStep, {
+      initial: asChallenge(observed)!,
+      onRestart: vi.fn(),
+    }),
+  );
+  expect(screen.getByTestId("otp-expiry").textContent).toContain("00:00");
+  expect(
+    (screen.getByTestId("registration-resend") as HTMLButtonElement).disabled,
+  ).toBe(false);
+  fireEvent.change(screen.getByTestId("register-otp"), {
+    target: { value: "123456" },
+  });
+  expect(
+    (screen.getByTestId("auth-submit") as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(mock.verify).not.toHaveBeenCalled();
 });

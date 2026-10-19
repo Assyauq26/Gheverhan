@@ -18,5 +18,7 @@ export type RegistrationChallenge = {
   expiresAt: number;
   resendAvailableAt: number;
   serverNow: number;
+  /** Service entry timestamp; lets clients separate provider work from transport latency. */
+  serverReceivedAt?: number;
   status: "active" | "expired" | "locked" | "sending";
 };

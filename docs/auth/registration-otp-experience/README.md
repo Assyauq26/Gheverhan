@@ -19,6 +19,8 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 9. Tiga deferred-response tests tambahan mereproduksi respons dari halaman OTP yang sudah ditutup menimpa challenge akun baru atau memanggil restart lama. Guard lifecycle sekarang mengabaikan hasil status/verify/resend setelah unmount sebelum menyentuh state, storage, atau callback. Respons jaringan tidak dapat menghidupkan lagi metadata pendaftaran lama ketika pengguna sudah berpindah flow.
 
+10. Review mengonfirmasi respons lambat membuat clock display mulai dari `serverNow` yang sudah tertinggal. Metadata kini menyertakan timestamp awal service; wrapper client mengukur round-trip monotonic, mengurangi durasi pemrosesan server/provider, dan mengestimasi midpoint transit. Anchor dibentuk saat respons diterima sebelum React memprosesnya; elapsed berikutnya memakai `performance.now()`, sehingga perubahan jam perangkat tidak mereset timer. Test mereproduksi reset sebelumnya dan memverifikasi provider work, latensi, React delay, serta clock skew tanpa mengubah deadline database.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.
@@ -35,7 +37,7 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 - Tombol **Daftar**, pesan konflik dengan link **Masuk** dan **Lupa password**, input form tidak hilang saat gagal.
 - Enam slot visual pada satu native input: numeric, `autocomplete="one-time-code"`, selection, keyboard, backspace/delete, paste, native autofill, serta autosubmit sekali per kode lengkap. Tombol verifikasi tetap tersedia; paste lebih dari enam digit ditolak agar tidak menghabiskan attempt dari potongan kode.
 - Border merah dan shake 360 ms hanya pada penolakan OTP server; hijau dan feedback keberhasilan hanya setelah server mengonfirmasi akun/sesi. Pending terkunci untuk mencegah double-submit. Network error tidak memalsukan state hijau atau mereset deadline.
-- Countdown `MM:SS` menggunakan metadata waktu server dan offset jam client. Reload memulihkan `{email, challengeId}` saja; password, kode, hash, dan deadline tidak disimpan dalam `sessionStorage`/`localStorage`.
+- Countdown `MM:SS` menggunakan metadata waktu server, estimasi transit, dan elapsed monotonic. Reload memulihkan `{email, challengeId}` saja; password, kode, hash, dan deadline tidak disimpan dalam `sessionStorage`/`localStorage`.
 - Challenge hilang/berganti atau konflik mengembalikan form yang valid. SMTP gagal menghapus reservation yang sesuai. Lost resend response meminta status server; status `sending` dipoll terbatas, lalu tersedia pemeriksaan manual.
 - Autofill email bergantung browser/OS; tidak dijanjikan pada semua perangkat. Tidak ada pembacaan Gmail/notifikasi atau penyalahgunaan WebOTP SMS.
 - Tampilan satu kolom, slot 56px, tap target 44px, focus/selection jelas, reduced motion, live feedback, dan tanpa overflow pada 320–1920px. Link Back Home, login, dan reset tetap berfungsi. Konten/status legal tidak diubah.
@@ -48,7 +50,7 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 | --- | --- |
 | Node.js 22, locked install, Prisma generate dan fresh deploy tujuh migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
-| Unit | 261 PASS |
+| Unit | 263 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
 | Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending | 8 PASS |
@@ -72,6 +74,7 @@ Screenshot berasal dari browser lokal build production; data dummy dan digit OTP
 ## Risiko residual dan deployment
 
 - Penolakan awal yang diminta pemilik menciptakan oracle keberadaan identitas. Pesan gabungan, kuota email/phone/global, dan tidak adanya endpoint per-keystroke membatasi, tetapi **tidak menghapus** risiko enumeration. Jangan mengklaim respons ini sepenuhnya anonim. Monitor 409/429 secara agregat tanpa identitas/kode; edge anti-abuse dapat dievaluasi terpisah bila diperlukan.
+- Estimasi waktu memakai midpoint jaringan; asimetri latency masih dapat menghasilkan selisih display. Expiry, cooldown, dan percobaan tetap diputuskan backend; deadline row database tidak berubah.
 - Normalisasi legacy melalui ekspresi SQL dapat memerlukan scan User. Kuota membatasi frekuensi; functional index/migrasi hanya perlu dievaluasi terpisah bila pengukuran volume menunjukkan kebutuhan, bukan diterapkan diam-diam.
 - Identitas yang baru diklaim ketika email provider sedang menerima request dapat tetap memperoleh email yang sudah terkirim. Email tidak bisa ditarik kembali; pemeriksaan setelah provider mencegah aktivasi challenge/akun duplikat. Test menahan provider dan membuktikan reservation dibersihkan.
 - Tanpa migration baru dan tanpa perubahan dependency/lockfile. Migration OTP existing `20261018150000_registration_email_otp` tetap checksum SHA-256 `eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e`. Jangan menjalankannya ulang di Production.

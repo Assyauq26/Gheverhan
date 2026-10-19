@@ -23,7 +23,6 @@ import {
 } from "./registration-otp-email";
 import {
   normalizeRegistrationPhone,
-  REGISTRATION_WHITESPACE,
   generateRegistrationOtp,
   hashRegistrationOtp,
   compareRegistrationOtp,
@@ -41,6 +40,8 @@ import {
   type RegistrationChallenge,
   type RegistrationFailure,
 } from "./registration-contract";
+
+import { registrationIdentityQuery } from "./registration-identity";
 
 export class RegistrationError extends HttpError {
   constructor(
@@ -63,17 +64,9 @@ export async function assertRegistrationIdentityAvailable(
   email: string,
   phone: string,
 ) {
-  const rows = await db.$queryRaw<{ conflict: boolean; filtered: boolean }[]>`
-    SELECT pg_catalog.row_security_active('public."User"'::regclass) AS filtered, EXISTS (
-      SELECT 1 FROM (
-        SELECT lower(btrim("email", ${REGISTRATION_WHITESPACE})) AS email,
-          translate(coalesce("phone", ''), ${REGISTRATION_WHITESPACE + "().-"}, '') AS phone
-        FROM public."User"
-      ) identities
-      WHERE email = ${email} OR
-        CASE WHEN phone LIKE '0%' THEN '+62' || substring(phone FROM 2)
-          WHEN phone LIKE '62%' THEN '+' || phone ELSE phone END = ${phone}
-    ) AS conflict`;
+  const rows = await db.$queryRaw<{ conflict: boolean; filtered: boolean }[]>(
+    registrationIdentityQuery(email, phone),
+  );
   if (!rows[0] || rows[0].filtered)
     throw new HttpError(
       "Layanan pendaftaran belum tersedia. Coba lagi nanti.",

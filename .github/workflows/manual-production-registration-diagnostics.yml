@@ -1,0 +1,107 @@
+name: Diagnose Production registration migration preflight (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Approved Supabase Production project ref'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-otp-schema
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.project_ref == 'bztprltkevacidcpjaam' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production-migration
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout immutable reviewed PR 74 source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: d62493c06890176a0a5f2aad111078c7a222f11c
+          persist-credentials: false
+          sparse-checkout: frontend
+      - name: Read-only categorized preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v psql >/dev/null || { echo 'BLOCKED: postgres_client_unavailable'; exit 1; }
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const { spawnSync } = require('node:child_process');
+          const expectedRef = 'bztprltkevacidcpjaam';
+          const names = fs.readdirSync('prisma/migrations').filter(n => /^\d{14}_[A-Za-z0-9_]+$/.test(n)).sort();
+          if (names.length !== 8 || names.at(-1) !== '20261019054922_registration_identity_lookup_indexes') {
+            console.error('BLOCKED: unexpected_source_migration_set'); process.exit(1);
+          }
+          const hash = n => crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/'+n+'/migration.sql')).digest('hex');
+          if (hash(names[7]) !== '369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b') {
+            console.error('BLOCKED: migration_checksum_mismatch'); process.exit(1);
+          }
+          const u = new URL(process.env.DIRECT_URL || '');
+          const user = decodeURIComponent(u.username);
+          if (!['postgres:','postgresql:'].includes(u.protocol) || !u.password ||
+              !(u.hostname === 'db.'+expectedRef+'.supabase.co' ||
+                (u.hostname.endsWith('.pooler.supabase.com') && user.endsWith('.'+expectedRef))) ||
+              u.pathname !== '/postgres') {
+            console.error('BLOCKED: unapproved_database_url'); process.exit(1);
+          }
+          const expected = names.slice(0,7).map(n => "('"+n+"','"+hash(n)+"')").join(',');
+          const checks = [
+            ['database_identity',"current_database()='postgres'"],
+            ['migration_ledger_count',"(SELECT count(*) FROM public._prisma_migrations)=7"],
+            ['migration_ledger_checksums',`(SELECT count(*) FROM public._prisma_migrations m JOIN (VALUES ${expected}) AS e(name,sha) ON m.migration_name=e.name AND m.checksum=e.sha WHERE m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)=7`],
+            ['target_indexes_absent',"(SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx'))=0"],
+            ['no_long_transactions',"(SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database() AND xact_start IS NOT NULL AND now()-xact_start>interval '30 seconds')=0"],
+            ['no_lock_waiters',"(SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database() AND wait_event_type='Lock')=0"],
+            ['ddl_owner_privilege',`((SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid='public."User"'::regclass),'MEMBER'))`]
+          ];
+          const sql = "BEGIN READ ONLY; SET LOCAL statement_timeout='10s';\n" +
+            checks.map(([name,expr])=>"SELECT '"+name+"' AS check_name, CASE WHEN "+expr+" THEN 'PASS' ELSE 'BLOCKED' END AS result;").join('\n') +
+            "\nCOMMIT;\n";
+          const p = spawnSync('psql',['-X','-A','-t','-q','-F','|','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:user,
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:'/etc/ssl/certs/ca-certificates.crt',PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if (p.error || p.status!==0) {
+            const err = String(p.stderr || '').toLowerCase();
+            const category = p.error?.code === 'ETIMEDOUT' || /timeout|timed out/.test(err) ? 'network_timeout'
+              : /certificate|ssl|tls|hostname mismatch/.test(err) ? 'tls_certificate'
+              : /authentication failed|password authentication/.test(err) ? 'authentication'
+              : /could not translate host|name or service not known/.test(err) ? 'dns'
+              : /no route|connection refused|network is unreachable/.test(err) ? 'network_unreachable'
+              : /permission denied/.test(err) ? 'database_permissions'
+              : /relation .* does not exist/.test(err) ? 'missing_schema_object'
+              : /syntax error/.test(err) ? 'preflight_sql_error' : 'database_query_failed';
+            console.error('BLOCKED: '+category+' (details suppressed to protect connection secrets)');
+            process.exit(1);
+          }
+          const results = p.stdout.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+          const failures=[];
+          for(const line of results) {
+            const [name,result]=line.split('|');
+            if(!checks.some(x=>x[0]===name) || !['PASS','BLOCKED'].includes(result)) continue;
+            console.log(result+': '+name);
+            if(result==='BLOCKED') failures.push(name);
+          }
+          if(results.length!==checks.length || failures.length) {
+            console.error('BLOCKED: preflight_incomplete_or_failed'); process.exit(1);
+          }
+          console.log('PASS: all read-only Production checks; no migration executed');
+          NODE

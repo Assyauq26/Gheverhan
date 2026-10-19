@@ -8,6 +8,18 @@ import { Button } from "@/components/ui/button";
 export type VariantChoice = { color: string; size: string };
 type ExistingChoice = VariantChoice;
 
+/** Keep UI counts consistent with the placeholder row removed by the editor. */
+export function getVariantCombinations(colors: string[], sizes: string[], variants: ExistingChoice[], placeholderRow = false) {
+  const pairs = (colors.length ? colors : [""]).flatMap(color =>
+    (sizes.length ? sizes : [""]).map(size => ({ color, size }))
+  );
+  const normalize = (value: string) => value.trim().toLocaleLowerCase("id");
+  const existing = new Set(variants.map(v => `${normalize(v.color)}::${normalize(v.size)}`));
+  const missing = pairs.filter(v => !existing.has(`${normalize(v.color)}::${normalize(v.size)}`));
+  return { missing, exceedsLimit: variants.length - (placeholderRow ? 1 : 0) + missing.length > 50 };
+}
+
+
 function uniqueOptions(options: string[]) {
   const seen = new Set<string>();
   return options.map(value => value.trim()).filter(value => {
@@ -19,9 +31,10 @@ function uniqueOptions(options: string[]) {
 }
 
 /** A frontend-only convenience for populating the existing flat variant model. */
-export function ProductVariantBuilder({ disabled, variants, onAdd }: {
+export function ProductVariantBuilder({ disabled, variants, placeholderRow = false, onAdd }: {
   disabled: boolean;
   variants: ExistingChoice[];
+  placeholderRow?: boolean;
   onAdd: (combinations: VariantChoice[]) => boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -56,12 +69,7 @@ export function ProductVariantBuilder({ disabled, variants, onAdd }: {
     if (event.key === "Enter") { event.preventDefault(); addOption(type); }
   }
 
-  const combinations = (colors.length ? colors : [""]).flatMap(color =>
-    (sizes.length ? sizes : [""]).map(size => ({ color, size }))
-  );
-  const existing = new Set(variants.map(v => `${v.color.trim().toLocaleLowerCase("id")}::${v.size.trim().toLocaleLowerCase("id")}`));
-  const missing = combinations.filter(v => !existing.has(`${v.color.toLocaleLowerCase("id")}::${v.size.toLocaleLowerCase("id")}`));
-  const exceedsLimit = variants.length + missing.length > 50;
+  const { missing, exceedsLimit } = getVariantCombinations(colors, sizes, variants, placeholderRow);
 
   return <Dialog.Root open={open} onOpenChange={toggle}>
     <Dialog.Trigger asChild>

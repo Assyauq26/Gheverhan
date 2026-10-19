@@ -156,6 +156,39 @@ async function main() {
       await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 2);
       await page.getByRole("button", { name: "Hapus varian 2", exact: true }).click(); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
     });
+    await check("seller variant builder renders responsively and persists unique color/size combinations", async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole("button", { name: "Buat kombinasi", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Atur variasi produk" });
+      await expect(dialog).toBeVisible();
+      for (const color of ["Merah", "Hijau"]) {
+        await dialog.getByLabel("Tambah opsi Warna").fill(color);
+        await dialog.getByLabel("Tambah opsi Warna").press("Enter");
+      }
+      for (const size of ["M", "L"]) {
+        await dialog.getByLabel("Tambah opsi Ukuran").fill(size);
+        await dialog.getByLabel("Tambah opsi Ukuran").press("Enter");
+      }
+      await expect(dialog.getByText("4 varian", { exact: true })).toBeVisible();
+      const bounds = await dialog.boundingBox();
+      assert.ok(bounds && bounds.x >= -1 && bounds.x + bounds.width <= 392 && bounds.y >= -1 && bounds.y + bounds.height <= 845, "mobile bottom sheet must fit the viewport");
+      await dialog.getByRole("button", { name: "Tambahkan 4 kombinasi", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      assert.equal(await page.getByLabel("SKU", { exact: true }).count(), 5);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "mobile editor has no horizontal overflow");
+      await page.getByTestId("save-product").click();
+      await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 5);
+      await page.setViewportSize({ width: 1360, height: 900 });
+      await expect(page.getByRole("navigation", { name: "Bagian editor produk" })).toBeVisible();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "desktop editor has no horizontal overflow");
+      for (let index = 5; index >= 2; index--) {
+        await page.getByRole("button", { name: `Hapus varian ${index}`, exact: true }).click();
+      }
+      await page.getByTestId("save-product").click();
+      await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
+    });
     await check("upload and serve draft image through the existing storage contract", async () => {
       await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("status")).toContainText("Gambar diunggah"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
       product = await db.product.findUniqueOrThrow({ where: { id: product.id }, include: { images: true, variants: { include: { inventory: true } } } });

@@ -101,16 +101,18 @@ jobs:
           // Single, read-only SQL query via libpq's simple query protocol; avoids
           // Prisma prepared statement collisions behind Supabase PgBouncer.
           const sql = `BEGIN READ ONLY; SET LOCAL statement_timeout = '7s'; WITH expected(migration_name,checksum) AS (VALUES ${tuples}),
-            complete AS (SELECT count(*)::int AS n FROM expected e JOIN public._prisma_migrations m
-              ON m.migration_name=e.migration_name AND m.checksum=e.checksum
-              AND m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL),
+            complete AS (SELECT count(*)::int AS n FROM expected e
+              WHERE (SELECT count(*) FROM public._prisma_migrations m
+                WHERE m.migration_name=e.migration_name AND m.checksum=e.checksum
+                  AND m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)=1),
             expected_columns(name,typ,nullable,default_text,precision) AS (VALUES ${columnTuples})
           SELECT CASE WHEN (SELECT n FROM complete)=7
             AND (SELECT count(*) FROM public._prisma_migrations)=7
             AND to_regclass('public."PendingRegistration"') IS NOT NULL
             AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public'
               AND table_name='User' AND column_name='emailVerifiedAt'
-              AND data_type='timestamp without time zone' AND is_nullable='YES')
+              AND data_type='timestamp without time zone' AND is_nullable='YES'
+              AND datetime_precision=3 AND column_default IS NULL)
             AND (SELECT count(*) FROM pg_indexes
               WHERE schemaname='public' AND tablename='PendingRegistration')=3
             AND (SELECT count(*) FROM

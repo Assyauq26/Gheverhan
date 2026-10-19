@@ -180,7 +180,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
             </div>
             <div className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-3">
               <ProductVariantBuilder disabled={!canEdit || !!pending} variants={values.variants} onAdd={appendCombinations}/>
-              <Button type="button" variant="outline" size="sm" className="min-h-10 border-zinc-300" disabled={!canEdit || !!pending || values.variants.length >= 50} onClick={() => change("variants", [...values.variants, { sku: "", color: "", size: "", price: null, salePrice: null, ...(canStock ? { onHand: 0 } : {}) }])}><Plus size={16}/> Tambah manual</Button>
+              <Button type="button" variant="outline" size="sm" className="min-h-10 border-zinc-300" disabled={!canEdit || !!pending || values.variants.length >= 50} onClick={() => change("variants", [...values.variants, { sku: "", color: "", size: "", price: null, salePrice: null, ...(canStock ? { onHand: 0 } : {}) }])}><Plus size={16}/> Tambah varian</Button>
             </div>
             <p className="text-xs leading-relaxed text-zinc-500">SKU wajib unik. Harga varian yang kosong mengikuti harga utama. Varian yang sudah digunakan dalam transaksi mungkin tidak dapat dihapus.</p>
             <div className="space-y-3">

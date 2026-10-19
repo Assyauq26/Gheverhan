@@ -153,7 +153,7 @@ jobs:
           (async () => {
             try {
               const rows = await db.$queryRawUnsafe('SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations');
-              const names = readdirSync('prisma/migrations').filter(n => /^\\d{14}_/.test(n)).sort();
+              const names = readdirSync('prisma/migrations').filter(n => /^\d{14}_/.test(n)).sort();
               if (names.length !== 7 || rows.length !== 7 || rows.some(x => !x.finished_at || x.rolled_back_at))
                 throw new Error('Not exactly seven successful migrations');
               for (const name of names) {

@@ -59,7 +59,6 @@ jobs:
           const { createHash } = require('node:crypto');
           const { spawnSync } = require('node:child_process');
           const ref = 'bztprltkevacidcpjaam';
-          const source = 'b1e38ce3086ee85df5fd01e609cc5e89e3db949f';
           if (process.env.GITHUB_REF !== 'refs/heads/main') throw new Error('Not dispatched from main');
           if (process.env.PROJECT_REF !== ref) throw new Error('Supabase target mismatch');
           function parse(key) {
@@ -85,12 +84,27 @@ jobs:
           if (hashes.at(-1).sha !== 'eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e')
             throw new Error('OTP migration checksum mismatch');
           const tuples = hashes.map(x => "('" + x.name + "','" + x.sha + "')").join(',\n');
+          const requiredColumns = [
+            ['id','text','NO',null,null],
+            ['email','text','NO',null,null],
+            ['name','text','NO',null,null],
+            ['phone','text','NO',null,null],
+            ['passwordHash','text','NO',null,null],
+            ['codeHash','text','NO',null,null],
+            ['attempts','integer','NO','0',null],
+            ['expiresAt','timestamp without time zone','NO',null,3],
+            ['sentAt','timestamp without time zone','NO','CURRENT_TIMESTAMP',3],
+            ['createdAt','timestamp without time zone','NO','CURRENT_TIMESTAMP',3],
+          ];
+          const quote = value => value === null ? 'NULL' : "'" + value.replace(/'/g, "''") + "'";
+          const columnTuples = requiredColumns.map(c => '(' + c.map(quote).join(',') + ')').join(',\n');
           // Single, read-only SQL query via libpq's simple query protocol; avoids
           // Prisma prepared statement collisions behind Supabase PgBouncer.
           const sql = `BEGIN READ ONLY; SET LOCAL statement_timeout = '7s'; WITH expected(migration_name,checksum) AS (VALUES ${tuples}),
             complete AS (SELECT count(*)::int AS n FROM expected e JOIN public._prisma_migrations m
               ON m.migration_name=e.migration_name AND m.checksum=e.checksum
-              AND m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)
+              AND m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL),
+            expected_columns(name,typ,nullable,default_text,precision) AS (VALUES ${columnTuples})
           SELECT CASE WHEN (SELECT n FROM complete)=7
             AND (SELECT count(*) FROM public._prisma_migrations)=7
             AND to_regclass('public."PendingRegistration"') IS NOT NULL
@@ -101,24 +115,49 @@ jobs:
               AND tablename='PendingRegistration' AND indexname IN
               ('PendingRegistration_pkey','PendingRegistration_email_key','PendingRegistration_expiresAt_idx'))=3
             AND (SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public."PendingRegistration"'))
+            AND (SELECT count(*) FROM pg_policies
+              WHERE schemaname='public' AND tablename='PendingRegistration')=0
             AND (SELECT count(*) FROM information_schema.columns WHERE table_schema='public'
               AND table_name='PendingRegistration')=10
-            AND has_table_privilege(current_user,'public."PendingRegistration"','SELECT')
-  AND has_table_privilege(current_user,'public."PendingRegistration"','INSERT')
-  AND has_table_privilege(current_user,'public."PendingRegistration"','UPDATE')
-  AND has_table_privilege(current_user,'public."PendingRegistration"','DELETE')
+            AND (SELECT count(*) FROM expected_columns ec
+              JOIN information_schema.columns c ON c.table_schema='public'
+                AND c.table_name='PendingRegistration' AND c.column_name=ec.name
+              WHERE c.data_type=ec.typ AND c.is_nullable=ec.nullable
+                AND c.column_default IS NOT DISTINCT FROM ec.default_text
+                AND c.datetime_precision IS NOT DISTINCT FROM ec.precision)=10
           THEN 'PASS' ELSE 'BLOCKED' END; COMMIT;`;
-          const proc = spawnSync('psql', ['--no-psqlrc','--no-align','--tuples-only','--quiet','--set','ON_ERROR_STOP=1'], {
-            env: { ...process.env, PGHOST: direct.host, PGPORT: direct.port,
-              PGUSER: direct.user, PGPASSWORD: direct.password, PGDATABASE: direct.database,
-              PGSSLMODE: 'require' },
-            input: sql, encoding: 'utf8', timeout: 20000, maxBuffer: 1024 * 1024,
-          });
-          if (proc.error || proc.status !== 0 || proc.stdout.trim() !== 'PASS') {
-            console.error('BLOCKED: read-only verification query failed or schema differs; do not retry migration');
-            process.exitCode = 1;
-          } else {
-            console.log('PASS: Prisma ledger 7/7 checksums, OTP schema, indexes, RLS and runtime role DML privileges');
-            console.log('PASS: verification is READ-ONLY; no Prisma migration was executed');
+          const runtimeSql = `BEGIN READ ONLY; SET LOCAL statement_timeout = '7s';
+          SELECT CASE WHEN
+            has_table_privilege(current_user,'public."PendingRegistration"','SELECT') AND
+            has_table_privilege(current_user,'public."PendingRegistration"','INSERT') AND
+            has_table_privilege(current_user,'public."PendingRegistration"','UPDATE') AND
+            has_table_privilege(current_user,'public."PendingRegistration"','DELETE') AND
+            EXISTS(SELECT 1 FROM pg_roles r JOIN pg_class c
+              ON c.oid=to_regclass('public."PendingRegistration"')
+              WHERE r.rolname=current_user AND
+                (r.rolsuper OR r.rolbypassrls OR
+                  (r.oid=c.relowner AND NOT c.relforcerowsecurity)))
+          THEN 'PASS' ELSE 'BLOCKED' END; COMMIT;`;
+          function runReadOnlySql(binding, query) {
+            // Uses the simple PostgreSQL query protocol to avoid Prisma's
+            // prepared-statement collision behind the Supabase pooler.
+            const proc = spawnSync('psql',
+              ['--no-psqlrc','--no-align','--tuples-only','--quiet','--set','ON_ERROR_STOP=1'], {
+              env: { ...process.env, PGHOST: binding.host, PGPORT: binding.port,
+                PGUSER: binding.user, PGPASSWORD: binding.password, PGDATABASE: binding.database,
+                PGSSLMODE: 'require' },
+              input: query, encoding: 'utf8', timeout: 20000, maxBuffer: 1024 * 1024,
+            });
+            if (proc.error || proc.status !== 0 || proc.stdout.trim() !== 'PASS') {
+              console.error('BLOCKED: read-only database check failed; do not retry migration');
+              process.exitCode = 1;
+              return false;
+            }
+            return true;
+          }
+          if (runReadOnlySql(direct, sql) && runReadOnlySql(runtime, runtimeSql)) {
+            console.log('PASS: ledger 7/7 checksums, OTP columns/defaults/indexes, RLS without policies');
+            console.log('PASS: effective runtime database role has OTP DML privileges and RLS access');
+            console.log('PASS: both checks were READ-ONLY; no Prisma migration was executed');
           }
           NODE

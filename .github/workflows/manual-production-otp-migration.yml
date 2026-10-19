@@ -47,6 +47,7 @@ jobs:
       PASSWORD_RESET_FROM: ${{ secrets.PASSWORD_RESET_FROM }}
       PASSWORD_RESET_BASE_URL: ${{ secrets.PASSWORD_RESET_BASE_URL }}
       MAINTENANCE_MODE: ${{ secrets.MAINTENANCE_MODE }}
+      OTP_MIGRATION_APPROVED_SHA: ${{ secrets.OTP_MIGRATION_APPROVED_SHA }}
     steps:
       - name: Check out immutable reviewed PR 70 commit only
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -135,6 +136,16 @@ jobs:
       - name: Check only - report readiness without touching schema
         if: ${{ inputs.operation == 'check' }}
         run: echo "Read-only prerequisite checks PASS. No migration executed."
+
+      - name: Require additional operator approval secret before schema mutation
+        if: ${{ inputs.operation == 'apply' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${OTP_MIGRATION_APPROVED_SHA:-}" = "b1e38ce3086ee85df5fd01e609cc5e89e3db949f" || {
+            echo "BLOCKED: protected environment approval secret is missing or does not match pinned release SHA."
+            exit 1
+          }
 
       - name: Apply reviewed migration using official Prisma CLI
         if: ${{ inputs.operation == 'apply' }}

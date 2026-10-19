@@ -254,6 +254,8 @@ async function main() {
           if (!route && response.status() === 202) {
             const json = await response.json();
             assert.equal(typeof json.data.challengeId, "string");
+            assert.equal(typeof json.data.serverReceivedAt, "number");
+            assert.ok(json.data.serverReceivedAt <= json.data.serverNow);
             assert.equal(json.data.otp, undefined);
             challenges.set(json.data.email, json.data.challengeId);
           }
@@ -1040,7 +1042,9 @@ async function main() {
         await page.reload();
         await expect(page.getByTestId("otp-expiry")).toContainText("00:00");
         await expect(page.getByTestId("auth-submit")).toBeDisabled();
-        await expect(page.getByTestId("verify-registration-form").getByRole("alert")).toContainText("kedaluwarsa");
+        await expect(
+          page.getByTestId("verify-registration-form").getByRole("alert"),
+        ).toContainText("kedaluwarsa");
         let dropped = false;
         injectingResendFailure = true;
         await page.route("**/register", async (route) => {
@@ -1126,7 +1130,9 @@ async function main() {
           data: { sentAt: new Date(Date.now() - 70_000) },
         });
         await page.reload();
-        await expect(page.getByTestId("verify-registration-form").getByRole("alert")).toContainText("Batas percobaan");
+        await expect(
+          page.getByTestId("verify-registration-form").getByRole("alert"),
+        ).toContainText("Batas percobaan");
         await page
           .getByTestId("register-otp")
           .fill(capturedOtp.get(limitedEmail)!);

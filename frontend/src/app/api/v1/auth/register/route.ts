@@ -19,6 +19,7 @@ export async function POST(req: Request) {
         expiresAt: result.expiresAt,
         resendAvailableAt: result.resendAvailableAt,
         serverNow: result.serverNow,
+        serverReceivedAt: result.serverReceivedAt,
         status: result.status,
       },
       202,

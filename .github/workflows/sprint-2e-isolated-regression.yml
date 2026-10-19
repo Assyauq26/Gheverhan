@@ -123,6 +123,9 @@ jobs:
       - name: Registration email OTP lifecycle on disposable PostgreSQL
         run: node --import tsx --test tests/integration/registration-otp.test.ts
 
+      - name: Registration conflict, metadata, recovery and provider isolation
+        run: node --import tsx --test tests/integration/registration-conflicts.test.ts
+
       - name: Chromium auth UI and public legal regression on dummy PostgreSQL
         id: auth_ui_browser
         env:

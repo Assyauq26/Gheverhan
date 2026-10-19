@@ -34,6 +34,20 @@ jobs:
           ref: d62493c06890176a0a5f2aad111078c7a222f11c
           persist-credentials: false
           sparse-checkout: frontend
+      - name: Prepare trusted Supabase database CA certificate
+        shell: bash
+        env:
+          SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_CA_CERT:-}" || { echo 'BLOCKED: missing Supabase CA certificate secret'; exit 1; }
+          umask 077
+          cert_path="${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt"
+          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
+          unset SUPABASE_DB_CA_CERT
+          openssl x509 -in "$cert_path" -noout >/dev/null 2>&1 || { echo 'BLOCKED: invalid Supabase CA certificate PEM'; rm -f "$cert_path"; exit 1; }
+          echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
+          echo 'PASS: trusted Supabase CA certificate loaded for verify-full'
       - name: Read-only categorized preflight
         shell: bash
         run: |
@@ -85,7 +99,7 @@ jobs:
           const p = spawnSync('psql',['-X','-A','-t','-q','-F','|','-v','ON_ERROR_STOP=1'],{
             env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:user,
               PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
-              PGSSLMODE:'verify-full',PGSSLROOTCERT:'/etc/ssl/certs/ca-certificates.crt',PGCONNECT_TIMEOUT:'10'},
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:process.env.PGSSLROOTCERT,PGCONNECT_TIMEOUT:'10'},
             input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
           });
           if (p.error || p.status!==0) {
@@ -114,3 +128,9 @@ jobs:
           }
           console.log('PASS: all read-only Production checks; no migration executed');
           NODE
+
+      - name: Remove temporary database CA certificate
+        if: always()
+        shell: bash
+        run: |
+          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt"

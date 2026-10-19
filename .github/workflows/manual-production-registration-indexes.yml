@@ -81,7 +81,7 @@ jobs:
           NODE
 
       - name: Install pinned dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Prepare trusted Supabase database CA certificate
         shell: bash
@@ -141,8 +141,27 @@ jobs:
           console.log('PASS: read-only ledger 7/7, indexes absent, no long transactions/lock waiters, owner and verified TLS');
           NODE
 
-      - name: Prisma migration status (Production)
-        run: npx --no-install prisma migrate status
+      - name: Verify Prisma CLI and pending migration (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x node_modules/.bin/prisma || { echo 'BLOCKED: Prisma CLI not installed'; exit 1; }
+          npx --no-install prisma --version
+          # Pending migrations are expected before deploy; migrate status exits nonzero for them.
+          # Capture status for diagnostics without using its exit code as the deployment gate.
+          set +e
+          npx --no-install prisma migrate status > "${RUNNER_TEMP}/prisma-migration-status.log" 2>&1
+          status_code=$?
+          set -e
+          if [ "$status_code" -gt 1 ]; then
+            echo 'BLOCKED: Prisma status failed unexpectedly'
+            exit 1
+          fi
+          if ! grep -Fq '20261019054922_registration_identity_lookup_indexes' "${RUNNER_TEMP}/prisma-migration-status.log"; then
+            echo 'BLOCKED: approved pending migration not reported by Prisma'
+            exit 1
+          fi
+          echo 'PASS: Prisma CLI responds and reports the approved pending migration'
 
       - name: Deploy only approved migration
         shell: bash

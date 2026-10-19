@@ -52,14 +52,23 @@ jobs:
           if (hash(names[7]) !== '369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b') {
             console.error('BLOCKED: migration_checksum_mismatch'); process.exit(1);
           }
-          const u = new URL(process.env.DIRECT_URL || '');
-          const user = decodeURIComponent(u.username);
-          if (!['postgres:','postgresql:'].includes(u.protocol) || !u.password ||
-              !(u.hostname === 'db.'+expectedRef+'.supabase.co' ||
-                (u.hostname.endsWith('.pooler.supabase.com') && user.endsWith('.'+expectedRef))) ||
-              u.pathname !== '/postgres') {
-            console.error('BLOCKED: unapproved_database_url'); process.exit(1);
+          const validUrl = key => {
+            try {
+              const url = new URL(process.env[key] || '');
+              const login = decodeURIComponent(url.username);
+              const host = url.hostname.toLowerCase();
+              return ['postgres:','postgresql:'].includes(url.protocol) && !!url.password &&
+                (host === 'db.'+expectedRef+'.supabase.co' ||
+                  (host.endsWith('.pooler.supabase.com') && login.endsWith('.'+expectedRef))) &&
+                url.pathname === '/postgres' &&
+                (url.searchParams.get('schema') || 'public') === 'public';
+            } catch { return false; }
+          };
+          if (!validUrl('DIRECT_URL') || !validUrl('DATABASE_URL')) {
+            console.error('BLOCKED: missing_or_unapproved_database_binding'); process.exit(1);
           }
+          const u = new URL(process.env.DIRECT_URL);
+          const user = decodeURIComponent(u.username);
           const expected = names.slice(0,7).map(n => "('"+n+"','"+hash(n)+"')").join(',');
           const checks = [
             ['database_identity',"current_database()='postgres'"],

@@ -1,0 +1,175 @@
+name: Manual Production registration indexes migration (PR 74)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Confirm exact Supabase Production project ref'
+        required: true
+        type: string
+      approved_head:
+        description: 'Confirm approved PR 74 source commit SHA'
+        required: true
+        type: string
+      write_drain_confirmed:
+        description: 'Type YES only after bounded Production write-drain window is coordinated'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-otp-schema
+  cancel-in-progress: false
+
+jobs:
+  migration:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.project_ref == 'bztprltkevacidcpjaam' && inputs.approved_head == 'd62493c06890176a0a5f2aad111078c7a222f11c' && inputs.write_drain_confirmed == 'YES' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-migration
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout immutable reviewed PR 74 source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: d62493c06890176a0a5f2aad111078c7a222f11c
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify immutable migration source and protected bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 'd62493c06890176a0a5f2aad111078c7a222f11c'
+          test -n "${DIRECT_URL:-}" && test -n "${DATABASE_URL:-}" || { echo 'BLOCKED: missing protected database secrets'; exit 1; }
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const expected = '20261019054922_registration_identity_lookup_indexes';
+          const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          if (dirs.length !== 8 || dirs.at(-1) !== expected) throw new Error('BLOCKED: unexpected migration set');
+          const sql = fs.readFileSync('prisma/migrations/' + expected + '/migration.sql', 'utf8');
+          if (crypto.createHash('sha256').update(sql).digest('hex') !== '369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b')
+            throw new Error('BLOCKED: migration checksum mismatch');
+          const ref = 'bztprltkevacidcpjaam';
+          for (const key of ['DIRECT_URL','DATABASE_URL']) {
+            const u = new URL(process.env[key]);
+            const host = u.hostname.toLowerCase();
+            const user = decodeURIComponent(u.username);
+            if (!['postgres:','postgresql:'].includes(u.protocol) ||
+                !(host === 'db.' + ref + '.supabase.co' ||
+                  (host.endsWith('.pooler.supabase.com') && user.endsWith('.' + ref))) ||
+                u.pathname !== '/postgres' || !u.password ||
+                (u.searchParams.get('schema') || 'public') !== 'public')
+              throw new Error('BLOCKED: ' + key + ' is not bound to approved Production database');
+          }
+          console.log('PASS: immutable source, exact migration checksum, approved database URL identity');
+          NODE
+
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify Production ledger and operational safety (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { Client } = require('pg');
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          (async () => {
+            const c = new Client({ connectionString: process.env.DIRECT_URL, connectionTimeoutMillis: 10000,
+              ssl: { rejectUnauthorized: false }, application_name: 'gheverhan_pr74_migration_preflight' });
+            try {
+              await c.connect();
+              await c.query('BEGIN READ ONLY');
+              await c.query("SET LOCAL statement_timeout = '10000ms'");
+              const id = await c.query("SELECT current_database() AS db, current_user AS usr, current_setting('server_version_num')::int AS version");
+              if (id.rows[0].db !== 'postgres' || id.rows[0].version < 120000) throw new Error('BLOCKED: database identity/version');
+              const migrations = await c.query('SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations ORDER BY migration_name');
+              const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+              if (migrations.rows.length !== 7 || dirs.length !== 8) throw new Error('BLOCKED: unexpected migration count');
+              for (let i = 0; i < 7; i++) {
+                const m = migrations.rows[i], name = dirs[i];
+                const hash = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+                if (m.migration_name !== name || m.checksum !== hash || !m.finished_at || m.rolled_back_at)
+                  throw new Error('BLOCKED: migration history mismatch');
+              }
+              const indexes = await c.query("SELECT count(*)::int AS n FROM pg_class WHERE relnamespace='public'::regnamespace AND relname = ANY($1)", [
+                ['User_registration_email_normalized_idx','User_registration_phone_normalized_idx']]);
+              if (indexes.rows[0].n !== 0) throw new Error('BLOCKED: expected indexes already exist');
+              const locks = await c.query(`SELECT
+                (SELECT count(*)::int FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database()
+                  AND state='active' AND now()-query_start > interval '30 seconds') AS long_active,
+                (SELECT count(*)::int FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database()
+                  AND xact_start IS NOT NULL AND now()-xact_start > interval '30 seconds') AS long_xact,
+                (SELECT count(*)::int FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database()
+                  AND wait_event_type='Lock') AS lock_waiters`);
+              if (Object.values(locks.rows[0]).some(Number)) throw new Error('BLOCKED: unsafe active transactions/locks');
+              const privileges = await c.query(`SELECT
+                pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid='public."User"'::regclass),'MEMBER') AS table_owner_member,
+                (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) AS superuser`);
+              if (!privileges.rows[0].table_owner_member && !privileges.rows[0].superuser)
+                throw new Error('BLOCKED: User table DDL ownership not verified');
+              await c.query('COMMIT');
+              console.log('PASS: 7/7 Prisma checksums, target pending, no indexes, no long transactions/lock waiters, DDL owner role');
+            } catch(e) {
+              try { await c.query('ROLLBACK'); } catch {}
+              throw e;
+            } finally { await c.end(); }
+          })().catch(e => { console.error(e.message); process.exit(1); });
+          NODE
+
+      - name: Prisma migration status (Production)
+        run: npx --no-install prisma migrate status
+
+      - name: Deploy only approved migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ledger and repository checks above ensure only the approved eighth migration is pending.
+          npx --no-install prisma migrate deploy
+
+      - name: Verify Prisma status and indexes (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --no-install prisma migrate status
+          node <<'NODE'
+          const { Client } = require('pg');
+          (async () => {
+            const c = new Client({ connectionString: process.env.DIRECT_URL, connectionTimeoutMillis: 10000,
+              ssl: { rejectUnauthorized: false }, application_name: 'gheverhan_pr74_postcheck' });
+            try {
+              await c.connect();
+              const m = await c.query(`SELECT count(*)::int AS total,
+                count(*) FILTER (WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL)::int AS complete
+                FROM public._prisma_migrations`);
+              if (m.rows[0].total !== 8 || m.rows[0].complete !== 8) throw new Error('BLOCKED: migration ledger not 8/8');
+              const i = await c.query(`SELECT c.relname, x.indisvalid, x.indisready
+                FROM pg_class c JOIN pg_index x ON x.indexrelid=c.oid
+                WHERE c.relnamespace='public'::regnamespace AND c.relname = ANY($1)`,
+                [['User_registration_email_normalized_idx','User_registration_phone_normalized_idx']]);
+              if (i.rows.length !== 2 || i.rows.some(x => !x.indisvalid || !x.indisready))
+                throw new Error('BLOCKED: indexes missing or invalid');
+              console.log('PASS: migration ledger 8/8, both indexes valid and ready');
+            } finally { await c.end(); }
+          })().catch(e => { console.error(e.message); process.exit(1); });
+          NODE
+
+      - name: Release preflight (read-only)
+        run: npm run release:preflight

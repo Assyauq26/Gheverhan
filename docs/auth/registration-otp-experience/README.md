@@ -24,6 +24,8 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 11. Serializer REST register memilih field secara eksplisit dan melewatkan `serverReceivedAt`, padahal status/resend meneruskannya. API kini konsisten; browser contract test memeriksa timestamp pada setiap respons register 202. Test terhadap build lama mereproduksi omission sebelum build source perbaikan.
 12. Reviewer menemukan scan O(jumlah User) pada ekspresi normalisasi. Benchmark dummy membuktikan kebutuhan migration indeks. Dua expression index non-unique mempertahankan akun legacy dan constraints raw; normalization literals di-inline dari konstanta tepercaya, sementara email/phone tetap bound parameters, agar generic prepared plan cocok dengan indeks. Drill fresh/upgrade/lock/partial-failure/retry dan query plan generic lulus, tanpa perubahan Production.
 
+13. CI entrypoint menemukan migration indeks hardcode `public.User`, sehingga gagal pada schema Prisma fixture yang berbeda. DDL draft diperbaiki menjadi table name yang mengikuti search path Prisma. Test sekarang memverifikasi dua indeks berada pada schema fixture dan fingerprint indeks public tidak berubah. Checksum draft kedelapan diperbarui sebelum release; ledger Production tidak disentuh dan checksum OTP ketujuh tetap sama.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.

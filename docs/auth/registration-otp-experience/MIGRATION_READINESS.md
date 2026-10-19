@@ -4,7 +4,7 @@ Status source: untuk review. **Production migration belum dijalankan dan deploym
 
 ## Kebutuhan dan rancangan
 
-`20261019054922_registration_identity_lookup_indexes`, SHA-256 `b299e7fe96d80769cfce9e4737f68649ef95d53657fc1377c0aaca2d0eda4c34`.
+`20261019054922_registration_identity_lookup_indexes`, SHA-256 `369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b`.
 
 Migration dibuat menggunakan Prisma CLI resmi `npm run prisma:migrate -- --create-only --name registration_identity_lookup_indexes`, kemudian SQL draft direview dan diterapkan hanya pada PostgreSQL disposable melalui `npm run prisma:deploy`. Tidak menggunakan `db push`.
 
@@ -15,7 +15,7 @@ Dua indeks:
 - `User_registration_email_normalized_idx`: lower/trim email dengan whitespace ECMAScript.
 - `User_registration_phone_normalized_idx`: translate separator lalu canonical prefix 0/62/+.
 
-Keduanya **non-unique**: tidak mengubah constraint atau menolak legacy rows yang kebetulan ekuivalen. Raw unique email/phone tetap menjadi perlindungan akhir registrasi baru yang selalu dinormalisasi. Tidak ada update/delete User, perubahan kolom, FK, role, grant, RLS, session atau password. Prisma 5 tidak memodelkan expression indexes; SQL migration historis mengelolanya. Pemeriksaan `prisma migrate diff` dari disposable schema ke datamodel menghasilkan exit 0.
+Keduanya **non-unique**: tidak mengubah constraint atau menolak legacy rows yang kebetulan ekuivalen. Raw unique email/phone tetap menjadi perlindungan akhir registrasi baru yang selalu dinormalisasi. DDL mengikuti schema target Prisma melalui nama tabel tanpa hardcode `public`; test entrypoint membuktikan schema fixture tidak menyentuh indeks public. Tidak ada update/delete User, perubahan kolom, FK, role, grant, RLS, session atau password. Prisma 5 tidak memodelkan expression indexes; SQL migration historis mengelolanya. Pemeriksaan `prisma migrate diff` dari disposable schema ke datamodel menghasilkan exit 0.
 
 Query meng-inline hanya karakter normalisasi statis sebagai SQL Unicode literals; input email/phone tetap parameter. Parameterisasi normalisasi itu sendiri akan menghalangi index match pada generic plans. Test query plan melindungi perubahan berikutnya agar tidak diam-diam kembali melakukan scan.
 

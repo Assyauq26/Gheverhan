@@ -47,6 +47,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   window.sessionStorage.clear();
@@ -226,4 +227,90 @@ it("expired challenges cannot verify and resend resets the field using server me
     ),
   );
   expect(mock.verify).not.toHaveBeenCalled();
+});
+
+it("sending recovery retries after a transient status failure and stops when the server activates the code", async () => {
+  vi.useFakeTimers();
+  const initial = { ...challenge(), status: "sending" as const };
+  mock.status
+    .mockReset()
+    .mockRejectedValueOnce(new Error("dummy disconnected"))
+    .mockResolvedValue({ ok: true, ...initial, status: "active" });
+  render(createElement(RegistrationOtpStep, { initial, onRestart: vi.fn() }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(1);
+  expect(
+    (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+  ).toBe(true);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(2);
+  expect(
+    (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+  ).toBe(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(2);
+  expect(mock.verify).not.toHaveBeenCalled();
+  expect(mock.resend).not.toHaveBeenCalled();
+});
+it("sending recovery stops after four failures and retains an explicit manual status fallback", async () => {
+  vi.useFakeTimers();
+  mock.status.mockReset().mockRejectedValue(new Error("dummy offline"));
+  render(
+    createElement(RegistrationOtpStep, {
+      initial: { ...challenge(), status: "sending" },
+      onRestart: vi.fn(),
+    }),
+  );
+  for (const delay of [1000, 2000, 4000, 8000]) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(delay);
+    });
+  }
+  expect(mock.status).toHaveBeenCalledTimes(4);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(4);
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Periksa status kode" }),
+    );
+  });
+  expect(mock.status).toHaveBeenCalledTimes(5);
+  expect(mock.verify).not.toHaveBeenCalled();
+  expect(mock.resend).not.toHaveBeenCalled();
+});
+
+it("fresh sending metadata cannot restart the automatic four-check budget indefinitely", async () => {
+  vi.useFakeTimers();
+  const initial = { ...challenge(), status: "sending" as const };
+  mock.status
+    .mockReset()
+    .mockImplementation(async () => ({
+      ok: true,
+      ...initial,
+      serverNow: Date.now(),
+    }));
+  render(createElement(RegistrationOtpStep, { initial, onRestart: vi.fn() }));
+  for (const delay of [1000, 2000, 4000, 8000]) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(delay);
+    });
+  }
+  expect(mock.status).toHaveBeenCalledTimes(4);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(4);
+  expect(
+    (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+  ).toBe(true);
+  expect(mock.verify).not.toHaveBeenCalled();
+  expect(mock.resend).not.toHaveBeenCalled();
 });

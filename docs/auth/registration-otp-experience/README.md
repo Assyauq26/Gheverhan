@@ -11,6 +11,8 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 5. Regression tambahan membuktikan SQL POSIX whitespace pada locale PostgreSQL tidak identik dengan JavaScript `trim()/\s`: phone legacy berisi non-breaking space sempat lolos. Lookup sekarang memakai himpunan whitespace ECMAScript eksplisit dengan `translate`/`btrim`, termasuk NBSP/BOM; test legacy Unicode gagal sebelum perbaikan dan lulus sesudahnya.
 
+6. Review Codex menemukan dua P2: ref retry tidak memicu penjadwalan ulang setelah status `sending` gagal dibaca, dan pesan restart selalu mengalahkan hasil submit terbaru. Tiga regression tests mereproduksi kedua temuan sebelum perbaikan; satu test tambahan memastikan metadata `sending` baru tidak mereset budget empat pemeriksaan otomatis. Retry kini berupa state yang bergerak setelah setiap respons gagal/sukses (maksimum empat, lalu fallback manual), dan feedback action terbaru menggantikan pesan/link recovery lama.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.
@@ -40,7 +42,7 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 | --- | --- |
 | Node.js 22, locked install, Prisma generate dan fresh deploy tujuh migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
-| Unit | 252 PASS |
+| Unit | 256 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
 | Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS | 7 PASS |

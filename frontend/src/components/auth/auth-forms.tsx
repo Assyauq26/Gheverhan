@@ -339,6 +339,9 @@ function RegistrationForm({
     form.addEventListener("reset", preserveInput);
     return () => form.removeEventListener("reset", preserveInput);
   }, [state.step, restoring, activeOtp]);
+  // A completed submission takes precedence over feedback from the previous challenge.
+  const registrationError = state.error ?? restartReason;
+  const registrationErrorCode = state.error ? state.errorCode : restartCode;
   const challenge =
     activeOtp || (state.step === "verify" ? asChallenge(state) : null);
   if (challenge)
@@ -479,10 +482,9 @@ function RegistrationForm({
             .
           </p>
         </div>
-        <Feedback error={restartReason ?? state.error} id="register-error" />
-        {(state.errorCode === "REGISTRATION_CONFLICT" ||
-          restartCode === "REGISTRATION_CONFLICT" ||
-          state.error === REGISTRATION_CONFLICT) && (
+        <Feedback error={registrationError} id="register-error" />
+        {(registrationErrorCode === "REGISTRATION_CONFLICT" ||
+          registrationError === REGISTRATION_CONFLICT) && (
           <nav className="auth-conflict-links" aria-label="Pemulihan akun">
             <Link href="/login">Masuk</Link>
             <Link href="/forgot-password">Lupa password</Link>

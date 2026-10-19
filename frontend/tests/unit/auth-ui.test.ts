@@ -14,7 +14,10 @@ const form = vi.hoisted(() => ({
     expiresAt?: number;
     serverNow?: number;
     status?: "active" | "expired" | "locked" | "sending";
-    errorCode?: "REGISTRATION_CONFLICT";
+    errorCode?:
+      | "REGISTRATION_CONFLICT"
+      | "TOO_MANY_REQUESTS"
+      | "OTP_DELIVERY_FAILED";
     ok: boolean;
     error?: string;
     email?: string;
@@ -225,4 +228,37 @@ it("server-deleted OTP metadata is discarded and the registration form recovers"
     ).toBeNull(),
   );
   expect(screen.getByTestId("register-form")).toBeTruthy();
+});
+
+it("a new action failure replaces stale restart feedback and obsolete conflict recovery links", async () => {
+  form.statusFn.mockResolvedValue({
+    ok: false,
+    errorCode: "REGISTRATION_CONFLICT",
+    error:
+      "Email atau nomor HP sudah terdaftar. Silakan masuk atau reset password.",
+  });
+  window.sessionStorage.setItem(
+    "gheverhan.registration.otp.v1",
+    JSON.stringify({
+      email: "conflict@example.test",
+      challengeId: "00000000-0000-4000-8000-000000000001",
+    }),
+  );
+  const view = render(createElement(RegisterForm));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("navigation", { name: "Pemulihan akun" }),
+    ).toBeTruthy(),
+  );
+  for (const [error, errorCode] of [
+    ["Terlalu banyak percobaan. Coba lagi nanti.", "TOO_MANY_REQUESTS"],
+    ["OTP tidak dapat dikirim. Coba lagi nanti.", "OTP_DELIVERY_FAILED"],
+  ] as const) {
+    form.state = { ok: false, error, errorCode };
+    view.rerender(createElement(RegisterForm));
+    expect(screen.getByTestId("register-error").textContent).toBe(error);
+    expect(
+      screen.queryByRole("navigation", { name: "Pemulihan akun" }),
+    ).toBeNull();
+  }
 });

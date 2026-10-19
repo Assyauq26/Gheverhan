@@ -54,7 +54,7 @@ export function RegistrationOtpStep({
   const input = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const autoSubmitted = useRef("");
-  const resendRecoveries = useRef(0);
+  const [resendRecoveries, setResendRecoveries] = useState(0);
   useEffect(() => {
     offset.current = challenge.serverNow - Date.now();
     setNow(challenge.serverNow);
@@ -102,18 +102,23 @@ export function RegistrationOtpStep({
       challenge.status !== "sending" ||
       pending ||
       verified ||
-      resendRecoveries.current >= 4
+      resendRecoveries >= 4
     )
       return;
+    let cancelled = false;
     const timer = setTimeout(
-      () => {
-        resendRecoveries.current += 1;
-        void recover();
+      async () => {
+        await recover();
+        // Failed status reads must also advance the bounded retry schedule.
+        if (!cancelled) setResendRecoveries((count) => count + 1);
       },
-      1000 * 2 ** resendRecoveries.current,
+      1000 * 2 ** resendRecoveries,
     );
-    return () => clearTimeout(timer);
-  }, [challenge, pending, recover, verified]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [challenge.status, pending, recover, verified, resendRecoveries]);
   useEffect(() => {
     if (!verified) return;
     clearRegistration();
@@ -195,7 +200,7 @@ export function RegistrationOtpStep({
       if (result.ok && adopt(result)) {
         setCode("");
         autoSubmitted.current = "";
-        resendRecoveries.current = 0;
+        setResendRecoveries(0);
         setFeedback({ message: "Kode OTP baru telah dikirim ke email Anda." });
         requestAnimationFrame(() => input.current?.focus());
       } else {

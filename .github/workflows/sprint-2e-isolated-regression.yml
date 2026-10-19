@@ -153,6 +153,7 @@ jobs:
           path: |
             /tmp/gheverhan-navigation-*/navigation-results.json
             /tmp/gheverhan-product-browser-*/validation-results.json
+            /tmp/gheverhan-product-browser-*/product-*.png
             /tmp/gheverhan-product-browser-*/cart-concurrency-*.json
             /tmp/gheverhan-operations-browser-*/validation-results.json
             /tmp/gheverhan-navigation-*/*-dashboard.png

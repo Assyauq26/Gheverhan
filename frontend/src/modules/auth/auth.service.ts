@@ -23,6 +23,7 @@ import {
 } from "./registration-otp-email";
 import {
   normalizeRegistrationPhone,
+  REGISTRATION_WHITESPACE,
   generateRegistrationOtp,
   hashRegistrationOtp,
   compareRegistrationOtp,
@@ -65,8 +66,8 @@ export async function assertRegistrationIdentityAvailable(
   const rows = await db.$queryRaw<{ conflict: boolean; filtered: boolean }[]>`
     SELECT pg_catalog.row_security_active('public."User"'::regclass) AS filtered, EXISTS (
       SELECT 1 FROM (
-        SELECT lower(btrim("email")) AS email,
-          regexp_replace(coalesce("phone", ''), '[[:space:]().-]', '', 'g') AS phone
+        SELECT lower(btrim("email", ${REGISTRATION_WHITESPACE})) AS email,
+          translate(coalesce("phone", ''), ${REGISTRATION_WHITESPACE + "().-"}, '') AS phone
         FROM public."User"
       ) identities
       WHERE email = ${email} OR

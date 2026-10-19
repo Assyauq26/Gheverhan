@@ -9,6 +9,8 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 3. Pesan verifikasi sebelumnya menyatukan kode salah, expired, dan batas percobaan. Error terstruktur sekarang membedakan ketiganya. Redirect langsung sebelumnya tidak memberikan state sukses yang dapat dipercaya; UI hijau sekarang hanya sesudah transaksi akun dan pembuatan sesi sukses di server.
 4. Pencarian identitas pada role yang terfilter RLS dapat memberikan hasil kosong yang keliru. Guard memeriksa `row_security_active` pada statement lookup yang sama dan menolak 503 bila visibilitas identitas tidak lengkap. Kegagalan database tetap fail-closed.
 
+5. Regression tambahan membuktikan SQL POSIX whitespace pada locale PostgreSQL tidak identik dengan JavaScript `trim()/\s`: phone legacy berisi non-breaking space sempat lolos. Lookup sekarang memakai himpunan whitespace ECMAScript eksplisit dengan `translate`/`btrim`, termasuk NBSP/BOM; test legacy Unicode gagal sebelum perbaikan dan lulus sesudahnya.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.

@@ -97,6 +97,12 @@ after(async () => {
   }
 });
 test("phone normalization and unguessable keyed OTP digest", () => {
+  for (const whitespace of client.REGISTRATION_WHITESPACE) {
+    assert.equal(
+      client.normalizeRegistrationPhone("0812" + whitespace + "34567890"),
+      "+6281234567890",
+    );
+  }
   assert.equal(
     client.normalizeRegistrationPhone("0812 3456 7890"),
     "+6281234567890",

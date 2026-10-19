@@ -126,6 +126,8 @@ test("existing identities reject before provider or pending mutations, including
     "phone-international",
     "phone-formatted",
     "legacy-format",
+    "legacy-unicode-format",
+    "legacy-unicode-email",
     "inactive",
   ];
   let calls = 0;
@@ -139,11 +141,17 @@ test("existing identities reject before provider or pending mutations, including
       const kind = scenarios[n];
       const data = input(100 + n);
       const storedEmail =
-        kind === "email-case" ? data.email.toUpperCase() : data.email;
+        kind === "email-case"
+          ? data.email.toUpperCase()
+          : kind === "legacy-unicode-email"
+            ? "\u00a0" + data.email.toUpperCase() + "\ufeff"
+            : data.email;
       const storedPhone =
         kind === "legacy-format"
           ? data.phone.slice(0, 4) + " " + data.phone.slice(4)
-          : client.normalizeRegistrationPhone(data.phone);
+          : kind === "legacy-unicode-format"
+            ? data.phone.slice(0, 4) + "\u00a0" + data.phone.slice(4) + "\ufeff"
+            : client.normalizeRegistrationPhone(data.phone);
       const { hashPassword } = await import("../../src/lib/auth/password");
       await db.user.create({
         data: {
@@ -162,10 +170,15 @@ test("existing identities reject before provider or pending mutations, including
           "phone-international",
           "phone-formatted",
           "legacy-format",
+          "legacy-unicode-format",
         ].includes(kind)
       )
         proposed.email = "new-" + data.email;
-      if (["email", "email-case", "inactive"].includes(kind))
+      if (
+        ["email", "email-case", "legacy-unicode-email", "inactive"].includes(
+          kind,
+        )
+      )
         proposed.phone = input(300 + n).phone;
       if (kind === "email-case")
         proposed.email = " " + data.email.toUpperCase() + " ";

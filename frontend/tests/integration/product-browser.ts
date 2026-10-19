@@ -136,7 +136,14 @@ async function main() {
     });
     const slug = `kaos-sprint-${prefix}`;
     await check("create draft with price, category, SKU and inventory", async () => {
-      await page.goto(`${base}/admin/products/new`); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6"); await page.getByTestId("save-product").click(); await expect(page).toHaveURL(/\/admin\/products\/(?!new)[^/?]+$/); await expect(page.getByTestId("product-status")).toHaveText("Draft");
+      await page.goto(`${base}/admin/products/new`); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6");
+      for (const width of [360, 390, 768, 1360]) {
+        await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
+        await page.screenshot({ path: path.join(artifactDir, `product-create-${width}.png`), fullPage: true });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `product create ${width}px has no horizontal overflow`);
+      }
+      await page.setViewportSize({ width: 1360, height: 900 });
+      await page.getByTestId("save-product").click(); await expect(page).toHaveURL(/\/admin\/products\/(?!new)[^/?]+$/); await expect(page.getByTestId("product-status")).toHaveText("Draft");
     });
     let product = await db.product.findUniqueOrThrow({ where: { slug }, include: { images: true, variants: { include: { inventory: true } } } });
     assert.equal(product.status, "DRAFT"); assert.equal(product.variants[0].inventory?.onHand, 6);
@@ -170,6 +177,8 @@ async function main() {
         await dialog.getByLabel("Tambah opsi Ukuran").press("Enter");
       }
       await expect(dialog.getByText("4 varian", { exact: true })).toBeVisible();
+      await dialog.screenshot({ path: path.join(artifactDir, "product-variant-sheet-390.png") });
+      await page.screenshot({ path: path.join(artifactDir, "product-variant-mobile-390.png"), fullPage: false });
       const bounds = await dialog.boundingBox();
       assert.ok(bounds && bounds.x >= -1 && bounds.x + bounds.width <= 392 && bounds.y >= -1 && bounds.y + bounds.height <= 845, "mobile bottom sheet must fit the viewport");
       await dialog.getByRole("button", { name: "Tambahkan 4 kombinasi", exact: true }).click();
@@ -191,6 +200,12 @@ async function main() {
     });
     await check("upload and serve draft image through the existing storage contract", async () => {
       await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("status")).toContainText("Gambar diunggah"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      for (const width of [390, 768, 1360]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+        await page.screenshot({ path: path.join(artifactDir, `product-edit-${width}.png`), fullPage: true });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `product edit ${width}px has no horizontal overflow`);
+      }
+      await page.setViewportSize({ width: 1360, height: 900 });
       product = await db.product.findUniqueOrThrow({ where: { id: product.id }, include: { images: true, variants: { include: { inventory: true } } } });
       assert.equal(product.images.length, 1); assert.equal(objects.size, 1); assert.equal((await admin.request.get(`${base}${product.images[0].url}`)).status(), 200); assert.equal((await anonymous.request.get(`${base}${product.images[0].url}`)).status(), 404);
       const form = { image: { name: "x.png", mimeType: "image/png", buffer: png }, updatedAt: product.updatedAt.toISOString() };

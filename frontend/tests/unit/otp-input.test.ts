@@ -402,3 +402,80 @@ it("automatic status recovery serializes with resend so an old sending snapshot 
     (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
   ).toBe(false);
 });
+
+it.each(["active", "missing"] as const)(
+  "an unmounted recovery cannot replace a newer registration or restart it (%s)",
+  async (outcome) => {
+    vi.useFakeTimers();
+    const initial = { ...challenge(), status: "sending" as const };
+    let release!: (value: unknown) => void;
+    mock.status.mockReset().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    const restart = vi.fn();
+    const view = render(
+      createElement(RegistrationOtpStep, { initial, onRestart: restart }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(mock.status).toHaveBeenCalledTimes(1);
+    view.unmount();
+    const next = {
+      email: "new-account@example.test",
+      challengeId: "00000000-0000-4000-8000-000000000002",
+    };
+    sessionStorage.setItem(
+      "gheverhan.registration.otp.v1",
+      JSON.stringify(next),
+    );
+    await act(async () => {
+      release(
+        outcome === "active"
+          ? { ok: true, ...initial, status: "active" }
+          : {
+              ok: false,
+              errorCode: "CHALLENGE_MISSING",
+              error: "Sesi pendaftaran tidak tersedia.",
+            },
+      );
+    });
+    expect(
+      JSON.parse(sessionStorage.getItem("gheverhan.registration.otp.v1")!),
+    ).toEqual(next);
+    expect(restart).not.toHaveBeenCalled();
+    expect(mock.replace).not.toHaveBeenCalled();
+  },
+);
+it("a resend response arriving after navigation cannot overwrite another account's challenge", async () => {
+  let release!: (value: unknown) => void;
+  mock.resend.mockReset().mockReturnValue(
+    new Promise((resolve) => {
+      release = resolve;
+    }),
+  );
+  const restart = vi.fn();
+  const view = render(
+    createElement(RegistrationOtpStep, {
+      initial: { ...challenge(), resendAvailableAt: Date.now() - 1 },
+      onRestart: restart,
+    }),
+  );
+  fireEvent.click(screen.getByTestId("registration-resend"));
+  await waitFor(() => expect(mock.resend).toHaveBeenCalledTimes(1));
+  view.unmount();
+  const next = {
+    email: "other-account@example.test",
+    challengeId: "00000000-0000-4000-8000-000000000002",
+  };
+  sessionStorage.setItem("gheverhan.registration.otp.v1", JSON.stringify(next));
+  await act(async () => {
+    release({ ok: true, ...challenge() });
+  });
+  expect(
+    JSON.parse(sessionStorage.getItem("gheverhan.registration.otp.v1")!),
+  ).toEqual(next);
+  expect(restart).not.toHaveBeenCalled();
+});

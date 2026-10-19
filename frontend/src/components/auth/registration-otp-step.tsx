@@ -48,6 +48,7 @@ export function RegistrationOtpStep({
     null,
   );
   const busy = useRef(false);
+  const mounted = useRef(false);
   const [verified, setVerified] = useState(false);
   const [now, setNow] = useState(initial.serverNow);
   const offset = useRef(initial.serverNow - Date.now());
@@ -56,12 +57,19 @@ export function RegistrationOtpStep({
   const autoSubmitted = useRef("");
   const [resendRecoveries, setResendRecoveries] = useState(0);
   useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  useEffect(() => {
     offset.current = challenge.serverNow - Date.now();
     setNow(challenge.serverNow);
     const timer = setInterval(() => setNow(Date.now() + offset.current), 1000);
     return () => clearInterval(timer);
   }, [challenge.serverNow]);
   const adopt = useCallback((value: unknown) => {
+    if (!mounted.current) return false;
     const next = asChallenge(value);
     if (!next) return false;
     setChallenge(next);
@@ -74,6 +82,7 @@ export function RegistrationOtpStep({
         undefined,
         registrationFields(initial),
       );
+      if (!mounted.current) return false;
       if (adopt(result)) {
         setFeedback({
           message:
@@ -91,6 +100,7 @@ export function RegistrationOtpStep({
     } catch {
       /* Preserve the opaque challenge when a response is lost. */
     }
+    if (!mounted.current) return false;
     setFeedback({
       error:
         "Status kode belum dapat diperiksa. Coba lagi atau kirim ulang setelah jeda.",
@@ -116,7 +126,7 @@ export function RegistrationOtpStep({
           await recover();
         } finally {
           busy.current = false;
-          setPending(null);
+          if (mounted.current) setPending(null);
         }
       },
       1000 * 2 ** resendRecoveries,
@@ -124,7 +134,7 @@ export function RegistrationOtpStep({
     return () => clearTimeout(timer);
   }, [challenge.status, pending, recover, verified, resendRecoveries]);
   useEffect(() => {
-    if (!verified) return;
+    if (!verified || !mounted.current) return;
     clearRegistration();
     const reduced = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
@@ -164,6 +174,7 @@ export function RegistrationOtpStep({
     try {
       const data = new FormData(event.currentTarget);
       const result = await verifyRegistrationAction(undefined, data);
+      if (!mounted.current) return;
       if (result.ok && "verified" in result && result.verified === true) {
         setFeedback({ message: "Email berhasil diverifikasi." });
         setVerified(true);
@@ -181,13 +192,14 @@ export function RegistrationOtpStep({
           });
       }
     } catch {
+      if (!mounted.current) return;
       setFeedback({
         error:
           "Respons verifikasi belum diterima. Periksa koneksi dan coba lagi.",
       });
     } finally {
       busy.current = false;
-      setPending(null);
+      if (mounted.current) setPending(null);
     }
   };
   const resend = async (event: FormEvent<HTMLFormElement>) => {
@@ -201,6 +213,7 @@ export function RegistrationOtpStep({
         undefined,
         new FormData(event.currentTarget),
       );
+      if (!mounted.current) return;
       if (result.ok && adopt(result)) {
         setCode("");
         autoSubmitted.current = "";
@@ -224,6 +237,7 @@ export function RegistrationOtpStep({
           );
       }
     } catch {
+      if (!mounted.current) return;
       // Never invent another ten minutes after a lost response. Reconcile server metadata.
       setCode("");
       autoSubmitted.current = "";
@@ -233,7 +247,7 @@ export function RegistrationOtpStep({
       await recover();
     } finally {
       busy.current = false;
-      setPending(null);
+      if (mounted.current) setPending(null);
     }
   };
   const visualState = verified
@@ -375,7 +389,7 @@ export function RegistrationOtpStep({
                   await recover();
                 } finally {
                   busy.current = false;
-                  setPending(null);
+                  if (mounted.current) setPending(null);
                 }
               }}
             >

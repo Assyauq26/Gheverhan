@@ -17,6 +17,8 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 8. Review berikutnya membuktikan recovery otomatis dapat bertumpang tindih dengan resend dan menimpa metadata baru memakai respons status lama. Seluruh status read dan mutation UI sekarang berbagi mutex `busy`/`pending`; retry dihitung saat mulai dan dijadwalkan berikutnya sesudah request selesai. Deferred-response regression gagal sebelum fix, lalu membuktikan resend tidak bisa dipaksa saat status masih in-flight, recovery berakhir, resend mengaktifkan kode baru, dan snapshot lama tidak menimpa state aktif.
 
+9. Tiga deferred-response tests tambahan mereproduksi respons dari halaman OTP yang sudah ditutup menimpa challenge akun baru atau memanggil restart lama. Guard lifecycle sekarang mengabaikan hasil status/verify/resend setelah unmount sebelum menyentuh state, storage, atau callback. Respons jaringan tidak dapat menghidupkan lagi metadata pendaftaran lama ketika pengguna sudah berpindah flow.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.
@@ -46,7 +48,7 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 | --- | --- |
 | Node.js 22, locked install, Prisma generate dan fresh deploy tujuh migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
-| Unit | 258 PASS |
+| Unit | 261 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
 | Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending | 8 PASS |

@@ -164,7 +164,16 @@ jobs:
             echo 'BLOCKED: Prisma status is not the expected pending-only state'
             exit 1
           fi
-          pending_names="$(sed -n '/^Following migrations\? have not yet been applied:/,/^To apply/p' "${RUNNER_TEMP}/prisma-migration-status.log" | grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*
+          pending_names="$(grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*$' "${RUNNER_TEMP}/prisma-migration-status.log" | tr -d '[:space:]' || true)"
+          if [ "$pending_names" != '20261019054922_registration_identity_lookup_indexes' ]; then
+            echo 'BLOCKED: Prisma pending set diverges from exactly one approved migration'
+            exit 1
+          fi
+          if grep -Eiq '(^error|failed|P[0-9]{4})' "${RUNNER_TEMP}/prisma-migration-status.log"; then
+            echo 'BLOCKED: Prisma status also contains an error'
+            exit 1
+          fi
+          echo 'PASS: Prisma reports exactly the one approved pending migration'
 
       - name: Deploy only approved migration
         env:
@@ -180,7 +189,7 @@ jobs:
           const fs = require('node:fs');
           const crypto = require('node:crypto');
           const u = new URL(process.env.DIRECT_URL);
-          const names = fs.readdirSync('prisma/migrations').filter(x => /^\\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          const names = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
           const expected = names.slice(0,7).map(name => {
             const sha = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/'+name+'/migration.sql')).digest('hex');
             return "('"+name+"','"+sha+"')";
@@ -206,7 +215,7 @@ jobs:
               PGSSLMODE:'verify-full',PGSSLROOTCERT:process.env.PGSSLROOTCERT,PGCONNECT_TIMEOUT:'10'},
             input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
           });
-          if (p.error || p.status!==0 || !p.stdout.split('\\n').some(x=>x.trim()==='PASS')) {
+          if (p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
             console.error('BLOCKED: immediate pre-deploy migration ledger/operational recheck failed'); process.exit(1);
           }
           console.log('PASS: immediate pre-deploy exact 7/7 ledger and operational recheck');

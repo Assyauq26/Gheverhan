@@ -354,3 +354,51 @@ it("a stranded sending reservation can resend after the server cooldown while ve
   );
   expect(mock.verify).not.toHaveBeenCalled();
 });
+
+it("automatic status recovery serializes with resend so an old sending snapshot cannot overwrite activation", async () => {
+  vi.useFakeTimers();
+  const initial = {
+    ...challenge(),
+    status: "sending" as const,
+    resendAvailableAt: Date.now() - 1,
+  };
+  let release!: (value: unknown) => void;
+  mock.status.mockReset().mockReturnValue(
+    new Promise((resolve) => {
+      release = resolve;
+    }),
+  );
+  mock.resend.mockResolvedValue({ ok: true, ...challenge() });
+  render(createElement(RegistrationOtpStep, { initial, onRestart: vi.fn() }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(1);
+  const resendButton = screen.getByTestId(
+    "registration-resend",
+  ) as HTMLButtonElement;
+  expect(resendButton.disabled).toBe(true);
+  await act(async () => {
+    fireEvent.submit(resendButton.closest("form")!);
+  });
+  expect(mock.resend).not.toHaveBeenCalled();
+  expect(mock.verify).not.toHaveBeenCalled();
+  await act(async () => {
+    release({ ok: true, ...initial, serverNow: Date.now() });
+  });
+  expect(resendButton.disabled).toBe(false);
+  await act(async () => {
+    fireEvent.click(resendButton);
+  });
+  expect(mock.resend).toHaveBeenCalledTimes(1);
+  expect(
+    (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+  ).toBe(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(15_000);
+  });
+  expect(mock.status).toHaveBeenCalledTimes(1);
+  expect(
+    (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+  ).toBe(false);
+});

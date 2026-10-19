@@ -105,19 +105,23 @@ export function RegistrationOtpStep({
       resendRecoveries >= 4
     )
       return;
-    let cancelled = false;
     const timer = setTimeout(
       async () => {
-        await recover();
-        // Failed status reads must also advance the bounded retry schedule.
-        if (!cancelled) setResendRecoveries((count) => count + 1);
+        // All status reads and mutations share one lock: a stale read cannot supersede resend.
+        if (busy.current) return;
+        busy.current = true;
+        setPending("status");
+        setResendRecoveries((count) => count + 1);
+        try {
+          await recover();
+        } finally {
+          busy.current = false;
+          setPending(null);
+        }
       },
       1000 * 2 ** resendRecoveries,
     );
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [challenge.status, pending, recover, verified, resendRecoveries]);
   useEffect(() => {
     if (!verified) return;

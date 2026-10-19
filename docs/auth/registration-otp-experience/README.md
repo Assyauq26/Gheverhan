@@ -11,9 +11,11 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 5. Regression tambahan membuktikan SQL POSIX whitespace pada locale PostgreSQL tidak identik dengan JavaScript `trim()/\s`: phone legacy berisi non-breaking space sempat lolos. Lookup sekarang memakai himpunan whitespace ECMAScript eksplisit dengan `translate`/`btrim`, termasuk NBSP/BOM; test legacy Unicode gagal sebelum perbaikan dan lulus sesudahnya.
 
-6. Review Codex menemukan dua P2: ref retry tidak memicu penjadwalan ulang setelah status `sending` gagal dibaca, dan pesan restart selalu mengalahkan hasil submit terbaru. Tiga regression tests mereproduksi kedua temuan sebelum perbaikan; satu test tambahan memastikan metadata `sending` baru tidak mereset budget empat pemeriksaan otomatis. Retry kini berupa state yang bergerak setelah setiap respons gagal/sukses (maksimum empat, lalu fallback manual), dan feedback action terbaru menggantikan pesan/link recovery lama.
+6. Review Codex menemukan dua P2: ref retry tidak memicu penjadwalan ulang setelah status `sending` gagal dibaca, dan pesan restart selalu mengalahkan hasil submit terbaru. Tiga regression tests mereproduksi kedua temuan sebelum perbaikan; satu test tambahan memastikan metadata `sending` baru tidak mereset budget empat pemeriksaan otomatis. Retry kini berupa state yang bergerak saat pemeriksaan dimulai, baik untuk respons gagal maupun sukses (maksimum empat, lalu fallback manual), dan feedback action terbaru menggantikan pesan/link recovery lama.
 
 7. Review lanjutan menemukan UI melarang resend pada reservation `sending` yang tertinggal setelah worker berhenti, walaupun cooldown sudah berlalu. Tombol resend sekarang mengikuti cooldown server tanpa memblokir status tersebut; verifikasi tetap terkunci hingga aktivasi. Unit test gagal sebelum perbaikan lalu lulus sesudahnya, dan PostgreSQL test membuktikan CAS replacement reservation serta pembuatan tepat satu akun setelah kode baru valid.
+
+8. Review berikutnya membuktikan recovery otomatis dapat bertumpang tindih dengan resend dan menimpa metadata baru memakai respons status lama. Seluruh status read dan mutation UI sekarang berbagi mutex `busy`/`pending`; retry dihitung saat mulai dan dijadwalkan berikutnya sesudah request selesai. Deferred-response regression gagal sebelum fix, lalu membuktikan resend tidak bisa dipaksa saat status masih in-flight, recovery berakhir, resend mengaktifkan kode baru, dan snapshot lama tidak menimpa state aktif.
 
 ## Backend dan batas keamanan
 
@@ -44,7 +46,7 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 | --- | --- |
 | Node.js 22, locked install, Prisma generate dan fresh deploy tujuh migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
-| Unit | 257 PASS |
+| Unit | 258 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
 | Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending | 8 PASS |

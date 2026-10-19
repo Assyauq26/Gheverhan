@@ -39,14 +39,6 @@ jobs:
       R21_EXPECTED_SUPABASE_REF: bztprltkevacidcpjaam
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      CRON_SECRET: ${{ secrets.CRON_SECRET }}
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      PASSWORD_RESET_FROM: ${{ secrets.PASSWORD_RESET_FROM }}
-      PASSWORD_RESET_BASE_URL: ${{ secrets.PASSWORD_RESET_BASE_URL }}
-      MAINTENANCE_MODE: ${{ secrets.MAINTENANCE_MODE }}
       OTP_MIGRATION_APPROVED_SHA: ${{ secrets.OTP_MIGRATION_APPROVED_SHA }}
     steps:
       - name: Check out immutable reviewed PR 70 commit only
@@ -98,8 +90,6 @@ jobs:
           }
           if (assertTarget('DATABASE_URL') !== assertTarget('DIRECT_URL'))
             throw new Error('Database bindings differ');
-          if ((process.env.JWT_SECRET || '').length < 16)
-            throw new Error('JWT_SECRET is missing or invalid');
           const db = new PrismaClient();
           (async () => {
             try {
@@ -151,8 +141,35 @@ jobs:
         if: ${{ inputs.operation == 'apply' }}
         run: npm run prisma:deploy
 
-      - name: Validate seven-migration post-state and release preflight
+      - name: Verify applied migration and schema with Prisma and read-only SQL
         if: ${{ inputs.operation == 'apply' }}
         run: |
           npx prisma migrate status
-          npm run release:preflight
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const { readFileSync, readdirSync } = require('node:fs');
+          const { createHash } = require('node:crypto');
+          const db = new PrismaClient();
+          (async () => {
+            try {
+              const rows = await db.$queryRawUnsafe('SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations');
+              const names = readdirSync('prisma/migrations').filter(n => /^\\d{14}_/.test(n)).sort();
+              if (names.length !== 7 || rows.length !== 7 || rows.some(x => !x.finished_at || x.rolled_back_at))
+                throw new Error('Not exactly seven successful migrations');
+              for (const name of names) {
+                const row = rows.find(x => x.migration_name === name);
+                const checksum = createHash('sha256').update(readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+                if (!row || row.checksum !== checksum) throw new Error('Checksum mismatch: ' + name);
+              }
+              const state = await db.$queryRawUnsafe(`
+                SELECT to_regclass('public."PendingRegistration"') IS NOT NULL AS pending,
+                EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema='public' AND table_name='User' AND column_name='emailVerifiedAt') AS verified`);
+              if (!state[0].pending || !state[0].verified)
+                throw new Error('Required OTP schema not present after migration');
+              console.log('PASS: seven migration checksums and OTP schema');
+            } finally {
+              await db.$disconnect();
+            }
+          })().catch(e => { console.error('BLOCKED:', e.message); process.exitCode = 1; });
+          NODE

@@ -23,11 +23,15 @@ const evidence = process.env.SPRINT1_ARTIFACT_DIR || "/tmp/gheverhan-auth-ui";
 const checkpoints: string[] = [],
   errors: string[] = [];
 const geometry: unknown[] = [];
+const expectedTransportErrors: string[] = [];
+let injectingResendFailure = false;
 const phoneSeed = String(randomInt(1_000_000, 10_000_000));
 const dummyPhone = (index: number) => "0812" + phoneSeed + index;
 let failMail = false;
 const capturedOtp = new Map<string, string>();
+const mailCounts = new Map<string, number>();
 const viewportSizes = [
+  [320, 740],
   [360, 800],
   [375, 812],
   [390, 844],
@@ -59,6 +63,7 @@ async function main() {
     const code = body.text.match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
     assert.ok(code, "OTP sent only to isolated local sink");
     capturedOtp.set(body.to[0], code);
+    mailCounts.set(body.to[0], (mailCounts.get(body.to[0]) || 0) + 1);
     res.writeHead(failMail ? 503 : 200, { "Content-Type": "application/json" });
     res.end("{}");
   });
@@ -126,7 +131,14 @@ async function main() {
     page.setDefaultNavigationTimeout(20000);
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => {
-      if (m.type() === "error") errors.push(m.text());
+      if (m.type() === "error") {
+        if (
+          injectingResendFailure &&
+          /ERR_FAILED|Failed to fetch|Failed to load resource/.test(m.text())
+        )
+          expectedTransportErrors.push(m.text());
+        else errors.push(m.text());
+      }
     });
     async function check(label: string, fn: () => Promise<void>) {
       await fn();
@@ -134,7 +146,7 @@ async function main() {
       console.log("PASS", label);
     }
     await check(
-      "all eight viewports: geometry, labels, native keyboard and logo order",
+      "all nine viewports: geometry, labels, native keyboard and logo order",
       async () => {
         for (const [width, height] of viewportSizes) {
           await page.setViewportSize({ width, height });
@@ -600,42 +612,175 @@ async function main() {
           .getByTestId("verify-registration-form")
           .locator('input[name="challengeId"]');
         await expect(hidden).toHaveValue(challenge.id);
+        // A forged generation must recover to the fresh form, never create an account.
+        await page
+          .getByTestId("verify-registration-form")
+          .evaluate((el, replacement: string) => {
+            el.addEventListener(
+              "submit",
+              () => {
+                el.querySelector<HTMLInputElement>(
+                  'input[name="challengeId"]',
+                )!.value = replacement;
+              },
+              { capture: true, once: true },
+            );
+          }, randomUUID());
         await page.getByTestId("register-otp").fill(code);
-        await hidden.evaluate((el: HTMLInputElement, replacement: string) => {
-          el.value = replacement;
-        }, randomUUID());
-        await page.getByTestId("auth-submit").click();
-        await expect(
-          page.getByTestId("verify-registration-error"),
-        ).toContainText("Sesi pendaftaran");
+        await expect(page.getByTestId("register-form")).toBeVisible();
+        await expect(page.getByTestId("register-error")).toContainText(
+          "Sesi pendaftaran",
+        );
         assert.equal(await db.user.count({ where: { email } }), 0);
-        await hidden.evaluate((el: HTMLInputElement, original: string) => {
-          el.value = original;
-        }, challenge.id);
+        // Restore the genuine server-issued opaque identifier to test reloading the same generation.
+        await page.evaluate(
+          ({ email, id }) =>
+            sessionStorage.setItem(
+              "gheverhan.registration.otp.v1",
+              JSON.stringify({ email, challengeId: id }),
+            ),
+          { email, id: challenge.id },
+        );
+        await page.reload();
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
         const resend = page.getByTestId("registration-resend");
         await resend.evaluate((el: HTMLButtonElement) => {
           el.disabled = false;
         });
         await resend.click();
         await expect(
-          page.getByTestId("registration-resend-error"),
+          page.getByTestId("verify-registration-error"),
         ).toContainText("60 detik");
         assert.equal(capturedOtp.get(email), code);
-        await page
-          .getByTestId("register-otp")
-          .fill(code === "000000" ? "111111" : "000000");
-        await page.getByTestId("auth-submit").click();
+        const otp = page.getByTestId("register-otp");
+        await expect(
+          page.getByTestId("otp-slots").locator(".auth-otp-slot"),
+        ).toHaveCount(6);
+        await otp.fill("12345");
+        await expect(page.getByTestId("auth-submit")).toBeDisabled();
+        await otp.press("ArrowLeft");
+        await otp.press("Backspace");
+        await expect(otp).toHaveValue("1235");
+        await otp.press("Delete");
+        await expect(otp).toHaveValue("123");
+        await otp.press("ControlOrMeta+A");
+        await otp.fill("");
+        let verifyPosts = 0;
+        await page.route("**/register", async (route) => {
+          if (route.request().method() === "POST") {
+            verifyPosts++;
+            await new Promise((r) => setTimeout(r, 350));
+          }
+          await route.continue();
+        });
+        await otp.evaluate(
+          (el: HTMLInputElement, wrong: string) => {
+            const clipboard = new DataTransfer();
+            clipboard.setData("text/plain", wrong);
+            el.dispatchEvent(
+              new ClipboardEvent("paste", {
+                clipboardData: clipboard,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          },
+          code === "000000" ? "111111" : "000000",
+        );
+        await expect(page.getByTestId("otp-slots")).toHaveAttribute(
+          "data-state",
+          "verifying",
+        );
+        await expect(page.getByTestId("auth-submit")).toBeDisabled();
+        assert.notEqual(
+          await page.getByTestId("otp-slots").getAttribute("data-state"),
+          "success",
+        );
         await expect(
           page.getByTestId("verify-registration-error"),
         ).toContainText("salah");
+        await page.unroute("**/register");
+        assert.equal(verifyPosts, 1);
+        await expect(page.getByTestId("otp-slots")).toHaveAttribute(
+          "data-state",
+          "error",
+        );
+        assert.equal(
+          await page
+            .locator(".auth-otp-slots")
+            .evaluate((el) => getComputedStyle(el).animationName),
+          "auth-otp-shake",
+        );
+        assert.deepEqual(
+          await page
+            .locator(".auth-otp-slot")
+            .evaluateAll((elements) =>
+              elements.map((el) => getComputedStyle(el).borderTopColor),
+            ),
+          Array(6).fill("rgb(180, 35, 24)"),
+        );
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await expect(page.locator(".auth-otp-slots")).toHaveCSS(
+          "animation-name",
+          "none",
+        );
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        for (const width of [390, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.screenshot({
+            path: path.join(evidence, `otp-error-${width}.png`),
+            fullPage: true,
+            style: ".auth-otp-slot { -webkit-text-security: disc; }",
+          });
+        }
         assert.equal(await db.user.count({ where: { email } }), 0);
         await page.reload();
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        await page.getByTestId("register-otp").fill(code);
-        await page.getByTestId("auth-submit").click();
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        await page.route("**/account*", async (route) => {
+          await new Promise((r) => setTimeout(r, 400));
+          await route.continue();
+        });
+        await page
+          .getByTestId("register-otp")
+          .evaluate((el: HTMLInputElement, value: string) => {
+            Object.getOwnPropertyDescriptor(
+              HTMLInputElement.prototype,
+              "value",
+            )!.set!.call(el, value);
+            el.dispatchEvent(
+              new InputEvent("input", {
+                bubbles: true,
+                inputType: "insertReplacementText",
+                data: value,
+              }),
+            );
+          }, code);
+        await expect(page.getByTestId("otp-slots")).toHaveAttribute(
+          "data-state",
+          "success",
+        );
+        await expect(
+          page.getByText("Email berhasil diverifikasi."),
+        ).toBeVisible();
+        await page.screenshot({
+          path: path.join(evidence, "otp-success-1440.png"),
+          fullPage: true,
+          style: ".auth-otp-slot { -webkit-text-security: disc; }",
+        });
         await page.waitForURL(base + "/account");
+        await page.unrouteAll({ behavior: "wait" });
         // The authenticated account page confirms success before discarding the OTP challenge.
-        await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"))).toBeNull();
+        await expect
+          .poll(() =>
+            page.evaluate(() =>
+              sessionStorage.getItem("gheverhan.registration.otp.v1"),
+            ),
+          )
+          .toBeNull();
         assert.equal(await db.user.count({ where: { email } }), 1);
         const created = await db.user.findUniqueOrThrow({ where: { email } });
         assert.ok(created.emailVerifiedAt);
@@ -658,13 +803,28 @@ async function main() {
         await page.getByTestId("register-confirm-password").fill(password);
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        const initialChallenge = await db.pendingRegistration.findUniqueOrThrow({ where: { email: retryEmail } });
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        const initialChallenge = await db.pendingRegistration.findUniqueOrThrow(
+          { where: { email: retryEmail } },
+        );
         await page.reload();
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        await expect(page.getByTestId("verify-registration-form").locator('input[name="challengeId"]')).toHaveValue(initialChallenge.id);
-        const savedState = await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"));
-        assert.ok(savedState && JSON.parse(savedState).challengeId === initialChallenge.id);
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        await expect(
+          page
+            .getByTestId("verify-registration-form")
+            .locator('input[name="challengeId"]'),
+        ).toHaveValue(initialChallenge.id);
+        const savedState = await page.evaluate(() =>
+          sessionStorage.getItem("gheverhan.registration.otp.v1"),
+        );
+        assert.ok(
+          savedState &&
+            JSON.parse(savedState).challengeId === initialChallenge.id,
+        );
         assert.equal(savedState.includes("password"), false);
         await page.evaluate(() => {
           const k = "gheverhan.registration.otp.v1";
@@ -672,27 +832,72 @@ async function main() {
           saved.expiresAt = Date.now() + 1200;
           sessionStorage.setItem(k, JSON.stringify(saved));
         });
-        await db.pendingRegistration.update({ where: { email: retryEmail }, data: { sentAt: new Date(Date.now() - 70_000) } });
+        await db.pendingRegistration.update({
+          where: { email: retryEmail },
+          data: {
+            sentAt: new Date(Date.now() - 70_000),
+            expiresAt: new Date(Date.now() + 25_000),
+          },
+        });
+        await page.reload();
+        await expect(page.getByTestId("otp-expiry")).toContainText(/00:2[0-5]/);
         const successfulResend = page.getByTestId("registration-resend");
-        await successfulResend.evaluate((el: HTMLButtonElement) => { el.disabled = false; });
+        await successfulResend.evaluate((el: HTMLButtonElement) => {
+          el.disabled = false;
+        });
         await successfulResend.click();
-        await expect(page.getByText("Kode OTP baru telah dikirim ke email Anda.")).toBeVisible();
+        await expect(
+          page.getByText("Kode OTP baru telah dikirim ke email Anda."),
+        ).toBeVisible();
         await page.waitForTimeout(1500);
         await page.reload();
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        await expect(page.getByTestId("verify-registration-form").locator('input[name="challengeId"]')).toHaveValue(initialChallenge.id);
-        const restored = await page.evaluate(() => JSON.parse(sessionStorage.getItem("gheverhan.registration.otp.v1") || "{}").expiresAt);
-        assert.ok(typeof restored === "number" && restored > Date.now());
-        await db.pendingRegistration.update({ where: { email: retryEmail }, data: { sentAt: new Date(Date.now() - 70_000) } });
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        await expect(
+          page
+            .getByTestId("verify-registration-form")
+            .locator('input[name="challengeId"]'),
+        ).toHaveValue(initialChallenge.id);
+        const restored = await page.evaluate(() =>
+          JSON.parse(
+            sessionStorage.getItem("gheverhan.registration.otp.v1") || "{}",
+          ),
+        );
+        assert.deepEqual(Object.keys(restored).sort(), [
+          "challengeId",
+          "email",
+        ]);
+        await expect(page.getByTestId("otp-expiry")).toContainText(
+          /(?:10:00|09:5[0-9])/,
+        );
+        await db.pendingRegistration.update({
+          where: { email: retryEmail },
+          data: { sentAt: new Date(Date.now() - 70_000) },
+        });
         failMail = true;
         try {
           const resend = page.getByTestId("registration-resend");
-          await resend.evaluate((el: HTMLButtonElement) => { el.disabled = false; });
+          await resend.evaluate((el: HTMLButtonElement) => {
+            el.disabled = false;
+          });
           await resend.click();
           await expect(page.getByTestId("register-form")).toBeVisible();
-          await expect(page.getByTestId("register-error")).toContainText("Pengiriman ulang OTP gagal");
-          assert.equal(await db.pendingRegistration.count({ where: { email: retryEmail } }), 0);
-          assert.equal(await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1")), null);
+          await expect(page.getByTestId("register-error")).toContainText(
+            "Pengiriman ulang OTP gagal",
+          );
+          assert.equal(
+            await db.pendingRegistration.count({
+              where: { email: retryEmail },
+            }),
+            0,
+          );
+          assert.equal(
+            await page.evaluate(() =>
+              sessionStorage.getItem("gheverhan.registration.otp.v1"),
+            ),
+            null,
+          );
         } finally {
           failMail = false;
         }
@@ -706,15 +911,27 @@ async function main() {
         await page.getByTestId("register-confirm-password").fill(password);
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        assert.equal(await db.pendingRegistration.count({ where: { email: freshEmail } }), 1);
-        await page.getByRole("button", { name: "Ubah data pendaftaran" }).click();
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        assert.equal(
+          await db.pendingRegistration.count({ where: { email: freshEmail } }),
+          1,
+        );
+        await page
+          .getByRole("button", { name: "Ubah data pendaftaran" })
+          .click();
         await expect(page.getByTestId("register-form")).toBeVisible();
-        assert.equal(await page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1")), null);
+        assert.equal(
+          await page.evaluate(() =>
+            sessionStorage.getItem("gheverhan.registration.otp.v1"),
+          ),
+          null,
+        );
       },
     );
     await check(
-      "duplicate contact is not exposed before inbox proof and cannot overwrite an account",
+      "duplicate contact is rejected before pending mutation or provider delivery",
       async () => {
         await page.goto(base + "/register");
         await page.getByTestId("register-name").fill("Dummy Kedua");
@@ -724,13 +941,212 @@ async function main() {
         await page.getByTestId("register-phone").fill(dummyPhone(4));
         await page.getByTestId("register-terms").check();
         await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("verify-registration-form")).toBeVisible();
-        await page.getByTestId("register-otp").fill(capturedOtp.get(email)!);
-        await page.getByTestId("auth-submit").click();
-        await expect(page.getByTestId("verify-registration-error")).toHaveText(
-          "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
+        await expect(page.getByTestId("register-error")).toHaveText(
+          "Email atau nomor HP sudah terdaftar. Silakan masuk atau reset password.",
         );
+        await expect(
+          page
+            .getByRole("navigation", { name: "Pemulihan akun" })
+            .getByRole("link", { name: "Masuk", exact: true }),
+        ).toHaveAttribute("href", "/login");
+        await expect(
+          page
+            .getByRole("navigation", { name: "Pemulihan akun" })
+            .getByRole("link", { name: "Lupa password", exact: true }),
+        ).toHaveAttribute("href", "/forgot-password");
+        assert.equal(
+          await db.pendingRegistration.count({ where: { email } }),
+          0,
+        );
+        assert.equal(mailCounts.get(email), 1);
         assert.equal(await db.user.count({ where: { email } }), 1);
+      },
+    );
+    await check(
+      "REST existing email/phone/both cannot call mail or create pending state",
+      async () => {
+        const api = await browser!.newContext();
+        try {
+          for (let n = 0; n < 3; n++) {
+            const fixtureEmail = `existing-${randomUUID()}@example.test`;
+            const fixturePhone = dummyPhone(20 + n);
+            await db.user.create({
+              data: {
+                name: "Existing dummy",
+                email: fixtureEmail,
+                phone: fixturePhone.slice(0, 4) + " " + fixturePhone.slice(4),
+                passwordHash: "isolated-dummy-hash",
+              },
+            });
+            const proposedEmail =
+              n === 1
+                ? `unused-${randomUUID()}@example.test`
+                : fixtureEmail.toUpperCase();
+            const proposedPhone =
+              n === 0 ? dummyPhone(40 + n) : "+62" + fixturePhone.slice(1);
+            const before = await db.pendingRegistration.count();
+            const response = await api.request.post(
+              base + "/api/v1/auth/register",
+              {
+                headers: { Origin: base },
+                data: {
+                  name: "Dummy conflict",
+                  email: proposedEmail,
+                  phone: proposedPhone,
+                  password,
+                  confirmPassword: password,
+                  terms: true,
+                },
+              },
+            );
+            assert.equal(response.status(), 409);
+            assert.equal(
+              (await response.json()).error.message,
+              "Email atau nomor HP sudah terdaftar. Silakan masuk atau reset password.",
+            );
+            assert.equal(await db.pendingRegistration.count(), before);
+            assert.equal(mailCounts.get(proposedEmail.toLowerCase()) || 0, 0);
+          }
+        } finally {
+          await api.close();
+        }
+      },
+    );
+    await check(
+      "expired UI and interrupted resend reconcile server timing; deleted challenge restarts safely",
+      async () => {
+        const recoveryEmail = `transport-${randomUUID()}@example.test`;
+        await page.goto(base + "/register");
+        await page
+          .getByTestId("register-name")
+          .fill("Dummy Transport Recovery");
+        await page.getByTestId("register-email").fill(recoveryEmail);
+        await page.getByTestId("register-phone").fill(dummyPhone(8));
+        await page.getByTestId("register-password").fill(password);
+        await page.getByTestId("register-confirm-password").fill(password);
+        await page.getByTestId("register-terms").check();
+        await page.getByTestId("auth-submit").click();
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        const beforeCode = capturedOtp.get(recoveryEmail)!;
+        await db.pendingRegistration.update({
+          where: { email: recoveryEmail },
+          data: {
+            expiresAt: new Date(Date.now() - 1000),
+            sentAt: new Date(Date.now() - 70_000),
+          },
+        });
+        await page.reload();
+        await expect(page.getByTestId("otp-expiry")).toContainText("00:00");
+        await expect(page.getByTestId("auth-submit")).toBeDisabled();
+        await expect(page.getByTestId("verify-registration-form").getByRole("alert")).toContainText("kedaluwarsa");
+        let dropped = false;
+        injectingResendFailure = true;
+        await page.route("**/register", async (route) => {
+          if (!dropped && route.request().method() === "POST") {
+            dropped = true;
+            await route.fetch();
+            await route.abort("failed");
+          } else await route.continue();
+        });
+        try {
+          await page.getByTestId("registration-resend").click();
+          await expect(
+            page.getByText(
+              "Status kode sudah diperbarui. Gunakan kode terbaru dari email Anda.",
+            ),
+          ).toBeVisible();
+          assert.equal(dropped, true);
+          assert.notEqual(capturedOtp.get(recoveryEmail), beforeCode);
+          await expect(page.getByTestId("otp-expiry")).toContainText(
+            /(?:10:00|09:5[0-9])/,
+          );
+          await expect(page.getByTestId("register-otp")).toHaveValue("");
+          assert.equal(
+            await db.user.count({ where: { email: recoveryEmail } }),
+            0,
+          );
+        } finally {
+          await page.unrouteAll({ behavior: "wait" });
+          injectingResendFailure = false;
+        }
+        await db.pendingRegistration.delete({
+          where: { email: recoveryEmail },
+        });
+        await page.reload();
+        await expect(page.getByTestId("register-form")).toBeVisible();
+        await expect(page.getByTestId("register-error")).toContainText(
+          "Sesi pendaftaran",
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            sessionStorage.getItem("gheverhan.registration.otp.v1"),
+          ),
+          null,
+        );
+      },
+    );
+    await check(
+      "five rejected codes lock verification until a server-approved resend",
+      async () => {
+        const limitedEmail = `attempts-${randomUUID()}@example.test`;
+        await page.goto(base + "/register");
+        await page.getByTestId("register-name").fill("Dummy Attempts");
+        await page.getByTestId("register-email").fill(limitedEmail);
+        await page.getByTestId("register-phone").fill(dummyPhone(9));
+        await page.getByTestId("register-password").fill(password);
+        await page.getByTestId("register-confirm-password").fill(password);
+        await page.getByTestId("register-terms").check();
+        await page.getByTestId("auth-submit").click();
+        await expect(
+          page.getByTestId("verify-registration-form"),
+        ).toBeVisible();
+        const pending = await db.pendingRegistration.findUniqueOrThrow({
+          where: { email: limitedEmail },
+        });
+        const wrong =
+          capturedOtp.get(limitedEmail) === "000000" ? "111111" : "000000";
+        for (let n = 0; n < 5; n++) {
+          const response = await context.request.post(
+            base + "/api/v1/auth/register/verify",
+            {
+              headers: { Origin: base },
+              data: {
+                email: limitedEmail,
+                challengeId: pending.id,
+                otp: wrong,
+              },
+            },
+          );
+          assert.equal(response.status(), 400);
+        }
+        await db.pendingRegistration.update({
+          where: { id: pending.id },
+          data: { sentAt: new Date(Date.now() - 70_000) },
+        });
+        await page.reload();
+        await expect(page.getByTestId("verify-registration-form").getByRole("alert")).toContainText("Batas percobaan");
+        await page
+          .getByTestId("register-otp")
+          .fill(capturedOtp.get(limitedEmail)!);
+        await expect(page.getByTestId("auth-submit")).toBeDisabled();
+        assert.equal(
+          await db.user.count({ where: { email: limitedEmail } }),
+          0,
+        );
+        await page.getByTestId("registration-resend").click();
+        await expect(
+          page.getByText("Kode OTP baru telah dikirim ke email Anda."),
+        ).toBeVisible();
+        await page
+          .getByTestId("register-otp")
+          .fill(capturedOtp.get(limitedEmail)!);
+        await page.waitForURL(base + "/account");
+        assert.equal(
+          await db.user.count({ where: { email: limitedEmail } }),
+          1,
+        );
       },
     );
     await check("logout, invalid login and safe login redirect", async () => {
@@ -744,17 +1160,28 @@ async function main() {
       await expect(page.getByTestId("login-error")).toContainText("salah");
       // Pending registration from a different user must not leak after login
       // redirects to /cart instead of /account.
-      await page.evaluate(() => sessionStorage.setItem("gheverhan.registration.otp.v1", JSON.stringify({
-        email: "another-person@example.test",
-        challengeId: "00000000-0000-4000-8000-000000000001",
-        resendAvailableAt: Date.now() + 60_000,
-        expiresAt: Date.now() + 600_000,
-      })));
+      await page.evaluate(() =>
+        sessionStorage.setItem(
+          "gheverhan.registration.otp.v1",
+          JSON.stringify({
+            email: "another-person@example.test",
+            challengeId: "00000000-0000-4000-8000-000000000001",
+            resendAvailableAt: Date.now() + 60_000,
+            expiresAt: Date.now() + 600_000,
+          }),
+        ),
+      );
       await page.getByTestId("login-identifier").fill(dummyPhone(0));
       await page.getByTestId("login-password").fill(password);
       await page.getByTestId("auth-submit").click();
       await page.waitForURL(base + "/cart");
-      await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gheverhan.registration.otp.v1"))).toBeNull();
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            sessionStorage.getItem("gheverhan.registration.otp.v1"),
+          ),
+        )
+        .toBeNull();
     });
     await check(
       "forgot password validates input and keeps a neutral response for an unknown account",
@@ -959,6 +1386,7 @@ async function main() {
           checkpoints,
           geometry,
           errors,
+          expectedTransportErrors,
           commitSha: execFileSync("git", ["rev-parse", "HEAD"], {
             encoding: "utf8",
           }).trim(),

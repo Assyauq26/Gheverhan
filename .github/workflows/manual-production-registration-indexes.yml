@@ -87,51 +87,44 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          command -v psql >/dev/null || { echo 'BLOCKED: psql unavailable'; exit 1; }
           node <<'NODE'
-          const { Client } = require('pg');
+          const { spawnSync } = require('node:child_process');
           const fs = require('node:fs');
           const crypto = require('node:crypto');
-          (async () => {
-            const c = new Client({ connectionString: process.env.DIRECT_URL, connectionTimeoutMillis: 10000,
-              ssl: { rejectUnauthorized: false }, application_name: 'gheverhan_pr74_migration_preflight' });
-            try {
-              await c.connect();
-              await c.query('BEGIN READ ONLY');
-              await c.query("SET LOCAL statement_timeout = '10000ms'");
-              const id = await c.query("SELECT current_database() AS db, current_user AS usr, current_setting('server_version_num')::int AS version");
-              if (id.rows[0].db !== 'postgres' || id.rows[0].version < 120000) throw new Error('BLOCKED: database identity/version');
-              const migrations = await c.query('SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations ORDER BY migration_name');
-              const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
-              if (migrations.rows.length !== 7 || dirs.length !== 8) throw new Error('BLOCKED: unexpected migration count');
-              for (let i = 0; i < 7; i++) {
-                const m = migrations.rows[i], name = dirs[i];
-                const hash = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
-                if (m.migration_name !== name || m.checksum !== hash || !m.finished_at || m.rolled_back_at)
-                  throw new Error('BLOCKED: migration history mismatch');
-              }
-              const indexes = await c.query("SELECT count(*)::int AS n FROM pg_class WHERE relnamespace='public'::regnamespace AND relname = ANY($1)", [
-                ['User_registration_email_normalized_idx','User_registration_phone_normalized_idx']]);
-              if (indexes.rows[0].n !== 0) throw new Error('BLOCKED: expected indexes already exist');
-              const locks = await c.query(`SELECT
-                (SELECT count(*)::int FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database()
-                  AND state='active' AND now()-query_start > interval '30 seconds') AS long_active,
-                (SELECT count(*)::int FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database()
-                  AND xact_start IS NOT NULL AND now()-xact_start > interval '30 seconds') AS long_xact,
-                (SELECT count(*)::int FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database()
-                  AND wait_event_type='Lock') AS lock_waiters`);
-              if (Object.values(locks.rows[0]).some(Number)) throw new Error('BLOCKED: unsafe active transactions/locks');
-              const privileges = await c.query(`SELECT
-                pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid='public."User"'::regclass),'MEMBER') AS table_owner_member,
-                (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) AS superuser`);
-              if (!privileges.rows[0].table_owner_member && !privileges.rows[0].superuser)
-                throw new Error('BLOCKED: User table DDL ownership not verified');
-              await c.query('COMMIT');
-              console.log('PASS: 7/7 Prisma checksums, target pending, no indexes, no long transactions/lock waiters, DDL owner role');
-            } catch(e) {
-              try { await c.query('ROLLBACK'); } catch {}
-              throw e;
-            } finally { await c.end(); }
-          })().catch(e => { console.error(e.message); process.exit(1); });
+          const u = new URL(process.env.DIRECT_URL);
+          const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          const tuples = dirs.slice(0,7).map(name => {
+            const sha = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+            return "('" + name + "','" + sha + "')";
+          }).join(',');
+          const sql = `BEGIN READ ONLY;
+          SET LOCAL statement_timeout = '10s';
+          SELECT CASE WHEN current_database()='postgres'
+            AND (SELECT count(*) FROM public._prisma_migrations)=7
+            AND (SELECT count(*) FROM public._prisma_migrations m JOIN
+              (VALUES ${tuples}) AS expected(name,sha) ON m.migration_name=expected.name AND m.checksum=expected.sha
+              WHERE m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)=7
+            AND (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN
+              ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx'))=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND xact_start IS NOT NULL AND now()-xact_start > interval '30 seconds')=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND wait_event_type='Lock')=0
+            AND ((SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR
+              pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid='public."User"'::regclass),'MEMBER'))
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: migration ledger, TLS, locks or DDL owner check failed'); process.exit(1);
+          }
+          console.log('PASS: read-only ledger 7/7, indexes absent, no long transactions/lock waiters, owner and verified TLS');
           NODE
 
       - name: Prisma migration status (Production)
@@ -150,25 +143,29 @@ jobs:
           set -euo pipefail
           npx --no-install prisma migrate status
           node <<'NODE'
-          const { Client } = require('pg');
-          (async () => {
-            const c = new Client({ connectionString: process.env.DIRECT_URL, connectionTimeoutMillis: 10000,
-              ssl: { rejectUnauthorized: false }, application_name: 'gheverhan_pr74_postcheck' });
-            try {
-              await c.connect();
-              const m = await c.query(`SELECT count(*)::int AS total,
-                count(*) FILTER (WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL)::int AS complete
-                FROM public._prisma_migrations`);
-              if (m.rows[0].total !== 8 || m.rows[0].complete !== 8) throw new Error('BLOCKED: migration ledger not 8/8');
-              const i = await c.query(`SELECT c.relname, x.indisvalid, x.indisready
-                FROM pg_class c JOIN pg_index x ON x.indexrelid=c.oid
-                WHERE c.relnamespace='public'::regnamespace AND c.relname = ANY($1)`,
-                [['User_registration_email_normalized_idx','User_registration_phone_normalized_idx']]);
-              if (i.rows.length !== 2 || i.rows.some(x => !x.indisvalid || !x.indisready))
-                throw new Error('BLOCKED: indexes missing or invalid');
-              console.log('PASS: migration ledger 8/8, both indexes valid and ready');
-            } finally { await c.end(); }
-          })().catch(e => { console.error(e.message); process.exit(1); });
+          const { spawnSync } = require('node:child_process');
+          const u = new URL(process.env.DIRECT_URL);
+          const sql = `BEGIN READ ONLY;
+          SELECT CASE WHEN
+            (SELECT count(*) FROM public._prisma_migrations)=8
+            AND (SELECT count(*) FROM public._prisma_migrations
+              WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL)=8
+            AND (SELECT count(*) FROM pg_class c JOIN pg_index i ON i.indexrelid=c.oid
+              WHERE c.relnamespace='public'::regnamespace
+                AND c.relname IN ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx')
+                AND i.indisvalid AND i.indisready)=2
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: post-migration ledger or indexes validation failed');process.exit(1);
+          }
+          console.log('PASS: 8/8 migrations and both indexes valid and ready');
           NODE
 
       - name: Release preflight (read-only)

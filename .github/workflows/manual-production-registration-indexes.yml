@@ -1,0 +1,170 @@
+name: Manual Production registration indexes migration (PR 74)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Confirm exact Supabase Production project ref'
+        required: true
+        type: string
+      approved_head:
+        description: 'Confirm approved PR 74 source commit SHA'
+        required: true
+        type: string
+      write_drain_confirmed:
+        description: 'Type YES only after bounded Production write-drain window is coordinated'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-otp-schema
+  cancel-in-progress: false
+
+jobs:
+  migration:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.project_ref == 'bztprltkevacidcpjaam' && inputs.approved_head == 'd62493c06890176a0a5f2aad111078c7a222f11c' && inputs.write_drain_confirmed == 'YES' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-migration
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout immutable reviewed PR 74 source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: d62493c06890176a0a5f2aad111078c7a222f11c
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify immutable migration source and protected bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 'd62493c06890176a0a5f2aad111078c7a222f11c'
+          test -n "${DIRECT_URL:-}" && test -n "${DATABASE_URL:-}" || { echo 'BLOCKED: missing protected database secrets'; exit 1; }
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const expected = '20261019054922_registration_identity_lookup_indexes';
+          const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          if (dirs.length !== 8 || dirs.at(-1) !== expected) throw new Error('BLOCKED: unexpected migration set');
+          const sql = fs.readFileSync('prisma/migrations/' + expected + '/migration.sql', 'utf8');
+          if (crypto.createHash('sha256').update(sql).digest('hex') !== '369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b')
+            throw new Error('BLOCKED: migration checksum mismatch');
+          const ref = 'bztprltkevacidcpjaam';
+          for (const key of ['DIRECT_URL','DATABASE_URL']) {
+            const u = new URL(process.env[key]);
+            const host = u.hostname.toLowerCase();
+            const user = decodeURIComponent(u.username);
+            if (!['postgres:','postgresql:'].includes(u.protocol) ||
+                !(host === 'db.' + ref + '.supabase.co' ||
+                  (host.endsWith('.pooler.supabase.com') && user.endsWith('.' + ref))) ||
+                u.pathname !== '/postgres' || !u.password ||
+                (u.searchParams.get('schema') || 'public') !== 'public')
+              throw new Error('BLOCKED: ' + key + ' is not bound to approved Production database');
+          }
+          console.log('PASS: immutable source, exact migration checksum, approved database URL identity');
+          NODE
+
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify Production ledger and operational safety (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v psql >/dev/null || { echo 'BLOCKED: psql unavailable'; exit 1; }
+          node <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const u = new URL(process.env.DIRECT_URL);
+          const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          const tuples = dirs.slice(0,7).map(name => {
+            const sha = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+            return "('" + name + "','" + sha + "')";
+          }).join(',');
+          const sql = `BEGIN READ ONLY;
+          SET LOCAL statement_timeout = '10s';
+          SELECT CASE WHEN current_database()='postgres'
+            AND (SELECT count(*) FROM public._prisma_migrations)=7
+            AND (SELECT count(*) FROM public._prisma_migrations m JOIN
+              (VALUES ${tuples}) AS expected(name,sha) ON m.migration_name=expected.name AND m.checksum=expected.sha
+              WHERE m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)=7
+            AND (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN
+              ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx'))=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND xact_start IS NOT NULL AND now()-xact_start > interval '30 seconds')=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND wait_event_type='Lock')=0
+            AND ((SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR
+              pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid='public."User"'::regclass),'MEMBER'))
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:'/etc/ssl/certs/ca-certificates.crt',PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: migration ledger, TLS, locks or DDL owner check failed'); process.exit(1);
+          }
+          console.log('PASS: read-only ledger 7/7, indexes absent, no long transactions/lock waiters, owner and verified TLS');
+          NODE
+
+      - name: Prisma migration status (Production)
+        run: npx --no-install prisma migrate status
+
+      - name: Deploy only approved migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ledger and repository checks above ensure only the approved eighth migration is pending.
+          npx --no-install prisma migrate deploy
+
+      - name: Verify Prisma status and indexes (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --no-install prisma migrate status
+          node <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const u = new URL(process.env.DIRECT_URL);
+          const sql = `BEGIN READ ONLY;
+          SELECT CASE WHEN
+            (SELECT count(*) FROM public._prisma_migrations)=8
+            AND (SELECT count(*) FROM public._prisma_migrations
+              WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL)=8
+            AND (SELECT count(*) FROM pg_class c JOIN pg_index i ON i.indexrelid=c.oid
+              WHERE c.relnamespace='public'::regnamespace
+                AND c.relname IN ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx')
+                AND i.indisvalid AND i.indisready)=2
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:'/etc/ssl/certs/ca-certificates.crt',PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: post-migration ledger or indexes validation failed');process.exit(1);
+          }
+          console.log('PASS: 8/8 migrations and both indexes valid and ready');
+          NODE
+

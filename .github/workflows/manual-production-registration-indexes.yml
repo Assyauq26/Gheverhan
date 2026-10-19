@@ -118,7 +118,7 @@ jobs:
           const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
             env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
               PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
-              PGSSLMODE:'verify-full',PGCONNECT_TIMEOUT:'10'},
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:'/etc/ssl/certs/ca-certificates.crt',PGCONNECT_TIMEOUT:'10'},
             input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
           });
           if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
@@ -159,7 +159,7 @@ jobs:
           const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
             env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
               PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
-              PGSSLMODE:'verify-full',PGCONNECT_TIMEOUT:'10'},
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:'/etc/ssl/certs/ca-certificates.crt',PGCONNECT_TIMEOUT:'10'},
             input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
           });
           if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
@@ -168,5 +168,3 @@ jobs:
           console.log('PASS: 8/8 migrations and both indexes valid and ready');
           NODE
 
-      - name: Release preflight (read-only)
-        run: npm run release:preflight

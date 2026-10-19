@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "@/components/ui/navigation";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, Upload, ChevronDown, ImagePlus, Layers3, Package, Info, Check, Save, Sparkles } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, ChevronDown, ImagePlus, Layers3, Package, Info, Check, Save, Sparkles } from "lucide-react";
 import { ProductVariantBuilder, type VariantChoice } from "@/components/admin/product-variant-builder";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -123,7 +123,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
         <fieldset disabled={!canEdit || !!pending} className="min-w-0 space-y-5">
           <section id="product-images" className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_3px_14px_rgba(0,0,0,.025)] sm:p-6">
             <div className="mb-4 flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-100"><ImagePlus size={20}/></span>
-              <div><h2 className="text-base font-bold text-zinc-950 sm:text-lg">Foto produk <span className="text-red-500">*</span></h2><p className="mt-0.5 text-xs leading-relaxed text-zinc-500">Foto pertama menjadi gambar utama pada halaman produk.</p></div>
+              <div><h2 className="text-base font-bold text-zinc-950 sm:text-lg">Foto produk <span aria-hidden="true" className="text-red-500">*</span></h2><p className="mt-0.5 text-xs leading-relaxed text-zinc-500">Foto pertama menjadi gambar utama pada halaman produk.</p></div>
               <span className="ml-auto shrink-0 text-xs font-semibold text-zinc-400">{values.images.length}/10</span>
             </div>
             <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
@@ -140,6 +140,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
               </div>)}
               {initial && canEdit && values.images.length < 10 && <label htmlFor="product-image-upload" className="flex aspect-square min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 px-2 text-center text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100"><Plus size={23}/><span>Tambah foto</span></label>}
             </div>
+            {initial && <label htmlFor="product-image-upload" className="sr-only">Unggah JPG, PNG, atau WebP</label>}
             {initial && <input id="product-image-upload" type="file" accept="image/jpeg,image/png,image/webp" disabled={!canEdit || !!pending || values.images.length >= 10} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} className="sr-only" aria-describedby="product-image-help"/>}
             {!initial && <div className="mt-3 flex items-start gap-2 rounded-xl bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600"><Info size={16} className="mt-0.5 shrink-0"/> Simpan produk sebagai draft terlebih dahulu untuk mengunggah foto.</div>}
             <p id="product-image-help" className="mt-3 text-xs text-zinc-400">JPG, PNG, atau WebP. Maksimal 4 MB per foto dan 10 foto per produk.</p>
@@ -147,13 +148,13 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
 
           <section id="product-basic" className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_3px_14px_rgba(0,0,0,.025)] sm:p-6">
             <div><h2 className="text-base font-bold text-zinc-950 sm:text-lg">Informasi dasar</h2><p className="mt-1 text-xs text-zinc-500">Buat nama dan identitas produk yang mudah dikenali.</p></div>
-            <div><div className="flex justify-between gap-3"><Label htmlFor="product-name">Nama produk <span className="text-red-500">*</span></Label><span className="text-xs text-zinc-400">{values.name.length}/160</span></div>
+            <div><div className="flex justify-between gap-3"><Label htmlFor="product-name">Nama produk <span aria-hidden="true" className="text-red-500">*</span></Label><span className="text-xs text-zinc-400">{values.name.length}/160</span></div>
               <Input id="product-name" value={values.name} required minLength={2} maxLength={160} placeholder="Contoh: Kemeja Linen Premium Wanita" onChange={e => { const name = e.target.value; change("name", name); if (!initial && (!values.slug || values.slug === suggestSlug(values.name))) change("slug", suggestSlug(name)); }} />
             </div>
             <div><Label htmlFor="product-category">Kategori</Label><select id="product-category" className={selectClass} value={values.categoryId || ""} onChange={e => change("categoryId", e.target.value || null)}><option value="">Pilih kategori produk</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
               <Link href="/admin/categories" className="mt-2 inline-flex min-h-9 items-center text-xs font-semibold text-zinc-600 underline-offset-4 hover:underline">Kelola kategori</Link></div>
             <div><Label htmlFor="product-brand">Merek</Label><select id="product-brand" className={selectClass} value={values.brandId || ""} onChange={e => change("brandId", e.target.value || null)}><option value="">Tanpa merek</option>{brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-            <div className="border-t border-zinc-100 pt-4"><Label htmlFor="product-slug">Alamat produk (slug) <span className="text-red-500">*</span></Label><Input id="product-slug" value={values.slug} required maxLength={120} onChange={e => change("slug", e.target.value)} placeholder="nama-produk"/>
+            <div className="border-t border-zinc-100 pt-4"><Label htmlFor="product-slug">Alamat produk (slug) <span aria-hidden="true" className="text-red-500">*</span></Label><Input id="product-slug" value={values.slug} required maxLength={120} onChange={e => change("slug", e.target.value)} placeholder="nama-produk"/>
               <p className="mt-1.5 break-all text-xs text-zinc-500">/product/{values.slug || "nama-produk"}</p></div>
           </section>
 
@@ -166,8 +167,8 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
           <section id="product-pricing" className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_3px_14px_rgba(0,0,0,.025)] sm:p-6">
             <div><h2 className="text-base font-bold sm:text-lg">Informasi penjualan</h2><p className="mt-1 text-xs text-zinc-500">Tentukan harga utama. Harga khusus dapat diatur per varian.</p></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div><Label htmlFor="product-price">Harga normal (Rp) <span className="text-red-500">*</span></Label><Input id="product-price" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required value={values.basePrice || ""} onChange={e => change("basePrice", Number(e.target.value))} placeholder="0"/></div>
-              <div><Label htmlFor="product-sale-price">Harga diskon (Rp)</Label><Input id="product-sale-price" type="number" inputMode="numeric" min={1} step={1} value={values.salePrice ?? ""} onChange={e => change("salePrice", e.target.value ? Number(e.target.value) : null)} placeholder="Opsional"/></div>
+              <div><Label htmlFor="product-price">Harga normal (Rp) <span aria-hidden="true" className="text-red-500">*</span></Label><Input id="product-price" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required value={values.basePrice || ""} onChange={e => change("basePrice", Number(e.target.value))} placeholder="0"/></div>
+              <div><Label htmlFor="product-sale-price">Harga diskon (opsional)</Label><Input id="product-sale-price" type="number" inputMode="numeric" min={1} step={1} value={values.salePrice ?? ""} onChange={e => change("salePrice", e.target.value ? Number(e.target.value) : null)} placeholder="Opsional"/></div>
             </div>
             <p className="text-xs leading-relaxed text-zinc-500"><Info size={14} className="mr-1 inline-block"/> Harga diskon harus lebih rendah dari harga normal.</p>
           </section>
@@ -191,7 +192,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
                 </summary>
                 <div className="space-y-3 border-t border-zinc-200 p-3 sm:p-4">
                   <div className="grid gap-3 sm:grid-cols-3">
-                    {([["sku", "SKU"], ["color", "Warna"], ["size", "Ukuran"]] as const).map(([key, label]) => <div key={key}><Label htmlFor={`variant-${index}-${key}`}>{label}{key === "sku" && <span className="text-red-500"> *</span>}</Label><Input id={`variant-${index}-${key}`} value={v[key] || ""} required={key === "sku"} maxLength={key === "sku" ? 80 : key === "color" ? 80 : 40} placeholder={key === "sku" ? "SKU unik" : key === "color" ? "Contoh: Hitam" : "Contoh: M"} onChange={e => variantChange(index, { [key]: e.target.value })}/></div>)}
+                    {([["sku", "SKU"], ["color", "Warna"], ["size", "Ukuran"]] as const).map(([key, label]) => <div key={key}><Label htmlFor={`variant-${index}-${key}`}>{label}{key === "sku" && <span aria-hidden="true" className="text-red-500"> *</span>}</Label><Input id={`variant-${index}-${key}`} value={v[key] || ""} required={key === "sku"} maxLength={key === "sku" ? 80 : key === "color" ? 80 : 40} placeholder={key === "sku" ? "SKU unik" : key === "color" ? "Contoh: Hitam" : "Contoh: M"} onChange={e => variantChange(index, { [key]: e.target.value })}/></div>)}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {([["price", "Harga varian (Rp)"], ["salePrice", "Diskon varian (Rp)"]] as const).map(([key, label]) => <div key={key}><Label htmlFor={`variant-${index}-${key}`}>{label}</Label><Input id={`variant-${index}-${key}`} type="number" inputMode="numeric" min={1} step={1} value={v[key] ?? ""} placeholder="Ikuti harga utama" onChange={e => variantChange(index, { [key]: e.target.value ? Number(e.target.value) : null })}/></div>)}

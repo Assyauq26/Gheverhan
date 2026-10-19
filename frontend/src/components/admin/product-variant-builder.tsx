@@ -59,8 +59,8 @@ export function ProductVariantBuilder({ disabled, variants, onAdd }: {
   const combinations = (colors.length ? colors : [""]).flatMap(color =>
     (sizes.length ? sizes : [""]).map(size => ({ color, size }))
   );
-  const existing = new Set(variants.map(v => ${v.color.trim().toLocaleLowerCase("id")}::${v.size.trim().toLocaleLowerCase("id")}));
-  const missing = combinations.filter(v => !existing.has(${v.color.toLocaleLowerCase("id")}::${v.size.toLocaleLowerCase("id")}));
+  const existing = new Set(variants.map(v => `${v.color.trim().toLocaleLowerCase("id")}::${v.size.trim().toLocaleLowerCase("id")}`));
+  const missing = combinations.filter(v => !existing.has(`${v.color.toLocaleLowerCase("id")}::${v.size.toLocaleLowerCase("id")}`));
   const exceedsLimit = variants.length + missing.length > 50;
 
   return <Dialog.Root open={open} onOpenChange={toggle}>
@@ -84,14 +84,14 @@ export function ProductVariantBuilder({ disabled, variants, onAdd }: {
             { type: "size" as const, title: "Ukuran", example: "Contoh: S, M, L, XL", options: sizes, draft: sizeDraft, setDraft: setSizeDraft, setOptions: setSizes, limit: 40 },
           ]).map(section => <div key={section.type} className="rounded-2xl border border-zinc-200 p-4">
             <div className="mb-3 flex items-center justify-between"><h3 className="font-semibold">{section.title}</h3><span className="text-xs text-zinc-400">{section.options.length} opsi</span></div>
-            <div className="flex flex-wrap gap-2" aria-label={$Opsi ${section.title.toLowerCase()}}>
+            <div className="flex flex-wrap gap-2" aria-label={`Opsi ${section.title.toLowerCase()}`}>
               {section.options.map(option => <span key={option.toLocaleLowerCase("id")} className="inline-flex max-w-full items-center gap-1 rounded-lg bg-zinc-100 py-1.5 pl-3 pr-1.5 text-sm text-zinc-800">
                 <span className="truncate">{option}</span>
-                <button type="button" className="grid h-7 w-7 place-items-center rounded-md hover:bg-zinc-200" onClick={() => section.setOptions(previous => previous.filter(value => value !== option))} aria-label={$Hapus opsi ${option}}><X size={14}/></button>
+                <button type="button" className="grid h-7 w-7 place-items-center rounded-md hover:bg-zinc-200" onClick={() => section.setOptions(previous => previous.filter(value => value !== option))} aria-label={`Hapus opsi ${option}`}><X size={14}/></button>
               </span>)}
             </div>
             <div className="mt-3 flex gap-2">
-              <input type="text" aria-label={$Tambah opsi ${section.title}} maxLength={section.limit} value={section.draft} placeholder={section.example} onChange={e => section.setDraft(e.target.value)} onKeyDown={e => handleEnter(e, section.type)} className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-200"/>
+              <input type="text" aria-label={`Tambah opsi ${section.title}`} maxLength={section.limit} value={section.draft} placeholder={section.example} onChange={e => section.setDraft(e.target.value)} onKeyDown={e => handleEnter(e, section.type)} className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-200"/>
               <Button type="button" variant="outline" className="h-11 shrink-0 px-4" onClick={() => addOption(section.type)} disabled={!section.draft.trim()}><Plus size={17}/> Tambah</Button>
             </div>
           </div>)}

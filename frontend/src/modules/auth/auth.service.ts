@@ -41,7 +41,7 @@ import {
   type RegistrationFailure,
 } from "./registration-contract";
 
-import { registrationIdentityQuery } from "./registration-identity";
+import { registrationIdentityQuery, recoveryIdentityQuery } from "./registration-identity";
 
 export class RegistrationError extends HttpError {
   constructor(
@@ -409,6 +409,18 @@ export async function verifyRegistrationOtp(
   }
 }
 
+async function recoveryUser(email: string | null, phone: string | null, rawPhone = "") {
+  const rows = await prisma.$queryRaw<{ filtered: boolean; ids: string[] }[]>(
+    recoveryIdentityQuery(email, phone, rawPhone),
+  );
+  if (!rows[0] || rows[0].filtered)
+    throw new HttpError("Layanan autentikasi belum tersedia. Coba lagi nanti.", 503);
+  // Include inactive identities in ambiguity detection; never try multiple passwords
+  // or send a reset token to an arbitrarily selected canonical alias.
+  if (rows[0].ids.length !== 1) return null;
+  return prisma.user.findUnique({ where: { id: rows[0].ids[0] } });
+}
+
 export async function authenticate(identifier: string, password: string) {
   const value = identifier.toLowerCase().trim();
   let normalized: string | undefined;
@@ -419,13 +431,8 @@ export async function authenticate(identifier: string, password: string) {
   }
   // Formatting aliases must share a quota; otherwise spaces could evade brute-force limits.
   await enforceAuthRateLimit("login", normalized ?? value);
-  let user = await prisma.user.findFirst({
-    where: { OR: [{ email: value }, { phone: identifier.trim() }] },
-  });
-  // Preserve exact legacy identities; add local-format login for newly normalized numbers.
-  if (!user && normalized && normalized !== identifier.trim()) {
-    user = await prisma.user.findUnique({ where: { phone: normalized } });
-  }
+  const user = await recoveryUser(value.includes("@") ? value : null,
+    normalized ?? null, identifier.trim());
   const valid = await verifyPassword(
     password,
     user?.isActive ? user.passwordHash : DUMMY_PASSWORD_HASH,
@@ -441,11 +448,10 @@ const tokenDigest = (token: string) =>
 export async function requestPasswordReset(email: string) {
   // Check configuration BEFORE account lookup, so an unconfigured provider
   // cannot silently claim that mail has been sent to existing accounts.
-  await enforceAuthRateLimit("reset", email);
+  const normalizedEmail = email.toLowerCase().trim();
+  await enforceAuthRateLimit("reset", normalizedEmail);
   const config = resetMailConfig();
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase().trim() },
-  });
+  const user = await recoveryUser(normalizedEmail, null);
   if (!user || !user.isActive) return; // keep the form response identical for unknown emails
   const token = randomBytes(32).toString("hex");
   const record = await prisma.passwordResetToken.create({
@@ -456,7 +462,7 @@ export async function requestPasswordReset(email: string) {
     },
   });
   try {
-    await sendPasswordResetEmail(user.email, token, config);
+    await sendPasswordResetEmail(user.email.trim().toLowerCase(), token, config);
   } catch {
     // A failed email must not leave a usable reset token behind.
     await prisma.passwordResetToken.deleteMany({ where: { id: record.id } });

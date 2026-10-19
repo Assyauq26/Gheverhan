@@ -7,7 +7,7 @@ import { cp, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
-import { registrationIdentityQuery } from "../../src/modules/auth/registration-identity";
+import { registrationIdentityQuery, recoveryIdentityQuery } from "../../src/modules/auth/registration-identity";
 
 const target = new URL(
   process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid",
@@ -23,6 +23,7 @@ const indexNames = [
 
 type Fixture = {
   db: PrismaClient;
+  url: URL;
   directory: string;
   command: (args: string[]) => ReturnType<typeof spawnSync>;
   addIndexMigration: () => Promise<void>;
@@ -91,7 +92,7 @@ async function disposable(
       0,
       "Disposable schema must migrate before testing",
     );
-    await run({ db, directory, command, addIndexMigration });
+    await run({ db, url, directory, command, addIndexMigration });
   } finally {
     await db.$disconnect();
     if (created) await admin.$executeRawUnsafe(`DROP DATABASE "${name}"`);
@@ -296,4 +297,26 @@ test("registration identity indexes: fresh, upgrade, transaction recovery and ge
         });
       }),
   );
+  await t.test("identity and recovery queries follow Prisma target schema without consulting public users", async () =>
+    disposable(8, async ({ db, url }) => {
+      await legacy(db);
+      await db.$executeRaw`CREATE SCHEMA recovery_fixture`;
+      await db.$executeRaw`CREATE TABLE recovery_fixture."User" (LIKE public."User" INCLUDING ALL)`;
+      await db.$executeRaw`INSERT INTO recovery_fixture."User" (id,name,email,phone,"passwordHash","updatedAt") VALUES
+        ('target-only','Dummy','TARGET@example.test','0812 00000000','dummy',NOW())`;
+      const scopedUrl = new URL(url);
+      scopedUrl.searchParams.set('schema', 'recovery_fixture');
+      const scoped = new PrismaClient({ datasources: { db: { url: scopedUrl.toString() } } });
+      try {
+        const query = (email: string, phone: string) => scoped.$queryRaw<{ filtered: boolean; conflict: boolean }[]>(registrationIdentityQuery(email, phone));
+        assert.deepEqual(await query('legacy@example.test', '+6281234567890'), [{ filtered: false, conflict: false }]);
+        assert.deepEqual(await query('target@example.test', '+6281200000000'), [{ filtered: false, conflict: true }]);
+        const found = await scoped.$queryRaw<{ filtered: boolean; ids: string[] }[]>(recoveryIdentityQuery('target@example.test', null, ''));
+        assert.deepEqual(found, [{ filtered: false, ids: ['target-only'] }]);
+        assert.deepEqual(await scoped.$queryRaw(recoveryIdentityQuery('legacy@example.test', null, '')), [{ filtered: false, ids: [] }]);
+      } finally { await scoped.$disconnect(); }
+      assert.equal(await db.user.count(), 2);
+    }),
+  );
+
 });

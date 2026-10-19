@@ -30,6 +30,7 @@ process.env.DIRECT_URL = isolated.toString();
 process.env.JWT_SECRET = "disposable-registration-otp-secret-only";
 process.env.RESEND_API_KEY = "dummy-only-test-mail-key";
 process.env.PASSWORD_RESET_FROM = "Gheverhan <test@example.test>";
+process.env.PASSWORD_RESET_BASE_URL = "https://example.test";
 delete process.env.REGISTRATION_OTP_TEST_SINK;
 const domain = suffix + ".example.test";
 const codes = new Map<string, string>();
@@ -476,4 +477,47 @@ test("a stranded sending reservation is unverifiable but can be atomically repla
   const user = await verify(data.email, codes.get(data.email)!);
   assert.ok(user.emailVerifiedAt);
   assert.equal(await db.user.count({ where: { email: data.email } }), 1);
+});
+
+test("legacy canonical identities can log in and reset without rewriting stored identities", async () => {
+  const data = input(900);
+  const { user } = await fixture(901, {
+    email: "\u00a0" + data.email.toUpperCase() + "\ufeff",
+    phone: "(" + data.phone.slice(0, 4) + ")\u00a0" + data.phone.slice(4),
+  });
+  const before = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+  assert.equal((await svc.authenticate(data.email, "dummy-test-password")).id, user.id);
+  assert.equal((await svc.authenticate(client.normalizeRegistrationPhone(data.phone), "dummy-test-password")).id, user.id);
+  const previous = globalThis.fetch;
+  process.env.PASSWORD_RESET_BASE_URL = "https://example.test";
+  let calls = 0;
+  globalThis.fetch = async (url, init) => {
+    assert.equal(String(url), "https://api.resend.com/emails");
+    const body = JSON.parse(String(init?.body));
+    assert.deepEqual(body.to, [data.email]);
+    calls++;
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    await svc.requestPasswordReset(" " + data.email.toUpperCase() + " ");
+    assert.equal(calls, 1);
+    assert.equal(await db.passwordResetToken.count({ where: { userId: user.id } }), 1);
+    assert.deepEqual(await db.user.findUniqueOrThrow({ where: { id: user.id } }), before);
+  } finally { globalThis.fetch = previous; }
+});
+
+test("ambiguous canonical aliases never pick an account or send reset mail", async () => {
+  const data = input(902);
+  const first = await fixture(903, { email: data.email, phone: data.phone });
+  const second = await fixture(904, { email: data.email.toUpperCase(), phone: client.normalizeRegistrationPhone(data.phone), isActive: false });
+  const previous = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; throw new Error("Unexpected email"); };
+  try {
+    for (const identifier of [data.email, client.normalizeRegistrationPhone(data.phone)])
+      await assert.rejects(svc.authenticate(identifier, "dummy-test-password"), { status: 401 });
+    await svc.requestPasswordReset(data.email);
+    assert.equal(calls, 0);
+    assert.equal(await db.passwordResetToken.count({ where: { userId: { in: [first.user.id, second.user.id] } } }), 0);
+  } finally { globalThis.fetch = previous; }
 });

@@ -26,6 +26,10 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 13. CI entrypoint menemukan migration indeks hardcode `public.User`, sehingga gagal pada schema Prisma fixture yang berbeda. DDL draft diperbaiki menjadi table name yang mengikuti search path Prisma. Test sekarang memverifikasi dua indeks berada pada schema fixture dan fingerprint indeks public tidak berubah. Checksum draft kedelapan diperbarui sebelum release; ledger Production tidak disentuh dan checksum OTP ketujuh tetap sama.
 
+14. Review terakhir menemukan recovery login/reset masih mencari email mentah setelah trim/lowercase, sehingga akun legacy yang baru dikenali oleh guard registrasi tidak dapat dipulihkan. Lookup recovery kini memakai normalisasi dan indeks yang sama, dibatasi dua hasil untuk mendeteksi ambiguitas termasuk akun nonaktif. Tidak memilih akun pertama atau mencoba beberapa password; login ambigu tetap generic 401, reset ambigu tetap respons netral tanpa token/email. Alamat tujuan berasal dari email tersimpan yang dinormalisasi, bukan alamat alternatif dari request; data User lama tidak ditulis ulang. Identitas legacy yang benar-benar bertabrakan memerlukan rekonsiliasi operator terpisah, bukan auto-merge akun.
+
+15. Query aplikasi masih hardcode `public.User` meskipun DDL telah mengikuti schema Prisma. Lookup konflik, recovery, dan pemeriksaan RLS sekarang mengikuti search path koneksi yang sama. Test menggunakan dua tabel User pada database disposable membuktikan query pada schema fixture tidak membaca/mencadangkan identitas public. Tidak ada schema name dari input pengguna yang diinterpolasi.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.
@@ -35,7 +39,7 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 - Kuota lama dipertahankan: tiga request/resend per email per jam, 30 global per menit; tambahan kuota tiga per phone kanonis per jam menutup rotasi email/format nomor. Verify tetap 12 per email per jam dan kuota private generation; status dibatasi 60 per generation per jam/240 global per menit. Bucket menggunakan digest dan realm server, bukan identitas mentah atau nilai realm dari request.
 - Pending yang expired dipertahankan paling lama jendela pemulihan 30 menit setelah expiry untuk resend. **Kode expired tetap tidak valid.** Retensi oportunistik ini dapat mencapai sekitar 40 menit sejak pengiriman; tidak mengirim email otomatis. Setelah jendela berakhir, pengguna mendaftar ulang.
 - Status POST memerlukan pasangan email + UUID generation privat, memeriksa Origin pada REST, tidak mengembalikan password/hash/kode/attempts. Server Actions mempertahankan perlindungan Origin bawaan Next.js. Unknown generation tidak menghabiskan kuota verifikasi email milik korban.
-- Login/logout/reset/JWT/revocation dan aturan transaksi bisnis tidak diubah. File cart browser hanya disesuaikan agar tidak menekan submit dua kali setelah autosubmit OTP.
+- Lookup login/reset diselaraskan untuk akun legacy; reset token, validasi password, logout/JWT/revocation dan aturan transaksi bisnis dipertahankan. File cart browser hanya disesuaikan agar tidak menekan submit dua kali setelah autosubmit OTP.
 
 ## UI dan pemulihan
 
@@ -55,18 +59,18 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 | --- | --- |
 | Node.js 22, locked install, Prisma generate dan fresh deploy delapan migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
-| Unit | 263 PASS |
+| Unit | 265 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
-| Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending | 8 PASS |
+| Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending, legacy recovery/ambiguity | 10 PASS |
 | Auth/session/reset PostgreSQL | 12 PASS |
-| Migration index fresh/upgrade/lock/partial failure/generic plan | 5 PASS (termasuk parent) |
+| Migration index fresh/upgrade/lock/partial failure/generic plan/schema isolation | 6 PASS (termasuk parent) |
 | Migration OTP 6→7 dan release preflight dengan gate indeks | 1 + 8 PASS |
 | Chromium auth/legal | 15 kelompok PASS, sembilan viewport 320/360/375/390/430/768/1024/1440/1920 |
 
 Browser membuktikan penolakan REST email/phone/both sebelum email/pending, form validation, private challenge/Origin, keyboard/paste/native autofill, satu autosubmit, merah setelah penolakan, hijau setelah sukses, reduced motion, expiry, locked attempts, reload, resubmission, SMTP failure, respons resend sengaja diputus setelah backend memproses, pemulihan challenge terhapus, login/logout/reset/session revocation, legal dan link affordance. Error transport dari fault injection dicatat terpisah; unexpected console/page errors tetap membuat test gagal.
 
-Workflow `test-containment.yml` dan `sprint-2e-isolated-regression.yml` wajib dijalankan pada HEAD PR final. Workflow kedua mempertahankan database entrypoint/preflight, migration lock/recovery, cart concurrency, product, checkout, payment/refund/shipping, browser product/operations, hydration replay, dan navigation **10×44**; menambahkan delapan kelompok konflik, drill indeks, dan gate preflight baru tanpa melewati gate lama. Hasil final yang terikat SHA, link Actions, dan status review dicantumkan di PR. Hasil source baseline tidak dipakai sebagai bukti source final.
+Workflow `test-containment.yml` dan `sprint-2e-isolated-regression.yml` wajib dijalankan pada HEAD PR final. Workflow kedua mempertahankan database entrypoint/preflight, migration lock/recovery, cart concurrency, product, checkout, payment/refund/shipping, browser product/operations, hydration replay, dan navigation **10×44**; menambahkan sepuluh kelompok konflik/recovery, drill indeks, dan gate preflight baru tanpa melewati gate lama. Hasil final yang terikat SHA, link Actions, dan status review dicantumkan di PR. Hasil source baseline tidak dipakai sebagai bukti source final.
 
 Screenshot berasal dari browser lokal build production; data dummy dan digit OTP sengaja disamarkan. Screenshot menggambarkan validasi visual awal; hardening recovery/timing berikutnya mempertahankan geometri dan desainnya. Bukti browser yang terikat HEAD final tersedia pada artifact CI, dan screenshot ilustrasi ini tidak menggantikannya.
 

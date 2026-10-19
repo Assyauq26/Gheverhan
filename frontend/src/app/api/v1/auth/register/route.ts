@@ -1,29 +1,22 @@
-import { z } from "zod";
-import { ok, handle, HttpError } from "@/lib/response";
-import { registerCustomer } from "@/modules/auth/auth.service";
-import { createSession } from "@/lib/auth/session";
+import { assertMutationOrigin } from "@/lib/mutation-origin";
+import { registrationSchema } from "@/modules/auth/registration-schema";
+import { ok, handle } from "@/lib/response";
+import { requestRegistrationOtp } from "@/modules/auth/auth.service";
 
 export const dynamic = "force-dynamic";
-
-const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  password: z.string().min(6),
-});
-
+/** Initiate email verification; NEVER create a user or session without verifying OTP. */
 export async function POST(req: Request) {
   return handle(async () => {
-    // Validate the signing secret before touching the database. Without this
-    // guard a successful registration could be committed and then fail while
-    // creating the session cookie, leaving the customer with a false error.
-    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
-      throw new HttpError("Layanan autentikasi belum dikonfigurasi", 503);
-    }
-
-    const body = schema.parse(await req.json());
-    const user = await registerCustomer(body);
-    await createSession(user.id, user.email, user.sessionVersion);
-    return ok({ id: user.id, name: user.name, email: user.email }, 201);
+    assertMutationOrigin(req);
+    const data = registrationSchema.parse(await req.json());
+    const result = await requestRegistrationOtp(data);
+    return ok(
+      {
+        email: result.email,
+        challengeId: result.challengeId,
+        verificationRequired: true,
+      },
+      202,
+    );
   });
 }

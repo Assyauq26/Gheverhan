@@ -49,7 +49,7 @@ test('legacy schema and ambiguous migration ledger are rejected without fail-ope
         created = true;
         await cp('prisma/schema.prisma', path.join(directory, 'schema.prisma'));
         const migrations = (await readdir('prisma/migrations')).filter(n => /^\d{14}_/.test(n)).sort();
-        assert.equal(migrations.length, 6);
+        assert.equal(migrations.length, 7);
         for (const migration of migrations.slice(0, 5))
             await cp(path.join('prisma/migrations', migration), path.join(directory, 'migrations', migration), { recursive: true });
         await cp('prisma/migrations/migration_lock.toml', path.join(directory, 'migrations/migration_lock.toml'));
@@ -133,7 +133,7 @@ test('trusted role needs every required privilege, not only SELECT', async () =>
         const noCleanup = run(limited.toString());
         assert.equal(noCleanup.status, 1);
         assert.equal(noCleanup.data.schema.trusted, false);
-        await db.$executeRawUnsafe(`GRANT DELETE ON "AuthRateLimit", "SessionRevocation" TO "${role}"`);
+        await db.$executeRawUnsafe(`GRANT DELETE ON "AuthRateLimit", "SessionRevocation", "PendingRegistration" TO "${role}"`);
         const complete = run(limited.toString());
         assert.equal(complete.status, 0);
         assert.equal(complete.data.schema.trusted, true);
@@ -153,4 +153,25 @@ test('database and direct URLs must identify the same database and public schema
         assert.equal(r.status, 1);
         assert.equal(r.data.databaseIdentity, false);
     }
+});
+
+
+test('preflight rejects missing OTP fields and wrong index targets despite matching counts', async () => {
+    await db.$executeRaw`ALTER TABLE "PendingRegistration" RENAME COLUMN "codeHash" TO "codeHash_missing"`;
+    try {
+        const missing = run();
+        assert.equal(missing.status, 1);
+        assert.equal(missing.data.schema.pendingColumns, false);
+    } finally { await db.$executeRaw`ALTER TABLE "PendingRegistration" RENAME COLUMN "codeHash_missing" TO "codeHash"`; }
+    await db.$executeRaw`DROP INDEX "PendingRegistration_expiresAt_idx"`;
+    await db.$executeRaw`CREATE INDEX "otp_wrong_target_test" ON "PendingRegistration"("name")`;
+    try {
+        const wrong = run();
+        assert.equal(wrong.status, 1);
+        assert.equal(wrong.data.schema.pendingIndexes, false);
+    } finally {
+        await db.$executeRaw`DROP INDEX "otp_wrong_target_test"`;
+        await db.$executeRaw`CREATE INDEX "PendingRegistration_expiresAt_idx" ON "PendingRegistration"("expiresAt")`;
+    }
+    assert.equal(run().status, 0);
 });

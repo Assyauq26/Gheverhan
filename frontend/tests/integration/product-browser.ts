@@ -23,6 +23,7 @@ const secret = randomBytes(32).toString("hex");
 process.env.JWT_SECRET = secret;
 const storageToken = randomUUID();
 const objects = new Map<string, { bytes: Buffer; mime: string }>();
+const emailCodes = new Map<string, string>();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
 const db = new PrismaClient({ datasources: { db: { url: target } } });
 const prefix = randomUUID().slice(0, 8);
@@ -56,6 +57,14 @@ async function main() {
   const storage = createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
+      if (url.pathname === "/emails" && req.method === "POST") {
+        const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { to: string[]; text: string };
+        const otp = body.text.match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
+        assert.ok(otp);
+        emailCodes.set(body.to[0], otp);
+        res.writeHead(200, { "Content-Type": "application/json" }).end("{}"); return;
+      }
       if (req.headers.authorization !== `Bearer ${storageToken}` || req.headers.apikey !== storageToken) {
         res.writeHead(403).end(); return;
       }
@@ -83,7 +92,7 @@ async function main() {
   });
   await new Promise<void>((resolve, reject) => { storage.once("error", reject); storage.listen(3102, "127.0.0.1", resolve); });
   const log = createWriteStream(path.join(artifactDir, "server.log"));
-  const server = spawn(process.execPath, [path.join(root, "node_modules/next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", "3101"], { cwd: root, env: { ...process.env, NODE_ENV: "production", DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret, AUTH_COOKIE_NAME: "gh_session", PAYMENT_PROVIDER: "manual", SHIPPING_PROVIDER: "manual", SUPABASE_URL: "http://127.0.0.1:3102", SUPABASE_SERVICE_ROLE_KEY: storageToken, STORAGE_APP_NAME: "gheverhan-sprint1-tests" }, stdio: ["ignore", "pipe", "pipe"] });
+  const server = spawn(process.execPath, [path.join(root, "node_modules/next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", "3101"], { cwd: root, env: { ...process.env, NODE_ENV: "production", DATABASE_URL: target, DIRECT_URL: target, JWT_SECRET: secret, AUTH_COOKIE_NAME: "gh_session", RESEND_API_KEY: "isolated-test-key", PASSWORD_RESET_FROM: "Gheverhan <test@example.test>", REGISTRATION_OTP_TEST_SINK: "http://127.0.0.1:3102/emails", PAYMENT_PROVIDER: "manual", SHIPPING_PROVIDER: "manual", SUPABASE_URL: "http://127.0.0.1:3102", SUPABASE_SERVICE_ROLE_KEY: storageToken, STORAGE_APP_NAME: "gheverhan-sprint1-tests" }, stdio: ["ignore", "pipe", "pipe"] });
   server.stdout?.pipe(log); server.stderr?.pipe(log);
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
@@ -216,7 +225,7 @@ async function main() {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
     await check("R20 authenticated cart synchronization and rollback at four viewports", async () => {
-      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir);
+      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir, emailCodes);
     });
     await check("live checkout coupon is priced by server, shows errors, and updates shipping without creating orders", async () => {
       await db.coupon.create({ data: { code: couponCode, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });

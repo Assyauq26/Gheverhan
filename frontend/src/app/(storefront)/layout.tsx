@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/storefront/bottom-nav";
 import { Truck, ShieldCheck, Headphones, Star } from "lucide-react";
 import Link from "@/components/ui/navigation";
 import { getStorefrontUserContext } from "@/lib/auth/session";
+import { RegistrationOtpCleanup } from "@/components/auth/registration-otp-cleanup";
 
 export default async function StorefrontLayout({
   children,
@@ -15,7 +16,8 @@ export default async function StorefrontLayout({
   const count = user?.cartCount ?? 0;
 
   return (
-    <div className="min-h-screen bg-white pb-24 md:pb-0">
+    <div className="storefront-root min-h-screen bg-white pb-24 md:pb-0">
+      {user && <RegistrationOtpCleanup />}
       <StorefrontHeader user={user} cartCount={count} />
       <main className="container py-2 md:py-6">{children}</main>
 

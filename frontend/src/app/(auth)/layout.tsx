@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import "@/components/auth/lumen/styles.css";
 import "@/components/auth/auth.css";
 export default function AuthLayout({
@@ -9,6 +10,7 @@ export default function AuthLayout({
   return (
     <div className="auth-ui" data-theme="light">
       <header className="auth-header">
+        <Link href="/" className="auth-back-home"><ArrowLeft size={19} strokeWidth={1.8} />Kembali ke Beranda</Link>
         <Link
           href="/"
           aria-label="Gheverhan — beranda"

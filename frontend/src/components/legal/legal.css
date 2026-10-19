@@ -26,8 +26,6 @@
 }
 .legal-back {
   font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 .legal-document {
   max-width: 800px;
@@ -83,16 +81,20 @@
   gap: 6px;
   font-size: 14px;
 }
-.legal-document a {
-  text-underline-offset: 3px;
+.legal-page a {
+  text-decoration: none;
+  transition: color 150ms ease;
 }
-.legal-toc a,
-.legal-footer a,
-.legal-contact a {
-  text-decoration: underline;
+.legal-page a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
-.legal-document a:hover {
-  color: hsl(var(--ink-muted));
+.legal-page a:hover,
+.legal-page a:focus-visible {
+  color: #2563eb;
+}
+.legal-page a:active {
+  color: #1d4ed8;
 }
 .legal-sections section {
   scroll-margin-top: 24px;

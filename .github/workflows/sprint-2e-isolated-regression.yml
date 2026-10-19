@@ -97,6 +97,9 @@ jobs:
       - name: Read-only release preflight rejects legacy schema, missing configuration and insufficient privileges
         run: node --import tsx --test tests/integration/release-preflight.test.ts
 
+      - name: Registration migration lock failure and recovery on disposable PostgreSQL
+        run: node --import tsx --test tests/integration/registration-migration.test.ts
+
       - name: Real PostgreSQL concurrent cart increments and first-cart creation
         run: node --import tsx --test tests/integration/cart-concurrency.test.ts
 
@@ -116,6 +119,9 @@ jobs:
       - name: Chromium operations/payment proof and RBAC test with loopback storage double
         id: operations_browser
         run: npm run test:e2e:operations
+
+      - name: Registration email OTP lifecycle on disposable PostgreSQL
+        run: node --import tsx --test tests/integration/registration-otp.test.ts
 
       - name: Chromium auth UI and public legal regression on dummy PostgreSQL
         id: auth_ui_browser

@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 
-type AuthOperation = "login" | "register" | "reset" | "resetConfirm";
+type AuthOperation = "login" | "register" | "registerConfirm" | "reset" | "resetConfirm";
 const policies = {
   login: { perIdentity: 10, windowMs: 15 * 60_000, global: 300 },
   register: { perIdentity: 3, windowMs: 60 * 60_000, global: 30 },
+  registerConfirm: { perIdentity: 12, windowMs: 60 * 60_000, global: 240 },
   resetConfirm: { perIdentity: 3, windowMs: 60 * 60_000, global: 60 },
   reset: { perIdentity: 3, windowMs: 60 * 60_000, global: 30 },
 } as const;
@@ -51,6 +52,7 @@ export async function enforceAuthRateLimit(operation: AuthOperation, identifier:
     // Indexed, opportunistic retention cleanup. A DB error must fail closed.
     await prisma.authRateLimit.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
     await prisma.sessionRevocation.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
+    await prisma.pendingRegistration.deleteMany({ where: { expiresAt: { lt: new Date(now) } } });
   }
   const identity = createHash("sha256").update(identifier.toLowerCase().trim()).digest("hex");
   const window = Math.floor(now / policy.windowMs);

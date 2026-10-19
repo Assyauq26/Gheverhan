@@ -23,7 +23,7 @@ export const termsSections = [
   ],
   [
     "Pendaftaran dan keamanan akun",
-    "Pendaftaran memerlukan nama, alamat email yang valid, password, dan persetujuan ketentuan. Nomor telepon dapat ditambahkan secara opsional; pendaftaran dengan nomor telepon saja belum tersedia. Jaga kerahasiaan password dan akses email, keluar dari perangkat bersama, dan segera laporkan dugaan penyalahgunaan melalui kontak resmi. Login Google dan WhatsApp belum tersedia.",
+    "Pendaftaran memerlukan nama, alamat email yang valid, password, dan persetujuan ketentuan. Nomor HP wajib diisi pada pendaftaran baru untuk kebutuhan akun dan komunikasi transaksi; pendaftaran menggunakan nomor HP saja belum tersedia. Email pendaftaran diverifikasi melalui kode OTP sebelum akun dibuat. Jaga kerahasiaan password dan akses email, keluar dari perangkat bersama, dan segera laporkan dugaan penyalahgunaan melalui kontak resmi. Login Google dan WhatsApp belum tersedia.",
   ],
   [
     "Tanggung jawab pengguna",
@@ -109,7 +109,7 @@ export const privacySections = [
   ],
   [
     "Akun, kontak, dan alamat pengiriman",
-    "Email diperlukan untuk pendaftaran dan pengenalan akun; nomor telepon dapat diberikan secara opsional pada pendaftaran dan digunakan sesuai kebutuhan kontak/pengiriman. Alamat serta data penerima dipakai untuk pemenuhan pesanan. Pastikan Anda berhak memberikan data orang lain sebagai penerima dan informasikan penggunaannya. Password disimpan sebagai hash, bukan disediakan sebagai teks biasa untuk dibaca pengelola.",
+    "Email diperlukan untuk pendaftaran dan pengenalan akun; nomor HP diwajibkan bagi akun baru dan digunakan sesuai kebutuhan akun, kontak, dan pengiriman. Email diverifikasi dengan kode OTP yang berlaku singkat sebelum akun baru diaktifkan. Alamat serta data penerima dipakai untuk pemenuhan pesanan. Pastikan Anda berhak memberikan data orang lain sebagai penerima dan informasikan penggunaannya. Password disimpan sebagai hash, bukan disediakan sebagai teks biasa untuk dibaca pengelola.",
   ],
   [
     "Pesanan dan transaksi",

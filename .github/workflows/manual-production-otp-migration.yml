@@ -111,9 +111,27 @@ jobs:
             AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public'
               AND table_name='User' AND column_name='emailVerifiedAt'
               AND data_type='timestamp without time zone' AND is_nullable='YES')
-            AND (SELECT count(*) FROM pg_indexes WHERE schemaname='public'
-              AND tablename='PendingRegistration' AND indexname IN
-              ('PendingRegistration_pkey','PendingRegistration_email_key','PendingRegistration_expiresAt_idx'))=3
+            AND (SELECT count(*) FROM pg_indexes
+              WHERE schemaname='public' AND tablename='PendingRegistration')=3
+            AND (SELECT count(*) FROM
+              (VALUES
+                ('PendingRegistration_pkey','id',true,true),
+                ('PendingRegistration_email_key','email',true,false),
+                ('PendingRegistration_expiresAt_idx','expiresAt',false,false)
+              ) AS expected_indexes(name,colname,unique_required,primary_required)
+              JOIN pg_class idx ON idx.relname=expected_indexes.name
+                AND idx.relnamespace='public'::regnamespace
+              JOIN pg_index i ON i.indexrelid=idx.oid
+                AND i.indrelid='public."PendingRegistration"'::regclass
+              JOIN pg_attribute a ON a.attrelid=i.indrelid
+                AND a.attnum=i.indkey[0] AND a.attname=expected_indexes.colname
+              JOIN pg_am am ON am.oid=idx.relam
+              WHERE i.indisvalid AND i.indisready
+                AND i.indisunique=expected_indexes.unique_required
+                AND i.indisprimary=expected_indexes.primary_required
+                AND i.indnkeyatts=1 AND i.indnatts=1
+                AND i.indpred IS NULL AND i.indexprs IS NULL
+                AND am.amname='btree')=3
             AND (SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public."PendingRegistration"'))
             AND (SELECT count(*) FROM pg_policies
               WHERE schemaname='public' AND tablename='PendingRegistration')=0

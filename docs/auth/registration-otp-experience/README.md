@@ -21,6 +21,9 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 10. Review mengonfirmasi respons lambat membuat clock display mulai dari `serverNow` yang sudah tertinggal. Metadata kini menyertakan timestamp awal service; wrapper client mengukur round-trip monotonic, mengurangi durasi pemrosesan server/provider, dan mengestimasi midpoint transit. Anchor dibentuk saat respons diterima sebelum React memprosesnya; elapsed berikutnya memakai `performance.now()`, sehingga perubahan jam perangkat tidak mereset timer. Test mereproduksi reset sebelumnya dan memverifikasi provider work, latensi, React delay, serta clock skew tanpa mengubah deadline database.
 
+11. Serializer REST register memilih field secara eksplisit dan melewatkan `serverReceivedAt`, padahal status/resend meneruskannya. API kini konsisten; browser contract test memeriksa timestamp pada setiap respons register 202. Test terhadap build lama mereproduksi omission sebelum build source perbaikan.
+12. Reviewer menemukan scan O(jumlah User) pada ekspresi normalisasi. Benchmark dummy membuktikan kebutuhan migration indeks. Dua expression index non-unique mempertahankan akun legacy dan constraints raw; normalization literals di-inline dari konstanta tepercaya, sementara email/phone tetap bound parameters, agar generic prepared plan cocok dengan indeks. Drill fresh/upgrade/lock/partial-failure/retry dan query plan generic lulus, tanpa perubahan Production.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.
@@ -48,20 +51,22 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 
 | Gate | Hasil |
 | --- | --- |
-| Node.js 22, locked install, Prisma generate dan fresh deploy tujuh migrasi pada disposable PostgreSQL | PASS |
+| Node.js 22, locked install, Prisma generate dan fresh deploy delapan migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
 | Unit | 263 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
 | Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending | 8 PASS |
 | Auth/session/reset PostgreSQL | 12 PASS |
+| Migration index fresh/upgrade/lock/partial failure/generic plan | 5 PASS (termasuk parent) |
+| Migration OTP 6→7 dan release preflight dengan gate indeks | 1 + 8 PASS |
 | Chromium auth/legal | 15 kelompok PASS, sembilan viewport 320/360/375/390/430/768/1024/1440/1920 |
 
 Browser membuktikan penolakan REST email/phone/both sebelum email/pending, form validation, private challenge/Origin, keyboard/paste/native autofill, satu autosubmit, merah setelah penolakan, hijau setelah sukses, reduced motion, expiry, locked attempts, reload, resubmission, SMTP failure, respons resend sengaja diputus setelah backend memproses, pemulihan challenge terhapus, login/logout/reset/session revocation, legal dan link affordance. Error transport dari fault injection dicatat terpisah; unexpected console/page errors tetap membuat test gagal.
 
-Workflow `test-containment.yml` dan `sprint-2e-isolated-regression.yml` wajib dijalankan pada HEAD PR final. Workflow kedua mempertahankan database entrypoint/preflight, migration lock/recovery, cart concurrency, product, checkout, payment/refund/shipping, browser product/operations, hydration replay, dan navigation **10×44**; menambahkan delapan kelompok konflik baru tanpa melewati gate lama. Hasil final yang terikat SHA, link Actions, dan status review dicantumkan di PR. Hasil source baseline tidak dipakai sebagai bukti source final.
+Workflow `test-containment.yml` dan `sprint-2e-isolated-regression.yml` wajib dijalankan pada HEAD PR final. Workflow kedua mempertahankan database entrypoint/preflight, migration lock/recovery, cart concurrency, product, checkout, payment/refund/shipping, browser product/operations, hydration replay, dan navigation **10×44**; menambahkan delapan kelompok konflik, drill indeks, dan gate preflight baru tanpa melewati gate lama. Hasil final yang terikat SHA, link Actions, dan status review dicantumkan di PR. Hasil source baseline tidak dipakai sebagai bukti source final.
 
-Screenshot berasal dari browser lokal build production; data dummy dan digit OTP sengaja disamarkan. Screenshot dibuat sebelum commit dari source yang sama dan berfungsi sebagai bukti visual, bukan pengganti hasil CI pada commit final.
+Screenshot berasal dari browser lokal build production; data dummy dan digit OTP sengaja disamarkan. Screenshot menggambarkan validasi visual awal; hardening recovery/timing berikutnya mempertahankan geometri dan desainnya. Bukti browser yang terikat HEAD final tersedia pada artifact CI, dan screenshot ilustrasi ini tidak menggantikannya.
 
 | Mobile register | OTP 320px |
 | --- | --- |
@@ -75,11 +80,11 @@ Screenshot berasal dari browser lokal build production; data dummy dan digit OTP
 
 - Penolakan awal yang diminta pemilik menciptakan oracle keberadaan identitas. Pesan gabungan, kuota email/phone/global, dan tidak adanya endpoint per-keystroke membatasi, tetapi **tidak menghapus** risiko enumeration. Jangan mengklaim respons ini sepenuhnya anonim. Monitor 409/429 secara agregat tanpa identitas/kode; edge anti-abuse dapat dievaluasi terpisah bila diperlukan.
 - Estimasi waktu memakai midpoint jaringan; asimetri latency masih dapat menghasilkan selisih display. Expiry, cooldown, dan percobaan tetap diputuskan backend; deadline row database tidak berubah.
-- Normalisasi legacy melalui ekspresi SQL dapat memerlukan scan User. Kuota membatasi frekuensi; functional index/migrasi hanya perlu dievaluasi terpisah bila pengukuran volume menunjukkan kebutuhan, bukan diterapkan diam-diam.
+- Lookup legacy semula melakukan sequential scan. Benchmark dummy 100.000 identitas menunjukkan 692,193 ms sebelum dan 0,085 ms setelah expression index (hasil lokal, bukan kapasitas Production). Dua indeks non-unique kini disediakan migration tambahan yang hanya diuji pada disposable PostgreSQL; query plan generic wajib memakai keduanya. Lihat [readiness migrasi](MIGRATION_READINESS.md).
 - Identitas yang baru diklaim ketika email provider sedang menerima request dapat tetap memperoleh email yang sudah terkirim. Email tidak bisa ditarik kembali; pemeriksaan setelah provider mencegah aktivasi challenge/akun duplikat. Test menahan provider dan membuktikan reservation dibersihkan.
-- Tanpa migration baru dan tanpa perubahan dependency/lockfile. Migration OTP existing `20261018150000_registration_email_otp` tetap checksum SHA-256 `eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e`. Jangan menjalankannya ulang di Production.
+- Migration indeks tambahan `20261019054922_registration_identity_lookup_indexes` diperlukan berdasarkan query plan/benchmark. Tidak ada perubahan dependency/lockfile. Migration OTP existing `20261018150000_registration_email_otp` tetap checksum SHA-256 `eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e`. Jangan menjalankannya ulang di Production.
 - `frontend/vercel.json` menonaktifkan Git deployment **branch fitur ini** untuk mencegah Preview PR menyentuh resource bersama. Tidak mengubah project settings/secret/alias Production. Operator tetap perlu memastikan deployment hooks/manual promotion tidak dijalankan tanpa izin.
-- Rollback source dapat kembali ke baseline OTP-compatible `12f7a45` setelah persetujuan operator, tetapi bug duplicate/timer akan muncul kembali. Jangan kembali ke versi sebelum session revocation/OTP. Utamakan roll-forward bila menyangkut integritas autentikasi; tidak drop/reset schema atau pending/customer data.
-- Merge dan deployment menunggu persetujuan pemilik. Pengiriman Resend dan native autofill pada perangkat nyata belum diuji di Production; automated test menggunakan mock/loopback tanpa email nyata. Tidak ada migrasi, backup, invalidasi sesi, atau smoke test finansial Production dalam scope ini.
+- Utamakan roll-forward. Rollback-compatible source wajib tetap menyertakan migration kedelapan dan preflight yang memahaminya; jangan menghapus history/ledger. Baseline OTP-compatible `12f7a45` hanya referensi perilaku aplikasi lama, dengan konsekuensi bug duplicate/timer kembali, dan perlu branch rollback yang mempertahankan migration baru. Jangan kembali ke versi sebelum session revocation/OTP atau drop/reset schema/data.
+- Migration indeks Production, merge, dan deployment menunggu persetujuan pemilik; urutan wajib database-first setelah review readiness indeks. Pengiriman Resend dan native autofill pada perangkat nyata belum diuji di Production; automated test menggunakan mock/loopback tanpa email nyata. Tidak ada migrasi, backup, invalidasi sesi, atau smoke test finansial Production dalam scope ini.
 
 Alternatif magic link dievaluasi dan sengaja dipisahkan: lihat [rencana keamanan](MAGIC_LINK_PLAN.md).

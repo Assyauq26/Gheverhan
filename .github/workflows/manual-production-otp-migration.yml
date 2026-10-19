@@ -1,0 +1,175 @@
+name: Manual Gheverhan Production OTP Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "check = read-only readiness; apply = run approved Prisma migration"
+        required: true
+        type: choice
+        options:
+          - check
+          - apply
+      confirmation:
+        description: "For apply, type exactly APPLY_OTP_MIGRATION_20261018150000"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-otp-schema
+  cancel-in-progress: false
+
+jobs:
+  migration:
+    # Must only be triggered from main. The release source below is SHA-pinned.
+    if: ${{ github.ref == 'refs/heads/main' && (inputs.operation == 'check' || (inputs.operation == 'apply' && inputs.confirmation == 'APPLY_OTP_MIGRATION_20261018150000')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-migration
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      CI: "true"
+      VERCEL_ENV: production
+      R21_ALLOW_PRODUCTION_READ_ONLY: "1"
+      R21_EXPECTED_SUPABASE_REF: bztprltkevacidcpjaam
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      OTP_MIGRATION_APPROVED_SHA: ${{ secrets.OTP_MIGRATION_APPROVED_SHA }}
+    steps:
+      - name: Check out immutable reviewed PR 70 commit only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: b1e38ce3086ee85df5fd01e609cc5e89e3db949f
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked dependencies and Prisma
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/@prisma/engines/scripts/postinstall.js
+          npm run prisma:generate
+
+      - name: Check immutable source, config binding and six historical migration checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "b1e38ce3086ee85df5fd01e609cc5e89e3db949f"
+          printf '%s  %s\n' \
+            'eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e' \
+            'prisma/migrations/20261018150000_registration_email_otp/migration.sql' | sha256sum -c -
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const { readFileSync, readdirSync } = require('node:fs');
+          const { createHash } = require('node:crypto');
+          const ref = 'bztprltkevacidcpjaam';
+          function assertTarget(key) {
+            const raw = process.env[key];
+            if (!raw) throw new Error(key + ' missing');
+            const u = new URL(raw);
+            if (!['postgresql:', 'postgres:'].includes(u.protocol) ||
+                u.pathname !== '/postgres' ||
+                (u.searchParams.get('schema') || 'public') !== 'public' ||
+                !(u.hostname === 'db.' + ref + '.supabase.co' ||
+                 (u.hostname.endsWith('.pooler.supabase.com') &&
+                  decodeURIComponent(u.username).endsWith('.' + ref)))) {
+              throw new Error(key + ' does not identify the reviewed Production Supabase database');
+            }
+            return u.pathname;
+          }
+          if (assertTarget('DATABASE_URL') !== assertTarget('DIRECT_URL'))
+            throw new Error('Database bindings differ');
+          const db = new PrismaClient();
+          (async () => {
+            try {
+              const rows = await db.$queryRawUnsafe(
+                'SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations'
+              );
+              const names = readdirSync('prisma/migrations')
+                .filter(name => /^\d{14}_/.test(name)).sort();
+              if (names.length !== 7) throw new Error('Expected exactly seven repository migrations');
+              const complete = rows.filter(x => x.finished_at && !x.rolled_back_at);
+              if (rows.length !== 6 || complete.length !== 6)
+                throw new Error('Production ledger not exactly six complete migrations; stop and reconcile');
+              for (const name of names.slice(0, -1)) {
+                const stored = rows.find(x => x.migration_name === name);
+                const expected = createHash('sha256')
+                  .update(readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+                if (!stored || stored.checksum !== expected) throw new Error('Historical migration ledger mismatch: ' + name);
+              }
+              if (rows.some(x => x.migration_name === names.at(-1)))
+                throw new Error('OTP migration exists in ledger; refuse to reapply without review');
+              const schema = await db.$queryRawUnsafe(`
+                SELECT to_regclass('public."PendingRegistration"') IS NOT NULL AS pending,
+                EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema='public' AND table_name='User' AND column_name='emailVerifiedAt') AS verified`);
+              if (schema[0].pending || schema[0].verified)
+                throw new Error('OTP schema partially present; stop for manual reconciliation');
+              console.log('PASS: target binding, migration SHA, six historical checksums, pending schema');
+            } finally {
+              await db.$disconnect();
+            }
+          })().catch(e => { console.error('BLOCKED:', e.message); process.exitCode = 1; });
+          NODE
+
+      - name: Check only - report readiness without touching schema
+        if: ${{ inputs.operation == 'check' }}
+        run: echo "Read-only prerequisite checks PASS. No migration executed."
+
+      - name: Require additional operator approval secret before schema mutation
+        if: ${{ inputs.operation == 'apply' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${OTP_MIGRATION_APPROVED_SHA:-}" = "b1e38ce3086ee85df5fd01e609cc5e89e3db949f" || {
+            echo "BLOCKED: protected environment approval secret is missing or does not match pinned release SHA."
+            exit 1
+          }
+
+      - name: Apply reviewed migration using official Prisma CLI
+        if: ${{ inputs.operation == 'apply' }}
+        run: npm run prisma:deploy
+
+      - name: Verify applied migration and schema with Prisma and read-only SQL
+        if: ${{ inputs.operation == 'apply' }}
+        run: |
+          npx prisma migrate status
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const { readFileSync, readdirSync } = require('node:fs');
+          const { createHash } = require('node:crypto');
+          const db = new PrismaClient();
+          (async () => {
+            try {
+              const rows = await db.$queryRawUnsafe('SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations');
+              const names = readdirSync('prisma/migrations').filter(n => /^\d{14}_/.test(n)).sort();
+              if (names.length !== 7 || rows.length !== 7 || rows.some(x => !x.finished_at || x.rolled_back_at))
+                throw new Error('Not exactly seven successful migrations');
+              for (const name of names) {
+                const row = rows.find(x => x.migration_name === name);
+                const checksum = createHash('sha256').update(readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+                if (!row || row.checksum !== checksum) throw new Error('Checksum mismatch: ' + name);
+              }
+              const state = await db.$queryRawUnsafe(`
+                SELECT to_regclass('public."PendingRegistration"') IS NOT NULL AS pending,
+                EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema='public' AND table_name='User' AND column_name='emailVerifiedAt') AS verified`);
+              if (!state[0].pending || !state[0].verified)
+                throw new Error('Required OTP schema not present after migration');
+              console.log('PASS: seven migration checksums and OTP schema');
+            } finally {
+              await db.$disconnect();
+            }
+          })().catch(e => { console.error('BLOCKED:', e.message); process.exitCode = 1; });
+          NODE

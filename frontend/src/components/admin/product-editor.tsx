@@ -18,6 +18,9 @@ function valuesFor(p?: ProductEditorData): Values {
   if (p) { const { id: _id, status: _status, updatedAt: _version, ...values } = p; return values; }
   return { name: "", slug: "", description: "", material: "", careInstruction: "", shippingReturn: "", basePrice: 0, salePrice: null, categoryId: null, brandId: null, isFeatured: false, isFlashSale: false, images: [], variants: [{ sku: "", color: "", size: "", price: null, salePrice: null, onHand: 0 }] };
 }
+function isEmptyDraftVariant(row: Values["variants"][number]) {
+  return !row.id && !row.sku && !row.color && !row.size && row.price == null && row.salePrice == null && !row.onHand;
+}
 function suggestSlug(name: string) { return name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 const statusLabels = { DRAFT: "Draft", PUBLISHED: "Terbit", ARCHIVED: "Arsip" };
 export function ProductEditor({ initial, categories, brands, canEdit, canStock, canArchive }: {
@@ -75,9 +78,7 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
   function variantChange(index: number, patch: Partial<Values["variants"][number]>) { change("variants", values.variants.map((v, i) => i === index ? { ...v, ...patch } : v)); }
   function appendCombinations(combinations: VariantChoice[]): boolean {
     // A blank create-mode row is only a form placeholder, not a persisted variant.
-    const placeholder = values.variants.length === 1 && !values.variants[0].id &&
-      !values.variants[0].sku && !values.variants[0].color && !values.variants[0].size &&
-      values.variants[0].price == null && values.variants[0].salePrice == null && !values.variants[0].onHand;
+    const placeholder = values.variants.length === 1 && isEmptyDraftVariant(values.variants[0]);
     const list = placeholder ? [] : [...values.variants];
     const pairs = new Set(list.map(v => `${v.color.trim().toLocaleLowerCase("id")}::${v.size.trim().toLocaleLowerCase("id")}`));
     const skus = new Set(list.map(v => v.sku.trim().toLocaleLowerCase("id")));
@@ -179,12 +180,12 @@ export function ProductEditor({ initial, categories, brands, canEdit, canStock, 
               <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700">{values.variants.length} / 50</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-3">
-              <ProductVariantBuilder disabled={!canEdit || !!pending} variants={values.variants} onAdd={appendCombinations}/>
+              <ProductVariantBuilder disabled={!canEdit || !!pending} variants={values.variants} placeholderRow={values.variants.length === 1 && isEmptyDraftVariant(values.variants[0])} onAdd={appendCombinations}/>
               <Button type="button" variant="outline" size="sm" className="min-h-10 border-zinc-300" disabled={!canEdit || !!pending || values.variants.length >= 50} onClick={() => change("variants", [...values.variants, { sku: "", color: "", size: "", price: null, salePrice: null, ...(canStock ? { onHand: 0 } : {}) }])}><Plus size={16}/> Tambah varian</Button>
             </div>
             <p className="text-xs leading-relaxed text-zinc-500">SKU wajib unik. Harga varian yang kosong mengikuti harga utama. Varian yang sudah digunakan dalam transaksi mungkin tidak dapat dihapus.</p>
             <div className="space-y-3">
-              {values.variants.map((v, index) => <details key={v.id || `new-${index}`} open className="group min-w-0 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+              {values.variants.map((v, index) => <details key={v.id || `new-${index}`} open onInvalidCapture={event => { event.currentTarget.open = true; }} className="group min-w-0 overflow-hidden rounded-xl border border-zinc-200 bg-white">
                 <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 bg-zinc-50 px-3 py-3 text-sm transition-colors hover:bg-zinc-100 sm:px-4 [&::-webkit-details-marker]:hidden">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white font-bold text-zinc-600 shadow-sm">{index + 1}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate font-semibold text-zinc-900">{[v.color, v.size].filter(Boolean).join(" · ") || `Varian ${index + 1}`}</span><span className="mt-0.5 block truncate text-xs text-zinc-500">{v.sku || "SKU belum diisi"}</span></span>

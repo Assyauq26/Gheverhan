@@ -164,11 +164,10 @@ test("email verification is required before account exists; bad OTP cannot creat
   await assert.rejects(verify(data.email, otp), {
     status: 400,
   });
-  const duplicate = await start(data);
-  assert.ok(duplicate.challengeId);
-  await assert.rejects(verify(data.email, codes.get(data.email)!), {
+  await assert.rejects(start(data), {
     status: 409,
-    message: "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
+    message:
+      "Email atau nomor HP sudah terdaftar. Silakan masuk atau reset password.",
   });
   assert.equal(await db.user.count({ where: { email: data.email } }), 1);
 });
@@ -477,8 +476,7 @@ test("missing or foreign challenge cannot verify, resend, or lock the current ch
   assert.ok(user.emailVerifiedAt);
 });
 
-
-test("shared phone remains private before OTP and concurrent verification commits only one account", async () => {
+test("concurrent verification for a shared phone commits only one account and rejects later requests", async () => {
   const first = input(30);
   const second = { ...input(31), phone: first.phone };
   await start(first);
@@ -492,7 +490,7 @@ test("shared phone remains private before OTP and concurrent verification commit
   assert.equal(failure?.status === "rejected" && failure.reason.status, 409);
   assert.equal(
     failure?.status === "rejected" && failure.reason.message,
-    "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
+    "Email atau nomor HP sudah terdaftar. Silakan masuk atau reset password.",
   );
   const accounts = await db.user.findMany({
     where: { email: { in: [first.email, second.email] } },
@@ -502,12 +500,15 @@ test("shared phone remains private before OTP and concurrent verification commit
   assert.equal(await db.customer.count({ where: { userId: winner.id } }), 1);
   assert.equal(await db.cart.count({ where: { userId: winner.id } }), 1);
   assert.equal(await db.wishlist.count({ where: { userId: winner.id } }), 1);
-  assert.equal(await db.auditLog.count({
-    where: { userId: winner.id, action: "auth.register.verified" },
-  }), 1);
+  assert.equal(
+    await db.auditLog.count({
+      where: { userId: winner.id, action: "auth.register.verified" },
+    }),
+    1,
+  );
   // A phone conflict is not exposed by initiating registration either.
   const third = { ...input(32), phone: first.phone };
-  assert.ok((await start(third)).challengeId);
+  await assert.rejects(start(third), { status: 409 });
   assert.equal(await db.user.count({ where: { email: third.email } }), 0);
 });
 
@@ -519,18 +520,30 @@ test("audit failure rolls back User, Customer, Cart, Wishlist, role and pending 
     update: {},
   });
   await start(data);
-  const snapshot = async () => Promise.all([
-    db.user.count(), db.customer.count(), db.cart.count(),
-    db.wishlist.count(), db.userRole.count(), db.auditLog.count(),
-  ]);
+  const snapshot = async () =>
+    Promise.all([
+      db.user.count(),
+      db.customer.count(),
+      db.cart.count(),
+      db.wishlist.count(),
+      db.userRole.count(),
+      db.auditLog.count(),
+    ]);
   const before = await snapshot();
   // This client can only target the unique local disposable database created above.
-  await db.$executeRawUnsafe(`CREATE FUNCTION otp_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'dummy audit failure'; END $$`);
-  await db.$executeRawUnsafe(`CREATE TRIGGER otp_reject_audit BEFORE INSERT ON "AuditLog" FOR EACH ROW EXECUTE FUNCTION otp_reject_audit()`);
+  await db.$executeRawUnsafe(
+    `CREATE FUNCTION otp_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'dummy audit failure'; END $$`,
+  );
+  await db.$executeRawUnsafe(
+    `CREATE TRIGGER otp_reject_audit BEFORE INSERT ON "AuditLog" FOR EACH ROW EXECUTE FUNCTION otp_reject_audit()`,
+  );
   try {
     await assert.rejects(verify(data.email, codes.get(data.email)!));
     assert.deepEqual(await snapshot(), before);
-    assert.equal(await db.pendingRegistration.count({ where: { email: data.email } }), 1);
+    assert.equal(
+      await db.pendingRegistration.count({ where: { email: data.email } }),
+      1,
+    );
     assert.equal(await db.user.count({ where: { email: data.email } }), 0);
   } finally {
     await db.$executeRawUnsafe(`DROP TRIGGER otp_reject_audit ON "AuditLog"`);

@@ -12,7 +12,8 @@
       "security/r20-test-toolchain-upgrades": false,
       "fix/r21-production-hardening": false,
       "feat/auth-ui-legal-pages": false,
-      "feat/registration-email-otp-and-storefront-links": false
+      "feat/registration-email-otp-and-storefront-links": false,
+      "fix/registration-conflicts-otp-experience": false
     }
   }
 }

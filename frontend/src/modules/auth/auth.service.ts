@@ -1,4 +1,7 @@
-import { enforceAuthRateLimit } from "@/lib/auth/rate-limit";
+import {
+  enforceAuthRateLimit,
+  enforceRegistrationPhoneLimit,
+} from "@/lib/auth/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { Prisma, type PendingRegistration } from "@prisma/client";
 import {
@@ -31,21 +34,100 @@ import {
   registrationVerificationSchema,
 } from "./registration-schema";
 
-export const REGISTRATION_OTP_DELIVERY_FAILURE = "OTP tidak dapat dikirim. Coba lagi nanti.";
+import {
+  REGISTRATION_CONFLICT,
+  REGISTRATION_RECOVERY_MS,
+  type RegistrationChallenge,
+  type RegistrationFailure,
+} from "./registration-contract";
+
+export class RegistrationError extends HttpError {
+  constructor(
+    public code: RegistrationFailure,
+    message: string,
+    status = 400,
+  ) {
+    super(message, status);
+  }
+}
+export const REGISTRATION_OTP_DELIVERY_FAILURE =
+  "OTP tidak dapat dikirim. Coba lagi nanti.";
 const REGISTRATION_TTL_MS = 10 * 60_000;
 const REGISTRATION_RESEND_MS = 60_000;
 const REGISTRATION_MAX_ATTEMPTS = 5;
 
-/** A delivery reservation cannot be used as an OTP digest, even while the provider is in flight. */
+/** Include legacy local/formatted phones without rewriting any existing identity. */
+export async function assertRegistrationIdentityAvailable(
+  db: Prisma.TransactionClient | typeof prisma,
+  email: string,
+  phone: string,
+) {
+  const rows = await db.$queryRaw<{ conflict: boolean; filtered: boolean }[]>`
+    SELECT pg_catalog.row_security_active('public."User"'::regclass) AS filtered, EXISTS (
+      SELECT 1 FROM (
+        SELECT lower(btrim("email")) AS email,
+          regexp_replace(coalesce("phone", ''), '[[:space:]().-]', '', 'g') AS phone
+        FROM public."User"
+      ) identities
+      WHERE email = ${email} OR
+        CASE WHEN phone LIKE '0%' THEN '+62' || substring(phone FROM 2)
+          WHEN phone LIKE '62%' THEN '+' || phone ELSE phone END = ${phone}
+    ) AS conflict`;
+  if (!rows[0] || rows[0].filtered)
+    throw new HttpError(
+      "Layanan pendaftaran belum tersedia. Coba lagi nanti.",
+      503,
+    );
+  if (rows[0].conflict)
+    throw new RegistrationError(
+      "REGISTRATION_CONFLICT",
+      REGISTRATION_CONFLICT,
+      409,
+    );
+}
+
+function challengeMetadata(
+  pending: PendingRegistration,
+): RegistrationChallenge {
+  const now = Date.now();
+  return {
+    email: pending.email,
+    challengeId: pending.id,
+    expiresAt: pending.expiresAt.getTime(),
+    resendAvailableAt: pending.sentAt.getTime() + REGISTRATION_RESEND_MS,
+    serverNow: now,
+    status: pending.codeHash.startsWith("sending:")
+      ? "sending"
+      : pending.attempts >= REGISTRATION_MAX_ATTEMPTS
+        ? "locked"
+        : pending.expiresAt.getTime() <= now
+          ? "expired"
+          : "active",
+  };
+}
+
+/** Provider I/O never holds a transaction; an unactivated reservation is unverifiable. */
 async function deliverRegistrationOtp(
   email: string,
   code: string,
   reservation: string,
   challengeId: string,
   config: ReturnType<typeof registrationMailConfig>,
-) {
+): Promise<RegistrationChallenge> {
   try {
+    // Recheck immediately before delivery, including on resends.
+    const pending = await prisma.pendingRegistration.findUnique({
+      where: { id: challengeId },
+    });
+    if (!pending || pending.codeHash !== reservation)
+      throw new RegistrationError(
+        "CHALLENGE_MISSING",
+        "Sesi pendaftaran tidak tersedia. Silakan daftar kembali.",
+      );
+    await assertRegistrationIdentityAvailable(prisma, email, pending.phone);
     await sendRegistrationOtpEmail(email, code, config);
+    // A competing verified registration must not leave an active challenge behind.
+    await assertRegistrationIdentityAvailable(prisma, email, pending.phone);
     const activated = await prisma.pendingRegistration.updateMany({
       where: {
         id: challengeId,
@@ -56,30 +138,36 @@ async function deliverRegistrationOtp(
       data: { codeHash: hashRegistrationOtp(email, code, challengeId) },
     });
     if (activated.count !== 1)
-      throw new HttpError("Sesi pendaftaran berubah. Daftar kembali.", 409);
-  } catch {
-    // A late failed delivery must never delete a newer reservation.
+      throw new RegistrationError(
+        "CHALLENGE_MISSING",
+        "Sesi pendaftaran berubah. Silakan daftar kembali.",
+      );
+    const live = await prisma.pendingRegistration.findUniqueOrThrow({
+      where: { id: challengeId },
+    });
+    return challengeMetadata(live);
+  } catch (error) {
     await prisma.pendingRegistration.deleteMany({
       where: { id: challengeId, email, codeHash: reservation },
     });
-    throw new HttpError(REGISTRATION_OTP_DELIVERY_FAILURE, 503);
+    if (error instanceof RegistrationError) throw error;
+    throw new RegistrationError(
+      "OTP_DELIVERY_FAILED",
+      REGISTRATION_OTP_DELIVERY_FAILURE,
+      503,
+    );
   }
-  return {
-    email,
-    challengeId,
-    resendAvailableAt: Date.now() + REGISTRATION_RESEND_MS,
-  };
 }
 
-/** No user/session or plaintext password/OTP is persisted before successful verification. */
+/** Validate conflicts before touching pending state or calling the mail provider. */
 export async function requestRegistrationOtp(input: unknown) {
   const data = registrationSchema.parse(input);
   const { email } = data;
   const phone = normalizeRegistrationPhone(data.phone);
-  const config = registrationMailConfig();
   await enforceAuthRateLimit("register", email);
-  // Do not expose existing email/phone before inbox verification. The unique
-  // constraints arbitrate conflicts atomically only after a valid OTP.
+  await enforceRegistrationPhoneLimit(phone);
+  await assertRegistrationIdentityAvailable(prisma, email, phone);
+  const config = registrationMailConfig();
   const current = await prisma.pendingRegistration.findUnique({
     where: { email },
   });
@@ -90,11 +178,9 @@ export async function requestRegistrationOtp(input: unknown) {
   )
     code = generateRegistrationOtp();
   const challengeId = randomUUID();
-  // Validate signing configuration before persisting anything; never store an unkeyed 6-digit hash.
   hashRegistrationOtp(email, code, challengeId);
   const passwordHash = await hashPassword(data.password);
-  const now = new Date(),
-    cutoff = new Date(now.getTime() - REGISTRATION_RESEND_MS);
+  const now = new Date();
   const reservation = "sending:" + randomUUID();
   const values = {
     id: challengeId,
@@ -111,7 +197,7 @@ export async function requestRegistrationOtp(input: unknown) {
       where: {
         id: current.id,
         codeHash: current.codeHash,
-        sentAt: { lte: cutoff },
+        sentAt: { lte: new Date(now.getTime() - REGISTRATION_RESEND_MS) },
       },
       data: values,
     });
@@ -120,34 +206,50 @@ export async function requestRegistrationOtp(input: unknown) {
   } else {
     try {
       await prisma.pendingRegistration.create({ data: { email, ...values } });
-    } catch (err) {
+    } catch (error) {
       if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === "P2002"
-      ) {
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      )
         throw new HttpError("Tunggu 60 detik sebelum meminta OTP baru.", 429);
-      }
-      throw err;
+      throw error;
     }
   }
   return deliverRegistrationOtp(email, code, reservation, challengeId, config);
 }
 
-/** Unknown generations cannot consume the victim's per-email quotas. */
-async function registrationChallenge(email: string, challengeId: string) {
+async function registrationChallenge(
+  email: string,
+  challengeId: string,
+  statusOnly = false,
+) {
   await enforceAuthRateLimit(
-    "registerConfirm",
+    statusOnly ? "registerStatus" : "registerConfirm",
     "challenge:" + email + ":" + challengeId,
   );
   const current = await prisma.pendingRegistration.findUnique({
     where: { id: challengeId },
   });
   if (!current || current.email !== email)
-    throw new HttpError(
-      "Sesi pendaftaran tidak valid atau kedaluwarsa. Daftar kembali.",
-      400,
+    throw new RegistrationError(
+      "CHALLENGE_MISSING",
+      "Sesi pendaftaran tidak tersedia. Silakan daftar kembali.",
     );
   return current;
+}
+
+/** Only an opaque generation holder can recover timing/status, never credentials or the code. */
+export async function getRegistrationChallenge(
+  emailInput: string,
+  challengeInput: string,
+) {
+  const { email, challengeId } = registrationResendSchema.parse({
+    email: emailInput,
+    challengeId: challengeInput,
+  });
+  const pending = await registrationChallenge(email, challengeId, true);
+  await assertRegistrationIdentityAvailable(prisma, email, pending.phone);
+  return challengeMetadata(pending);
 }
 
 export async function resendRegistrationOtp(
@@ -158,18 +260,19 @@ export async function resendRegistrationOtp(
     email: emailInput,
     challengeId: challengeInput,
   });
-  const config = registrationMailConfig();
   const current = await registrationChallenge(email, challengeId);
   await enforceAuthRateLimit("register", email);
+  await enforceRegistrationPhoneLimit(current.phone);
+  await assertRegistrationIdentityAvailable(prisma, email, current.phone);
+  const config = registrationMailConfig();
   const now = new Date();
-  if (!current || current.expiresAt <= now) {
-    throw new HttpError(
+  const recoveryCutoff = new Date(now.getTime() - REGISTRATION_RECOVERY_MS);
+  if (current.expiresAt <= recoveryCutoff)
+    throw new RegistrationError(
+      "CHALLENGE_MISSING",
       "Sesi pendaftaran berakhir. Silakan daftar kembali.",
-      400,
     );
-  }
   let code = generateRegistrationOtp();
-  // The previous code must not survive a resend, including a random collision.
   while (compareRegistrationOtp(email, code, current.codeHash, current.id))
     code = generateRegistrationOtp();
   hashRegistrationOtp(email, code, challengeId);
@@ -179,7 +282,7 @@ export async function resendRegistrationOtp(
       id: current.id,
       codeHash: current.codeHash,
       sentAt: { lte: new Date(now.getTime() - REGISTRATION_RESEND_MS) },
-      expiresAt: { gt: now },
+      expiresAt: { gt: recoveryCutoff },
     },
     data: {
       codeHash: reservation,
@@ -207,29 +310,46 @@ export async function verifyRegistrationOtp(
   await enforceAuthRateLimit("registerConfirm", email);
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Lock before reading credential snapshots. Attempts, resend and account creation serialize.
-      // Email delivery and password hashing always happen outside this short transaction.
       const rows = await tx.$queryRaw<PendingRegistration[]>`
         SELECT * FROM "PendingRegistration" WHERE "email" = ${email} AND "id" = ${challengeId} FOR UPDATE`;
       const pending = rows[0];
-      if (
-        !pending ||
-        pending.expiresAt <= new Date() ||
-        pending.attempts >= REGISTRATION_MAX_ATTEMPTS ||
-        pending.codeHash.startsWith("sending:")
-      ) {
+      if (!pending)
         return {
-          error: "Kode OTP tidak valid atau kedaluwarsa. Daftar kembali.",
+          code: "CHALLENGE_MISSING",
+          error: "Sesi pendaftaran tidak tersedia. Silakan daftar kembali.",
         } as const;
-      }
+      if (pending.expiresAt <= new Date())
+        return {
+          code: "OTP_EXPIRED",
+          error: "Kode OTP sudah kedaluwarsa. Silakan kirim ulang kode.",
+        } as const;
+      if (pending.attempts >= REGISTRATION_MAX_ATTEMPTS)
+        return {
+          code: "OTP_ATTEMPTS_EXHAUSTED",
+          error: "Batas percobaan kode OTP tercapai. Silakan kirim ulang kode.",
+        } as const;
+      if (pending.codeHash.startsWith("sending:"))
+        return {
+          code: "OTP_SENDING",
+          error: "Kode OTP masih dikirim. Silakan tunggu sebentar.",
+        } as const;
       if (!compareRegistrationOtp(email, otp, pending.codeHash, pending.id)) {
         await tx.pendingRegistration.update({
           where: { id: pending.id },
           data: { attempts: { increment: 1 } },
         });
-        // Return rather than throw inside the transaction: persist the rejected attempt.
-        return { error: "Kode OTP salah atau kedaluwarsa." } as const;
+        return pending.attempts + 1 >= REGISTRATION_MAX_ATTEMPTS
+          ? ({
+              code: "OTP_ATTEMPTS_EXHAUSTED",
+              error:
+                "Batas percobaan kode OTP tercapai. Silakan kirim ulang kode.",
+            } as const)
+          : ({
+              code: "OTP_INVALID",
+              error: "Kode OTP salah. Periksa kembali dan coba lagi.",
+            } as const);
       }
+      await assertRegistrationIdentityAvailable(tx, email, pending.phone);
       await tx.pendingRegistration.delete({ where: { id: pending.id } });
       const role = await tx.role.findUnique({ where: { name: "Customer" } });
       const user = await tx.user.create({
@@ -258,19 +378,20 @@ export async function verifyRegistrationOtp(
       );
       return { user } as const;
     });
-    if (result.error !== undefined) throw new HttpError(result.error, 400);
+    if (result.error !== undefined)
+      throw new RegistrationError(result.code, result.error);
     return result.user;
-  } catch (err) {
+  } catch (error) {
     if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
-      throw new HttpError(
-        "Pendaftaran tidak dapat diselesaikan. Gunakan data lain atau masuk/reset password jika sudah memiliki akun.",
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    )
+      throw new RegistrationError(
+        "REGISTRATION_CONFLICT",
+        REGISTRATION_CONFLICT,
         409,
       );
-    }
-    throw err;
+    throw error;
   }
 }
 

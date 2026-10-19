@@ -445,3 +445,33 @@ test("RLS-filtered identity lookup fails closed instead of treating hidden accou
       );
   }
 });
+
+test("a stranded sending reservation is unverifiable but can be atomically replaced after cooldown", async () => {
+  const data = input(800);
+  const first = await start(data);
+  const originalCode = codes.get(data.email)!;
+  await db.pendingRegistration.update({
+    where: { id: first.challengeId },
+    data: {
+      codeHash: "sending:" + randomUUID(),
+      sentAt: new Date(Date.now() - 70_000),
+    },
+  });
+  const status = await svc.getRegistrationChallenge(
+    data.email,
+    first.challengeId,
+  );
+  assert.equal(status.status, "sending");
+  await assert.rejects(verify(data.email, originalCode), {
+    code: "OTP_SENDING",
+  });
+  assert.equal(await db.user.count({ where: { email: data.email } }), 0);
+  const recovered = await resend(data.email);
+  assert.equal(recovered.status, "active");
+  assert.equal(recovered.challengeId, first.challengeId);
+  assert.ok(recovered.resendAvailableAt > Date.now());
+  assert.ok(recovered.expiresAt > Date.now() + 590_000);
+  const user = await verify(data.email, codes.get(data.email)!);
+  assert.ok(user.emailVerifiedAt);
+  assert.equal(await db.user.count({ where: { email: data.email } }), 1);
+});

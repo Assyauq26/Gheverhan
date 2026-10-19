@@ -290,13 +290,11 @@ it("sending recovery stops after four failures and retains an explicit manual st
 it("fresh sending metadata cannot restart the automatic four-check budget indefinitely", async () => {
   vi.useFakeTimers();
   const initial = { ...challenge(), status: "sending" as const };
-  mock.status
-    .mockReset()
-    .mockImplementation(async () => ({
-      ok: true,
-      ...initial,
-      serverNow: Date.now(),
-    }));
+  mock.status.mockReset().mockImplementation(async () => ({
+    ok: true,
+    ...initial,
+    serverNow: Date.now(),
+  }));
   render(createElement(RegistrationOtpStep, { initial, onRestart: vi.fn() }));
   for (const delay of [1000, 2000, 4000, 8000]) {
     await act(async () => {
@@ -313,4 +311,46 @@ it("fresh sending metadata cannot restart the automatic four-check budget indefi
   ).toBe(true);
   expect(mock.verify).not.toHaveBeenCalled();
   expect(mock.resend).not.toHaveBeenCalled();
+});
+
+it("a stranded sending reservation can resend after the server cooldown while verification remains blocked", async () => {
+  const first = render(
+    createElement(RegistrationOtpStep, {
+      initial: { ...challenge(), status: "sending" },
+      onRestart: vi.fn(),
+    }),
+  );
+  expect(
+    (screen.getByTestId("registration-resend") as HTMLButtonElement).disabled,
+  ).toBe(true);
+  first.unmount();
+  const stranded = {
+    ...challenge(),
+    status: "sending" as const,
+    resendAvailableAt: Date.now() - 1,
+  };
+  mock.resend.mockResolvedValue({ ok: true, ...challenge() });
+  render(
+    createElement(RegistrationOtpStep, {
+      initial: stranded,
+      onRestart: vi.fn(),
+    }),
+  );
+  expect(
+    (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+  ).toBe(true);
+  expect(
+    (screen.getByTestId("auth-submit") as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(
+    (screen.getByTestId("registration-resend") as HTMLButtonElement).disabled,
+  ).toBe(false);
+  fireEvent.click(screen.getByTestId("registration-resend"));
+  await waitFor(() => expect(mock.resend).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(
+      (screen.getByTestId("register-otp") as HTMLInputElement).disabled,
+    ).toBe(false),
+  );
+  expect(mock.verify).not.toHaveBeenCalled();
 });

@@ -13,6 +13,8 @@ Baseline: `main@12f7a4589ff50dbf2f3c70f19dd92b98df19fcd9`, setelah PR #70 di-mer
 
 6. Review Codex menemukan dua P2: ref retry tidak memicu penjadwalan ulang setelah status `sending` gagal dibaca, dan pesan restart selalu mengalahkan hasil submit terbaru. Tiga regression tests mereproduksi kedua temuan sebelum perbaikan; satu test tambahan memastikan metadata `sending` baru tidak mereset budget empat pemeriksaan otomatis. Retry kini berupa state yang bergerak setelah setiap respons gagal/sukses (maksimum empat, lalu fallback manual), dan feedback action terbaru menggantikan pesan/link recovery lama.
 
+7. Review lanjutan menemukan UI melarang resend pada reservation `sending` yang tertinggal setelah worker berhenti, walaupun cooldown sudah berlalu. Tombol resend sekarang mengikuti cooldown server tanpa memblokir status tersebut; verifikasi tetap terkunci hingga aktivasi. Unit test gagal sebelum perbaikan lalu lulus sesudahnya, dan PostgreSQL test membuktikan CAS replacement reservation serta pembuatan tepat satu akun setelah kode baru valid.
+
 ## Backend dan batas keamanan
 
 - Email trim/lowercase dan phone Indonesia dinormalisasi konsisten. Lookup juga mengenali email legacy dengan kapitalisasi dan phone legacy berformat lokal/spasi/tanda baca tanpa mengubah data lama.
@@ -42,16 +44,16 @@ Verifikasi lokal yang benar-benar dijalankan sebelum commit:
 | --- | --- |
 | Node.js 22, locked install, Prisma generate dan fresh deploy tujuh migrasi pada disposable PostgreSQL | PASS |
 | TypeScript, ESLint, production build | PASS |
-| Unit | 256 PASS |
+| Unit | 257 PASS |
 | Critical containment / security mitigation | 25 / 9 PASS |
 | Registration OTP lifecycle PostgreSQL | 15 PASS |
-| Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS | 7 PASS |
+| Konflik identitas, canonical phone quota, metadata, expiry recovery, provider race, RLS, stranded sending | 8 PASS |
 | Auth/session/reset PostgreSQL | 12 PASS |
 | Chromium auth/legal | 15 kelompok PASS, sembilan viewport 320/360/375/390/430/768/1024/1440/1920 |
 
 Browser membuktikan penolakan REST email/phone/both sebelum email/pending, form validation, private challenge/Origin, keyboard/paste/native autofill, satu autosubmit, merah setelah penolakan, hijau setelah sukses, reduced motion, expiry, locked attempts, reload, resubmission, SMTP failure, respons resend sengaja diputus setelah backend memproses, pemulihan challenge terhapus, login/logout/reset/session revocation, legal dan link affordance. Error transport dari fault injection dicatat terpisah; unexpected console/page errors tetap membuat test gagal.
 
-Workflow `test-containment.yml` dan `sprint-2e-isolated-regression.yml` wajib dijalankan pada HEAD PR final. Workflow kedua mempertahankan database entrypoint/preflight, migration lock/recovery, cart concurrency, product, checkout, payment/refund/shipping, browser product/operations, hydration replay, dan navigation **10×44**; menambahkan tujuh kelompok konflik baru tanpa melewati gate lama. Hasil final yang terikat SHA, link Actions, dan status review dicantumkan di PR. Hasil source baseline tidak dipakai sebagai bukti source final.
+Workflow `test-containment.yml` dan `sprint-2e-isolated-regression.yml` wajib dijalankan pada HEAD PR final. Workflow kedua mempertahankan database entrypoint/preflight, migration lock/recovery, cart concurrency, product, checkout, payment/refund/shipping, browser product/operations, hydration replay, dan navigation **10×44**; menambahkan delapan kelompok konflik baru tanpa melewati gate lama. Hasil final yang terikat SHA, link Actions, dan status review dicantumkan di PR. Hasil source baseline tidak dipakai sebagai bukti source final.
 
 Screenshot berasal dari browser lokal build production; data dummy dan digit OTP sengaja disamarkan. Screenshot dibuat sebelum commit dari source yang sama dan berfungsi sebagai bukti visual, bukan pengganti hasil CI pada commit final.
 

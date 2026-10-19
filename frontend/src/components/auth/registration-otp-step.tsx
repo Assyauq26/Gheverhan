@@ -335,7 +335,7 @@ export function RegistrationOtpStep({
           className="auth-resend-button"
           data-testid="registration-resend"
           aria-busy={pending === "resend"}
-          disabled={Boolean(pending || verified || cooldown > 0 || sending)}
+          disabled={Boolean(pending || verified || cooldown > 0)}
         >
           {pending === "resend"
             ? "Mengirim..."

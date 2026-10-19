@@ -96,7 +96,7 @@ jobs:
             ['sentAt','timestamp without time zone','NO','CURRENT_TIMESTAMP',3],
             ['createdAt','timestamp without time zone','NO','CURRENT_TIMESTAMP',3],
           ];
-          const quote = value => value === null ? 'NULL' : "'" + value.replace(/'/g, "''") + "'";
+          const quote = value => value === null ? 'NULL' : typeof value === 'number' ? String(value) : "'" + value.replace(/'/g, "''") + "'";
           const columnTuples = requiredColumns.map(c => '(' + c.map(quote).join(',') + ')').join(',\n');
           // Single, read-only SQL query via libpq's simple query protocol; avoids
           // Prisma prepared statement collisions behind Supabase PgBouncer.

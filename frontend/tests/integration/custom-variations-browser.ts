@@ -237,6 +237,12 @@ export async function verifyCustomVariations(c: Context) {
           "Foto variasi hanya dapat digunakan pada satu jenis variasi.",
         );
         await capture("image-conflict-390");
+        await expect(
+          dialog.getByRole("button", { name: "Batal", exact: true }),
+        ).toBeFocused();
+        await page.setViewportSize({ width: 1360, height: 900 });
+        await capture("image-conflict-1360");
+        await page.setViewportSize({ width: 390, height: 844 });
         await dialog
           .getByRole("button", { name: "Batal", exact: true })
           .click();
@@ -298,6 +304,13 @@ export async function verifyCustomVariations(c: Context) {
         await page.reload();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Warna");
         await capture("saved-390");
+        await page.setViewportSize({ width: 1360, height: 900 });
+        await root.locator(".variation-heading").scrollIntoViewIfNeeded();
+        await page.evaluate(() => window.scrollBy(0, -120));
+        await capture("photos-overview-1360");
+        await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
+        await capture("photos-skus-1360");
+        await page.setViewportSize({ width: 390, height: 844 });
       },
     );
     await check(
@@ -771,6 +784,38 @@ export async function verifyCustomVariations(c: Context) {
         );
         await root.getByLabel("Nama variasi 1").focus();
         await expect(root.getByLabel("Nama variasi 1")).toBeFocused();
+        // Reduced viewport represents keyboard occlusion, not a physical Android/iOS IME.
+        await page.setViewportSize({ width: 390, height: 480 });
+        const field = root.getByLabel("Nama variasi 1");
+        await field.evaluate((el) => el.scrollIntoView({ block: "center" }));
+        await field.focus();
+        const fieldBox = await field.boundingBox(),
+          headerBox = await page.locator("header").first().boundingBox(),
+          saveBox = await page
+            .getByTestId("save-product")
+            .locator("..")
+            .boundingBox();
+        assert.ok(
+          fieldBox &&
+            headerBox &&
+            saveBox &&
+            fieldBox.y >= headerBox.y + headerBox.height &&
+            fieldBox.y + fieldBox.height <= saveBox.y,
+          "focused input is clear of header/sticky actions",
+        );
+        await capture("keyboard-viewport-390");
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        assert.equal(
+          await root
+            .getByRole("switch")
+            .first()
+            .evaluate(
+              (el) => getComputedStyle(el, "::before").transitionDuration,
+            ),
+          "0s",
+        );
+        await page.emulateMedia({ reducedMotion: "no-preference" });
         assert.deepEqual(errors, []);
       },
     );

@@ -417,7 +417,11 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .variation-editor *,
-  .variation-confirm * {
+  .variation-editor *::before,
+  .variation-editor *::after,
+  .variation-confirm *,
+  .variation-confirm *::before,
+  .variation-confirm *::after {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;

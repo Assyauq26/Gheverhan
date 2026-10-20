@@ -63,7 +63,7 @@ async function disposable(count: number, run: (f: Fixture) => Promise<void>) {
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 9);
+    assert.equal(names.length, 10);
     assert.equal(names[8], migration);
     for (const n of names.slice(0, count))
       await cp(
@@ -141,7 +141,7 @@ test("custom variation migration preserves legacy data and supports bounded offi
   await t.test(
     "fresh install records the exact checksum, RLS, partial index and deferred constraints",
     async () =>
-      disposable(9, async ({ db, command }) => {
+      disposable(10, async ({ db, command }) => {
         assert.equal(command(["status"]).status, 0);
         assert.equal(command(["deploy"]).status, 0);
         const ledger = await db.$queryRaw<

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkoutIntentId } from "@/modules/checkout/checkout-intent";
 import { ok, handle } from "@/lib/response";
 import { requireUser } from "@/lib/auth/session";
 import { checkoutLinesSchema, checkoutQuoteSchema } from "@/modules/checkout/checkout.validation";
@@ -8,6 +9,7 @@ import { listOrdersForUser } from "@/modules/orders/orders.service";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
+  intentId: checkoutIntentId.optional(),
   address: z.object({
     recipientName: z.string(), phone: z.string(), line: z.string(),
     city: z.string(), province: z.string(), postalCode: z.string(),

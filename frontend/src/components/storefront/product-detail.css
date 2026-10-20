@@ -20,7 +20,7 @@
 .pdp-product-price { letter-spacing: -.035em; }
 .pdp-gallery-frame { position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #f5f3f1; }
 .pdp-gallery-image { object-fit: cover; }
-.pdp-gallery-dots { position: absolute; bottom: 1.35rem; left:0; right:0; display: flex; justify-content:center; gap:.45rem; z-index: 2; }
+.pdp-gallery-dots { position: absolute; bottom: 1.35rem; left:0; right:0; display: flex; flex-wrap:wrap; justify-content:center; gap:.1rem; z-index: 2; }
 .pdp-gallery-dot { width:.43rem; height:.43rem; min-width: .43rem; border-radius:9999px; background:rgba(30,30,30,.22); transition: width .2s, background .2s; }
 .pdp-gallery-dot[aria-current="true"] { background:#202020; width:.53rem; }
 .pdp-thumb-bar { display:flex; max-width:100%; overflow-x:auto; gap:.7rem; padding:.6rem .2rem .2rem; }

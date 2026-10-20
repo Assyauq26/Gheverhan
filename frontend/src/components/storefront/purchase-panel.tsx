@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useProductSelection } from "./product-selection";
 import { resolveVariant } from "@/modules/catalog/variation-domain";
 import { cn } from "@/lib/utils";
+import { buyNowAction } from "@/modules/checkout/checkout-intent.actions";
 import { addToCartAction } from "@/modules/cart/cart.actions";
 
 export interface VariantOption {
@@ -76,7 +77,10 @@ export function PurchasePanel({
   const [done, setDone] = useState(false);
   const [notified, setNotified] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const [transitioning, start] = useTransition();
+  const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
+  const pending = transitioning || busy;
 
   const selected = useMemo(
     () =>
@@ -116,30 +120,35 @@ export function PurchasePanel({
   const outOfStock = stock <= 0;
 
   function add(checkout = false) {
-    if (!selected || selected.available < qty || pending) return;
+    if (!selected || selected.available < qty || inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
     setError(null);
     start(async () => {
       try {
+        if (checkout) {
+          const intent = await buyNowAction(selected.id, qty);
+          if (!intent.ok || !intent.data) { setError(intent.error ?? "Gagal menyiapkan checkout"); return; }
+          router.push(intent.data.checkoutUrl);
+          return;
+        }
         const res = await addToCartAction(selected.id, qty);
         if (res.unauthorized) {
-          router.push(checkout ? "/login?redirectTo=/checkout" : "/login?redirectTo=/cart");
+          router.push("/login?redirectTo=/cart");
           return;
         }
         if (!res.ok) {
           setError(res.error ?? "Gagal menambah ke keranjang");
           return;
         }
-        if (checkout) {
-          // Checkout is deliberately cart-based; the order review will include
-          // any earlier cart items. Do not fake a single-item direct checkout.
-          router.push("/checkout");
-        } else {
-          setDone(true);
-          setTimeout(() => setDone(false), 1500);
-          router.refresh();
-        }
+        setDone(true);
+        setTimeout(() => setDone(false), 1500);
+        router.refresh();
       } catch {
-        setError("Koneksi terputus. Periksa keranjang sebelum mencoba lagi.");
+        setError("Koneksi terputus. Silakan coba lagi.");
+      } finally {
+        inFlight.current = false;
+        setBusy(false);
       }
     });
   }
@@ -245,7 +254,7 @@ export function PurchasePanel({
         </button>
       </div>
       <p className="text-[11px] leading-relaxed text-zinc-400 md:max-w-md">
-        Beli Sekarang melanjutkan ke checkout dengan seluruh isi keranjang Anda.
+        Beli Sekarang hanya membeli pilihan ini. Isi keranjang Anda tetap tersimpan.
       </p>
     </div>
   );

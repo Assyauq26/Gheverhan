@@ -62,7 +62,7 @@ export function ProductGallery({
                 aria-label={`Lihat foto produk ${i + 1} dari ${list.length}`}
                 aria-current={index === i ? "true" : undefined}
                 onClick={() => setActive(i)}
-                className="grid h-7 w-7 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                className="grid h-11 w-11 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               >
                 <span className="pdp-gallery-dot" aria-current={index === i ? "true" : undefined}/>
               </button>

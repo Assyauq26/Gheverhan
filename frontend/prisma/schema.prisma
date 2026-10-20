@@ -100,6 +100,25 @@ model User {
   auditLogs       AuditLog[]
   resetTokens     PasswordResetToken[]
   revokedSessions SessionRevocation[]
+  checkoutIntents CheckoutIntent[]
+}
+
+// Isolated Buy Now: a browser-bound guest intent can be claimed after login.
+// Consumed together with order creation; never mutates the customer's Cart.
+model CheckoutIntent {
+  id              String   @id @default(uuid())
+  userId          String?
+  guestSecretHash String?
+  variantId       String
+  quantity        Int
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  orderId         String?  @unique
+  createdAt       DateTime @default(now())
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
 }
 
 // Pending customer registration: no User/session until the email OTP is verified.

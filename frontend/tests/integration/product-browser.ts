@@ -9,6 +9,7 @@ import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
 import { verifyCustomVariations } from "./custom-variations-browser";
+import { verifyDirectCheckout } from "./direct-checkout-browser";
 import { verifyCartSynchronization } from "./cart-sync-browser";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
@@ -272,6 +273,9 @@ async function main() {
     });
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
+    });
+    await check("Buy Now guest login continuation and exact legacy/custom checkout preserve the old cart", async () => {
+      await verifyDirectCheckout(browser!, db, base, artifactDir, pageErrors);
     });
     await check("R20 authenticated cart synchronization and rollback at four viewports", async () => {
       await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir, emailCodes);

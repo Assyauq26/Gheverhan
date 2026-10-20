@@ -176,6 +176,24 @@ jobs:
           if grep -Eiq '(^error|failed|P[0-9]{4})' "$logfile"; then echo 'BLOCKED: Prisma reported an error'; exit 1; fi
           echo 'PASS: official Prisma CLI reports precisely the two approved pending migrations'
 
+      - name: Require real runtime preflight bindings before Production DDL
+        if: inputs.operation == 'migrate'
+        shell: bash
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          PASSWORD_RESET_FROM: ${{ secrets.PASSWORD_RESET_FROM }}
+          PASSWORD_RESET_BASE_URL: ${{ secrets.PASSWORD_RESET_BASE_URL }}
+        run: |
+          set -euo pipefail
+          for key in JWT_SECRET SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY CRON_SECRET RESEND_API_KEY PASSWORD_RESET_FROM PASSWORD_RESET_BASE_URL; do
+            test -n "${!key:-}" || { echo "BLOCKED: missing protected runtime binding $key"; exit 1; }
+          done
+          echo 'PASS: protected runtime preflight bindings are present (values not printed)'
+
       - name: Confirm actual CLOSED maintenance and all-writer isolation before any write
         if: inputs.operation == 'migrate'
         run: node .github/scripts/gheverhan-final-release-gate.mjs maintenance
@@ -210,6 +228,25 @@ jobs:
             echo 'BLOCKED: final Prisma schema status not up to date'; exit 1;
           }
           echo 'PASS: official Prisma status is up to date'
+
+      - name: Run official full-schema read-only release preflight after migration
+        if: inputs.operation == 'migrate'
+        working-directory: candidate/frontend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          PASSWORD_RESET_FROM: ${{ secrets.PASSWORD_RESET_FROM }}
+          PASSWORD_RESET_BASE_URL: ${{ secrets.PASSWORD_RESET_BASE_URL }}
+          R21_EXPECTED_SUPABASE_REF: bztprltkevacidcpjaam
+          R21_ALLOW_PRODUCTION_READ_ONLY: '1'
+        run: |
+          set -euo pipefail
+          npm run release:preflight
 
       - name: Verify public LIVE domain and exact final Production SHA (read-only)
         if: inputs.operation == 'verify_live'

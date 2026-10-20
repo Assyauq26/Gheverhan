@@ -76,10 +76,9 @@ jobs:
           persist-credentials: false
       - name: Verify all ten pinned migrations on the actual candidate (NO Production secrets)
         env:
-          GITHUB_REF: refs/heads/main
           INPUT_PROJECT_REF: bztprltkevacidcpjaam
           INPUT_APPROVED_SHA: ec3e56f8b84d3446a3c19a51a8049d2beb999896
-        run: node .github/scripts/gheverhan-final-release-gate.mjs source
+        run: node .github/scripts/gheverhan-final-release-gate.mjs source-static
 
   controlled:
     if: >-

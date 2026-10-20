@@ -18,7 +18,7 @@ This is a *separate* automation PR based on `main`. It makes the already-existin
 
 1. Review and approve this automation PR, and merge it to `main` **only when this workflow itself has passed code review**. Its only app-impacting files are `.github/workflows/` and `.github/scripts/`; it does not migrate or deploy by merging. Note: even a workflow-only commit can trigger Vercel Git deployment when main autodeploy is on; first examine this behavior using the existing Production project settings.
 2. Open repository **Settings → Environments → production-migration**. Retain required human reviewers and prevent unprotected branches from deploying to this environment. Do not turn off environment approval or branch protection.
-3. Via GitHub's secret UI, verify protected **environment secrets** (do not paste them in chat): `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_DB_CA_CERT`. Add `VERCEL_TOKEN` with access to scope `syauqi3` and project `gheverhan`; it must have permission to read project/deployments/domain metadata. If scoped Vercel API still returns 403, stop rather than remove the scope or try an unrelated project.
+3. Via GitHub's secret UI, verify protected **environment secrets** (do not paste them in chat): `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_DB_CA_CERT`. Add `VERCEL_TOKEN` with access to scope `syauqi3` and project `gheverhan`; it must have permission to read project/deployments/domain metadata. For the official postmigration release preflight, also configure `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `PASSWORD_RESET_FROM`, and `PASSWORD_RESET_BASE_URL` from the real Production configuration, using secure secret entry and never dummy substitutes. GitHub Actions will refuse to migrate if any of these are absent. If scoped Vercel API still returns 403, stop rather than remove the scope or try an unrelated project.
 4. Confirm Production URL IDs, PostgreSQL SSL verify-full, app role/DDL privileges, migration checksums, preview/live writer inventory and agreed recovery constraints. The previous decision **not to create an additional backup because data is dummy** must be reconfirmed explicitly at run time.
 5. Use GitHub's PR review UI for #75, #83 and #84. An authorized human (requested reviewer: `mrifatsyauqi`) must approve **each exact pinned HEAD**. This workflow refuses to migrate if any of them remain unapproved or if their two required CI workflows are not SUCCESS. Do not self-approve or bypass protected branch review.
 
@@ -47,7 +47,7 @@ Inputs:
 - `writer_isolation_confirmed = YES`
 - `backup_decision = NO_ADDITIONAL_BACKUP_DUMMY_DATA`
 
-The job checks the exact historical 8/8 Prisma ledger and the two pending migrations, verifies the frozen source, approval and TLS, then calls official `npm run prisma:deploy` from candidate SHA. Afterward it checks 10/10 ledger and official up-to-date Prisma status. **Never retry a failed migration blindly.** If an error occurs, inspect the ledger/schema and follow the candidate runbook.
+The job checks the exact historical 8/8 Prisma ledger and the two pending migrations, verifies the frozen source, approval and TLS, then calls official `npm run prisma:deploy` from candidate SHA. Afterward it checks 10/10 ledger, official up-to-date Prisma status, and the complete read-only `npm run release:preflight` against protected Production runtime bindings. **Never retry a failed migration blindly.** If an error occurs, inspect the ledger/schema and follow the candidate runbook.
 
 ### Third: merge and Production deployment
 

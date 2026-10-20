@@ -1,0 +1,45 @@
+name: Verify Production public HTTP after OTP release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/production-public-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Check public storefront and health (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for host in gheverhan.store www.gheverhan.store; do
+            for route in / /api/v1/health; do
+              tmp="$(mktemp)"
+              url="https://${host}${route}"
+              status="$(curl --silent --show-error --location --max-time 25 --retry 2 --retry-delay 2 --header 'Cache-Control: no-cache' --output "$tmp" --write-out '%{http_code}' "$url")"
+              if [ "$status" != 200 ]; then
+                echo "BLOCKED: Public route ${host}${route} returned HTTP ${status}; deployment may still be in maintenance or unavailable"
+                rm -f "$tmp"
+                exit 1
+              fi
+              if grep -Fq 'Layanan sedang dalam pemeliharaan' "$tmp"; then
+                echo "BLOCKED: Maintenance response still served on ${host}${route}"
+                rm -f "$tmp"
+                exit 1
+              fi
+              if [ "$route" = '/api/v1/health' ] && ! grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$tmp"; then
+                echo "BLOCKED: Public health endpoint returned unexpected body"
+                rm -f "$tmp"
+                exit 1
+              fi
+              rm -f "$tmp"
+              echo "PASS: ${host}${route} responds HTTP 200 outside maintenance"
+            done
+          done
+          echo 'PASS: public storefront and health smoke; no mutations or OTP messages sent'

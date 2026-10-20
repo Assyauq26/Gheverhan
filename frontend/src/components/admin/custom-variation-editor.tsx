@@ -21,7 +21,6 @@ import {
   type OptionGroup,
 } from "@/modules/catalog/variation-domain";
 import type { ProductInput } from "@/modules/catalog/product-management.validation";
-import "./variation-editor.css";
 
 type Row = ProductInput["variants"][number] & {
   reserved?: number;

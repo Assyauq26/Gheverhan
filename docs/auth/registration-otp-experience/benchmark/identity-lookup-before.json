@@ -1,0 +1,73 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Result",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Startup Cost": 5.34,
+      "Total Cost": 5.35,
+      "Plan Rows": 1,
+      "Plan Width": 1,
+      "Actual Startup Time": 692.166,
+      "Actual Total Time": 692.168,
+      "Actual Rows": 1,
+      "Actual Loops": 1,
+      "Shared Hit Blocks": 0,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 834,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0,
+      "Plans": [
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "InitPlan",
+          "Subplan Name": "InitPlan 1",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Relation Name": "registration_identity_bench",
+          "Alias": "registration_identity_bench",
+          "Startup Cost": 0.0,
+          "Total Cost": 5334.0,
+          "Plan Rows": 998,
+          "Plan Width": 0,
+          "Actual Startup Time": 692.162,
+          "Actual Total Time": 692.163,
+          "Actual Rows": 0,
+          "Actual Loops": 1,
+          "Filter": "((lower(btrim(email, '\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff'::text)) = 'absent@example.test'::text) OR (CASE WHEN (translate(COALESCE(phone, ''::text), '\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff().-'::text, ''::text) ~~ '0%'::text) THEN ('+62'::text || SUBSTRING(translate(COALESCE(phone, ''::text), '\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff().-'::text, ''::text) FROM 2)) WHEN (translate(COALESCE(phone, ''::text), '\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff().-'::text, ''::text) ~~ '62%'::text) THEN ('+'::text || translate(COALESCE(phone, ''::text), '\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff().-'::text, ''::text)) ELSE translate(COALESCE(phone, ''::text), '\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff().-'::text, ''::text) END = '+62999999999999'::text))",
+          "Rows Removed by Filter": 100000,
+          "Shared Hit Blocks": 0,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 834,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        }
+      ]
+    },
+    "Planning": {
+      "Shared Hit Blocks": 2,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 2,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning Time": 0.145,
+    "Triggers": [],
+    "Execution Time": 692.193
+  }
+]

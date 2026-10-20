@@ -1,0 +1,297 @@
+name: Manual Production registration indexes migration (PR 74)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Confirm exact Supabase Production project ref'
+        required: true
+        type: string
+      approved_head:
+        description: 'Confirm approved PR 74 source commit SHA'
+        required: true
+        type: string
+      write_drain_confirmed:
+        description: 'Type YES only after bounded Production write-drain window is coordinated'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-otp-schema
+  cancel-in-progress: false
+
+jobs:
+  migration:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.project_ref == 'bztprltkevacidcpjaam' && inputs.approved_head == 'd62493c06890176a0a5f2aad111078c7a222f11c' && inputs.write_drain_confirmed == 'YES' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-migration
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout immutable reviewed PR 74 source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: d62493c06890176a0a5f2aad111078c7a222f11c
+          persist-credentials: false
+          sparse-checkout: frontend
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify immutable migration source and protected bindings
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 'd62493c06890176a0a5f2aad111078c7a222f11c'
+          test -n "${DIRECT_URL:-}" && test -n "${DATABASE_URL:-}" || { echo 'BLOCKED: missing protected database secrets'; exit 1; }
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const expected = '20261019054922_registration_identity_lookup_indexes';
+          const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          if (dirs.length !== 8 || dirs.at(-1) !== expected) throw new Error('BLOCKED: unexpected migration set');
+          const sql = fs.readFileSync('prisma/migrations/' + expected + '/migration.sql', 'utf8');
+          if (crypto.createHash('sha256').update(sql).digest('hex') !== '369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b')
+            throw new Error('BLOCKED: migration checksum mismatch');
+          const ref = 'bztprltkevacidcpjaam';
+          for (const key of ['DIRECT_URL','DATABASE_URL']) {
+            const u = new URL(process.env[key]);
+            const host = u.hostname.toLowerCase();
+            const user = decodeURIComponent(u.username);
+            if (!['postgres:','postgresql:'].includes(u.protocol) ||
+                !(host === 'db.' + ref + '.supabase.co' ||
+                  (host.endsWith('.pooler.supabase.com') && user.endsWith('.' + ref))) ||
+                u.pathname !== '/postgres' || !u.password ||
+                (u.searchParams.get('schema') || 'public') !== 'public')
+              throw new Error('BLOCKED: ' + key + ' is not bound to approved Production database');
+          }
+          console.log('PASS: immutable source, exact migration checksum, approved database URL identity');
+          NODE
+
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Prepare trusted Supabase database CA certificate
+        shell: bash
+        env:
+          SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_CA_CERT:-}" || { echo 'BLOCKED: missing Supabase CA certificate secret'; exit 1; }
+          umask 077
+          cert_path="${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt"
+          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
+          unset SUPABASE_DB_CA_CERT
+          openssl x509 -in "$cert_path" -noout >/dev/null 2>&1 || { echo 'BLOCKED: invalid Supabase CA certificate PEM'; rm -f "$cert_path"; exit 1; }
+          echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
+          echo 'PASS: trusted Supabase CA certificate loaded for verify-full'
+      - name: Confirm Production maintenance write-drain via public endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Maintenance must be observable on both public Production domains.
+          # GET / and a non-existent POST API path cannot mutate customer data.
+          for host in gheverhan.store www.gheverhan.store; do
+            for method in GET POST; do
+              route="/"
+              if [ "$method" = "POST" ]; then route="/api/__migration_write_drain_probe"; fi
+              status="$(curl --silent --show-error --location --max-time 20 --request "$method" --dump-header "${RUNNER_TEMP}/maintenance-headers" --output "${RUNNER_TEMP}/maintenance-body" --write-out '%{http_code}' "https://${host}${route}")"
+              if [ "$status" != '503' ] || ! grep -Fq 'Layanan sedang dalam pemeliharaan' "${RUNNER_TEMP}/maintenance-body" || ! grep -qi 'cache-control:.*no-store' "${RUNNER_TEMP}/maintenance-headers"; then
+                echo "BLOCKED: confirmed Production maintenance response missing for ${host} ${method}; no migration executed"
+                exit 1
+              fi
+              echo "PASS: Production maintenance confirmed for ${host} ${method}"
+            done
+          done
+
+      - name: Verify Production ledger and operational safety (read-only)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v psql >/dev/null || { echo 'BLOCKED: psql unavailable'; exit 1; }
+          node <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const u = new URL(process.env.DIRECT_URL);
+          const dirs = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          const tuples = dirs.slice(0,7).map(name => {
+            const sha = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/' + name + '/migration.sql')).digest('hex');
+            return "('" + name + "','" + sha + "')";
+          }).join(',');
+          const sql = `BEGIN READ ONLY;
+          SET LOCAL statement_timeout = '10s';
+          SELECT CASE WHEN current_database()='postgres'
+            AND (SELECT count(*) FROM public._prisma_migrations)=7
+            AND (SELECT count(*) FROM public._prisma_migrations m JOIN
+              (VALUES ${tuples}) AS expected(name,sha) ON m.migration_name=expected.name AND m.checksum=expected.sha
+              WHERE m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)=7
+            AND (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN
+              ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx'))=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND xact_start IS NOT NULL AND now()-xact_start > interval '30 seconds')=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND wait_event_type='Lock')=0
+            AND ((SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR
+              pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid='public."User"'::regclass),'MEMBER'))
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:process.env.PGSSLROOTCERT,PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: migration ledger, TLS, locks or DDL owner check failed'); process.exit(1);
+          }
+          console.log('PASS: read-only ledger 7/7, indexes absent, no long transactions/lock waiters, owner and verified TLS');
+          NODE
+
+      - name: Verify Prisma CLI and pending migration (read-only)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x node_modules/.bin/prisma || { echo 'BLOCKED: Prisma CLI not installed'; exit 1; }
+          npx --no-install prisma --version
+          # Pending migrations are expected before deploy; migrate status exits nonzero for them.
+          # Capture status for diagnostics without using its exit code as the deployment gate.
+          set +e
+          npx --no-install prisma migrate status > "${RUNNER_TEMP}/prisma-migration-status.log" 2>&1
+          status_code=$?
+          set -e
+          # Prisma 5 exits 1 when a migration is pending, but also for errors.
+          # Do not accept a nonzero exit merely because the expected name appears.
+          if [ "$status_code" -ne 1 ] || ! grep -Eq '^Following migrations? have not yet been applied:' "${RUNNER_TEMP}/prisma-migration-status.log"; then
+            echo 'BLOCKED: Prisma status is not the expected pending-only state'
+            exit 1
+          fi
+          pending_names="$(grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*$' "${RUNNER_TEMP}/prisma-migration-status.log" | tr -d '[:space:]' || true)"
+          if [ "$pending_names" != '20261019054922_registration_identity_lookup_indexes' ]; then
+            echo 'BLOCKED: Prisma pending set diverges from exactly one approved migration'
+            exit 1
+          fi
+          if grep -Eiq '(^error|failed|P[0-9]{4})' "${RUNNER_TEMP}/prisma-migration-status.log"; then
+            echo 'BLOCKED: Prisma status also contains an error'
+            exit 1
+          fi
+          echo 'PASS: Prisma reports exactly the one approved pending migration'
+
+      - name: Deploy only approved migration
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Maintenance must be observable on both public Production domains.
+          # GET / and a non-existent POST API path cannot mutate customer data.
+          for host in gheverhan.store www.gheverhan.store; do
+            for method in GET POST; do
+              route="/"
+              if [ "$method" = "POST" ]; then route="/api/__migration_write_drain_probe"; fi
+              status="$(curl --silent --show-error --location --max-time 20 --request "$method" --dump-header "${RUNNER_TEMP}/maintenance-headers" --output "${RUNNER_TEMP}/maintenance-body" --write-out '%{http_code}' "https://${host}${route}")"
+              if [ "$status" != '503' ] || ! grep -Fq 'Layanan sedang dalam pemeliharaan' "${RUNNER_TEMP}/maintenance-body" || ! grep -qi 'cache-control:.*no-store' "${RUNNER_TEMP}/maintenance-headers"; then
+                echo "BLOCKED: confirmed Production maintenance response missing for ${host} ${method}; no migration executed"
+                exit 1
+              fi
+              echo "PASS: Production maintenance confirmed for ${host} ${method}"
+            done
+          done
+
+          # Repeat the exact 7/7 ledger verification immediately before deployment.
+          # The externally coordinated Production write-drain remains mandatory.
+          node <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const u = new URL(process.env.DIRECT_URL);
+          const names = fs.readdirSync('prisma/migrations').filter(x => /^\d{14}_[A-Za-z0-9_]+$/.test(x)).sort();
+          const expected = names.slice(0,7).map(name => {
+            const sha = crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/'+name+'/migration.sql')).digest('hex');
+            return "('"+name+"','"+sha+"')";
+          }).join(',');
+          const sql = `BEGIN READ ONLY;
+          SET LOCAL statement_timeout = '10s';
+          SELECT CASE WHEN current_database()='postgres'
+            AND (SELECT count(*) FROM public._prisma_migrations)=7
+            AND (SELECT count(*) FROM public._prisma_migrations m JOIN
+              (VALUES ${expected}) AS e(name,sha) ON m.migration_name=e.name AND m.checksum=e.sha
+              WHERE m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL)=7
+            AND (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN
+              ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx'))=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND xact_start IS NOT NULL AND now()-xact_start > interval '30 seconds')=0
+            AND (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND datname=current_database()
+              AND wait_event_type='Lock')=0
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:process.env.PGSSLROOTCERT,PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if (p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: immediate pre-deploy migration ledger/operational recheck failed'); process.exit(1);
+          }
+          console.log('PASS: immediate pre-deploy exact 7/7 ledger and operational recheck');
+          NODE
+          npx --no-install prisma migrate deploy
+
+      - name: Verify Prisma status and indexes (read-only)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --no-install prisma migrate status
+          node <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const u = new URL(process.env.DIRECT_URL);
+          const sql = `BEGIN READ ONLY;
+          SELECT CASE WHEN
+            (SELECT count(*) FROM public._prisma_migrations)=8
+            AND (SELECT count(*) FROM public._prisma_migrations
+              WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL)=8
+            AND (SELECT count(*) FROM pg_class c JOIN pg_index i ON i.indexrelid=c.oid
+              WHERE c.relnamespace='public'::regnamespace
+                AND c.relname IN ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx')
+                AND i.indisvalid AND i.indisready)=2
+            THEN 'PASS' ELSE 'BLOCKED' END;
+          COMMIT;`;
+          const p = spawnSync('psql',['-X','-A','-t','-q','-v','ON_ERROR_STOP=1'],{
+            env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),
+              PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',
+              PGSSLMODE:'verify-full',PGSSLROOTCERT:process.env.PGSSLROOTCERT,PGCONNECT_TIMEOUT:'10'},
+            input:sql,encoding:'utf8',timeout:20000,maxBuffer:1024*1024
+          });
+          if(p.error || p.status!==0 || !p.stdout.split('\n').some(x=>x.trim()==='PASS')) {
+            console.error('BLOCKED: post-migration ledger or indexes validation failed');process.exit(1);
+          }
+          console.log('PASS: 8/8 migrations and both indexes valid and ready');
+          NODE
+
+      - name: Remove temporary database CA certificate
+        if: always()
+        shell: bash
+        run: |
+          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt" "${RUNNER_TEMP}/prisma-migration-status.log" "${RUNNER_TEMP}/maintenance-headers" "${RUNNER_TEMP}/maintenance-body"

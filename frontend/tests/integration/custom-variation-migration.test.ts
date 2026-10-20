@@ -63,8 +63,8 @@ async function disposable(count: number, run: (f: Fixture) => Promise<void>) {
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 8);
-    assert.equal(names[7], migration);
+    assert.equal(names.length, 9);
+    assert.equal(names[8], migration);
     for (const n of names.slice(0, count))
       await cp(
         path.join("prisma/migrations", n),
@@ -141,7 +141,7 @@ test("custom variation migration preserves legacy data and supports bounded offi
   await t.test(
     "fresh install records the exact checksum, RLS, partial index and deferred constraints",
     async () =>
-      disposable(8, async ({ db, command }) => {
+      disposable(9, async ({ db, command }) => {
         assert.equal(command(["status"]).status, 0);
         assert.equal(command(["deploy"]).status, 0);
         const ledger = await db.$queryRaw<
@@ -177,7 +177,7 @@ test("custom variation migration preserves legacy data and supports bounded offi
   await t.test(
     "upgrade and repeated backfill preserve variant IDs, raw fields, inventory, reservations, cart and order snapshots",
     async () =>
-      disposable(7, async ({ db, command, add }) => {
+      disposable(8, async ({ db, command, add }) => {
         const before = await legacy(db);
         await add();
         assert.equal(command(["deploy"]).status, 0);
@@ -201,7 +201,7 @@ test("custom variation migration preserves legacy data and supports bounded offi
   await t.test(
     "lock timeout rolls back and resolves/retries only after the local blocker is released",
     async () =>
-      disposable(7, async ({ db, command, add }) => {
+      disposable(8, async ({ db, command, add }) => {
         const before = await legacy(db);
         await add();
         let release!: () => void, ready!: () => void;
@@ -246,7 +246,7 @@ test("custom variation migration preserves legacy data and supports bounded offi
   await t.test(
     "a later DDL failure rolls back earlier ALTERs and can be recovered without false ledger completion",
     async () =>
-      disposable(7, async ({ db, command, add }) => {
+      disposable(8, async ({ db, command, add }) => {
         const before = await legacy(db);
         await db.$executeRaw`CREATE TABLE "ProductOptionValue"(sentinel text)`;
         await db.$executeRaw`INSERT INTO "ProductOptionValue" VALUES('dummy-fixture-only')`;

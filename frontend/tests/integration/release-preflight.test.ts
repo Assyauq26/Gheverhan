@@ -49,7 +49,7 @@ test('legacy schema and ambiguous migration ledger are rejected without fail-ope
         created = true;
         await cp('prisma/schema.prisma', path.join(directory, 'schema.prisma'));
         const migrations = (await readdir('prisma/migrations')).filter(n => /^\d{14}_/.test(n)).sort();
-        assert.equal(migrations.length, 8);
+        assert.equal(migrations.length, 9);
         for (const migration of migrations.slice(0, 5))
             await cp(path.join('prisma/migrations', migration), path.join(directory, 'migrations', migration), { recursive: true });
         await cp('prisma/migrations/migration_lock.toml', path.join(directory, 'migrations/migration_lock.toml'));
@@ -186,4 +186,14 @@ test('preflight blocks missing custom-variation partial index despite a matching
     try {
         const result=run();assert.equal(result.status,1);assert.equal(result.data.ledgerMatches,true);assert.equal(result.data.schema.customOptions,false);
     } finally { await db.$executeRaw`ALTER INDEX custom_fixture_missing_index RENAME TO "ProductOptionGroup_one_image_group"`; }
+});
+
+test('preflight rejects a missing normalized identity index without changing customer rows', async () => {
+    await db.$executeRaw`ALTER INDEX "User_registration_email_normalized_idx" RENAME TO "registration_index_hidden_test"`;
+    try {
+        const missing = run();
+        assert.equal(missing.status, 1);
+        assert.equal(missing.data.schema.normalizedIdentityIndexes, false);
+    } finally { await db.$executeRaw`ALTER INDEX "registration_index_hidden_test" RENAME TO "User_registration_email_normalized_idx"`; }
+    assert.equal(run().status, 0);
 });

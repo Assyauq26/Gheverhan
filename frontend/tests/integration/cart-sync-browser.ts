@@ -30,8 +30,7 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
    assert.equal(await db.user.count({ where: { email } }), 0, 'account is not created before OTP');
    const otp = emailCodes.get(email);
    assert.ok(otp, 'OTP must arrive only at localhost test mail sink');
-   await page.getByTestId('register-otp').fill(otp);
-   await page.getByTestId('auth-submit').click();
+   await page.getByTestId('register-otp').fill(otp); // complete code auto-submits exactly once
    await expect(page).toHaveURL(`${base}/account`);
    const user = await db.user.findUniqueOrThrow({ where: { email }, select: { id: true } }); userId=user.id;
    const previousSession = (await ctx.cookies()).find(cookie => cookie.name==='gh_session');

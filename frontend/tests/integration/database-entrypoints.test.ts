@@ -33,8 +33,17 @@ function run(args: string[], preview: boolean) {
 
 test("direct scripts and managed migrations obey policy in a disposable local schema", async () => {
   try {
+    const publicIndexes = () => db.$queryRaw<{ name: string; definition: string }[]>`
+      SELECT indexname AS name,indexdef AS definition FROM pg_catalog.pg_indexes
+      WHERE schemaname='public' AND tablename='User' ORDER BY indexname`;
+    const before = await publicIndexes();
     const migration = run(["node_modules/prisma/build/index.js", "migrate", "deploy"], false);
     assert.equal(migration.status, 0, "isolated fixture migrations must succeed");
+    assert.deepEqual(await publicIndexes(), before, "An isolated Prisma schema must never change public indexes");
+    const scoped = await db.$queryRaw<{ count: bigint }[]>`
+      SELECT count(*) AS count FROM pg_catalog.pg_indexes WHERE schemaname=${schema}
+      AND indexname IN ('User_registration_email_normalized_idx','User_registration_phone_normalized_idx')`;
+    assert.equal(Number(scoped[0].count), 2, "Both expression indexes belong to the Prisma target schema");
     for (const args of [
       ["--import", "tsx", "prisma/seed.ts"],
       ["--import", "tsx", "prisma/bootstrap-admin.ts"],

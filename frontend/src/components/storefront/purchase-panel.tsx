@@ -7,7 +7,6 @@ import {
   Minus,
   Plus,
   ShoppingCart,
-  Heart,
   Check,
   Loader2,
   BellRing,
@@ -17,7 +16,6 @@ import { useProductSelection } from "./product-selection";
 import { resolveVariant } from "@/modules/catalog/variation-domain";
 import { cn } from "@/lib/utils";
 import { addToCartAction } from "@/modules/cart/cart.actions";
-import { toggleWishlistAction } from "@/modules/wishlist/wishlist.actions";
 
 export interface VariantOption {
   id: string;
@@ -31,9 +29,7 @@ export interface VariantOption {
 }
 
 export function PurchasePanel({
-  productId,
   variants,
-  wishlisted,
   groups,
 }: {
   productId: string;
@@ -77,7 +73,6 @@ export function PurchasePanel({
   const [color, setColor] = useState<string | null>(colors[0] ?? null);
   const [size, setSize] = useState<string | null>(sizes[0] ?? null);
   const [qty, setQty] = useState(1);
-  const [wish, setWish] = useState(wishlisted);
   const [done, setDone] = useState(false);
   const [notified, setNotified] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,69 +115,61 @@ export function PurchasePanel({
   }, [stock]);
   const outOfStock = stock <= 0;
 
-  function add() {
-    if (!selected) return;
+  function add(checkout = false) {
+    if (!selected || selected.available < qty || pending) return;
     setError(null);
     start(async () => {
       try {
         const res = await addToCartAction(selected.id, qty);
-        if (res.unauthorized) return router.push("/login?redirectTo=/cart");
-        if (!res.ok)
-          return setError(res.error ?? "Gagal menambah ke keranjang");
-        setDone(true);
-        setTimeout(() => setDone(false), 1500);
+        if (res.unauthorized) {
+          router.push(checkout ? "/login?redirectTo=/checkout" : "/login?redirectTo=/cart");
+          return;
+        }
+        if (!res.ok) {
+          setError(res.error ?? "Gagal menambah ke keranjang");
+          return;
+        }
+        if (checkout) {
+          // Checkout is deliberately cart-based; the order review will include
+          // any earlier cart items. Do not fake a single-item direct checkout.
+          router.push("/checkout");
+        } else {
+          setDone(true);
+          setTimeout(() => setDone(false), 1500);
+          router.refresh();
+        }
       } catch {
         setError("Koneksi terputus. Periksa keranjang sebelum mencoba lagi.");
-      } finally {
-        router.refresh();
       }
-    });
-  }
-
-  function toggleWish() {
-    start(async () => {
-      const res = await toggleWishlistAction(productId);
-      if (res.unauthorized) return router.push("/login?redirectTo=/wishlist");
-      if (res.ok && res.data) setWish(res.data.active);
     });
   }
 
   return (
     <div className="space-y-5" data-testid="purchase-panel">
       {groups?.map((group) => (
-        <fieldset key={group.id} className="min-w-0 space-y-2">
-          <legend className="text-sm font-semibold text-ink">
-            {group.name}
-          </legend>
-          <div className="flex flex-wrap gap-2">
+        <fieldset key={group.id} className="min-w-0 space-y-2.5">
+          <legend className="mb-2 text-sm font-semibold text-zinc-900">{group.name}</legend>
+          <div className="flex flex-wrap gap-2.5">
             {group.values.map((value) => (
               <button
                 key={value.id}
                 type="button"
                 aria-pressed={options[group.id] === value.id}
                 data-testid={`option-${value.id}`}
-                className={cn(
-                  "inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-                  options[group.id] === value.id
-                    ? "border-black bg-black text-white"
-                    : "border-line text-ink hover:border-ink",
-                )}
+                className={cn("pdp-choice-pill", !group.allowsImage && "pdp-choice-pill--solid")}
                 onClick={() => {
-                  setOptions((current) => ({
-                    ...current,
-                    [group.id]: value.id,
-                  }));
+                  setOptions(current => ({ ...current, [group.id]: value.id }));
                   setDone(false);
+                  setNotified(false);
+                  setError(null);
                 }}
               >
-                {group.allowsImage && value.image && (
-                  <Image
-                    src={value.image.url}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="size-7 rounded object-cover"
-                  />
+                {group.allowsImage && (
+                  <span className="pdp-swatch">
+                    {value.image?.url
+                      ? <Image src={value.image.url} alt="" width={28} height={28} className="h-full w-full object-cover"/>
+                      : value.value.slice(0, 1).toUpperCase()}
+                  </span>
                 )}
                 {value.value}
               </button>
@@ -191,156 +178,74 @@ export function PurchasePanel({
         </fieldset>
       ))}
       {!groups?.length && colors.length > 0 && (
-        <div>
-          <p className="mb-2 text-sm font-semibold text-ink">Warna</p>
-          <div className="flex flex-wrap gap-2">
-            {colors.map((c) => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                data-testid={`color-${c}`}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
-                  color === c
-                    ? "border-black bg-black text-white"
-                    : "border-line text-ink-soft hover:border-ink",
-                )}
-              >
-                {c}
+        <fieldset className="space-y-2.5">
+          <legend className="mb-2 text-sm font-semibold text-zinc-900">Warna</legend>
+          <div className="flex flex-wrap gap-2.5">
+            {colors.map(c => (
+              <button key={c} type="button" data-testid={`color-${c}`}
+                aria-pressed={color === c} className="pdp-choice-pill"
+                onClick={() => { setColor(c); setDone(false); setError(null); }}>
+                <span className="pdp-swatch">{c.slice(0, 1).toUpperCase()}</span>{c}
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
       )}
-
       {!groups?.length && sizes.length > 0 && (
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-semibold text-ink">Ukuran</p>
-            <button className="text-xs font-semibold text-ink-soft hover:text-primary focus-visible:text-primary active:text-blue-800">
-              Panduan Ukuran
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {sizes.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSize(s)}
-                data-testid={`size-${s}`}
-                className={cn(
-                  "min-w-[48px] rounded-xl border px-3 py-2 text-sm font-medium transition-colors",
-                  size === s
-                    ? "border-black bg-black text-white"
-                    : "border-line text-ink-soft hover:border-ink",
-                )}
-              >
-                {s}
-              </button>
+        <fieldset className="space-y-2.5">
+          <legend className="mb-2 text-sm font-semibold text-zinc-900">Ukuran</legend>
+          <div className="flex flex-wrap gap-2.5">
+            {sizes.map(s => (
+              <button key={s} type="button" data-testid={`size-${s}`}
+                aria-pressed={size === s} className="pdp-choice-pill pdp-choice-pill--solid"
+                onClick={() => { setSize(s); setDone(false); setError(null); }}>{s}</button>
             ))}
           </div>
-        </div>
+        </fieldset>
       )}
 
-      <div className="flex items-center gap-4">
-        <p className="text-sm font-semibold text-ink">Jumlah</p>
-        <div className="flex items-center gap-3 rounded-full border border-line px-2 py-1">
-          <button
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface"
-            data-testid="qty-minus"
-          >
-            <Minus size={16} />
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <span className="text-sm font-semibold text-zinc-900">Jumlah</span>
+        <div className="pdp-quantity-stepper" aria-label="Atur jumlah">
+          <button type="button" data-testid="qty-minus" aria-label="Kurangi jumlah"
+            disabled={qty <= 1 || pending} onClick={() => setQty(q => Math.max(1, q - 1))}>
+            <Minus size={18}/>
           </button>
-          <span
-            className="w-6 text-center text-sm font-semibold"
-            data-testid="qty-value"
-          >
-            {qty}
-          </span>
-          <button
-            onClick={() => setQty((q) => Math.min(stock || 1, q + 1))}
-            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface"
-            data-testid="qty-plus"
-          >
-            <Plus size={16} />
+          <span className="w-8 text-center text-sm font-semibold tabular-nums" data-testid="qty-value">{qty}</span>
+          <button type="button" data-testid="qty-plus" aria-label="Tambah jumlah"
+            disabled={pending || stock <= qty} onClick={() => setQty(q => Math.min(stock || 1, q + 1))}>
+            <Plus size={18}/>
           </button>
         </div>
-        <span
-          className={cn(
-            "text-xs font-semibold",
-            outOfStock ? "text-destructive" : "text-ink-muted",
-          )}
-        >
-          {!selected
-            ? "Kombinasi tidak tersedia"
-            : outOfStock
-              ? "Stok habis"
-              : `${stock} tersedia`}
+        <span className={cn("text-xs", outOfStock ? "font-medium text-red-600" : "text-zinc-400")}>
+          {!selected ? "Kombinasi tidak tersedia" : outOfStock ? "Stok habis" : `${stock} tersedia`}
         </span>
       </div>
 
-      {selected?.sku && (
-        <p className="text-xs text-ink-muted" data-testid="selected-sku">
-          SKU: {selected.sku}
-        </p>
-      )}
-      {error && (
-        <p className="text-sm text-destructive" data-testid="purchase-error">
-          {error}
-        </p>
+      {selected?.sku && <p className="text-xs text-zinc-400" data-testid="selected-sku">SKU: {selected.sku}</p>}
+      {error && <p role="alert" className="text-sm text-red-600" data-testid="purchase-error">{error}</p>}
+      {outOfStock && selected && (
+        <Button type="button" size="sm" variant="outline" data-testid="notify-me-btn"
+          disabled={notified} onClick={() => setNotified(true)}>
+          {notified ? <><Check size={16}/> Akan diberi tahu</> : <><BellRing size={16}/> Beri Tahu Saya</>}
+        </Button>
       )}
 
-      <div className="flex gap-3">
-        {!selected ? (
-          <Button className="flex-1" disabled>
-            Kombinasi tidak tersedia
-          </Button>
-        ) : outOfStock ? (
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => setNotified(true)}
-            disabled={notified}
-            data-testid="notify-me-btn"
-          >
-            {notified ? (
-              <>
-                <Check size={18} /> Akan diberi tahu
-              </>
-            ) : (
-              <>
-                <BellRing size={18} /> Beri Tahu Saya
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button
-            className="flex-1"
-            size="lg"
-            onClick={add}
-            disabled={pending}
-            data-testid="add-to-cart-btn"
-          >
-            {pending ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : done ? (
-              <Check size={18} />
-            ) : (
-              <ShoppingCart size={18} />
-            )}
-            {done ? "Ditambahkan" : "Tambah ke Keranjang"}
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12"
-          onClick={toggleWish}
-          data-testid="pdp-wishlist-btn"
-        >
-          <Heart size={20} className={wish ? "fill-black text-black" : ""} />
-        </Button>
+      <div className="pdp-purchase-actions" aria-label="Aksi pembelian produk">
+        <button type="button" className="pdp-cart-pill" data-testid="add-to-cart-btn"
+          aria-label={done ? "Produk ditambahkan ke keranjang" : "Tambah ke keranjang"}
+          title="Tambah ke keranjang" disabled={pending || outOfStock || !selected}
+          onClick={() => add(false)}>
+          {pending ? <Loader2 size={23} className="animate-spin"/> : done ? <Check size={24}/> : <ShoppingCart size={24}/>}
+        </button>
+        <button type="button" className="pdp-buy-pill" data-testid="buy-now-btn"
+          disabled={pending || outOfStock || !selected} onClick={() => add(true)}>
+          {pending ? "Memproses..." : !selected ? "Variasi tidak tersedia" : outOfStock ? "Stok habis" : "Beli Sekarang"}
+        </button>
       </div>
+      <p className="text-[11px] leading-relaxed text-zinc-400 md:max-w-md">
+        Beli Sekarang melanjutkan ke checkout dengan seluruh isi keranjang Anda.
+      </p>
     </div>
   );
 }

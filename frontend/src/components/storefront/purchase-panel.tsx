@@ -232,15 +232,16 @@ export function PurchasePanel({
       )}
 
       <div className="pdp-purchase-actions" aria-label="Aksi pembelian produk">
-        <button type="button" className="pdp-cart-pill" data-testid="add-to-cart-btn"
+        {selected && <button type="button" className="pdp-cart-pill" data-testid="add-to-cart-btn"
           aria-label={done ? "Produk ditambahkan ke keranjang" : "Tambah ke keranjang"}
           title="Tambah ke keranjang" disabled={pending || outOfStock || !selected}
           onClick={() => add(false)}>
           {pending ? <Loader2 size={23} className="animate-spin"/> : done ? <Check size={24}/> : <ShoppingCart size={24}/>}
-        </button>
+          <span className="sr-only">{done ? "Ditambahkan" : "Tambah ke keranjang"}</span>
+        </button>}
         <button type="button" className="pdp-buy-pill" data-testid="buy-now-btn"
           disabled={pending || outOfStock || !selected} onClick={() => add(true)}>
-          {pending ? "Memproses..." : !selected ? "Variasi tidak tersedia" : outOfStock ? "Stok habis" : "Beli Sekarang"}
+          {pending ? "Memproses..." : !selected ? "Kombinasi tidak tersedia" : outOfStock ? "Stok habis" : "Beli Sekarang"}
         </button>
       </div>
       <p className="text-[11px] leading-relaxed text-zinc-400 md:max-w-md">

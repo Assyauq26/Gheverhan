@@ -33,8 +33,8 @@ function need(name) {
   if (!value) fail("Required protected secret or input missing: " + name);
   return value;
 }
-function source() {
-  if (process.env.GITHUB_REF !== "refs/heads/main") fail("Dispatch must run from main");
+function source(verifyDispatch = true) {
+  if (verifyDispatch && process.env.GITHUB_REF !== "refs/heads/main") fail("Dispatch must run from main");
   if (process.env.INPUT_PROJECT_REF !== PROJECT_REF) fail("Production project ref mismatch");
   if (process.env.INPUT_APPROVED_SHA !== FINAL_SHA) fail("Unreviewed candidate SHA");
   const folders = fs.readdirSync(ROOT + "/prisma/migrations")
@@ -192,6 +192,7 @@ async function live() {
 try {
   const mode = process.argv[2];
   if (mode === "source") source();
+  else if (mode === "source-static") source(false);
   else if (mode === "review") await githubReview();
   else if (mode === "vercel") await vercel(process.env.INPUT_OPERATION);
   else if (mode === "ledger-before") ledger("before");

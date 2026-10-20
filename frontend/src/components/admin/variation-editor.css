@@ -468,3 +468,20 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Long recovery action must wrap inside the media card at mobile widths. */
+.variation-media-library > button {
+  width: 100%;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  justify-content: flex-start;
+}
+.variation-editor :where(input, select, button, summary) {
+  scroll-margin-block: 8rem;
+}
+.variation-editor :where(select, summary):focus-visible {
+  outline: 2px solid hsl(var(--brand));
+  outline-offset: 3px;
+}

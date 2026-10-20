@@ -36,19 +36,19 @@ export function ProductSelectionPrice({
   const pct = discountPercent(original, unit);
   return (
     <div
-      className="flex flex-wrap items-center gap-3"
+      className="pdp-product-price flex flex-wrap items-center gap-3"
       aria-live="polite"
       data-testid="selected-product-price"
     >
-      <span className="font-display text-3xl font-black text-ink">
+      <span className="font-display text-[1.9rem] font-extrabold leading-none text-zinc-950 sm:text-[2.15rem]">
         {formatIDR(unit)}
       </span>
       {pct > 0 && (
         <>
-          <span className="text-lg text-ink-muted line-through">
+          <span className="text-sm font-medium text-zinc-400 line-through sm:text-base">
             {formatIDR(original)}
           </span>
-          <span className="rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+          <span className="rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white">
             {pct}% OFF
           </span>
         </>

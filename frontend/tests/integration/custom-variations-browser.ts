@@ -429,6 +429,16 @@ export async function verifyCustomVariations(c: Context) {
             ),
           ),
         );
+        await store.getByTestId("product-gallery").scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            store
+              .getByTestId("product-gallery")
+              .locator("img")
+              .first()
+              .evaluate((img) => (img as HTMLImageElement).naturalWidth),
+          )
+          .toBeGreaterThan(0);
         await store.screenshot({
           path: path.join(artifactDir, "product-custom-store-red-390.png"),
         });
@@ -457,6 +467,16 @@ export async function verifyCustomVariations(c: Context) {
         await expect(store.getByTestId("selected-sku")).toContainText(
           variant.sku,
         );
+        await store.getByTestId("product-gallery").scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            store
+              .getByTestId("product-gallery")
+              .locator("img")
+              .first()
+              .evaluate((img) => (img as HTMLImageElement).naturalWidth),
+          )
+          .toBeGreaterThan(0);
         await store.screenshot({
           path: path.join(artifactDir, "product-custom-store-green-390.png"),
         });

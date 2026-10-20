@@ -67,7 +67,9 @@ async function main() {
         (SELECT count(*)=1 AND bool_and(c.relrowsecurity AND NOT pg_catalog.row_security_active(c.oid)
           AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
           FROM pg_catalog.pg_class c WHERE c.oid=to_regclass('public."CheckoutIntent"'))
-          AND (SELECT count(*)=4 AND bool_and(indisvalid AND indisready) FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid WHERE i.indrelid=to_regclass('public."CheckoutIntent"') AND c.relname IN ('CheckoutIntent_pkey','CheckoutIntent_orderId_key','CheckoutIntent_expiresAt_idx','CheckoutIntent_userId_idx'))
+          AND (SELECT count(*)=4 AND bool_and(indisvalid AND indisready)
+          AND count(*) FILTER (WHERE c.relname='CheckoutIntent_orderId_key' AND indisunique AND indnatts=1 AND indkey[0]=(SELECT attnum FROM pg_catalog.pg_attribute WHERE attrelid=i.indrelid AND attname='orderId'))=1
+          FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid WHERE i.indrelid=to_regclass('public."CheckoutIntent"') AND c.relname IN ('CheckoutIntent_pkey','CheckoutIntent_orderId_key','CheckoutIntent_expiresAt_idx','CheckoutIntent_userId_idx'))
           AND (SELECT count(*)=4 AND bool_and(convalidated) FROM pg_catalog.pg_constraint WHERE conrelid=to_regclass('public."CheckoutIntent"') AND conname IN ('CheckoutIntent_userId_fkey','CheckoutIntent_quantity_check','CheckoutIntent_owner_check','CheckoutIntent_consumed_check'))
           AND NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='CheckoutIntent') AS "directCheckout",
         to_regclass('public."SessionRevocation"') IS NOT NULL AS revocation,

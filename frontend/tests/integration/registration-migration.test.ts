@@ -53,7 +53,7 @@ test("six-to-seven upgrade preserves legacy accounts, rolls back lock failure, a
     const migrations = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(migrations.length, 7);
+    assert.equal(migrations.length, 8);
     for (const migration of migrations.slice(0, 6))
       await cp(
         path.join("prisma/migrations", migration),

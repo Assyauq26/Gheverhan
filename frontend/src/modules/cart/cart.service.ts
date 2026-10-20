@@ -68,6 +68,7 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
           createdAt: true,
           variant: {
             select: {
+              optionValues: { select: { value: { select: { value: true, group: { select: { name: true, sortOrder: true, allowsImage: true } }, image: { select: { url: true } } } } } },
               color: true,
               size: true,
               price: true,
@@ -76,6 +77,7 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
               product: {
                 select: {
                   id: true,
+                  optionsEnabled: true,
                   name: true,
                   slug: true,
                   status: true,
@@ -85,6 +87,7 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
                   flashSaleStartsAt: true,
                   flashSaleEndsAt: true,
                   images: {
+                    where: { isVariation: false },
                     select: { url: true },
                     orderBy: { sortOrder: "asc" },
                     take: 1,
@@ -106,6 +109,8 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
     const stock = it.variant.inventory
       ? available(it.variant.inventory.onHand, it.variant.inventory.reserved)
       : 0;
+    const selections = it.variant.product.optionsEnabled ? [...it.variant.optionValues].sort((a,b) => a.value.group.sortOrder-b.value.group.sortOrder) : [];
+    const optionImage = selections.find(s => s.value.group.allowsImage && s.value.image)?.value.image?.url;
     return {
       id: it.id,
       variantId: it.variantId,
@@ -118,9 +123,9 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
         id: it.variant.product.id,
         name: it.variant.product.name,
         slug: it.variant.product.slug,
-        image: it.variant.product.images[0]?.url ?? null,
+        image: optionImage ?? it.variant.product.images[0]?.url ?? null,
       },
-      variantLabel: [it.variant.color, it.variant.size].filter(Boolean).join(" / ") || "Default",
+      variantLabel: selections.length ? selections.map(s => `${s.value.group.name}: ${s.value.value}`).join(" / ") : [it.variant.color, it.variant.size].filter(Boolean).join(" / ") || "Default",
     };
   });
 

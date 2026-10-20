@@ -100,6 +100,9 @@ jobs:
       - name: Registration migration lock failure and recovery on disposable PostgreSQL
         run: node --import tsx --test tests/integration/registration-migration.test.ts
 
+      - name: Custom variation relational, image and concurrency invariants
+        run: node --import tsx --test tests/integration/custom-variations.test.ts
+
       - name: Real PostgreSQL concurrent cart increments and first-cart creation
         run: node --import tsx --test tests/integration/cart-concurrency.test.ts
 

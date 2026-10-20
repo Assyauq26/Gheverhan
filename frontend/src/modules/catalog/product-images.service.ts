@@ -15,11 +15,11 @@ export function validateProductImage(bytes: Uint8Array, mime: string) {
   if (!((mime === "image/png" && png) || (mime === "image/jpeg" && jpeg) || (mime === "image/webp" && webp))) throw new HttpError("Gunakan file JPG, PNG, atau WebP yang valid", 422);
   return formats[mime as keyof typeof formats];
 }
-export async function uploadProductImage(actor: CatalogActor, productId: string, updatedAt: string, bytes: Uint8Array, mime: string, alt = "") {
+export async function uploadProductImage(actor: CatalogActor, productId: string, updatedAt: string, bytes: Uint8Array, mime: string, alt = "", purpose: "gallery" | "option" = "gallery") {
   assertCatalogPermission(actor, PERMISSIONS.PRODUCT_UPDATE);
   const current = await getManagedProduct(actor, productId);
   if (current.updatedAt !== updatedAt) throw new HttpError("Produk sudah berubah. Muat ulang sebelum mengunggah.", 409);
-  if (current.images.length >= 10) throw new HttpError("Maksimal 10 gambar per produk", 422);
+  if ((purpose === "option" ? current.optionImages.length : current.images.length) >= (purpose === "option" ? 50 : 10)) throw new HttpError("Batas foto produk tercapai", 422);
   if (alt.length > 200) throw new HttpError("Teks alternatif maksimal 200 karakter", 422);
   const extension = validateProductImage(bytes, mime);
   const id = randomUUID();
@@ -27,7 +27,7 @@ export async function uploadProductImage(actor: CatalogActor, productId: string,
   const stored = await putObject(path, bytes, mime);
   if (stored.path !== path) throw new Error("Storage returned an unexpected object path");
   try {
-    return await attachProductImage(actor, productId, updatedAt, { id, url: `/api/v1/product-images/${id}?object=${encodeURIComponent(path)}`, alt: alt.trim() });
+    return await attachProductImage(actor, productId, updatedAt, { isVariation: purpose === "option", id, url: `/api/v1/product-images/${id}?object=${encodeURIComponent(path)}`, alt: alt.trim() });
   } catch (error) {
     try { await removeObject(stored.path); }
     catch { console.error("[storage] Product image compensation failed"); }

@@ -49,7 +49,7 @@ test('legacy schema and ambiguous migration ledger are rejected without fail-ope
         created = true;
         await cp('prisma/schema.prisma', path.join(directory, 'schema.prisma'));
         const migrations = (await readdir('prisma/migrations')).filter(n => /^\d{14}_/.test(n)).sort();
-        assert.equal(migrations.length, 7);
+        assert.equal(migrations.length, 8);
         for (const migration of migrations.slice(0, 5))
             await cp(path.join('prisma/migrations', migration), path.join(directory, 'migrations', migration), { recursive: true });
         await cp('prisma/migrations/migration_lock.toml', path.join(directory, 'migrations/migration_lock.toml'));
@@ -134,6 +134,11 @@ test('trusted role needs every required privilege, not only SELECT', async () =>
         assert.equal(noCleanup.status, 1);
         assert.equal(noCleanup.data.schema.trusted, false);
         await db.$executeRawUnsafe(`GRANT DELETE ON "AuthRateLimit", "SessionRevocation", "PendingRegistration" TO "${role}"`);
+        const missingVariations = run(limited.toString());
+        assert.equal(missingVariations.status, 1);
+        assert.equal(missingVariations.data.schema.customOptions, false);
+        await db.$executeRawUnsafe(`GRANT DELETE ON "ProductOptionGroup", "ProductOptionValue", "ProductVariantOptionValue" TO "${role}"`);
+        await db.$executeRawUnsafe(`GRANT EXECUTE ON FUNCTION gheverhan_backfill_legacy_options(text) TO "${role}"`);
         const complete = run(limited.toString());
         assert.equal(complete.status, 0);
         assert.equal(complete.data.schema.trusted, true);
@@ -174,4 +179,11 @@ test('preflight rejects missing OTP fields and wrong index targets despite match
         await db.$executeRaw`CREATE INDEX "PendingRegistration_expiresAt_idx" ON "PendingRegistration"("expiresAt")`;
     }
     assert.equal(run().status, 0);
+});
+
+test('preflight blocks missing custom-variation partial index despite a matching migration ledger', async () => {
+    await db.$executeRaw`ALTER INDEX "ProductOptionGroup_one_image_group" RENAME TO custom_fixture_missing_index`;
+    try {
+        const result=run();assert.equal(result.status,1);assert.equal(result.data.ledgerMatches,true);assert.equal(result.data.schema.customOptions,false);
+    } finally { await db.$executeRaw`ALTER INDEX custom_fixture_missing_index RENAME TO "ProductOptionGroup_one_image_group"`; }
 });

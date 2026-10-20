@@ -187,11 +187,21 @@ export async function verifyCustomVariations(c: Context) {
         await page.route(
           uploadUrl,
           async (route) => {
-            await route.fetch();
+            const committed = await route.fetch();
+            assert.equal(
+              committed.status(),
+              201,
+              "fault injection must discard a successful committed upload",
+            );
             await route.abort("failed");
           },
           { times: 1 },
         );
+        const responseLost = page.waitForEvent("requestfailed", {
+          predicate: (request) =>
+            request.url() === uploadUrl && request.method() === "POST",
+          timeout: 30000,
+        });
         await root
           .getByLabel("File foto Hijau", { exact: true })
           .setInputFiles({
@@ -199,6 +209,9 @@ export async function verifyCustomVariations(c: Context) {
             mimeType: "image/png",
             buffer: green,
           });
+        // Assert recovery after the real upload has committed and its response is lost,
+        // rather than counting provider processing time against the UI's 5s deadline.
+        await responseLost;
         await expect(
           root
             .getByRole("button", { name: "Ganti foto Hijau", exact: true })

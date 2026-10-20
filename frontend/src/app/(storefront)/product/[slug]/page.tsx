@@ -103,7 +103,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
   };
 
   return (
-    <div className="pdp-page space-y-12">
+    <div className="pdp-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

@@ -12,6 +12,7 @@
 .pdp-handle { display: none; }
 .pdp-heading { letter-spacing: -.04em; }
 .pdp-divider { border-color: #ededed; }
+.pdp-below { margin-top: 3rem; }
 .pdp-detail-row { border-bottom: 1px solid #ececec; }
 .pdp-detail-row summary { list-style: none; }
 .pdp-detail-row summary::-webkit-details-marker { display:none; }

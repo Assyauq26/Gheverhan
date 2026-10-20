@@ -21,7 +21,7 @@ Checkout, preview API, order API, dan Server Action menerima intent ID yang diva
 
 Rate limit atomik PostgreSQL: 300 intent/minute per deployment realm dan 30/15 menit per user/browser. Counter global tidak bergantung identitas client. Cleanup oportunistik dibatasi 1.000 intent yang telah expired lebih dari tujuh hari, satu batch pada request pertama tiap menit; tidak menghapus order/audit/history. Replay intent setelah retention tidak didukung. Tidak ada endpoint GET yang membuat order.
 
-Tap target dots galeri menjadi 44px dan dapat wrap, tanpa mengubah tampilan dot kecil. Pending action memiliki guard synchronous agar double-click React 18 tidak membuat request paralel.
+Tap target dots galeri menjadi 44px dan dapat wrap, tanpa mengubah tampilan dot kecil. Pending action memiliki guard synchronous agar double-click React 18 tidak membuat request paralel. Brand mobile memakai latar putih agar kontras tidak bergantung warna foto. Bagikan menangani clipboard ditolak/tidak tersedia dan native cancel tanpa unhandled rejection atau false success; enam unit regression dan browser clipboard fallback/denial ditambahkan.
 
 ## Migration dan bukti read-only Production
 
@@ -42,10 +42,10 @@ Agregat awal: 11 Product, 49 Variant, 5 CartItem, 4 Order, 5 OrderItem; nol pasa
 
 Node.js 22, PostgreSQL 17 disposable loopback, dependency pinned, Storage/Resend mock. Tidak memakai Production credential/data untuk testing.
 
-- 300 unit, 25 containment, 9 mitigation lulus pada source pengembangan; CI kandidat final wajib memverifikasi ulang.
+- 306 unit, 25 containment, 9 mitigation lulus pada source pengembangan; CI kandidat final wajib memverifikasi ulang.
 - Sembilan pengujian direct checkout lulus: cart terjaga, guest claim, expiry/validation, tampering, replay/concurrency, last-stock race, voucher limit, rollback audit failure, rejection/resubmission/expiry protection/payment sale idempotent.
 - Empat suite migration lokal, 16 tests termasuk parent: fresh, upgrade, historical checksum, lock failure, transactional rollback, official Prisma recovery/retry lulus.
-- Sepuluh test release preflight lulus; role yang kurang DELETE, ledger/schema salah, index hilang ditolak. Fixture closed maintenance diuji pada skema lama sebelum schema baru.
+- Gabungan PostgreSQL lokal lulus 152 tests (termasuk parent), di luar 16 migration/recovery tests. Sepuluh test release preflight lulus; role yang kurang DELETE, ledger/schema salah, index hilang ditolak. Fixture closed maintenance diuji pada skema lama sebelum schema baru.
 - Browser product lulus 26 checkpoint, termasuk actual guest login → direct legacy/custom checkout → order manual pending, reload, cart terjaga, dan checkout cart normal sesudahnya. Screenshot `product-direct-checkout-390.png` tidak berisi credential.
 - Prisma validate/generate, TypeScript, ESLint, production build lulus lokal. Setelah perubahan terakhir, kedua workflow harus lulus pada HEAD kandidat; full PG/auth/operations/hydration/navigation 10×44 menjadi gate CI, bukan diasumsikan dari run lama.
 - Screenshot CI final wajib diunduh dan diinspeksi; pemeriksaan perangkat IME fisik belum dilakukan.
@@ -68,7 +68,7 @@ Read-only HTTP baseline `https://gheverhan.store/`, `/shop`, `/api/v1/health` me
 5. `npx prisma migrate deploy` dari `frontend` dengan dependency/source frozen dan DIRECT_URL terverifikasi, hanya dua migration reviewed. Jangan reset/db push/manual ledger, menghapus timeout, terminate session, atau blind retry. Jika gagal, hentikan; dokumentasikan kondisi parsial dan recovery ter-review.
 6. Verifikasi sepuluh completed dengan checksum tepat, no failed, RLS tanpa public policies, CRUD trusted app role pada empat tabel baru, fungsi/trigger/FK/index, invariant IDs/SKU/inventory/reservations/cart/order. `npm run release:preflight` dan official migrate status harus PASS/up-to-date memakai role efektif, bukan hanya connector.
 7. Merge #75 lalu retarget/merge #83 kemudian #84 secara terkontrol; pertahankan seluruh historical migrations. Jika retarget/merge mengubah source tree, ulangi gate relevan dan approval menurut GitHub. Main belum boleh autodeploy source interim. Bandingkan tree main final terhadap candidate tervalidasi; jangan memaksa merge bila berbeda.
-8. Satu final Production deployment pada main SHA approved. Verifikasi Vercel READY, source SHA, logs dan alias gheverhan.store; buka maintenance hanya setelah gate. Pulihkan autodeploy secara sengaja dan catat final setting.
+8. Satu final Production deployment pada main SHA approved. Verifikasi Vercel READY, source SHA, logs dan alias gheverhan.store; buka maintenance hanya setelah gate. Pulihkan autodeploy secara sengaja dan catat final setting. Jalankan kedua workflow pada commit main hasil integrasi dan tunggu SUCCESS sebelum aktivasi final, sekalipun tree comparison cocok.
 9. Smoke LIVE read-only dan dedicated dummy account/product yang aman. Direct checkout harus mengecualikan/mempertahankan cart lama. Order/payment uji memerlukan reconciliation/exclusion keuangan yang bisa diaudit; jangan approve pembayaran nyata atau menghapus financial records untuk membersihkan test. Verifikasi OTP, storage, auth, editor permissions, image/SKU, voucher/shipping, hydration dan mobile/desktop. Jangan menamai hasil lokal sebagai LIVE proof.
 
 Recovery mengutamakan roll-forward atau source kompatibel session revocation/custom options/intents. Jangan drop schema/history atau rollback ke writer lama yang tidak memahami relasi. Bila lock timeout/checksum/unknown migration/review/CI/provider failure: stop activation, pertahankan kontrol writer, simpan evidence dan perbaiki melalui source ter-review.

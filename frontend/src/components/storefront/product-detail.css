@@ -57,7 +57,7 @@
   .pdp-gallery-frame { aspect-ratio: 1 / 1.04; border-radius:0; }
   .pdp-topbar { display:flex; position:absolute; inset:0 0 auto 0; z-index:10; justify-content:space-between; align-items:center; padding:calc(.9rem + env(safe-area-inset-top, 0px)) 1.1rem .8rem; pointer-events:none; }
   .pdp-topbar > * { pointer-events:auto; }
-  .pdp-topbar-center { position:absolute; left:50%; transform:translateX(-50%); font-size:1rem; font-weight:650; letter-spacing:-.02em; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 12px rgba(255,255,255,.85); }
+  .pdp-topbar-center { position:absolute; left:50%; transform:translateX(-50%); padding:.4rem .65rem; border-radius:9999px; background:rgba(255,255,255,.94); color:#181818; font-size:1rem; font-weight:650; letter-spacing:-.02em; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .pdp-topbar-actions { display:flex; gap:.6rem; }
   .pdp-sheet { margin-top:-1.45rem; border-radius:2rem 2rem 0 0; padding:1.1rem 1.35rem 1.7rem; z-index:5; }
   .pdp-handle { display:block; width:2.45rem; height:.25rem; border-radius:9999px; background:#dedede; margin:0 auto 1.3rem; }

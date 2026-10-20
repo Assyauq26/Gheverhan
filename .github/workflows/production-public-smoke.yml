@@ -19,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           for host in gheverhan.store www.gheverhan.store; do
-            for route in / /api/v1/health; do
+            for route in / /login /register /api/v1/health; do
               tmp="$(mktemp)"
               url="https://${host}${route}"
               status="$(curl --silent --show-error --location --max-time 25 --retry 2 --retry-delay 2 --header 'Cache-Control: no-cache' --output "$tmp" --write-out '%{http_code}' "$url")"
@@ -42,4 +42,4 @@ jobs:
               echo "PASS: ${host}${route} responds HTTP 200 outside maintenance"
             done
           done
-          echo 'PASS: public storefront and health smoke; no mutations or OTP messages sent'
+          echo 'PASS: public storefront, auth pages and health smoke; no mutations or OTP messages sent'

@@ -1,0 +1,209 @@
+name: Gheverhan controlled final Production migration and verification
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/gheverhan-final-production-cutover.yml"
+      - ".github/scripts/gheverhan-final-release-gate.mjs"
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Read-only checks, approved migration, or read-only LIVE verification"
+        required: true
+        type: choice
+        default: preflight
+        options:
+          - preflight
+          - migrate
+          - verify_live
+      project_ref:
+        description: "Confirm exact Supabase Production project ref"
+        required: true
+        type: string
+      approved_sha:
+        description: "Confirm immutable PR #84 final release candidate SHA"
+        required: true
+        type: string
+      maintenance_confirmed:
+        description: "For migrate ONLY: type YES after 503 maintenance is effective"
+        required: true
+        type: string
+        default: "NO"
+      writer_isolation_confirmed:
+        description: "For migrate ONLY: type YES after all old/Preview/cron/queued writers are isolated"
+        required: true
+        type: string
+        default: "NO"
+      backup_decision:
+        description: "For migrate ONLY: type NO_ADDITIONAL_BACKUP_DUMMY_DATA after confirming owner decision"
+        required: true
+        type: string
+        default: "UNCONFIRMED"
+      approved_main_sha:
+        description: "For verify_live ONLY: exact fully merged Production main commit SHA"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: gheverhan-final-production-cutover
+  cancel-in-progress: false
+
+jobs:
+  workflow-source-audit:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Parse release gate without executing it or accessing Production
+        run: node --check .github/scripts/gheverhan-final-release-gate.mjs
+
+  controlled:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.project_ref == 'bztprltkevacidcpjaam' &&
+      inputs.approved_sha == 'ec3e56f8b84d3446a3c19a51a8049d2beb999896'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production-migration
+    env:
+      INPUT_PROJECT_REF: ${{ inputs.project_ref }}
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
+      INPUT_OPERATION: ${{ inputs.operation }}
+      INPUT_MAINTENANCE: ${{ inputs.maintenance_confirmed }}
+      INPUT_WRITER_ISOLATION: ${{ inputs.writer_isolation_confirmed }}
+      INPUT_BACKUP_DECISION: ${{ inputs.backup_decision }}
+      INPUT_MAIN_SHA: ${{ inputs.approved_main_sha }}
+    steps:
+      - name: Checkout only reviewed release workflow from main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Checkout exact immutable final candidate under candidate/
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ec3e56f8b84d3446a3c19a51a8049d2beb999896
+          path: candidate
+          sparse-checkout: frontend
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: candidate/frontend/package-lock.json
+      - name: Verify exactly pinned source and all ten migration hashes
+        if: inputs.operation != 'verify_live'
+        run: node .github/scripts/gheverhan-final-release-gate.mjs source
+      - name: Require original human GitHub approvals and successful SHA-specific CI
+        if: inputs.operation != 'verify_live'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/gheverhan-final-release-gate.mjs review
+      - name: Verify Vercel scope, project, domain and READY deployment using scoped token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: node .github/scripts/gheverhan-final-release-gate.mjs vercel
+
+      - name: Install locked Prisma tooling from reviewed candidate (no install scripts)
+        if: inputs.operation != 'verify_live'
+        working-directory: candidate/frontend
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/@prisma/engines/scripts/postinstall.js
+          npm run prisma:generate
+      - name: Prepare trusted Supabase CA in temporary file
+        if: inputs.operation != 'verify_live'
+        env:
+          SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_CA_CERT:-}" || { echo 'BLOCKED: missing trusted CA'; exit 1; }
+          umask 077
+          cert="${RUNNER_TEMP}/gheverhan-production-ca.crt"
+          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert"
+          openssl x509 -in "$cert" -noout >/dev/null
+          echo "PGSSLROOTCERT=$cert" >> "$GITHUB_ENV"
+
+      - name: Verify exactly eight historical Prisma ledger rows (read-only)
+        if: inputs.operation != 'verify_live'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: node .github/scripts/gheverhan-final-release-gate.mjs ledger-before
+
+      - name: Verify Prisma CLI sees exactly the two expected pending migrations
+        if: inputs.operation != 'verify_live'
+        working-directory: candidate/frontend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          set -euo pipefail
+          logfile="${RUNNER_TEMP}/prisma-status-before.log"
+          set +e
+          npx --no-install prisma migrate status > "$logfile" 2>&1
+          result=$?
+          set -e
+          test "$result" = 1 || { echo 'BLOCKED: Prisma status not pending-only'; exit 1; }
+          grep -Eq '^Following migrations? have not yet been applied:' "$logfile" || { echo 'BLOCKED: unexpected Prisma status'; exit 1; }
+          pending="$(grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*$' "$logfile" | tr -d '[:space:]' || true)"
+          test "$pending" = '20261020070000_custom_product_variations20261020120000_direct_checkout_intents' || { echo 'BLOCKED: migration pending set not exactly two approved files'; exit 1; }
+          if grep -Eiq '(^error|failed|P[0-9]{4})' "$logfile"; then echo 'BLOCKED: Prisma reported an error'; exit 1; fi
+          echo 'PASS: official Prisma CLI reports precisely the two approved pending migrations'
+
+      - name: Confirm actual CLOSED maintenance and all-writer isolation before any write
+        if: inputs.operation == 'migrate'
+        run: node .github/scripts/gheverhan-final-release-gate.mjs maintenance
+
+      - name: Deploy ONLY the two checked and approved Prisma migrations
+        if: inputs.operation == 'migrate'
+        working-directory: candidate/frontend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          set -euo pipefail
+          npm run prisma:deploy
+
+      - name: Verify ten exact Prisma ledger rows and expected schema
+        if: inputs.operation == 'migrate'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: node .github/scripts/gheverhan-final-release-gate.mjs ledger-after
+
+      - name: Verify official Prisma status is fully up to date
+        if: inputs.operation == 'migrate'
+        working-directory: candidate/frontend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          set -euo pipefail
+          npx --no-install prisma migrate status > "${RUNNER_TEMP}/prisma-status-after.log" 2>&1
+          grep -Eq 'Database schema is up to date' "${RUNNER_TEMP}/prisma-status-after.log" || {
+            echo 'BLOCKED: final Prisma schema status not up to date'; exit 1;
+          }
+          echo 'PASS: official Prisma status is up to date'
+
+      - name: Verify public LIVE domain and exact final Production SHA (read-only)
+        if: inputs.operation == 'verify_live'
+        run: node .github/scripts/gheverhan-final-release-gate.mjs verify-live
+
+      - name: Clean temporary CA and Prisma logs
+        if: always()
+        run: |
+          rm -f "${RUNNER_TEMP}/gheverhan-production-ca.crt"             "${RUNNER_TEMP}/prisma-status-before.log"             "${RUNNER_TEMP}/prisma-status-after.log"

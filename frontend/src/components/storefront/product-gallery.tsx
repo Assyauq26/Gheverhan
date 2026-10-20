@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useProductSelection } from "./product-selection";
-import { cn } from "@/lib/utils";
 
 export function ProductGallery({
   images,
@@ -12,54 +11,77 @@ export function ProductGallery({
   images: { url: string; alt: string }[];
   name: string;
 }) {
-  const context = useProductSelection();
-  const [choice, setChoice] = useState<{
-    option: string;
-    index: number;
-  } | null>(null);
-  const list = images.length ? images : [{ url: "", alt: name }];
-  const option = context?.image?.url || "";
-  const active =
-    choice?.option === option ? Math.min(choice.index, list.length - 1) : 0;
-  const displayed =
-    choice?.option === option ? list[active] : (context?.image ?? list[0]);
+  const selection = useProductSelection();
+  const optionImage = selection?.image;
+  // Keep option photos inside the same carousel, without duplicating a gallery photo.
+  const list = optionImage?.url
+    ? [optionImage, ...images.filter(image => image.url !== optionImage.url)]
+    : images;
+  const [active, setActive] = useState(0);
+  const touchStart = useRef<number | null>(null);
+  useEffect(() => { setActive(0); }, [optionImage?.url]);
+  const index = Math.min(active, Math.max(0, list.length - 1));
+  const displayed = list[index];
+
+  function swipe(end: number) {
+    if (touchStart.current == null || list.length < 2) return;
+    const delta = end - touchStart.current;
+    touchStart.current = null;
+    if (Math.abs(delta) < 45) return;
+    setActive(previous => Math.max(0, Math.min(list.length - 1, previous + (delta < 0 ? 1 : -1))));
+  }
 
   return (
-    <div className="space-y-3" data-testid="product-gallery">
-      <div className="relative aspect-square overflow-hidden rounded-3xl bg-surface">
-        {displayed.url && (
+    <div className="min-w-0" data-testid="product-gallery" aria-label="Galeri produk">
+      <div
+        className="pdp-gallery-frame"
+        onTouchStart={event => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+        onTouchEnd={event => swipe(event.changedTouches[0]?.clientX ?? 0)}
+      >
+        {displayed?.url ? (
           <Image
+            key={displayed.url}
             src={displayed.url}
             alt={displayed.alt || name}
             fill
-            priority
-            sizes="(max-width:768px) 100vw, 50vw"
-            className="object-cover"
+            priority={index === 0}
+            sizes="(max-width: 767px) 100vw, (max-width: 1280px) 50vw, 560px"
+            className="pdp-gallery-image"
           />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-zinc-100 text-sm text-zinc-400">
+            Foto produk belum tersedia
+          </div>
+        )}
+        {list.length > 1 && (
+          <div className="pdp-gallery-dots" aria-label="Pilih foto produk">
+            {list.map((image, i) => (
+              <button
+                type="button"
+                key={image.url}
+                aria-label={`Lihat foto produk ${i + 1} dari ${list.length}`}
+                aria-current={index === i ? "true" : undefined}
+                onClick={() => setActive(i)}
+                className="grid h-7 w-7 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+              >
+                <span className="pdp-gallery-dot" aria-current={index === i ? "true" : undefined}/>
+              </button>
+            ))}
+          </div>
         )}
       </div>
       {list.length > 1 && (
-        <div className="flex max-w-full gap-3 overflow-x-auto p-1">
-          {list.map((img, i) => (
+        <div className="pdp-thumb-bar no-scrollbar" aria-label="Foto produk lainnya">
+          {list.map((image, i) => (
             <button
-              key={i}
-              onClick={() => setChoice({ option, index: i })}
+              type="button"
+              key={image.url}
+              onClick={() => setActive(i)}
               aria-label={`Lihat foto produk ${i + 1}`}
-              aria-pressed={choice?.option === option && i === active}
-              className={cn(
-                "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface ring-2 transition-all",
-                choice?.option === option && i === active
-                  ? "ring-black"
-                  : "ring-transparent",
-              )}
+              aria-pressed={index === i}
+              className="pdp-gallery-thumb focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
             >
-              <Image
-                src={img.url}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="64px"
-              />
+              <Image src={image.url} alt="" fill sizes="64px" className="object-cover"/>
             </button>
           ))}
         </div>

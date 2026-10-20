@@ -304,12 +304,27 @@ export async function verifyCustomVariations(c: Context) {
         await page.reload();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Warna");
         await capture("saved-390");
-        await page.setViewportSize({ width: 1360, height: 900 });
-        await root.locator(".variation-heading").scrollIntoViewIfNeeded();
-        await page.evaluate(() => window.scrollBy(0, -120));
-        await capture("photos-overview-1360");
-        await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
-        await capture("photos-skus-1360");
+        for (const width of [768, 1024, 1360]) {
+          await page.setViewportSize({ width, height: 900 });
+          await root.locator(".variation-heading").scrollIntoViewIfNeeded();
+          await page.evaluate(() => window.scrollBy(0, -120));
+          const inputBox = await root
+            .getByLabel("Opsi Warna 1", { exact: true })
+            .boundingBox();
+          assert.ok(
+            inputBox && inputBox.width >= 100,
+            `usable image option field at ${width}`,
+          );
+          assert.equal(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth > innerWidth,
+            ),
+            false,
+          );
+          await capture(`photos-overview-${width}`);
+          await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
+          await capture(`photos-skus-${width}`);
+        }
         await page.setViewportSize({ width: 390, height: 844 });
       },
     );

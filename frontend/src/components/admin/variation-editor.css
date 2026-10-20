@@ -54,6 +54,7 @@
 }
 .variation-groups {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: var(--ui-space-group);
   min-width: 0;
 }
@@ -402,14 +403,11 @@
   min-height: 44px;
 }
 @media (min-width: 1024px) {
-  .variation-groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .variation-groups > .variation-card:only-child {
     grid-column: 1/-1;
   }
   .variation-sku-fields {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   }
   .variation-sku-fields > .variation-field:first-child {
     grid-column: auto;

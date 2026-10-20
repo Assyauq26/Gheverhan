@@ -69,7 +69,9 @@ async function githubReview() {
     const reviews = await request(base, "/pulls/" + number + "/reviews?per_page=100", token);
     const reviewer = reviews.filter(x => x.user?.login?.toLowerCase() === "mrifatsyauqi")
       .sort((a,b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
-    if (reviewer?.state !== "APPROVED") fail("Required human approval missing on PR #" + number);
+    if (reviewer?.state !== "APPROVED" || reviewer.commit_id !== sha) {
+      fail("Human approval for exact current HEAD missing on PR #" + number);
+    }
     const runs = await request(base,
       "/actions/runs?event=pull_request&head_sha=" + sha + "&per_page=100", token);
     for (const workflowName of ["Unit tests with Critical containment",
@@ -102,10 +104,20 @@ async function vercel(operation) {
     (x.state === "READY" || x.readyState === "READY"))
     .sort((a,b) => (b.created || 0) - (a.created || 0))[0];
   if (!ready) fail("Vercel READY Production deployment not found");
-  if (operation === "verify_live" && ready.meta?.githubCommitSha !== process.env.INPUT_MAIN_SHA) {
-    fail("Production Git SHA differs from approved merged main SHA");
+  // The newest READY deployment is not necessarily the deployment assigned
+  // to a public alias (rollback and failed promotion are common).
+  const active = await request(base,
+    "/v13/deployments/gheverhan.store?url=gheverhan.store&teamId=" + VERCEL_TEAM, token);
+  if (active.project?.id !== VERCEL_PROJECT ||
+      active.target !== "production" ||
+      !["READY"].includes(active.readyState || active.state) ||
+      !active.alias?.includes("gheverhan.store")) {
+    fail("Current gheverhan.store alias does not serve an authorized READY Production deployment");
   }
-  console.log("PASS: Vercel scoped token, project, verified domain and READY Production deployment");
+  if (operation === "verify_live" && active.meta?.githubCommitSha !== process.env.INPUT_MAIN_SHA) {
+    fail("Current gheverhan.store alias Git SHA differs from final main SHA");
+  }
+  console.log("PASS: scoped Vercel project, verified domain and currently serving READY Production alias");
 }
 function getPgEnv() {
   const urls = ["DATABASE_URL", "DIRECT_URL"].map(key => {
@@ -175,6 +187,9 @@ async function maintenance() {
 async function live() {
   const sha = need("INPUT_MAIN_SHA");
   if (!/^[a-f0-9]{40}$/.test(sha)) fail("Expected merged main SHA is invalid");
+  const main = await request("https://api.github.com/repos/Assyauq26/Gheverhan",
+    "/commits/main", need("GITHUB_TOKEN"));
+  if (main.sha !== sha) fail("Provided main SHA does not match actual GitHub main HEAD");
   for (const domain of ["gheverhan.store", "www.gheverhan.store"]) {
     for (const route of ["/", "/shop", "/login", "/register", "/api/v1/health"]) {
       const response = await fetch("https://" + domain + route, {

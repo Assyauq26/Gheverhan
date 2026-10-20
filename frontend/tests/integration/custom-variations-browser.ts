@@ -80,6 +80,7 @@ export async function verifyCustomVariations(c: Context) {
       fullPage: false,
     });
   };
+  const fixtureProductIds: string[] = [];
   let productId = "",
     beforeIds: string[] = [],
     orderId = "",
@@ -151,6 +152,7 @@ export async function verifyCustomVariations(c: Context) {
         await expect(page.getByRole("status")).toContainText("Draft siap");
         productId = (await db.product.findUniqueOrThrow({ where: { slug } }))
           .id;
+        fixtureProductIds.push(productId);
         // Pause locally to inspect a real pending upload, then resume the actual API call.
         let release!: () => void, entered!: () => void;
         const hold = new Promise<void>((r) => (release = r)),
@@ -682,6 +684,7 @@ export async function verifyCustomVariations(c: Context) {
             onHand: 1,
           })),
         });
+        fixtureProductIds.push(result.id);
         const gallery = await db.productImage.create({
           data: {
             productId: result.id,
@@ -772,6 +775,12 @@ export async function verifyCustomVariations(c: Context) {
       },
     );
   } finally {
+    // Only this loopback run's fixtures: preserve history, hide media after its mock stops.
+    if (fixtureProductIds.length)
+      await db.product.updateMany({
+        where: { id: { in: fixtureProductIds } },
+        data: { status: "ARCHIVED" },
+      });
     await buyer.close();
   }
 }

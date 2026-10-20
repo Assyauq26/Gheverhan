@@ -244,12 +244,15 @@ jobs:
           PASSWORD_RESET_BASE_URL: ${{ secrets.PASSWORD_RESET_BASE_URL }}
           R21_EXPECTED_SUPABASE_REF: bztprltkevacidcpjaam
           R21_ALLOW_PRODUCTION_READ_ONLY: '1'
+          MAINTENANCE_MODE: '1' # Confirmed as effective HTTP 503 by the earlier gate, not inferred from runner env
         run: |
           set -euo pipefail
           npm run release:preflight
 
       - name: Verify public LIVE domain and exact final Production SHA (read-only)
         if: inputs.operation == 'verify_live'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/gheverhan-final-release-gate.mjs verify-live
 
       - name: Clean temporary CA and Prisma logs

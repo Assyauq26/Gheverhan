@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Share2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function ShareButton({ title }: { title: string }) {
+export function ShareButton({ title, iconOnly = false }: { title: string; iconOnly?: boolean }) {
   const [copied, setCopied] = useState(false);
   async function share() {
     const url = window.location.href;
@@ -19,9 +19,9 @@ export function ShareButton({ title }: { title: string }) {
     setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <Button variant="ghost" size="sm" onClick={share} data-testid="share-btn">
+    <Button type="button" variant={iconOnly ? "outline" : "ghost"} size={iconOnly ? "icon" : "sm"} className={iconOnly ? "pdp-header-action h-11 w-11 border-0 bg-white/90 shadow-sm backdrop-blur" : ""} aria-label={copied ? "Tautan produk tersalin" : "Bagikan produk"} onClick={share} data-testid="share-btn">
       {copied ? <Check size={16} /> : <Share2 size={16} />}
-      {copied ? "Tersalin" : "Bagikan"}
+      {!iconOnly && (copied ? "Tersalin" : "Bagikan")}
     </Button>
   );
 }

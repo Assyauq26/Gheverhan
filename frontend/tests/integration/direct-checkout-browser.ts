@@ -34,7 +34,8 @@ export async function verifyDirectCheckout(browser: Browser, db: PrismaClient, b
     await page.getByTestId("share-btn").click();
     await expect(page.getByTestId("share-btn")).toHaveAttribute("aria-label", "Tautan produk tersalin");
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `${base}/product/${selected.slug}`);
-    await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { value: { writeText: async () => { throw new DOMException("Dummy denied", "NotAllowedError"); } }, configurable: true }));
+    // Keep this browser-only mock free from esbuild's Node-side __name helper.
+    await page.evaluate("Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { throw new DOMException('Dummy denied', 'NotAllowedError'); } }, configurable: true })");
     await page.getByTestId("share-btn").click();
     await expect(page.getByRole("status").filter({ hasText: "Gunakan menu Bagikan" })).toBeVisible();
     await expect(page.getByTestId("share-btn")).toHaveAttribute("aria-label", "Bagikan produk");

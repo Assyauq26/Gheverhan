@@ -17,3 +17,10 @@ describe("bounded stable variation identity",()=>{
  it("keeps inherited price nullable and enforces explicit SKU discount basis",()=>{const data=input([group("a",1)]);expect(productInputSchema.parse(data).variants[0].price).toBeUndefined();expect(productInputSchema.safeParse({...data,variants:[{...data.variants[0],salePrice:10}]}).success).toBe(false);});
  it("rejects a fourth group on the server and unsafe relational IDs",()=>{const groups=[group("a",1),group("b",1),group("c",1),group("d",1)];expect(()=>generateCombinations(groups)).toThrow();expect(productInputSchema.safeParse({...input(groups.slice(0,3)),optionGroups:groups}).success).toBe(false);groups[0].id="bad|id";expect(productInputSchema.safeParse({...input(groups.slice(0,3)),optionGroups:groups.slice(0,3)}).success).toBe(false);});
 });
+
+it("rejects custom mode without groups and duplicate option image IDs",()=>{
+ const data=input([group("a",1)]);
+ expect(productInputSchema.safeParse({...data,optionsEnabled:true,optionGroups:[]}).success).toBe(false);
+ expect(productInputSchema.safeParse({...data,optionsEnabled:true,optionGroups:undefined}).success).toBe(false);
+ expect(productInputSchema.safeParse({...data,optionImages:[{id:"same"},{id:"same"}]}).success).toBe(false);
+});

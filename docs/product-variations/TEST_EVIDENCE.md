@@ -6,8 +6,8 @@ Pengujian hanya memakai Node.js 22, PostgreSQL 17 disposable loopback, Chromium 
 
 | Gate | Hasil terukur |
 | --- | --- |
-| `npm run test:ci` pada container offline, read-only, tanpa credential | 272 unit, 25 containment, 9 mitigation PASS |
-| `node --import tsx --test --test-concurrency=1 tests/integration/{database-entrypoints,auth-security,release-preflight,registration-migration,custom-variation-migration,custom-variations,cart-concurrency,product-lifecycle,transaction-correctness,order-refund-shipping,registration-otp}.test.ts` | 136 PASS, 0 fail/skip |
+| `npm run test:ci` pada container offline, read-only, tanpa credential | 273 unit, 25 containment, 9 mitigation PASS |
+| `node --import tsx --test --test-concurrency=1 tests/integration/{database-entrypoints,auth-security,release-preflight,registration-migration,custom-variation-migration,custom-variations,cart-concurrency,product-lifecycle,transaction-correctness,order-refund-shipping,registration-otp}.test.ts` | 137 PASS, 0 fail/skip |
 | `npx prisma validate` / `prisma generate` | PASS |
 | `npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code` | No difference detected; custom SQL objects diperiksa terpisah oleh integration/preflight |
 | `npm run typecheck` | PASS |
@@ -23,6 +23,7 @@ Migration `20261020070000_custom_product_variations`, SHA-256:
 
 ## Root cause dan perbaikan yang diuji
 
+- Payload API grup kosong dapat menghilangkan mapping SKU kustom sambil mempertahankan ID-nya: service menolak downgrade kosong dan validator menolak flag kustom tanpa grup; regression membuktikan stok dan selection tetap utuh.
 - Storefront lama dapat memilih SKU pertama ketika kombinasi tidak cocok: diganti exact selection seluruh ID, termasuk legacy tanpa fallback.
 - Roundtrip GET produk legacy menyertakan virtual groups: flag `optionsEnabled=false` kini tetap otoritatif, sehingga consumer lama tidak otomatis mengonversi SKU.
 - Respons upload hilang setelah server commit dapat meninggalkan version stale: pemulihan strict snapshot + file digest, bukan retry write atau menimpa perubahan operator lain.
@@ -30,7 +31,7 @@ Migration `20261020070000_custom_product_variations`, SHA-256:
 - Aplikasi Prisma tidak dapat deserialize PostgreSQL void dari backfill: pemanggilan service memakai cast `::text`.
 - Drill baru memerlukan grants tiga tabel/fungsi tambahan dan preflight harus memeriksa partial index/deferred triggers, bukan hanya keberadaan kolom.
 
-Kegagalan pengembangan tidak disembunyikan: fixture enum stock movement diperbaiki menjadi `ADJUSTMENT`; type output `spawnSync` diperjelas; selector alert di browser dipersempit ke region aplikasi karena Next route announcer juga memiliki role alert. Tidak ada test/assertion bisnis yang dihapus atau dilonggarkan.
+Kegagalan pengembangan tidak disembunyikan: fixture enum stock movement diperbaiki menjadi `ADJUSTMENT`; type output `spawnSync` diperjelas; selector alert di browser dipersempit ke region aplikasi karena Next route announcer juga memiliki role alert. Tombol pemulihan foto panjang ditemukan overflow saat library terbuka dan diperbaiki dengan wrapping. Fixture storefront memakai kategori unik run untuk menghindari rekomendasi fixture lama yang storage mock-nya telah berakhir; assertion console error tetap aktif. Tidak ada test/assertion bisnis yang dihapus atau dilonggarkan.
 
 ## Bukti browser dan visual
 

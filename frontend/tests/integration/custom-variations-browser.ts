@@ -67,6 +67,9 @@ function png(red: number, green: number, blue: number) {
 export async function verifyCustomVariations(c: Context) {
   const { page, db, base, check, artifactDir } = c,
     root = page.getByTestId("custom-variation-editor");
+  const category = await db.category.findUniqueOrThrow({
+    where: { slug: `browser-${c.prefix}` },
+  });
   const name = "Variasi Custom " + c.prefix,
     slug = "variasi-custom-" + c.prefix;
   const red = png(160, 28, 38),
@@ -120,6 +123,9 @@ export async function verifyCustomVariations(c: Context) {
         await page
           .getByLabel("Harga normal (Rp)", { exact: true })
           .fill("175000");
+        await page
+          .getByLabel("Kategori", { exact: true })
+          .selectOption(category.id);
         await root
           .getByRole("button", { name: "Tambah variasi pertama", exact: true })
           .scrollIntoViewIfNeeded();
@@ -664,6 +670,7 @@ export async function verifyCustomVariations(c: Context) {
         const sparseSlug = "sparse-" + c.prefix;
         const result = await createManagedProduct(actor, {
           name: "Dummy sparse options",
+          categoryId: category.id,
           slug: sparseSlug,
           basePrice: 1000,
           images: [],

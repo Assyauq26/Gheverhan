@@ -79,6 +79,14 @@ test("custom variations persistence, safety and legacy compatibility",async t=>{
   await svc.updateManagedProduct(actor,created.id,managed.updatedAt,managed);
   assert.equal((await svc.getManagedProduct(actor,created.id)).variants[0].id,before.id);assert.equal((await svc.getManagedProduct(actor,created.id)).variants[0].onHand,2);
  });
+ await t.test("empty group payload cannot silently downgrade a protected custom SKU to legacy",async()=>{
+  const {product}=await create();const variantsBefore=await db.productVariant.findMany({where:{productId:product.id},include:{inventory:true,optionValues:true},orderBy:{id:"asc"}});
+  for(const optionsEnabled of [undefined,true]){
+   await assert.rejects(svc.updateManagedProduct(actor,product.id,product.updatedAt,{...product,optionsEnabled,optionGroups:[]}),err=>[409,422].includes((err as {status:number}).status));
+  }
+  assert.deepEqual(await db.productVariant.findMany({where:{productId:product.id},include:{inventory:true,optionValues:true},orderBy:{id:"asc"}}),variantsBefore);
+  assert.equal((await svc.getManagedProduct(actor,product.id)).optionsEnabled,true);
+ });
  await t.test("unauthorized operators cannot mutate products or acquire stock privileges",async()=>{
   await assert.rejects(svc.createManagedProduct({...actor,isAdmin:false},input()),{status:403});
   await assert.rejects(svc.createManagedProduct({...actor,permissions:["product.create"]},input()),{status:403});

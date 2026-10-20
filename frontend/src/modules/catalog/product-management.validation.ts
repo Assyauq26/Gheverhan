@@ -39,6 +39,7 @@ export const productInputSchema = z.object({
 }).superRefine((v, ctx) => {
   if (v.salePrice != null && v.salePrice >= v.basePrice) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Harga diskon harus lebih kecil dari harga normal" });
   if (v.isFlashSale && v.salePrice == null) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Flash sale memerlukan harga diskon" });
+  if (v.optionsEnabled === true && !v.optionGroups?.length) ctx.addIssue({ code: "custom", path: ["optionGroups"], message: "Mode variasi kustom memerlukan minimal satu jenis variasi" });
   if (v.optionGroups?.length && v.optionsEnabled !== false) {
     const groups = v.optionGroups;
     const issue = (message: string) => ctx.addIssue({ code: "custom", path: ["optionGroups"], message });
@@ -57,7 +58,7 @@ export const productInputSchema = z.object({
     }
     if (new Set(v.variants.map(row => combinationKey(row.optionValueIds ?? []))).size !== v.variants.length) issue("Kombinasi SKU tidak boleh duplikat");
   }
-  for (const [key, values] of [["SKU", v.variants.map(x => x.sku)], ["ID varian", v.variants.flatMap(x => x.id ? [x.id] : [])], ["ID gambar", v.images.map(x => x.id)]] as const) {
+  for (const [key, values] of [["SKU", v.variants.map(x => x.sku)], ["ID varian", v.variants.flatMap(x => x.id ? [x.id] : [])], ["ID gambar", [...v.images, ...(v.optionImages ?? [])].map(x => x.id)]] as const) {
     if (new Set(values).size !== values.length) ctx.addIssue({ code: "custom", message: `${key} tidak boleh duplikat` });
   }
 });

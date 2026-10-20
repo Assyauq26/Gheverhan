@@ -83,7 +83,7 @@ export async function updateManagedProduct(actor: CatalogActor, id: string, expe
   const input = parseProduct(value);
   const result = await transaction(async tx => {
     const { p, updatedAt } = await lockProduct(tx, id, expected);
-    if (p.optionsEnabled && input.optionGroups === undefined) throw new HttpError("Produk memakai variasi kustom. Gunakan editor yang mendukung pilihan SKU.", 409);
+    if (p.optionsEnabled && !input.optionGroups?.length) throw new HttpError("Produk memakai variasi kustom. Gunakan editor yang mendukung pilihan SKU.", 409);
     const keptOptionImages = input.optionImages ?? p.images.filter(i => i.isVariation).map(i => ({ id: i.id, alt: i.alt }));
     const allImages = [...input.images, ...keptOptionImages];
     for (const image of input.images) if (!p.images.some(i => i.id === image.id && !i.isVariation)) throw new HttpError("Gambar galeri bukan milik produk ini", 422);

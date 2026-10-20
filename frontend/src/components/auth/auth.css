@@ -402,3 +402,173 @@
 .auth-ui .auth-success {
   overflow-wrap: anywhere;
 }
+
+/* One selectable native input, six visual slots. The whole field is a tap target. */
+.auth-ui .auth-otp {
+  position: relative;
+  width: 100%;
+  max-width: 384px;
+  margin-inline: auto;
+}
+.auth-ui .auth-otp-slots {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(5px, 1.5vw, 10px);
+}
+.auth-ui .auth-otp-slot {
+  min-width: 0;
+  height: 56px;
+  border: 1px solid #8b929b;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  background: #fff;
+  color: #111;
+  font-size: 25px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+.auth-ui input.auth-otp-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-size: 20px;
+  cursor: text;
+  box-shadow: none;
+}
+.auth-ui input.auth-otp-input:focus-visible {
+  outline: 0;
+}
+.auth-ui input.auth-otp-input::selection {
+  background: transparent;
+  color: transparent;
+}
+.auth-ui .auth-otp[data-focused="true"] .auth-otp-slot[data-active="true"] {
+  border: 2px solid #111;
+}
+.auth-ui .auth-otp-slot[data-selected="true"] {
+  background: #eff2f5;
+}
+.auth-ui .auth-otp[data-state="error"] .auth-otp-slot {
+  border-color: #b42318;
+  background: #fff6f5;
+}
+.auth-ui .auth-otp[data-state="error"] .auth-otp-slots {
+  animation: auth-otp-shake 360ms ease-out;
+}
+.auth-ui .auth-otp[data-state="success"] .auth-otp-slot {
+  border-color: #16713d;
+  background: #f1fbf4;
+  color: #145b32;
+}
+.auth-ui .auth-otp[data-state="verifying"] .auth-otp-slot {
+  border-color: #7c828b;
+  background: #f7f8f9;
+}
+.auth-ui .auth-otp-caret {
+  position: absolute;
+  height: 24px;
+  width: 2px;
+  background: #111;
+  animation: auth-otp-blink 1s step-end infinite;
+}
+.auth-ui .auth-otp-expiry {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  color: #4b515a;
+  font-size: 14px;
+}
+.auth-ui .auth-otp-expiry time {
+  color: #111;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.auth-ui .auth-otp-feedback {
+  min-height: 48px;
+  display: grid;
+  align-items: center;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.auth-ui .auth-otp-feedback p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.auth-ui .auth-otp-feedback [role="alert"] {
+  color: #b42318;
+}
+.auth-ui .auth-otp-form .auth-submit:disabled {
+  cursor: not-allowed;
+}
+.auth-ui .auth-conflict-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+.auth-ui .auth-conflict-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 14px;
+}
+@keyframes auth-otp-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+@keyframes auth-otp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-ui .auth-otp-slot {
+    transition: none;
+  }
+  .auth-ui .auth-otp-slots,
+  .auth-ui .auth-otp-caret {
+    animation: none !important;
+  }
+}
+
+.auth-ui
+  .auth-otp[data-focused="true"][data-state="error"]
+  .auth-otp-slot[data-active="true"] {
+  border-color: #b42318;
+}
+.auth-ui .auth-otp-secondary {
+  min-height: 124px;
+}
+.auth-ui .auth-otp-secondary .auth-switch a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}

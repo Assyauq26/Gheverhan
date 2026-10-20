@@ -16,9 +16,23 @@ import {
   registerAction,
   forgotPasswordAction,
   resetPasswordAction,
-  verifyRegistrationAction,
-  resendRegistrationAction,
+  registrationStatusAction,
 } from "@/modules/auth/auth.actions";
+
+import { RegistrationOtpStep } from "./registration-otp-step";
+import {
+  asChallenge,
+  clearRegistration,
+  readRegistration,
+  registrationFields,
+  rememberRegistration,
+  timedRegistration,
+} from "./registration-state";
+import {
+  REGISTRATION_CONFLICT,
+  type RegistrationChallenge,
+  type RegistrationFailure,
+} from "@/modules/auth/registration-contract";
 
 type FormState = {
   ok: boolean;
@@ -28,32 +42,11 @@ type FormState = {
   challengeId?: string;
   step?: string;
   resendAvailableAt?: number;
-  restartRequired?: boolean;
+  expiresAt?: number;
+  serverNow?: number;
+  status?: RegistrationChallenge["status"];
+  errorCode?: RegistrationFailure;
 };
-type PersistedRegistrationOtp = {
-  email: string;
-  challengeId: string;
-  resendAvailableAt: number;
-  expiresAt: number;
-};
-const REGISTRATION_OTP_STORAGE_KEY = "gheverhan.registration.otp.v1";
-const REGISTRATION_OTP_TTL_MS = 10 * 60_000;
-function validPersistedOtp(value: unknown): value is PersistedRegistrationOtp {
-  if (!value || typeof value !== "object") return false;
-  const item = value as Partial<PersistedRegistrationOtp>;
-  const now = Date.now();
-  return (
-    typeof item.email === "string" &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email) &&
-    typeof item.challengeId === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.challengeId) &&
-    typeof item.resendAvailableAt === "number" &&
-    Number.isFinite(item.resendAvailableAt) &&
-    typeof item.expiresAt === "number" &&
-    item.expiresAt > now &&
-    item.expiresAt <= now + REGISTRATION_OTP_TTL_MS + 60_000
-  );
-}
 const initialState: FormState = { ok: false };
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -249,235 +242,142 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     </div>
   );
 }
-function ResendSubmit({ availableAt }: { availableAt: number }) {
-  const { pending } = useFormStatus();
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  const remaining = Math.max(0, Math.ceil((availableAt - now) / 1000));
-  return (
-    <button
-      type="submit"
-      className="auth-resend-button"
-      disabled={pending || remaining > 0}
-      aria-busy={pending}
-      data-testid="registration-resend"
-    >
-      {pending
-        ? "Mengirim..."
-        : remaining > 0
-          ? `Kirim ulang dalam ${remaining} detik`
-          : "Kirim ulang kode OTP"}
-    </button>
-  );
-}
-function RegistrationOtpStep({
-  email,
-  challengeId,
-  availableAt,
-  onRestart,
-}: {
-  email: string;
-  challengeId: string;
-  availableAt: number;
-  onRestart: (reason?: string) => void;
-}) {
-  const [state, action] = useFormState<FormState, FormData>(
-    verifyRegistrationAction,
-    initialState,
-  );
-  const [resendState, resendAction] = useFormState<FormState, FormData>(
-    resendRegistrationAction,
-    initialState,
-  );
-  useEffect(() => {
-    if (resendState.restartRequired) {
-      onRestart("Pengiriman ulang OTP gagal. Silakan minta kode baru.");
-      return;
-    }
-    if (!resendState.ok || !resendState.resendAvailableAt) return;
-    try {
-      const serialized = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
-      if (!serialized) return;
-      const stored: unknown = JSON.parse(serialized);
-      if (!validPersistedOtp(stored)) return;
-      if (stored.email !== email || stored.challengeId !== challengeId) return;
-      window.sessionStorage.setItem(
-        REGISTRATION_OTP_STORAGE_KEY,
-        JSON.stringify({
-          ...stored,
-          resendAvailableAt: resendState.resendAvailableAt,
-          expiresAt: Date.now() + REGISTRATION_OTP_TTL_MS,
-        }),
-      );
-    } catch {
-      // Storage may be disabled; the live verification form remains usable.
-    }
-  }, [resendState.ok, resendState.restartRequired, resendState.resendAvailableAt, email, challengeId, onRestart]);
-  const preserveInterruptedResend = () => {
-    // If the email is sent but the response is lost, preserve the same challenge.
-    // Only the server can validate the new code, expiration and cooldown.
-    try {
-      const raw = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
-      if (!raw) return;
-      const stored: unknown = JSON.parse(raw);
-      if (!validPersistedOtp(stored)) return;
-      if (stored.email !== email || stored.challengeId !== challengeId) return;
-      const now = Date.now();
-      window.sessionStorage.setItem(
-        REGISTRATION_OTP_STORAGE_KEY,
-        JSON.stringify({
-          ...stored,
-          expiresAt: now + REGISTRATION_OTP_TTL_MS,
-          resendAvailableAt: now + 60_000,
-        }),
-      );
-    } catch {
-      // Unavailable browser storage does not block resending.
-    }
-  };
-  return (
-    <div className="auth-content">
-      <Heading title="Verifikasi email">
-        Masukkan kode OTP 6 angka yang dikirim ke {email}.
-      </Heading>
-      <form
-        action={action}
-        className="auth-form"
-        data-testid="verify-registration-form"
-        aria-describedby="register-otp-note verify-registration-error"
-      >
-        <input type="hidden" name="email" value={email} />
-        <input type="hidden" name="challengeId" value={challengeId} />
-        <Field
-          id="register-otp"
-          label="Kode OTP 6 angka"
-          name="otp"
-          icon="mail"
-          autoComplete="one-time-code"
-          inputMode="numeric"
-          pattern="[0-9]{6}"
-          maxLength={6}
-          required
-          autoFocus
-          aria-describedby="register-otp-note verify-registration-error"
-          data-testid="register-otp"
-        />
-        <p className="auth-otp-note" id="register-otp-note">
-          Kode berlaku 10 menit dengan maksimal 5 percobaan.
-        </p>
-        <Feedback error={state.error} id="verify-registration-error" />
-        <Submit label="Verifikasi & Buat Akun" />
-      </form>
-      <form action={resendAction} onSubmit={preserveInterruptedResend} className="auth-resend-form">
-        <input type="hidden" name="email" value={email} />
-        <input type="hidden" name="challengeId" value={challengeId} />
-        <ResendSubmit
-          availableAt={resendState.resendAvailableAt ?? availableAt}
-        />
-      </form>
-      <Feedback error={resendState.error} id="registration-resend-error" />
-      {resendState.message && (
-        <p role="status" className="auth-success">
-          {resendState.message}
-        </p>
-      )}
-      <p className="auth-switch">
-        <button
-          type="button"
-          className="auth-resend-button"
-          onClick={() => onRestart()}
-        >
-          Ubah data pendaftaran
-        </button>
-      </p>
-    </div>
-  );
-}
 export function RegisterForm() {
   const [attempt, setAttempt] = useState(0);
-  const [restartReason, setRestartReason] = useState<string | undefined>();
-  const onRestart = useCallback((reason?: string) => {
-    try {
-      window.sessionStorage.removeItem(REGISTRATION_OTP_STORAGE_KEY);
-    } catch {
-      // Private browsing may disable storage.
-    }
-    setRestartReason(reason);
-    setAttempt((value) => value + 1);
-  }, []);
+  const [restartReason, setRestartReason] = useState<string>();
+  const [restartCode, setRestartCode] = useState<RegistrationFailure>();
+  const onRestart = useCallback(
+    (reason?: string, code?: RegistrationFailure) => {
+      clearRegistration();
+      setRestartReason(reason);
+      setRestartCode(code);
+      setAttempt((value) => value + 1);
+    },
+    [],
+  );
   return (
-    <RegistrationForm key={attempt} onRestart={onRestart} restartReason={restartReason} />
+    <RegistrationForm
+      key={attempt}
+      onRestart={onRestart}
+      restartReason={restartReason}
+      restartCode={restartCode}
+    />
   );
 }
 function RegistrationForm({
   onRestart,
   restartReason,
+  restartCode,
 }: {
-  onRestart: (reason?: string) => void;
+  onRestart: (reason?: string, code?: RegistrationFailure) => void;
   restartReason?: string;
+  restartCode?: RegistrationFailure;
 }) {
+  const registerWithClock = useCallback(
+    (_prev: FormState, formData: FormData) =>
+      timedRegistration(() => registerAction(undefined, formData)),
+    [],
+  );
   const [state, action] = useFormState<FormState, FormData>(
-    registerAction,
+    registerWithClock,
     initialState,
   );
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [activeOtp, setActiveOtp] = useState<PersistedRegistrationOtp | null>(null);
+  const [activeOtp, setActiveOtp] = useState<RegistrationChallenge | null>(
+    null,
+  );
+  const [restoring, setRestoring] = useState(true);
+  const [recoveryError, setRecoveryError] = useState(false);
+  const [recoveryAttempt, setRecoveryAttempt] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    try {
-      const saved = window.sessionStorage.getItem(REGISTRATION_OTP_STORAGE_KEY);
-      if (!saved) return;
-      const item: unknown = JSON.parse(saved);
-      if (validPersistedOtp(item)) {
-        setActiveOtp(item);
-      } else {
-        window.sessionStorage.removeItem(REGISTRATION_OTP_STORAGE_KEY);
+    let cancelled = false;
+    const saved = readRegistration();
+    if (!saved) {
+      setRestoring(false);
+      return;
+    }
+    setRestoring(true);
+    setRecoveryError(false);
+    void (async () => {
+      try {
+        const result = await timedRegistration(() =>
+          registrationStatusAction(undefined, registrationFields(saved)),
+        );
+        if (cancelled) return;
+        const live = asChallenge(result);
+        if (live) {
+          setActiveOtp(live);
+          rememberRegistration(live);
+        } else if (
+          result.errorCode === "CHALLENGE_MISSING" ||
+          result.errorCode === "REGISTRATION_CONFLICT"
+        ) {
+          onRestart(result.error, result.errorCode);
+          return;
+        } else setRecoveryError(true);
+      } catch {
+        if (!cancelled) setRecoveryError(true);
+      } finally {
+        if (!cancelled) setRestoring(false);
       }
-    } catch {
-      // Invalid or unavailable storage must never prevent registration.
-    }
-  }, []);
-  useEffect(() => {
-    if (state.step !== "verify" || !state.email || !state.challengeId) return;
-    const item: PersistedRegistrationOtp = {
-      email: state.email,
-      challengeId: state.challengeId,
-      resendAvailableAt: state.resendAvailableAt ?? 0,
-      expiresAt: Date.now() + REGISTRATION_OTP_TTL_MS,
+    })();
+    return () => {
+      cancelled = true;
     };
-    setActiveOtp(item);
-    try {
-      // Only the email and opaque challenge metadata: never persist password/OTP.
-      window.sessionStorage.setItem(REGISTRATION_OTP_STORAGE_KEY, JSON.stringify(item));
-    } catch {
-      // Verification still works without browser storage.
+  }, [onRestart, recoveryAttempt]);
+  useEffect(() => {
+    if (state.step !== "verify") return;
+    const live = asChallenge(state);
+    if (live) {
+      rememberRegistration(live);
+      setActiveOtp(live);
     }
-  }, [state.step, state.email, state.challengeId, state.resendAvailableAt]);
+  }, [state]);
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
-    // React's delegated reset event can be suppressed while a Server Action is pending.
-    // Cancel the native reset on this form so failed validation cannot discard consent/input.
+    // Native action resets must not erase input or explicit consent after rejection.
     const preserveInput = (event: Event) => event.preventDefault();
     form.addEventListener("reset", preserveInput);
     return () => form.removeEventListener("reset", preserveInput);
-  }, [state.step]);
-  const challenge = state.step === "verify" && state.email && state.challengeId
-    ? { email: state.email, challengeId: state.challengeId, resendAvailableAt: state.resendAvailableAt ?? 0 }
-    : activeOtp;
+  }, [state.step, restoring, activeOtp]);
+  // A completed submission takes precedence over feedback from the previous challenge.
+  const registrationError = state.error ?? restartReason;
+  const registrationErrorCode = state.error ? state.errorCode : restartCode;
+  const challenge =
+    activeOtp || (state.step === "verify" ? asChallenge(state) : null);
   if (challenge)
+    return <RegistrationOtpStep initial={challenge} onRestart={onRestart} />;
+  if (restoring || recoveryError)
     return (
-      <RegistrationOtpStep
-        email={challenge.email}
-        challengeId={challenge.challengeId}
-        availableAt={challenge.resendAvailableAt}
-        onRestart={onRestart}
-      />
+      <div className="auth-content">
+        <Heading title="Verifikasi email">
+          Memulihkan sesi pendaftaran Anda.
+        </Heading>
+        <p className="auth-otp-note" role="status">
+          {restoring
+            ? "Memeriksa status kode..."
+            : "Status kode belum dapat diperiksa. Periksa koneksi dan coba lagi."}
+        </p>
+        {!restoring && (
+          <p className="auth-switch">
+            <button
+              className="auth-resend-button"
+              onClick={() => setRecoveryAttempt((n) => n + 1)}
+            >
+              Coba lagi
+            </button>
+          </p>
+        )}
+        <p className="auth-switch">
+          <button className="auth-resend-button" onClick={() => onRestart()}>
+            Ubah data pendaftaran
+          </button>
+        </p>
+      </div>
     );
   return (
     <div className="auth-content">
@@ -587,8 +487,15 @@ function RegistrationForm({
             .
           </p>
         </div>
-        <Feedback error={restartReason ?? state.error} id="register-error" />
-        <Submit label="Kirim Kode OTP" />
+        <Feedback error={registrationError} id="register-error" />
+        {(registrationErrorCode === "REGISTRATION_CONFLICT" ||
+          registrationError === REGISTRATION_CONFLICT) && (
+          <nav className="auth-conflict-links" aria-label="Pemulihan akun">
+            <Link href="/login">Masuk</Link>
+            <Link href="/forgot-password">Lupa password</Link>
+          </nav>
+        )}
+        <Submit label="Daftar" />
       </form>
       <SocialButtons />
       <p className="auth-switch">

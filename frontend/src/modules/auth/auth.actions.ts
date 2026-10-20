@@ -5,20 +5,41 @@ import { redirect } from "next/navigation";
 import { createSession, destroySession } from "@/lib/auth/session";
 import {
   requestRegistrationOtp,
-  REGISTRATION_OTP_DELIVERY_FAILURE,
+  RegistrationError,
+  getRegistrationChallenge,
   verifyRegistrationOtp,
   resendRegistrationOtp,
   authenticate,
   requestPasswordReset,
   resetPassword,
 } from "./auth.service";
-import { runAction } from "@/lib/action";
+import { runAction, type ActionResult } from "@/lib/action";
+import { HttpError } from "@/lib/response";
+import type { RegistrationFailure } from "./registration-contract";
 
 import {
   registrationSchema,
   registrationVerificationSchema,
   registrationResendSchema,
 } from "./registration-schema";
+
+/** Preserve structured registration errors without changing other action contracts. */
+async function registrationResult<T>(
+  fn: () => Promise<T>,
+): Promise<ActionResult<T> & { errorCode?: RegistrationFailure }> {
+  let errorCode: RegistrationFailure | undefined;
+  const result = await runAction(async () => {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error instanceof RegistrationError) errorCode = error.code;
+      else if (error instanceof HttpError && error.status === 429)
+        errorCode = "TOO_MANY_REQUESTS";
+      throw error;
+    }
+  });
+  return { ...result, errorCode };
+}
 
 export async function registerAction(_prev: unknown, formData: FormData) {
   const parsed = registrationSchema.safeParse({
@@ -27,17 +48,38 @@ export async function registerAction(_prev: unknown, formData: FormData) {
   });
   if (!parsed.success)
     return { ok: false, error: parsed.error.errors[0].message };
-  const result = await runAction(() => requestRegistrationOtp(parsed.data));
-  if (!result.ok) return { ok: false, error: result.error };
+  const result = await registrationResult(() =>
+    requestRegistrationOtp(parsed.data),
+  );
+  if (!result.ok)
+    return { ok: false, error: result.error, errorCode: result.errorCode };
   return {
     ok: true,
     step: "verify",
-    email: result.data!.email,
-    challengeId: result.data!.challengeId,
-    resendAvailableAt: result.data!.resendAvailableAt,
-    message:
-      "Kode OTP telah dikirim. Masukkan 6 angka dari email Anda (berlaku 10 menit).",
+    ...result.data!,
+    message: "Kode OTP telah dikirim ke email Anda.",
   };
+}
+
+export async function registrationStatusAction(
+  _prev: unknown,
+  formData: FormData,
+) {
+  const parsed = registrationResendSchema.safeParse(
+    Object.fromEntries(formData),
+  );
+  if (!parsed.success)
+    return {
+      ok: false,
+      error: "Sesi pendaftaran tidak valid.",
+      errorCode: "CHALLENGE_MISSING" as const,
+    };
+  const result = await registrationResult(() =>
+    getRegistrationChallenge(parsed.data.email, parsed.data.challengeId),
+  );
+  if (!result.ok)
+    return { ok: false, error: result.error, errorCode: result.errorCode };
+  return { ok: true, ...result.data! };
 }
 
 export async function verifyRegistrationAction(
@@ -49,20 +91,20 @@ export async function verifyRegistrationAction(
   );
   if (!parsed.success)
     return { ok: false, error: parsed.error.errors[0].message };
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16)
     return { ok: false, error: "Layanan autentikasi belum dikonfigurasi." };
-  }
-  const result = await runAction(async () => {
+  const result = await registrationResult(async () => {
     const user = await verifyRegistrationOtp(
       parsed.data.email,
       parsed.data.otp,
       parsed.data.challengeId,
     );
     await createSession(user.id, user.email, user.sessionVersion);
-    return user;
   });
-  if (!result.ok) return { ok: false, error: result.error };
-  redirect("/account");
+  if (!result.ok)
+    return { ok: false, error: result.error, errorCode: result.errorCode };
+  // The client may animate success only after BOTH the account and session are confirmed.
+  return { ok: true, verified: true, message: "Email berhasil diverifikasi." };
 }
 
 export async function resendRegistrationAction(
@@ -74,19 +116,15 @@ export async function resendRegistrationAction(
   );
   if (!parsed.success)
     return { ok: false, error: parsed.error.errors[0].message };
-  const result = await runAction(() =>
+  const result = await registrationResult(() =>
     resendRegistrationOtp(parsed.data.email, parsed.data.challengeId),
   );
   if (!result.ok)
-    return {
-      ok: false,
-      error: result.error,
-      restartRequired: result.error === REGISTRATION_OTP_DELIVERY_FAILURE,
-    };
+    return { ok: false, error: result.error, errorCode: result.errorCode };
   return {
     ok: true,
+    ...result.data!,
     message: "Kode OTP baru telah dikirim ke email Anda.",
-    resendAvailableAt: result.data!.resendAvailableAt,
   };
 }
 

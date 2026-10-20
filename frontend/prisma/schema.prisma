@@ -73,6 +73,8 @@ enum DiscountType {
 }
 
 // ---------- Auth / RBAC ----------
+// Functional registration lookup indexes are managed by
+// 20261019054922_registration_identity_lookup_indexes (Prisma 5 cannot model expressions).
 model User {
   id           String   @id @default(cuid())
   name         String

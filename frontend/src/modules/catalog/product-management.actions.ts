@@ -43,3 +43,11 @@ export async function saveCategoryAction(id: string | null, value: unknown) {
     return result;
   });
 }
+
+/** Read-only reconciliation; never advances a client revision without checking the snapshot. */
+export async function readProductEditorAction(id: string) {
+  return runAction(async () => {
+    const actor=await requirePermission(PERMISSIONS.PRODUCT_READ);
+    return getManagedProduct(actor,id);
+  });
+}

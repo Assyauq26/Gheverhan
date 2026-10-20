@@ -1,11 +1,18 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "@/components/ui/navigation";
-import { getProductBySlug, getRelatedProducts } from "@/modules/catalog/catalog.service";
+import {
+  getProductBySlug,
+  getRelatedProducts,
+} from "@/modules/catalog/catalog.service";
 import { trackView } from "@/modules/catalog/recently-viewed.service";
 import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
-import { formatIDR, discountPercent } from "@/lib/money";
+import { effectivePrice } from "@/lib/money";
+import {
+  ProductSelectionProvider,
+  ProductSelectionPrice,
+} from "@/components/storefront/product-selection";
 import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
 import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +50,10 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: ProductRouteProps) {
   const { slug } = await params;
-  const [product, user] = await Promise.all([getProductBySlug(slug), getStorefrontUserContext()]);
+  const [product, user] = await Promise.all([
+    getProductBySlug(slug),
+    getStorefrontUserContext(),
+  ]);
   if (!product) notFound();
   const [related, wishIds] = await Promise.all([
     getRelatedProducts({ id: product.id, categoryId: product.categoryId }),
@@ -56,9 +66,12 @@ export default async function ProductPage({ params }: ProductRouteProps) {
 
   const wl = new Set(wishIds);
   const price = effectiveProductPrice(product);
-  const pct = discountPercent(product.basePrice, price);
   const variantOptions = product.variants.map((v) => ({
     id: v.id,
+    sku: v.sku,
+    optionValueIds: v.optionValues.map((s) => s.valueId),
+    price: v.price != null ? effectivePrice(v.price, v.salePrice) : price,
+    originalPrice: v.price ?? product.basePrice,
     color: v.color,
     size: v.size,
     available: v.inventory ? v.inventory.onHand - v.inventory.reserved : 0,
@@ -88,76 +101,117 @@ export default async function ProductPage({ params }: ProductRouteProps) {
 
   return (
     <div className="space-y-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <ProductGallery images={product.images} name={product.name} />
+      <ProductSelectionProvider key={product.id}>
+        <div className="grid gap-8 md:grid-cols-2">
+          <ProductGallery images={product.images} name={product.name} />
 
-        <div className="space-y-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              {product.brand && (
-                <Link href={`/brand/${product.brand.slug}`} className="text-sm font-semibold text-ink-soft hover:text-ink">
-                  {product.brand.name}
-                </Link>
-              )}
-              <h1 className="font-display text-3xl font-black leading-tight text-ink">{product.name}</h1>
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                {product.brand && (
+                  <Link
+                    href={`/brand/${product.brand.slug}`}
+                    className="text-sm font-semibold text-ink-soft hover:text-ink"
+                  >
+                    {product.brand.name}
+                  </Link>
+                )}
+                <h1 className="font-display text-3xl font-black leading-tight text-ink">
+                  {product.name}
+                </h1>
+              </div>
+              <ShareButton title={product.name} />
             </div>
-            <ShareButton title={product.name} />
-          </div>
 
-          <Rating value={product.ratingAvg} count={product.reviewCount} size={16} />
+            <Rating
+              value={product.ratingAvg}
+              count={product.reviewCount}
+              size={16}
+            />
 
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="font-display text-3xl font-black text-ink">{formatIDR(price)}</span>
-            {pct > 0 && (
-              <>
-                <span className="text-lg text-ink-muted line-through">{formatIDR(product.basePrice)}</span>
-                <Badge variant="sale">{pct}% OFF</Badge>
-              </>
-            )}
-          </div>
+            <ProductSelectionPrice
+              defaultPrice={price}
+              basePrice={product.basePrice}
+            />
 
-          <PurchasePanel productId={product.id} variants={variantOptions} wishlisted={wl.has(product.id)} />
+            <PurchasePanel
+              productId={product.id}
+              variants={variantOptions}
+              groups={product.optionsEnabled ? product.optionGroups : undefined}
+              wishlisted={wl.has(product.id)}
+            />
 
-          <div className="space-y-2 pt-2">
-            {[
-              { t: "Deskripsi", c: product.description },
-              { t: "Material & Perawatan", c: product.material + "\n" + product.careInstruction },
-              { t: "Pengiriman & Retur", c: product.shippingReturn },
-            ].map((sec, i) => (
-              <details key={i} className="group rounded-2xl border border-line p-4" open={i === 0}>
-                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink">
-                  {sec.t}
-                  <span className="text-ink-muted transition-transform group-open:rotate-45">+</span>
-                </summary>
-                <p className="mt-3 whitespace-pre-line text-sm text-ink-soft">{sec.c}</p>
-              </details>
-            ))}
+            <div className="space-y-2 pt-2">
+              {[
+                { t: "Deskripsi", c: product.description },
+                {
+                  t: "Material & Perawatan",
+                  c: product.material + "\n" + product.careInstruction,
+                },
+                { t: "Pengiriman & Retur", c: product.shippingReturn },
+              ].map((sec, i) => (
+                <details
+                  key={i}
+                  className="group rounded-2xl border border-line p-4"
+                  open={i === 0}
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink">
+                    {sec.t}
+                    <span className="text-ink-muted transition-transform group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-3 whitespace-pre-line text-sm text-ink-soft">
+                    {sec.c}
+                  </p>
+                </details>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </ProductSelectionProvider>
 
       <section id="reviews">
         <SectionHeader title={`Ulasan (${product.reviewCount})`} />
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             {product.reviews.length === 0 && (
-              <p className="text-sm text-ink-soft">Belum ada ulasan. Jadilah yang pertama!</p>
+              <p className="text-sm text-ink-soft">
+                Belum ada ulasan. Jadilah yang pertama!
+              </p>
             )}
             {product.reviews.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-line p-4" data-testid={`review-${r.id}`}>
+              <div
+                key={r.id}
+                className="rounded-2xl border border-line p-4"
+                data-testid={`review-${r.id}`}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-ink">{r.user.name}</span>
+                  <span className="text-sm font-semibold text-ink">
+                    {r.user.name}
+                  </span>
                   <Rating value={r.rating} />
                 </div>
-                {r.title && <p className="mt-2 text-sm font-semibold text-ink">{r.title}</p>}
+                {r.title && (
+                  <p className="mt-2 text-sm font-semibold text-ink">
+                    {r.title}
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-ink-soft">{r.body}</p>
               </div>
             ))}
           </div>
           <div>
-            <h3 className="mb-3 font-display text-lg font-bold text-ink">Tulis Ulasan</h3>
+            <h3 className="mb-3 font-display text-lg font-bold text-ink">
+              Tulis Ulasan
+            </h3>
             <ReviewForm productId={product.id} slug={product.slug} />
           </div>
         </div>
@@ -171,18 +225,29 @@ export default async function ProductPage({ params }: ProductRouteProps) {
               <p className="text-sm text-ink-soft">Belum ada pertanyaan.</p>
             )}
             {product.questions.map((q) => (
-              <div key={q.id} className="rounded-2xl border border-line p-4" data-testid={`question-${q.id}`}>
+              <div
+                key={q.id}
+                className="rounded-2xl border border-line p-4"
+                data-testid={`question-${q.id}`}
+              >
                 <p className="text-sm font-semibold text-ink">T: {q.body}</p>
                 {q.answers.map((a) => (
                   <p key={a.id} className="mt-2 text-sm text-ink-soft">
-                    J: {a.body} {a.isOfficial && <Badge variant="info" className="ml-1">Penjual</Badge>}
+                    J: {a.body}{" "}
+                    {a.isOfficial && (
+                      <Badge variant="info" className="ml-1">
+                        Penjual
+                      </Badge>
+                    )}
                   </p>
                 ))}
               </div>
             ))}
           </div>
           <div>
-            <h3 className="mb-3 font-display text-lg font-bold text-ink">Ajukan Pertanyaan</h3>
+            <h3 className="mb-3 font-display text-lg font-bold text-ink">
+              Ajukan Pertanyaan
+            </h3>
             <QnaForm productId={product.id} slug={product.slug} />
           </div>
         </div>
@@ -193,7 +258,11 @@ export default async function ProductPage({ params }: ProductRouteProps) {
           <SectionHeader title="Kamu Mungkin Suka" href="/shop" />
           <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
             {related.slice(0, 4).map((p) => (
-              <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
+              <ProductCard
+                key={p.id}
+                product={toCardData(p)}
+                wishlisted={wl.has(p.id)}
+              />
             ))}
           </div>
         </section>

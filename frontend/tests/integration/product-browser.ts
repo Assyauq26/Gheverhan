@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
+import { verifyCustomVariations } from "./custom-variations-browser";
 import { verifyCartSynchronization } from "./cart-sync-browser";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
@@ -136,7 +137,7 @@ async function main() {
     });
     const slug = `kaos-sprint-${prefix}`;
     await check("create draft with price, category, SKU and inventory", async () => {
-      await page.goto(`${base}/admin/products/new`); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6");
+      await page.goto(`${base}/admin/products/new`); await page.getByRole("button", { name: "Gunakan varian sederhana", exact: true }).click(); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6");
       for (const width of [360, 390, 768, 1360]) {
         await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
         await page.screenshot({ path: path.join(artifactDir, `product-create-${width}.png`), fullPage: true });
@@ -381,6 +382,7 @@ async function main() {
       const captures = [{ width: 1360, height: 900, route: "/admin", file: "desktop.png" }, { width: 390, height: 844, route: `/admin/products/${product.id}`, file: "mobile.png" }, { width: 1360, height: 900, route: `/admin/products/${product.id}`, file: "desktop-product.png" }, { width: 390, height: 844, route: "/admin", file: "mobile-dashboard.png" }];
       for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
     }
+    await verifyCustomVariations({page,browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,prefix,check});
     completed = true;
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: false }, null, 2));
     console.log(`PASS ${checks} browser/data-flow checks; no production data or external storage used`);

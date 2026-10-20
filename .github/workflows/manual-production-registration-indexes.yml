@@ -97,6 +97,25 @@ jobs:
           openssl x509 -in "$cert_path" -noout >/dev/null 2>&1 || { echo 'BLOCKED: invalid Supabase CA certificate PEM'; rm -f "$cert_path"; exit 1; }
           echo "PGSSLROOTCERT=$cert_path" >> "$GITHUB_ENV"
           echo 'PASS: trusted Supabase CA certificate loaded for verify-full'
+      - name: Confirm Production maintenance write-drain via public endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Maintenance must be observable on both public Production domains.
+          # GET / and a non-existent POST API path cannot mutate customer data.
+          for host in gheverhan.store www.gheverhan.store; do
+            for method in GET POST; do
+              route="/"
+              if [ "$method" = "POST" ]; then route="/api/__migration_write_drain_probe"; fi
+              status="$(curl --silent --show-error --location --max-time 20 --request "$method" --dump-header "${RUNNER_TEMP}/maintenance-headers" --output "${RUNNER_TEMP}/maintenance-body" --write-out '%{http_code}' "https://${host}${route}")"
+              if [ "$status" != '503' ] || ! grep -Fq 'Layanan sedang dalam pemeliharaan' "${RUNNER_TEMP}/maintenance-body" || ! grep -qi 'cache-control:.*no-store' "${RUNNER_TEMP}/maintenance-headers"; then
+                echo "BLOCKED: confirmed Production maintenance response missing for ${host} ${method}; no migration executed"
+                exit 1
+              fi
+              echo "PASS: Production maintenance confirmed for ${host} ${method}"
+            done
+          done
+
       - name: Verify Production ledger and operational safety (read-only)
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
@@ -182,6 +201,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Maintenance must be observable on both public Production domains.
+          # GET / and a non-existent POST API path cannot mutate customer data.
+          for host in gheverhan.store www.gheverhan.store; do
+            for method in GET POST; do
+              route="/"
+              if [ "$method" = "POST" ]; then route="/api/__migration_write_drain_probe"; fi
+              status="$(curl --silent --show-error --location --max-time 20 --request "$method" --dump-header "${RUNNER_TEMP}/maintenance-headers" --output "${RUNNER_TEMP}/maintenance-body" --write-out '%{http_code}' "https://${host}${route}")"
+              if [ "$status" != '503' ] || ! grep -Fq 'Layanan sedang dalam pemeliharaan' "${RUNNER_TEMP}/maintenance-body" || ! grep -qi 'cache-control:.*no-store' "${RUNNER_TEMP}/maintenance-headers"; then
+                echo "BLOCKED: confirmed Production maintenance response missing for ${host} ${method}; no migration executed"
+                exit 1
+              fi
+              echo "PASS: Production maintenance confirmed for ${host} ${method}"
+            done
+          done
+
           # Repeat the exact 7/7 ledger verification immediately before deployment.
           # The externally coordinated Production write-drain remains mandatory.
           node <<'NODE'
@@ -260,4 +294,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt" "${RUNNER_TEMP}/prisma-migration-status.log"
+          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt" "${RUNNER_TEMP}/prisma-migration-status.log" "${RUNNER_TEMP}/maintenance-headers" "${RUNNER_TEMP}/maintenance-body"

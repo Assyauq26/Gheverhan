@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { ArrowLeft, ChevronRight, Package, Truck } from "lucide-react";
+import "@/components/storefront/product-detail.css";
 import type { Metadata } from "next";
 import Link from "@/components/ui/navigation";
 import {
@@ -19,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProductGallery } from "@/components/storefront/product-gallery";
 import { PurchasePanel } from "@/components/storefront/purchase-panel";
 import { ShareButton } from "@/components/storefront/share-button";
+import { WishlistButton } from "@/components/storefront/wishlist-button";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { QnaForm } from "@/components/storefront/qna-form";
 import { SectionHeader } from "@/components/storefront/section-header";
@@ -100,7 +103,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="pdp-page space-y-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -109,75 +112,80 @@ export default async function ProductPage({ params }: ProductRouteProps) {
       />
 
       <ProductSelectionProvider key={product.id}>
-        <div className="grid gap-8 md:grid-cols-2">
-          <ProductGallery images={product.images} name={product.name} />
-
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                {product.brand && (
-                  <Link
-                    href={`/brand/${product.brand.slug}`}
-                    className="text-sm font-semibold text-ink-soft hover:text-ink"
-                  >
-                    {product.brand.name}
-                  </Link>
-                )}
-                <h1 className="font-display text-3xl font-black leading-tight text-ink">
-                  {product.name}
-                </h1>
+        <div className="pdp-main" data-testid="pdp-main">
+          <div className="pdp-hero">
+            <div className="pdp-media">
+              <ProductGallery images={product.images} name={product.name}/>
+              <div className="pdp-topbar" aria-label="Navigasi produk">
+                <Link href="/shop" aria-label="Kembali ke toko"
+                  className="pdp-header-action grid h-11 w-11 place-items-center bg-white/90 shadow-sm backdrop-blur">
+                  <ArrowLeft size={23}/>
+                </Link>
+                <span className="pdp-topbar-center">Gheverhan</span>
+                <div className="pdp-topbar-actions">
+                  <WishlistButton productId={product.id} initialActive={wl.has(product.id)}
+                    className="pdp-header-action h-11 w-11 rounded-2xl bg-white/90"/>
+                  <ShareButton title={product.name} iconOnly/>
+                </div>
               </div>
-              <ShareButton title={product.name} />
             </div>
-
-            <Rating
-              value={product.ratingAvg}
-              count={product.reviewCount}
-              size={16}
-            />
-
-            <ProductSelectionPrice
-              defaultPrice={price}
-              basePrice={product.basePrice}
-            />
-
+          </div>
+          <div className="pdp-sheet">
+            <span className="pdp-handle" aria-hidden="true"/>
+            <div className="mb-1.5 text-sm font-medium text-zinc-400">
+              {product.brand?.name ?? "Gheverhan"}
+            </div>
+            <h1 className="pdp-heading text-[1.75rem] font-extrabold leading-tight text-zinc-950 sm:text-[2rem]">
+              {product.name}
+            </h1>
+            <a href="#reviews" className="mt-2.5 inline-flex items-center gap-2 text-sm text-zinc-500">
+              <Rating value={product.ratingAvg} size={16}/>
+              <span>({product.reviewCount} ulasan)</span>
+            </a>
+            <div className="my-5">
+              <ProductSelectionPrice defaultPrice={price} basePrice={product.basePrice}/>
+            </div>
             <PurchasePanel
               productId={product.id}
               variants={variantOptions}
               groups={product.optionsEnabled ? product.optionGroups : undefined}
               wishlisted={wl.has(product.id)}
             />
-
-            <div className="space-y-2 pt-2">
-              {[
-                { t: "Deskripsi", c: product.description },
-                {
-                  t: "Material & Perawatan",
-                  c: product.material + "\n" + product.careInstruction,
-                },
-                { t: "Pengiriman & Retur", c: product.shippingReturn },
-              ].map((sec, i) => (
-                <details
-                  key={i}
-                  className="group rounded-2xl border border-line p-4"
-                  open={i === 0}
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink">
-                    {sec.t}
-                    <span className="text-ink-muted transition-transform group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <p className="mt-3 whitespace-pre-line text-sm text-ink-soft">
-                    {sec.c}
-                  </p>
-                </details>
-              ))}
+            <div className="mt-6 border-t border-zinc-100">
+              <details className="pdp-detail-row group py-4" open>
+                <summary className="flex min-h-7 cursor-pointer items-center justify-between gap-3 text-sm font-bold text-zinc-900">
+                  Deskripsi <ChevronRight className="pdp-detail-chevron shrink-0 text-zinc-500 transition-transform" size={19}/>
+                </summary>
+                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-zinc-500">
+                  {product.description || "Informasi produk akan segera tersedia."}
+                </p>
+              </details>
+              <details className="pdp-detail-row group py-4">
+                <summary className="flex min-h-7 cursor-pointer items-center gap-3 text-sm font-medium text-zinc-800">
+                  <Package size={19} className="shrink-0"/>
+                  <span className="flex-1">Material &amp; Perawatan</span>
+                  <ChevronRight className="pdp-detail-chevron shrink-0 text-zinc-500 transition-transform" size={19}/>
+                </summary>
+                <p className="mt-3 whitespace-pre-line pl-8 text-sm leading-relaxed text-zinc-500">
+                  {[product.material, product.careInstruction].filter(Boolean).join("\n") || "Informasi material dan perawatan belum tersedia."}
+                </p>
+              </details>
+              <details className="pdp-detail-row group py-4">
+                <summary className="flex min-h-7 cursor-pointer items-center gap-3 text-sm font-medium text-zinc-800">
+                  <Truck size={19} className="shrink-0"/>
+                  <span className="flex-1">Pengiriman &amp; Retur</span>
+                  <ChevronRight className="pdp-detail-chevron shrink-0 text-zinc-500 transition-transform" size={19}/>
+                </summary>
+                <p className="mt-3 whitespace-pre-line pl-8 text-sm leading-relaxed text-zinc-500">
+                  {product.shippingReturn || "Informasi pengiriman dan retur belum tersedia."}
+                </p>
+              </details>
             </div>
           </div>
         </div>
       </ProductSelectionProvider>
 
+      <div className="pdp-below space-y-12">
       <section id="reviews">
         <SectionHeader title={`Ulasan (${product.reviewCount})`} />
         <div className="grid gap-6 md:grid-cols-2">
@@ -267,6 +275,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }

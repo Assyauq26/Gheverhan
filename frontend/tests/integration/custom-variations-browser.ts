@@ -812,6 +812,20 @@ export async function verifyCustomVariations(c: Context) {
             false,
             `storefront overflow ${width}`,
           );
+          await expect(store.getByTestId("buy-now-btn")).toBeVisible();
+          await expect(store.getByTestId("selected-product-price")).toBeVisible();
+          if (width < 768) {
+            await expect(store.locator(".pdp-topbar")).toBeVisible();
+            await expect(store.locator(".storefront-root > header")).toBeHidden();
+            await expect(store.getByTestId("bottom-nav")).toBeHidden();
+            await expect(store.locator(".pdp-purchase-actions")).toHaveCSS("position", "fixed");
+            const button = await store.getByTestId("buy-now-btn").boundingBox();
+            assert.ok(button && button.x >= 0 && button.x + button.width <= width + 1, "floating buy pill must fit the phone");
+          } else {
+            await expect(store.locator(".pdp-topbar")).toBeHidden();
+            await expect(store.locator(".storefront-root > header")).toBeVisible();
+            await expect(store.locator(".pdp-purchase-actions")).toHaveCSS("position", "static");
+          }
           await store.screenshot({
             path: path.join(artifactDir, `product-custom-store-${width}.png`),
           });

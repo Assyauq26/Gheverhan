@@ -158,11 +158,7 @@ jobs:
             echo 'BLOCKED: unexpected Prisma migration status result; no migration executed'
             exit 1
           fi
-          pending_names="$(grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*        if: always()
-        shell: bash
-        run: |
-          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt" "${RUNNER_TEMP}/prisma-readonly-status.log"
- "${RUNNER_TEMP}/prisma-readonly-status.log" | tr -d '[:space:]' || true)"
+          pending_names="$(grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*$' "${RUNNER_TEMP}/prisma-readonly-status.log" | tr -d '[:space:]' || true)"
           if [ "$pending_names" != '20261019054922_registration_identity_lookup_indexes' ]; then
             echo 'BLOCKED: unexpected pending migration set; no migration executed'
             exit 1
@@ -177,4 +173,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt"
+          rm -f "${RUNNER_TEMP}/gheverhan-supabase-db-ca.crt" "${RUNNER_TEMP}/prisma-readonly-status.log"

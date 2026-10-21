@@ -10,7 +10,7 @@ Seluruh I/O Storage aplikasi melewati server-only `src/lib/storage.ts` dengan se
 | Variasi legacy | Path sama, ProductImage.isVariation=true | Proxy yang sama; order/cart/history authorization tetap berlaku |
 | Foto pending | `<app>/product-images/staged-<id>/<id>.<ext>` | `/api/v1/admin/product-media/<id>` memeriksa actor/session/purpose/ready/TTL |
 | Foto finalized | Path staged immutable tetap, ProductImage terikat dalam transaksi | Proxy permanen dan pemeriksaan published/staff/cart/order; reader baru mengenali prefix |
-| Payment proof | `<app>/payment-proofs/<orderId>/<id>.<ext>` | Bucket terpisah, buyer/admin proof routes berizin; tidak ikut perubahan produk |
+| Payment proof | `<app>/payment-proofs/<userId>/<id>.<ext>` | Bucket terpisah, buyer/admin proof routes berizin; tidak ikut perubahan produk |
 | External legacy URL | URL eksternal pada ProductImage | Tidak dipindah atau diubah; pembacaan pihak ketiga bukan dari product-images |
 
 Read-only pada project `bztprltkevacidcpjaam`: 18 ProductImage (16 galeri, 2 variasi); 8 proxy aplikasi, 10 external HTTPS, 0 direct public Storage URL, 0 relative legacy lainnya. OrderItem memiliki 0 referensi direct public product bucket; 0 staged-prefix objects. Tidak membaca isi foto, customer identity atau signed URL.

@@ -72,6 +72,11 @@ async function main() {
     prisma.cart.deleteMany(),
     prisma.inventoryMovement.deleteMany(),
     prisma.inventory.deleteMany(),
+    // FK RESTRICT on group-owned values: clear mapping -> values -> groups
+    // before deleting product images, variants and products (development seed only).
+    prisma.productVariantOptionValue.deleteMany(),
+    prisma.productOptionValue.deleteMany(),
+    prisma.productOptionGroup.deleteMany(),
     prisma.productImage.deleteMany(),
     prisma.productVariant.deleteMany(),
     prisma.product.deleteMany(),

@@ -124,14 +124,14 @@ export async function stageProductMedia(
       if (!row) throw new HttpError("Upload tidak tersedia", 409);
       const objectPath = row.objectPath;
       try {
-        await putObject(objectPath, bytes, mime);
+        await putObject(objectPath, bytes, mime, AbortSignal.timeout(15000));
       } catch {
         // Immutable object may have succeeded before transport failure; adopt only exact bytes.
         let matches = false;
         try {
           matches =
             createHash("sha256")
-              .update((await getObject(objectPath)).data)
+              .update((await getObject(objectPath, AbortSignal.timeout(15000))).data)
               .digest("hex") === contentHash;
         } catch {
           /* fail closed */
@@ -182,7 +182,7 @@ export async function cleanupStagedMedia() {
       });
       if (!claimed.count) return;
       try {
-        await removeObject(row.objectPath);
+        await removeObject(row.objectPath, AbortSignal.timeout(15000));
         await prisma.stagedProductMedia.deleteMany({
           where: { id: row.id, productId: null, cancelledAt: { not: null } },
         });

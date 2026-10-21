@@ -19,7 +19,7 @@ Bulk memakai set stok absolut dan hanya field berisi. Selected rows tidak bergan
 - TTL 24 jam. DELETE hanya membatalkan media belum difinalisasi. Cleanup maksimum lima expired objects paralel, menandai cancelled secara durable sebelum delete; kegagalan tetap tercatat untuk retry. Upload/cancel berikutnya memicu bounded cleanup. Tidak ada cron baru di Production; operator perlu memantau backlog dan menjadwalkan pemanggilan cleanup trusted-server bila volume memerlukan cleanup tanpa aktivitas editor.
 - Finalized media tidak menjadi kandidat TTL cleanup, termasuk foto histori. Penghapusan permanen mengikuti pemeriksaan histori existing.
 - Tab browser hanya menyimpan UUID foto sementara di sessionStorage, tanpa cookie, session hash atau data form. Reload mengambil metadata ulang melalui GET berizin yang menyaring actor/session/TTL. Galeri dan library foto dipulihkan; unsaved teks/mapping variasi tidak disimpan diam-diam. Sesi baru tidak bisa mengadopsi foto sesi lama. Storage browser opsional.
-- Setelah kedaluwarsa/cancel, pengguna mengunggah kembali. Cancel/refresh tidak membuat produk tersembunyi. Storage I/O dibatasi timeout 15 detik; transaction upload maksimal 45 detik.
+- Setelah kedaluwarsa/cancel, pengguna mengunggah kembali. Cancel/refresh tidak membuat produk tersembunyi. Storage I/O khusus staged media dibatasi timeout 15 detik; caller payment/gallery existing mempertahankan perilaku timeout sebelumnya; transaction upload maksimal 45 detik.
 
 ## Metadata pengiriman
 

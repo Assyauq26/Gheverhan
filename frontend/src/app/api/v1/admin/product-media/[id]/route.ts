@@ -17,7 +17,7 @@ export async function GET(_req: Request, { params }: Context) {
       await productEditorSessionHash(),
       (await params).id,
     );
-    const object = await getObject(row.objectPath);
+    const object = await getObject(row.objectPath, AbortSignal.timeout(15000));
     return new Response(Buffer.from(object.data), {
       headers: {
         "Content-Type": row.mime,

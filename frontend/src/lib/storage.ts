@@ -53,6 +53,7 @@ export async function putObject(
   path: string,
   data: Uint8Array,
   contentType: string,
+  signal?: AbortSignal,
 ): Promise<{ path: string; size: number }> {
   const object = resolveStorageObject(path, STORAGE_APP);
   const mimeByExtension: Record<string, string> = {
@@ -77,7 +78,7 @@ export async function putObject(
     },
     body: Buffer.from(data),
     cache: "no-store",
-    signal: AbortSignal.timeout(15000),
+    signal,
   });
   if (!response.ok)
     throw new Error(`Storage upload failed (${response.status})`);
@@ -86,12 +87,13 @@ export async function putObject(
 
 export async function getObject(
   path: string,
+  signal?: AbortSignal,
 ): Promise<{ data: Uint8Array; contentType: string }> {
   const object = resolveStorageObject(path, STORAGE_APP);
   const response = await fetch(objectUrl(object.bucket, object.key), {
     headers: headers(),
     cache: "no-store",
-    signal: AbortSignal.timeout(15000),
+    signal,
   });
   if (!response.ok) throw new Error(`Storage read failed (${response.status})`);
   const data = new Uint8Array(await response.arrayBuffer());
@@ -103,7 +105,7 @@ export async function getObject(
 }
 
 /** For compensating failed DB writes only. Caller must enforce ownership and authorization. */
-export async function removeObject(path: string): Promise<void> {
+export async function removeObject(path: string, signal?: AbortSignal): Promise<void> {
   const object = resolveStorageObject(path, STORAGE_APP);
   const { origin } = config();
   const response = await fetch(
@@ -113,7 +115,7 @@ export async function removeObject(path: string): Promise<void> {
       headers: headers("application/json"),
       body: JSON.stringify({ prefixes: [object.key] }),
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal,
     },
   );
   if (!response.ok)

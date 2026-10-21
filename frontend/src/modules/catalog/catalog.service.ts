@@ -8,17 +8,20 @@ import { CATALOG_CACHE_TAG } from "./catalog-cache";
 // every variant and every inventory row for a 12/48 item grid made the RSC
 // payload and Prisma response much larger than necessary.
 const productCardInclude = {
-  images: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+  images: { where: { isVariation: false }, select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
   brand: { select: { name: true } },
   variants: { select: { id: true }, take: 1 },
 } satisfies Prisma.ProductInclude;
 
 const productDetailInclude = {
-  images: { orderBy: { sortOrder: "asc" } },
+  images: { where: { isVariation: false }, orderBy: { sortOrder: "asc" } },
   brand: { select: { name: true, slug: true } },
   category: { select: { id: true, slug: true, name: true } },
+  optionGroups: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, allowsImage: true, values: { orderBy: { sortOrder: "asc" }, select: { id: true, value: true, image: { select: { url: true, alt: true } } } } } },
   variants: {
     select: {
+      optionValues: { select: { valueId: true } },
+      sku: true,
       id: true,
       color: true,
       size: true,

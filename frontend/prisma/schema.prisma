@@ -100,6 +100,25 @@ model User {
   auditLogs       AuditLog[]
   resetTokens     PasswordResetToken[]
   revokedSessions SessionRevocation[]
+  checkoutIntents CheckoutIntent[]
+}
+
+// Isolated Buy Now: a browser-bound guest intent can be claimed after login.
+// Consumed together with order creation; never mutates the customer's Cart.
+model CheckoutIntent {
+  id              String   @id @default(uuid())
+  userId          String?
+  guestSecretHash String?
+  variantId       String
+  quantity        Int
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  orderId         String?  @unique
+  createdAt       DateTime @default(now())
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
 }
 
 // Pending customer registration: no User/session until the email OTP is verified.
@@ -238,6 +257,8 @@ model Product {
   reviewCount     Int           @default(0)
   categoryId      String?
   brandId         String?
+  optionsEnabled Boolean @default(false)
+  optionGroups ProductOptionGroup[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -261,8 +282,11 @@ model ProductImage {
   url       String
   alt       String  @default("")
   sortOrder Int     @default(0)
+  isVariation Boolean @default(false)
+  optionValues ProductOptionValue[]
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@unique([id, productId])
   @@index([productId])
 }
 
@@ -281,7 +305,11 @@ model ProductVariant {
   cartItems CartItem[]
   orderItems OrderItem[]
   movements InventoryMovement[]
+  combinationKey String?
+  optionValues ProductVariantOptionValue[]
 
+  @@unique([id, productId])
+  @@unique([productId, combinationKey])
   @@index([productId])
 }
 
@@ -679,4 +707,50 @@ model AuthRateLimit {
   attempts Int
   expiresAt DateTime
   @@index([expiresAt])
+}
+
+
+model ProductOptionGroup {
+  id String @id
+  productId String
+  name String
+  normalizedName String
+  legacyAxis String?
+  sortOrder Int @default(0)
+  allowsImage Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values ProductOptionValue[]
+  @@unique([id, productId])
+  @@unique([productId, normalizedName])
+  @@index([productId, sortOrder])
+}
+model ProductOptionValue {
+  id String @id
+  productId String
+  groupId String
+  value String
+  normalizedValue String
+  sortOrder Int @default(0)
+  imageId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  group ProductOptionGroup @relation(fields: [groupId, productId], references: [id, productId], onDelete: Restrict)
+  image ProductImage? @relation(fields: [imageId, productId], references: [id, productId], onDelete: Restrict)
+  variants ProductVariantOptionValue[]
+  @@unique([id, groupId, productId])
+  @@unique([groupId, normalizedValue])
+  @@index([groupId, sortOrder])
+  @@index([imageId, productId])
+}
+model ProductVariantOptionValue {
+  variantId String
+  productId String
+  groupId String
+  valueId String
+  variant ProductVariant @relation(fields: [variantId, productId], references: [id, productId], onDelete: Cascade)
+  value ProductOptionValue @relation(fields: [valueId, groupId, productId], references: [id, groupId, productId], onDelete: Restrict)
+  @@id([variantId, groupId])
+  @@index([valueId, groupId, productId])
 }

@@ -1,3 +1,4 @@
+import "@/components/admin/variation-editor.css";
 import { OperationNotice } from "@/components/admin/operation-notice";
 import Link from "@/components/ui/navigation";
 import { redirect } from "next/navigation";

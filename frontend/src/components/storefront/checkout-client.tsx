@@ -40,6 +40,7 @@ export function CheckoutClient({
   subtotal,
   expectedLines,
   requestId,
+  intentId,
   rates,
   banks,
   address,
@@ -47,6 +48,7 @@ export function CheckoutClient({
   subtotal: number;
   expectedLines: CheckoutLines;
   requestId: string;
+  intentId?: string;
   rates: Rate[];
   banks: Bank[];
   address: Addr | null;
@@ -58,7 +60,7 @@ export function CheckoutClient({
   const [retry, setRetry] = useState(0);
   const [quote, setQuote] = useState<QuoteState | null>(null);
   const rate = rates[rateIdx];
-  const quoteKey = JSON.stringify([couponCode, rate?.courier, rate?.service, rate?.cost, retry]);
+  const quoteKey = JSON.stringify([intentId, couponCode, rate?.courier, rate?.service, rate?.cost, retry]);
 
   useEffect(() => {
     if (!rate) {
@@ -78,6 +80,7 @@ export function CheckoutClient({
           cache: "no-store",
           signal: controller.signal,
           body: JSON.stringify({
+            intentId,
             couponCode: couponCode || undefined,
             shipping: { courier: rate.courier, service: rate.service, cost: rate.cost },
           }),
@@ -100,7 +103,7 @@ export function CheckoutClient({
       }
     }, couponCode ? 350 : 0);
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
-  }, [quoteKey, couponCode, rate]);
+  }, [quoteKey, couponCode, rate, intentId]);
 
   // Never render stale coupon/rate results, even before a previous request's effect cleanup runs.
   const currentQuote = quote?.key === quoteKey && quote.status === "ready" ? quote.data : null;
@@ -110,6 +113,7 @@ export function CheckoutClient({
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_360px]" data-testid="checkout-form">
+      <input type="hidden" name="intentId" value={intentId || ""} />
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="expectedLines" value={JSON.stringify(expectedLines)} />
       <input type="hidden" name="expectedQuote" value={currentQuote ? JSON.stringify({

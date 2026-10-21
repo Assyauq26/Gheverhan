@@ -8,6 +8,7 @@ import { computeDiscount } from "@/modules/promotions/coupon.service";
 import { getPaymentProvider } from "@/infrastructure/payments";
 import { getShippingProvider } from "@/infrastructure/shipping";
 import { checkoutLinesSchema, checkoutQuoteSchema, checkoutSignature, type CheckoutLines, type CheckoutQuoteConfirmation } from "./checkout.validation";
+import { getIntentCheckoutView, readCheckoutIntent } from "./checkout-intent";
 import { writeAudit } from "@/modules/audit/audit.service";
 
 export interface AddressInput {
@@ -45,9 +46,9 @@ async function resolveShippingCost(courier: string, service: string): Promise<nu
 /** Server-side recalculation only. Client-submitted totals are ignored. */
 export async function previewCheckout(
   userId: string,
-  input: { couponCode?: string; shipping?: ShippingChoice },
+  input: { couponCode?: string; shipping?: ShippingChoice; intentId?: string },
 ) {
-  const cart = await getCartView(userId);
+  const cart = input.intentId ? await getIntentCheckoutView(input.intentId, userId) : await getCartView(userId);
   if (cart.lines.length === 0) throw new HttpError("Keranjang kosong", 400);
 
   const shippingCost = input.shipping
@@ -77,6 +78,7 @@ export async function createOrder(
     expectedLines?: CheckoutLines;
     expectedQuote?: CheckoutQuoteConfirmation;
     requestId?: string;
+    intentId?: string;
   },
 ) {
   const confirmation = checkoutLinesSchema.safeParse(input.expectedLines);
@@ -91,8 +93,9 @@ export async function createOrder(
   if (input.requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId)) throw new HttpError("Request checkout tidak valid", 422);
   const hash = (value: string) => createHash("sha256").update(value).digest("hex");
   // Persist idempotency through the existing Order PK and transactional audit metadata.
-  const orderId = input.requestId ? `chk_${hash(`${userId}:${input.requestId}`).slice(0, 40)}` : undefined;
-  const requestDigest = hash(JSON.stringify({ address: Object.entries(input.address).sort(([a], [b]) => a.localeCompare(b)), shipping: { courier: input.shipping.courier, service: input.shipping.service }, bankAccountId: input.bankAccountId, couponCode: input.couponCode?.toUpperCase() || null, note: input.note || null, lines: checkoutSignature(confirmation.data), expectedQuote: acceptedQuote?.success ? acceptedQuote.data : null }));
+  if (input.intentId) await readCheckoutIntent(input.intentId, userId, prisma, true);
+  const orderId = input.intentId ? `buy_${hash(`${userId}:${input.intentId}`).slice(0, 40)}` : input.requestId ? `chk_${hash(`${userId}:${input.requestId}`).slice(0, 40)}` : undefined;
+  const requestDigest = hash(JSON.stringify({ ...(input.intentId ? { intentId: input.intentId } : {}), address: Object.entries(input.address).sort(([a], [b]) => a.localeCompare(b)), shipping: { courier: input.shipping.courier, service: input.shipping.service }, bankAccountId: input.bankAccountId, couponCode: input.couponCode?.toUpperCase() || null, note: input.note || null, lines: checkoutSignature(confirmation.data), expectedQuote: acceptedQuote?.success ? acceptedQuote.data : null }));
   const replay = async (tx: Prisma.TransactionClient) => {
     if (!orderId) return null;
     const existing = await tx.order.findUnique({ where: { id: orderId, userId } });
@@ -104,7 +107,15 @@ export async function createOrder(
   };
   const previous = await replay(prisma);
   if (previous) return previous;
-  const cartView = await getCartView(userId);
+  const cartView = await (async () => {
+    try { return input.intentId ? await getIntentCheckoutView(input.intentId, userId) : await getCartView(userId); }
+    catch (error) {
+      const completed = await replay(prisma);
+      if (completed) return null;
+      throw error;
+    }
+  })();
+  if (!cartView) return (await replay(prisma))!;
   if (cartView.lines.length === 0) {
     const completed = await replay(prisma);
     if (completed) return completed;
@@ -126,11 +137,16 @@ export async function createOrder(
 
   const result = await prisma.$transaction(async (tx) => {
     // Serialize consumption of this cart; lock items too against concurrent edits/removal.
-    const carts = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT "id" FROM "Cart" WHERE "userId" = ${userId} FOR UPDATE`);
+    if (input.intentId) {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "CheckoutIntent" WHERE "id" = ${input.intentId} AND "userId" = ${userId} FOR UPDATE`);
+      await readCheckoutIntent(input.intentId, userId, tx, true);
+    } else {
+      const carts = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT "id" FROM "Cart" WHERE "userId" = ${userId} FOR UPDATE`);
+      if (!carts.length) throw new HttpError("Keranjang kosong atau sudah diproses", 409);
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "CartItem" WHERE "cartId" = ${carts[0].id} ORDER BY "id" FOR UPDATE`);
+    }
     const processed = await replay(tx);
     if (processed) return { order: processed, created: false };
-    if (!carts.length) throw new HttpError("Keranjang kosong atau sudah diproses", 409);
-    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "CartItem" WHERE "cartId" = ${carts[0].id} ORDER BY "id" FOR UPDATE`);
     // Catalog locks match product management's Product -> Variant -> Inventory order.
     const productIds = [...new Set(cartView.lines.map(line => line.product.id))].sort();
     const published = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -141,7 +157,7 @@ export async function createOrder(
     if (published.length !== productIds.length) throw new HttpError("Produk tidak lagi tersedia. Periksa keranjang Anda.", 409);
     const variantIds = cartView.lines.map(l => l.variantId).sort();
     await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "ProductVariant" WHERE "id" IN (${Prisma.join(variantIds)}) ORDER BY "id" FOR SHARE`);
-    const current = await getCartView(userId, tx);
+    const current = input.intentId ? await getIntentCheckoutView(input.intentId, userId, tx) : await getCartView(userId, tx);
     if (!current.lines.length) throw new HttpError("Keranjang sudah diproses. Periksa pesanan Anda.", 409);
     if (checkoutSignature(current.lines) !== checkoutSignature(confirmation.data)) throw new HttpError("Harga atau isi keranjang berubah. Muat ulang checkout dan konfirmasi ulang sebelum membuat pesanan.", 409);
     if (current.lines.some(l => !l.inStock || !Number.isSafeInteger(l.quantity) || l.quantity <= 0)) throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
@@ -207,9 +223,12 @@ export async function createOrder(
       },
     });
 
-    // clear cart
-    const cart = await tx.cart.findUnique({ where: { userId } });
-    if (cart) await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+    if (input.intentId) {
+      await tx.checkoutIntent.update({ where: { id: input.intentId }, data: { consumedAt: new Date(), orderId: created.id } });
+    } else {
+      const cart = await tx.cart.findUnique({ where: { userId } });
+      if (cart) await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+    }
 
     await writeAudit(
       { userId, action: "order.create", entity: "Order", entityId: created.id, meta: { orderNumber, total, requestDigest } },

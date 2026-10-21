@@ -13,6 +13,8 @@
       "fix/r21-production-hardening": false,
       "feat/auth-ui-legal-pages": false,
       "feat/registration-email-otp-and-storefront-links": false,
+      "feat/custom-variations-lumen-ux": false,
+      "feat/storefront-product-detail-editorial-ux": false,
       "fix/registration-conflicts-otp-experience": false
     }
   }

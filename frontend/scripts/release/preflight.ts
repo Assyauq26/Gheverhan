@@ -43,6 +43,8 @@ async function main() {
         SELECT migration_name,checksum,finished_at IS NOT NULL AS finished,rolled_back_at IS NOT NULL AS rolled_back
         FROM public._prisma_migrations ORDER BY migration_name`;
             const schema = await tx.$queryRaw<{
+                customOptions: boolean;
+                directCheckout: boolean;
                 revocation: boolean;
                 limiter: boolean;
                 version: boolean;
@@ -55,7 +57,22 @@ async function main() {
                 pendingIndexes: boolean;
                 pendingColumns: boolean;
             }[]> `
-        SELECT to_regclass('public."SessionRevocation"') IS NOT NULL AS revocation,
+        SELECT (to_regclass('public."ProductOptionGroup"') IS NOT NULL AND to_regclass('public."ProductOptionValue"') IS NOT NULL AND to_regclass('public."ProductVariantOptionValue"') IS NOT NULL
+          AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Product' AND column_name='optionsEnabled')
+          AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='ProductImage' AND column_name='isVariation')
+          AND EXISTS(SELECT 1 FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid WHERE c.relname='ProductOptionGroup_one_image_group' AND i.indrelid=to_regclass('public."ProductOptionGroup"') AND i.indisunique AND i.indisvalid AND i.indisready AND i.indpred IS NOT NULL)
+          AND (SELECT count(*)=3 AND bool_and(c.relrowsecurity AND NOT pg_catalog.row_security_active(c.oid) AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE')) FROM pg_catalog.pg_class c WHERE c.oid IN (to_regclass('public."ProductOptionGroup"'),to_regclass('public."ProductOptionValue"'),to_regclass('public."ProductVariantOptionValue"')))
+          AND EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=to_regnamespace('public') AND proname='gheverhan_backfill_legacy_options' AND NOT prosecdef AND has_function_privilege(oid,'EXECUTE'))
+          AND (SELECT count(*)=5 AND bool_and(tgdeferrable AND tginitdeferred AND tgenabled='O') FROM pg_catalog.pg_trigger WHERE tgrelid IN (to_regclass('public."Product"'),to_regclass('public."ProductOptionGroup"'),to_regclass('public."ProductOptionValue"'),to_regclass('public."ProductVariant"'),to_regclass('public."ProductVariantOptionValue"')) AND tgname IN ('Product_options_integrity','ProductOptionGroup_integrity','ProductOptionValue_integrity','ProductVariant_options_integrity','ProductVariantOptionValue_integrity')) AND (SELECT count(*)=5 AND bool_and(convalidated) FROM pg_catalog.pg_constraint WHERE contype='f' AND conrelid IN (to_regclass('public."ProductOptionGroup"'),to_regclass('public."ProductOptionValue"'),to_regclass('public."ProductVariantOptionValue"')))) AS "customOptions",
+        (SELECT count(*)=1 AND bool_and(c.relrowsecurity AND NOT pg_catalog.row_security_active(c.oid)
+          AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
+          FROM pg_catalog.pg_class c WHERE c.oid=to_regclass('public."CheckoutIntent"'))
+          AND (SELECT count(*)=4 AND bool_and(indisvalid AND indisready)
+          AND count(*) FILTER (WHERE c.relname='CheckoutIntent_orderId_key' AND indisunique AND indnatts=1 AND indkey[0]=(SELECT attnum FROM pg_catalog.pg_attribute WHERE attrelid=i.indrelid AND attname='orderId'))=1
+          FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid WHERE i.indrelid=to_regclass('public."CheckoutIntent"') AND c.relname IN ('CheckoutIntent_pkey','CheckoutIntent_orderId_key','CheckoutIntent_expiresAt_idx','CheckoutIntent_userId_idx'))
+          AND (SELECT count(*)=4 AND bool_and(convalidated) FROM pg_catalog.pg_constraint WHERE conrelid=to_regclass('public."CheckoutIntent"') AND conname IN ('CheckoutIntent_userId_fkey','CheckoutIntent_quantity_check','CheckoutIntent_owner_check','CheckoutIntent_consumed_check'))
+          AND NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='CheckoutIntent') AS "directCheckout",
+        to_regclass('public."SessionRevocation"') IS NOT NULL AS revocation,
         to_regclass('public."AuthRateLimit"') IS NOT NULL AS limiter,
         to_regclass('public."PendingRegistration"') IS NOT NULL AS pending,
         EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='emailVerifiedAt' AND data_type='timestamp without time zone' AND is_nullable='YES') AS "verifiedAt",
@@ -88,7 +105,7 @@ async function main() {
         const active = facts.ledger.filter(row => !row.rolled_back);
         const ledgerMatches = active.length === expectedLedger.size && new Set(active.map(row => row.migration_name)).size === expectedLedger.size && active.every(row => row.finished) &&
             facts.ledger.every(row => expectedLedger.get(row.migration_name) === row.checksum);
-        const schemaReady = facts.schema.revocation && facts.schema.limiter && facts.schema.version && facts.schema.indexes && facts.schema.foreignKey && facts.schema.trusted && facts.schema.pending && facts.schema.verifiedAt && facts.schema.pendingIndexes && facts.schema.pendingColumns && facts.schema.normalizedIdentityIndexes;
+        const schemaReady = facts.schema.directCheckout && facts.schema.customOptions && facts.schema.revocation && facts.schema.limiter && facts.schema.version && facts.schema.indexes && facts.schema.foreignKey && facts.schema.trusted && facts.schema.pending && facts.schema.verifiedAt && facts.schema.pendingIndexes && facts.schema.pendingColumns && facts.schema.normalizedIdentityIndexes;
         const maintenanceMode = ['0', '1'].includes(env.MAINTENANCE_MODE || '') ? env.MAINTENANCE_MODE : 'UNCONFIGURED';
         const configReady = maintenanceMode !== 'UNCONFIGURED' && Object.values(presence).every(Boolean) && (env.JWT_SECRET?.length || 0) >= 16;
         console.log(JSON.stringify({ status: ledgerMatches && schemaReady && configReady ? 'PASS' : 'BLOCKED',

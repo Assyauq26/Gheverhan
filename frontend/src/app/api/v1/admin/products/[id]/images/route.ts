@@ -14,7 +14,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const form = await readUploadFormData(req, MAX_IMAGE_BYTES + 128 * 1024);
     const file = form.get("image");
     if (!(file instanceof File)) throw new HttpError("File gambar diperlukan", 422);
-    const result = await uploadProductImage(actor, (await params).id, String(form.get("updatedAt") || ""), new Uint8Array(await file.arrayBuffer()), file.type, String(form.get("alt") || ""));
+    const purpose = form.get("purpose") || "gallery";
+    if (purpose !== "gallery" && purpose !== "option") throw new HttpError("Jenis foto tidak valid", 422);
+    const result = await uploadProductImage(actor, (await params).id, String(form.get("updatedAt") || ""), new Uint8Array(await file.arrayBuffer()), file.type, String(form.get("alt") || ""), purpose);
     revalidateTag(CATALOG_CACHE_TAG);
     return ok(result, 201);
   });

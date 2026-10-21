@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
+import { verifyCustomVariations } from "./custom-variations-browser";
+import { verifyDirectCheckout } from "./direct-checkout-browser";
 import { verifyCartSynchronization } from "./cart-sync-browser";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
@@ -136,7 +138,14 @@ async function main() {
     });
     const slug = `kaos-sprint-${prefix}`;
     await check("create draft with price, category, SKU and inventory", async () => {
-      await page.goto(`${base}/admin/products/new`); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6"); await page.getByTestId("save-product").click(); await expect(page).toHaveURL(/\/admin\/products\/(?!new)[^/?]+$/); await expect(page.getByTestId("product-status")).toHaveText("Draft");
+      await page.goto(`${base}/admin/products/new`); await page.getByRole("button", { name: "Gunakan varian sederhana", exact: true }).click(); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6");
+      for (const width of [360, 390, 768, 1360]) {
+        await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
+        await page.screenshot({ path: path.join(artifactDir, `product-create-${width}.png`), fullPage: true });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `product create ${width}px has no horizontal overflow`);
+      }
+      await page.setViewportSize({ width: 1360, height: 900 });
+      await page.getByTestId("save-product").click(); await expect(page).toHaveURL(/\/admin\/products\/(?!new)[^/?]+$/); await expect(page.getByTestId("product-status")).toHaveText("Draft");
     });
     let product = await db.product.findUniqueOrThrow({ where: { slug }, include: { images: true, variants: { include: { inventory: true } } } });
     assert.equal(product.status, "DRAFT"); assert.equal(product.variants[0].inventory?.onHand, 6);
@@ -156,8 +165,49 @@ async function main() {
       await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 2);
       await page.getByRole("button", { name: "Hapus varian 2", exact: true }).click(); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
     });
+    await check("seller variant builder renders responsively and persists unique color/size combinations", async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole("button", { name: "Buat kombinasi", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Atur variasi produk" });
+      await expect(dialog).toBeVisible();
+      for (const color of ["Merah", "Hijau"]) {
+        await dialog.getByLabel("Tambah opsi Warna").fill(color);
+        await dialog.getByLabel("Tambah opsi Warna").press("Enter");
+      }
+      for (const size of ["M", "L"]) {
+        await dialog.getByLabel("Tambah opsi Ukuran").fill(size);
+        await dialog.getByLabel("Tambah opsi Ukuran").press("Enter");
+      }
+      await expect(dialog.getByText("4 varian", { exact: true })).toBeVisible();
+      await dialog.screenshot({ path: path.join(artifactDir, "product-variant-sheet-390.png") });
+      await page.screenshot({ path: path.join(artifactDir, "product-variant-mobile-390.png"), fullPage: false });
+      const bounds = await dialog.boundingBox();
+      assert.ok(bounds && bounds.x >= -1 && bounds.x + bounds.width <= 392 && bounds.y >= -1 && bounds.y + bounds.height <= 845, "mobile bottom sheet must fit the viewport");
+      await dialog.getByRole("button", { name: "Tambahkan 4 kombinasi", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      assert.equal(await page.getByLabel("SKU", { exact: true }).count(), 5);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "mobile editor has no horizontal overflow");
+      await page.getByTestId("save-product").click();
+      await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 5);
+      await page.setViewportSize({ width: 1360, height: 900 });
+      await expect(page.getByRole("navigation", { name: "Bagian editor produk" })).toBeVisible();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "desktop editor has no horizontal overflow");
+      for (let index = 5; index >= 2; index--) {
+        await page.getByRole("button", { name: `Hapus varian ${index}`, exact: true }).click();
+      }
+      await page.getByTestId("save-product").click();
+      await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
+    });
     await check("upload and serve draft image through the existing storage contract", async () => {
       await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("status")).toContainText("Gambar diunggah"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      for (const width of [390, 768, 1360]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+        await page.screenshot({ path: path.join(artifactDir, `product-edit-${width}.png`), fullPage: true });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `product edit ${width}px has no horizontal overflow`);
+      }
+      await page.setViewportSize({ width: 1360, height: 900 });
       product = await db.product.findUniqueOrThrow({ where: { id: product.id }, include: { images: true, variants: { include: { inventory: true } } } });
       assert.equal(product.images.length, 1); assert.equal(objects.size, 1); assert.equal((await admin.request.get(`${base}${product.images[0].url}`)).status(), 200); assert.equal((await anonymous.request.get(`${base}${product.images[0].url}`)).status(), 404);
       const form = { image: { name: "x.png", mimeType: "image/png", buffer: png }, updatedAt: product.updatedAt.toISOString() };
@@ -223,6 +273,9 @@ async function main() {
     });
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
+    });
+    await check("Buy Now guest login continuation and exact legacy/custom checkout preserve the old cart", async () => {
+      await verifyDirectCheckout(browser!, db, base, artifactDir, pageErrors);
     });
     await check("R20 authenticated cart synchronization and rollback at four viewports", async () => {
       await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir, emailCodes);
@@ -333,6 +386,7 @@ async function main() {
       const captures = [{ width: 1360, height: 900, route: "/admin", file: "desktop.png" }, { width: 390, height: 844, route: `/admin/products/${product.id}`, file: "mobile.png" }, { width: 1360, height: 900, route: `/admin/products/${product.id}`, file: "desktop-product.png" }, { width: 390, height: 844, route: "/admin", file: "mobile-dashboard.png" }];
       for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
     }
+    await verifyCustomVariations({page,browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,prefix,check});
     completed = true;
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: false }, null, 2));
     console.log(`PASS ${checks} browser/data-flow checks; no production data or external storage used`);

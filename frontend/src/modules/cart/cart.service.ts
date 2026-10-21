@@ -51,6 +51,37 @@ function unitPriceFor(variant: {
   return effectiveProductPrice(variant.product);
 }
 
+export const checkoutVariantSelection = {
+  optionValues: { select: { value: { select: { value: true, group: { select: { name: true, sortOrder: true, allowsImage: true } }, image: { select: { url: true } } } } } },
+  color: true,
+  size: true,
+  price: true,
+  salePrice: true,
+  inventory: { select: { onHand: true, reserved: true } },
+  product: {
+    select: {
+      id: true,
+      optionsEnabled: true,
+      name: true,
+      slug: true,
+      status: true,
+      basePrice: true,
+      salePrice: true,
+      flashSalePrice: true,
+      flashSaleStartsAt: true,
+      flashSaleEndsAt: true,
+      images: {
+        where: { isVariation: false },
+        select: { url: true },
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+      },
+    },
+  },
+} satisfies Prisma.ProductVariantSelect;
+
+type CheckoutVariant = Prisma.ProductVariantGetPayload<{ select: typeof checkoutVariantSelection }>;
+
 export async function getCartView(userId: string, client: Prisma.TransactionClient = prisma) {
   // A read of an empty cart must stay read-only. Cart creation is deferred to
   // the first mutation (add-to-cart), avoiding a DB write on every cart visit.
@@ -67,31 +98,7 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
           quantity: true,
           createdAt: true,
           variant: {
-            select: {
-              color: true,
-              size: true,
-              price: true,
-              salePrice: true,
-              inventory: { select: { onHand: true, reserved: true } },
-              product: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  status: true,
-                  basePrice: true,
-                  salePrice: true,
-                  flashSalePrice: true,
-                  flashSaleStartsAt: true,
-                  flashSaleEndsAt: true,
-                  images: {
-                    select: { url: true },
-                    orderBy: { sortOrder: "asc" },
-                    take: 1,
-                  },
-                },
-              },
-            },
+            select: checkoutVariantSelection,
           },
         },
         orderBy: { createdAt: "asc" },
@@ -101,32 +108,45 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
 
   if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
 
-  const lines = cart.items.map((it) => {
-    const unitPrice = unitPriceFor(it.variant);
-    const stock = it.variant.inventory
-      ? available(it.variant.inventory.onHand, it.variant.inventory.reserved)
-      : 0;
-    return {
-      id: it.id,
-      variantId: it.variantId,
-      quantity: it.quantity,
-      unitPrice,
-      lineTotal: unitPrice * it.quantity,
-      inStock: it.variant.product.status === "PUBLISHED" && stock >= it.quantity,
-      availableStock: stock,
-      product: {
-        id: it.variant.product.id,
-        name: it.variant.product.name,
-        slug: it.variant.product.slug,
-        image: it.variant.product.images[0]?.url ?? null,
-      },
-      variantLabel: [it.variant.color, it.variant.size].filter(Boolean).join(" / ") || "Default",
-    };
-  });
+  const lines = cart.items.map(checkoutLine);
 
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
   const count = lines.reduce((s, l) => s + l.quantity, 0);
   return { cartId: cart.id, lines, subtotal, count };
+}
+
+function checkoutLine(it: { id: string; variantId: string; quantity: number; variant: CheckoutVariant }) {
+  const unitPrice = unitPriceFor(it.variant);
+  const stock = it.variant.inventory
+    ? available(it.variant.inventory.onHand, it.variant.inventory.reserved)
+    : 0;
+  const selections = it.variant.product.optionsEnabled ? [...it.variant.optionValues].sort((a,b) => a.value.group.sortOrder-b.value.group.sortOrder) : [];
+  const optionImage = selections.find(s => s.value.group.allowsImage && s.value.image)?.value.image?.url;
+  return {
+    id: it.id,
+    variantId: it.variantId,
+    quantity: it.quantity,
+    unitPrice,
+    lineTotal: unitPrice * it.quantity,
+    inStock: it.variant.product.status === "PUBLISHED" && stock >= it.quantity,
+    availableStock: stock,
+    product: {
+      id: it.variant.product.id,
+      name: it.variant.product.name,
+      slug: it.variant.product.slug,
+      image: optionImage ?? it.variant.product.images[0]?.url ?? null,
+    },
+    variantLabel: selections.length ? selections.map(s => `${s.value.group.name}: ${s.value.value}`).join(" / ") : [it.variant.color, it.variant.size].filter(Boolean).join(" / ") || "Default",
+  };
+}
+
+/** Same authoritative price, option image and availability projection as cart checkout. */
+export async function getDirectCheckoutView(variantId: string, quantity: number, client: Prisma.TransactionClient = prisma) {
+  validateQuantity(quantity);
+  const variant = await client.productVariant.findUnique({ where: { id: variantId }, select: checkoutVariantSelection });
+  if (!variant) throw new HttpError("Varian tidak ditemukan", 404);
+  const line = checkoutLine({ id: variantId, variantId, quantity, variant });
+  return { cartId: null, lines: [line], subtotal: line.lineTotal, count: quantity };
 }
 
 async function incrementItem(userId: string, variantId: string, quantity: number) {

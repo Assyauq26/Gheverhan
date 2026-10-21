@@ -100,6 +100,11 @@ jobs:
       - name: Registration migration lock failure and recovery on disposable PostgreSQL
         run: node --import tsx --test tests/integration/registration-migration.test.ts
 
+      - name: Custom variation migration/backfill and official Prisma recovery drill
+        run: node --import tsx --test tests/integration/custom-variation-migration.test.ts
+
+      - name: Custom variation relational, image and concurrency invariants
+        run: node --import tsx --test tests/integration/custom-variations.test.ts
       - name: Registration identity index upgrade, transactional recovery and generic-plan performance
         run: node --import tsx --test tests/integration/registration-indexes.test.ts
 
@@ -108,6 +113,12 @@ jobs:
 
       - name: Real PostgreSQL product lifecycle and concurrency
         run: npm run test:integration:products
+
+      - name: Direct checkout official Prisma fresh, upgrade and bounded lock recovery
+        run: node --import tsx --test tests/integration/direct-checkout-migration.test.ts
+
+      - name: Isolated Buy Now ownership, replay, cart preservation and inventory concurrency
+        run: node --disable-proto=throw --import tsx --test tests/integration/direct-checkout.test.ts
 
       - name: Real PostgreSQL checkout and transaction correctness
         run: npm run test:integration:transactions
@@ -159,6 +170,7 @@ jobs:
           path: |
             /tmp/gheverhan-navigation-*/navigation-results.json
             /tmp/gheverhan-product-browser-*/validation-results.json
+            /tmp/gheverhan-product-browser-*/product-*.png
             /tmp/gheverhan-product-browser-*/cart-concurrency-*.json
             /tmp/gheverhan-operations-browser-*/validation-results.json
             /tmp/gheverhan-navigation-*/*-dashboard.png

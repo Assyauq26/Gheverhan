@@ -726,9 +726,11 @@ export async function verifyCustomVariations(c: Context) {
           },
         ];
         const ids = [
-          [groups[0].values[0].id, groups[1].values[0].id],
+          // Intentionally omit the first×first combination. The storefront
+          // must initialize on a real available SKU, not disabled by default.
           [groups[0].values[0].id, groups[1].values[1].id],
           [groups[0].values[1].id, groups[1].values[0].id],
+          [groups[0].values[1].id, groups[1].values[1].id],
         ];
         const sparseSlug = "sparse-" + c.prefix;
         const result = await createManagedProduct(actor, {
@@ -771,8 +773,8 @@ export async function verifyCustomVariations(c: Context) {
         // Cartesian product; deliberately selecting a missing combo still fails.
         await expect(store.getByTestId("selected-sku")).toContainText("SPARSE-");
         await expect(store.getByTestId("buy-now-btn")).toBeEnabled();
-        await store.getByTestId(`option-${groups[0].values[1].id}`).click();
-        await store.getByTestId(`option-${groups[1].values[1].id}`).click();
+        await store.getByTestId(`option-${groups[0].values[0].id}`).click();
+        await store.getByTestId(`option-${groups[1].values[0].id}`).click();
         await expect(
           store.getByRole("button", {
             name: "Kombinasi tidak tersedia",

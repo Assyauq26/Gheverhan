@@ -172,6 +172,13 @@ export function ProductEditor({
   const saveRequest = useRef<{ payload: string; id: string }>();
   const uploadRequests = useRef(new WeakMap<File, string>());
   const [retryFile, setRetryFile] = useState<File>();
+  const [galleryPreview, setGalleryPreview] = useState("");
+  useEffect(
+    () => () => {
+      if (galleryPreview) URL.revokeObjectURL(galleryPreview);
+    },
+    [galleryPreview],
+  );
   const [mediaRecovered, setMediaRecovered] = useState(false);
   useEffect(() => {
     const key = `gh-product-media:${productId || "new"}`;
@@ -362,8 +369,10 @@ export function ProductEditor({
       return;
     }
     busy.current = true;
+    if (purpose === "gallery") setGalleryPreview(URL.createObjectURL(file));
     setPending("upload-" + purpose);
     setError("");
+    setNotice("");
     try {
       let requestId = uploadRequests.current.get(file);
       if (!requestId) {
@@ -429,6 +438,7 @@ export function ProductEditor({
     } finally {
       busy.current = false;
       setPending(null);
+      if (purpose === "gallery") setGalleryPreview("");
     }
   }
   async function upload(file?: File) {
@@ -450,7 +460,7 @@ export function ProductEditor({
     }
   }
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !pending?.startsWith("upload-")) return;
     const unload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -480,7 +490,7 @@ export function ProductEditor({
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", navigate, true);
     };
-  }, [dirty]);
+  }, [dirty, pending]);
   useEffect(() => {
     setBulkSelected(new Set());
   }, [values.variants.length]);
@@ -760,6 +770,23 @@ export function ProductEditor({
                     )}
                   </div>
                 ))}
+                {galleryPreview && (
+                  <div className="relative aspect-square min-w-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+                    {/* Local preview is never submitted or persisted as a ProductImage. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={galleryPreview}
+                      alt="Pratinjau foto sedang diunggah"
+                      className="h-full w-full object-cover"
+                    />
+                    <span
+                      role="status"
+                      className="absolute inset-x-0 bottom-0 bg-black/80 p-2 text-center text-xs text-white"
+                    >
+                      Mengunggah foto…
+                    </span>
+                  </div>
+                )}
                 {canEdit && values.images.length < 10 && (
                   <label
                     htmlFor="product-image-upload"
@@ -1495,11 +1522,13 @@ export function ProductEditor({
         {canEdit && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
             <span className="min-w-0 flex-1 text-xs font-medium text-zinc-500">
-              {dirty
-                ? "Ada perubahan yang belum disimpan."
-                : productId
-                  ? "Seluruh perubahan telah disimpan."
-                  : "Belum ada perubahan."}
+              {pending?.startsWith("upload-")
+                ? "Foto sedang diunggah. Produk belum disimpan."
+                : dirty
+                  ? "Ada perubahan yang belum disimpan."
+                  : productId
+                    ? "Seluruh perubahan telah disimpan."
+                    : "Belum ada perubahan."}
             </span>
             <Button
               type="submit"

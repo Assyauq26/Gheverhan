@@ -56,11 +56,46 @@ export async function verifyProductEditorV2({
       await page.setViewportSize({ width: 390, height: 844 });
       const before = await db.product.count();
       for (let i = 0; i < 2; i++) {
+        let release: (() => void) | undefined;
+        let started: Promise<void> | undefined;
+        if (i === 0) {
+          let entered!: () => void;
+          started = new Promise<void>((resolve) => {
+            entered = resolve;
+          });
+          const gate = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          await page.route(
+            base + "/api/v1/admin/product-media",
+            async (route) => {
+              entered();
+              await gate;
+              await route.continue();
+            },
+            { times: 1 },
+          );
+        }
         await page.locator("#product-image-upload").setInputFiles({
           name: `before-save-${i}.png`,
           mimeType: "image/png",
           buffer: png,
         });
+        if (started && release) {
+          await started;
+          await expect(
+            page.getByAltText("Pratinjau foto sedang diunggah", {
+              exact: true,
+            }),
+          ).toHaveAttribute("src", /^blob:/);
+          assert.equal(await db.product.count(), before);
+          page.once("dialog", (dialog) => void dialog.dismiss());
+          await page
+            .getByRole("link", { name: "Kembali ke produk", exact: true })
+            .click();
+          await expect(page).toHaveURL(base + "/admin/products/new");
+          release();
+        }
         await expect(page.getByRole("status")).toContainText(
           "Foto sementara siap",
         );

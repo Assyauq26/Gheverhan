@@ -10,6 +10,8 @@ Bulk memakai set stok absolut dan hanya field berisi. Selected rows tidak bergan
 
 ## Staged media
 
+Thumbnail lokal Blob langsung tampil saat request masih berjalan, untuk galeri maupun opsi. URL dicabut setelah selesai/unmount, tidak disimpan ke database/sessionStorage, dan hanya ID tervalidasi server yang bisa difinalisasi. Navigation guard juga mencakup upload in-flight.
+
 - POST `/api/v1/admin/product-media`, authenticated admin dengan PRODUCT_READ dan CREATE atau UPDATE; exact Origin, multipart bounded, signature JPG/PNG/WebP, 4 MB.
 - UUID idempotency ID + SHA-256 isi; binding actor dan SHA-256 cookie sesi yang telah divalidasi. Hash/token tidak dikirim ke client. Maksimum 60 outstanding/actor, gallery 10 dan option 50 saat save.
 - Intent database durable dibuat sebelum Storage; immutable `x-upsert=false` object. Kegagalan/response hilang direkonsiliasi hanya bila hash bytes cocok. File yang sama dicoba ulang dengan ID yang sama.

@@ -172,6 +172,12 @@ export async function verifyCustomVariations(c: Context) {
           });
         await started;
         await expect(root.getByText(/Mengunggah/)).toBeVisible();
+        await expect(
+          root
+            .getByRole("button", { name: "Unggah foto Merah", exact: true })
+            .locator("img"),
+        ).toHaveAttribute("src", /^blob:/);
+
         await capture("uploading-390");
         release();
         await expect(
@@ -285,7 +291,9 @@ export async function verifyCustomVariations(c: Context) {
           .click();
         for (let i = 0; i < 6; i++)
           await expect(root.locator(`#sku-stock-${i}`)).toHaveValue("5");
-        await bulk.getByRole("radio", {name:"Hanya SKU dipilih",exact:true}).check();
+        await bulk
+          .getByRole("radio", { name: "Hanya SKU dipilih", exact: true })
+          .check();
         await root
           .getByRole("checkbox", { name: "Pilih SKU 1", exact: true })
           .check();
@@ -296,7 +304,9 @@ export async function verifyCustomVariations(c: Context) {
         await expect(root.locator("#sku-stock-0")).toHaveValue("7");
         await expect(root.locator("#sku-stock-1")).toHaveValue("5");
         await capture("bulk-selected-390");
-        await bulk.getByRole("radio", {name:"Terapkan ke semua SKU",exact:true}).check();
+        await bulk
+          .getByRole("radio", { name: "Terapkan ke semua SKU", exact: true })
+          .check();
         await root
           .getByLabel("SKU kombinasi 1", { exact: true })
           .fill("CUSTOM-" + c.prefix + "-RED-M");

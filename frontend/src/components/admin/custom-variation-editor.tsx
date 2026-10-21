@@ -66,8 +66,16 @@ export function CustomVariationEditor(p: Props) {
     confirm: string;
     run: () => void;
   } | null>(null);
-  const [upload, setUpload] = useState<{ id: string; progress: number } | null>(
-    null,
+  const [upload, setUpload] = useState<{
+    id: string;
+    progress: number;
+    preview: string;
+  } | null>(null);
+  useEffect(
+    () => () => {
+      if (upload?.preview) URL.revokeObjectURL(upload.preview);
+    },
+    [upload?.preview],
   );
   const retry = useRef<{ id: string; file: File } | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -164,11 +172,11 @@ export function CustomVariationEditor(p: Props) {
     if (blocked) return;
     retry.current = { id: valueId, file };
     setUploadNotice("");
-    setUpload({ id: valueId, progress: 0 });
+    setUpload({ id: valueId, progress: 0, preview: URL.createObjectURL(file) });
     setError("");
     try {
       const image = await p.onUpload(file, (progress) =>
-        setUpload({ id: valueId, progress }),
+        setUpload((current) => (current ? { ...current, progress } : current)),
       );
       if (image) {
         valueChange(groupId, valueId, { imageId: image.id });
@@ -506,11 +514,11 @@ export function CustomVariationEditor(p: Props) {
                               ?.click()
                           }
                         >
-                          {image ? (
+                          {image || upload?.id === value.id ? (
                             <Image
                               unoptimized
-                              src={image.url}
-                              alt={image.alt || value.value}
+                              src={image?.url || upload!.preview}
+                              alt={image?.alt || value.value}
                               width={56}
                               height={56}
                             />

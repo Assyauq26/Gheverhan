@@ -8,7 +8,7 @@ This is a *separate* automation PR based on `main`. It makes the already-existin
 
 - #75: `d685813d02e457e5ccc182a145598c3b139b5559` (requires review).
 - #83: `62477c97ded2ac2ab552b31c7e9ac1a3fd045032` (requires review).
-- #84 immutable release source: `ec3e56f8b84d3446a3c19a51a8049d2beb999896`.
+- #84 immutable release source: `cf9279a42cfcbfc3f339ba50e03c02c66dc255a7`.
 - Approved schema only:
   - `20261020070000_custom_product_variations`: `499d4c6259b90c2342c5dc1a2baebcb04e72751c8a9f3111414ad7db492e4735`
   - `20261020120000_direct_checkout_intents`: `96c9e45d13d8379c67bfdd87f3971664e3dcd43d19b6e430f60f7899186f55f0`.
@@ -28,7 +28,7 @@ Open **Actions → Gheverhan controlled final Production migration and verificat
 
 Choose branch **main** and supply:
 - `project_ref`: `bztprltkevacidcpjaam`
-- `approved_sha`: `ec3e56f8b84d3446a3c19a51a8049d2beb999896`.
+- `approved_sha`: `cf9279a42cfcbfc3f339ba50e03c02c66dc255a7`.
 
 ### First: `operation = preflight`
 

@@ -51,11 +51,24 @@ export function PurchasePanel({
   const context = useProductSelection();
   const setImage = context?.setImage,
     setPrice = context?.setPrice;
-  const [options, setOptions] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      (groups ?? []).map((g) => [g.id, g.values[0]?.id || ""]),
-    ),
-  );
+  const [options, setOptions] = useState<Record<string, string>>(() => {
+    // Initialize from a real sellable SKU, never an invented first×first
+    // combination. Sparse catalogs can intentionally omit some combinations.
+    const complete = (variant: VariantOption) =>
+      (groups ?? []).every(group =>
+        group.values.some(value => variant.optionValueIds?.includes(value.id)),
+      );
+    const initial = variants.find(variant => variant.available > 0 && complete(variant))
+      ?? variants.find(complete);
+    return Object.fromEntries(
+      (groups ?? []).map(group => [
+        group.id,
+        group.values.find(value => initial?.optionValueIds?.includes(value.id))?.id
+          ?? group.values[0]?.id
+          ?? "",
+      ]),
+    );
+  });
   const colors = useMemo(
     () =>
       Array.from(

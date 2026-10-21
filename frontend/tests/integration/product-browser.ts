@@ -207,7 +207,7 @@ async function main() {
       assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
     });
     await check("upload and serve draft image through the existing storage contract", async () => {
-      await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("status")).toContainText("Foto sementara siap"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("region", {name:"Status perubahan produk"}).getByRole("status")).toContainText("Foto sementara siap"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
       for (const width of [390, 768, 1360]) {
         await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
         await page.screenshot({ path: path.join(artifactDir, `product-edit-${width}.png`), fullPage: true });

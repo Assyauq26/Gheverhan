@@ -96,7 +96,7 @@ export async function verifyProductEditorV2({
           await expect(page).toHaveURL(base + "/admin/products/new");
           release();
         }
-        await expect(page.getByRole("status")).toContainText(
+        await expect(page.getByRole("region", {name:"Status perubahan produk"}).getByRole("status")).toContainText(
           "Foto sementara siap",
         );
         await expect(page.locator("#product-images img")).toHaveCount(i + 1);

@@ -1,6 +1,8 @@
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { createServer, type Server } from "node:http";
 import type { PrismaClient } from "@prisma/client";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
@@ -269,6 +271,60 @@ test("product editor V2 database, media and compatibility", async (t) => {
       await media.cancelStagedMedia(actor, sessionHash, id);
       assert.ok(await db.productImage.findUnique({ where: { id } }));
       await svc.changeProductStatus(actor, p.id, p.updatedAt, "PUBLISHED");
+    },
+  );
+  await t.test(
+    "roll-forward recovery reads legacy and finalized staged media from a fresh process without rewriting data",
+    async () => {
+      const images = await import("../../src/modules/catalog/product-images.service");
+      const made = await svc.createManagedProduct(actor, input());
+      let product = await svc.getManagedProduct(actor, made.id);
+      await images.uploadProductImage(
+        actor, product.id, product.updatedAt, png, "image/png", "Legacy recovery",
+      );
+      product = await svc.getManagedProduct(actor, made.id);
+      const stagedId = randomUUID();
+      await media.stageProductMedia(actor, sessionHash, stagedId, png, "image/png", "gallery");
+      await svc.updateManagedProduct(actor, product.id, product.updatedAt, {
+        ...product,
+        images: [...product.images, { id: stagedId, alt: "Staged recovery" }],
+      }, { sessionHash, requestId: randomUUID() });
+      const snapshot = async () => JSON.stringify({
+        product: await db.product.findUniqueOrThrow({ where: { id: made.id } }),
+        images: await db.productImage.findMany({ where: { productId: made.id }, orderBy: { id: "asc" } }),
+        variants: await db.productVariant.findMany({ where: { productId: made.id }, orderBy: { id: "asc" } }),
+        finalized: await db.stagedProductMedia.findUniqueOrThrow({ where: { id: stagedId } }),
+      });
+      const beforeRecovery = await snapshot();
+      // A fresh process models a recovery deployment with the compatible reader.
+      // It inherits only the isolated localhost DB and dummy Storage fixture config.
+      const script = `
+        const assert = require("node:assert/strict");
+        const { createHash } = require("node:crypto");
+        const { prisma } = require("./src/lib/prisma.ts");
+        const { readManagedProductImage } = require("./src/modules/catalog/product-images.service.ts");
+        (async () => {
+          try {
+            const rows = await prisma.productImage.findMany({ where: { productId: ${JSON.stringify(made.id)} } });
+            assert.equal(rows.length, 2);
+            for (const row of rows) {
+              const image = await readManagedProductImage(row);
+              assert.equal(image.contentType, "image/png");
+              assert.equal(createHash("sha256").update(image.data).digest("hex"), ${JSON.stringify(createHash("sha256").update(png).digest("hex"))});
+            }
+            const staged = rows.find(row => row.id === ${JSON.stringify(stagedId)});
+            assert.ok(staged.url.includes("staged-"));
+            await assert.rejects(readManagedProductImage({ ...staged, id: "wrong-image" }), { status: 404 });
+            process.stdout.write("RECOVERY_READERS_PASS");
+          } finally { await prisma.$disconnect(); }
+        })().catch(() => { process.stderr.write("RECOVERY_READERS_FAILED"); process.exitCode = 1; });
+      `;
+      const child = await promisify(execFile)(process.execPath, ["--import", "tsx", "--eval", script], { timeout: 30000 });
+      assert.equal(child.stdout, "RECOVERY_READERS_PASS");
+      assert.equal(await snapshot(), beforeRecovery, "Recovery reader must not mutate product, SKU, image or finalization metadata");
+      await media.cancelStagedMedia(actor, sessionHash, stagedId);
+      await media.cleanupStagedMedia();
+      assert.equal(await snapshot(), beforeRecovery, "Cleanup must preserve finalized media after recovery");
     },
   );
   await t.test(

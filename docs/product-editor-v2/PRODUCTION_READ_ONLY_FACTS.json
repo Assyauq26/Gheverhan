@@ -1,0 +1,65 @@
+{
+  "ledger": [
+    {
+      "name": "20260922143925_init",
+      "checksum": "f6c17309e9a970b2479bece2546cece8a7a483d0c7fa748e662d479b0e1910b9"
+    },
+    {
+      "name": "20261015000000_add_refunded_payment_status",
+      "checksum": "e86e9a4d4ec18d6c60ebabceeaa9506a718de29059b1234a38dd2764c24a2e81"
+    },
+    {
+      "name": "20261016112100_coupon_usage_limits",
+      "checksum": "1f7ef91ea2b13c0bd6928602968c03c37b5bcc00cb7d351d679a0ff903c74265"
+    },
+    {
+      "name": "20261016112200_coupon_redemption_concurrent_index",
+      "checksum": "f205120c21d348d14f016ebdf793b9e6a93686ad5cba80227f3d66d3f632d40d"
+    },
+    {
+      "name": "20261016140500_product_scheduled_flash_sale",
+      "checksum": "e0598e543c8fed33e5ee69f085f8d6a22230ebe288b72d6ab9d53293cb9abb39"
+    },
+    {
+      "name": "20261017000000_auth_session_controls",
+      "checksum": "35d593d27d0e0cd708d6c9353b61343e46481b9e7795656165297efbc16d88d1"
+    },
+    {
+      "name": "20261018150000_registration_email_otp",
+      "checksum": "eec85ff983628830923da3c7b0760bfc20378bdcf9cb7376dd6b1cca539eb84e"
+    },
+    {
+      "name": "20261019054922_registration_identity_lookup_indexes",
+      "checksum": "369372134dd10fca58dc04e5afb4b4bcec347c948524f239918f1663e8fa3d0b"
+    },
+    {
+      "name": "20261020070000_custom_product_variations",
+      "checksum": "499d4c6259b90c2342c5dc1a2baebcb04e72751c8a9f3111414ad7db492e4735"
+    },
+    {
+      "name": "20261020120000_direct_checkout_intents",
+      "checksum": "96c9e45d13d8379c67bfdd87f3971664e3dcd43d19b6e430f60f7899186f55f0"
+    }
+  ],
+  "buckets": [
+    {
+      "id": "product-images",
+      "public": true,
+      "file_size_limit": 5242880
+    },
+    {
+      "id": "payment-proofs",
+      "public": false,
+      "file_size_limit": 5242880
+    }
+  ],
+  "database": "postgres",
+  "new_tables": 0,
+  "product_rls": true,
+  "waiting_locks": 0,
+  "inspection_role": "postgres",
+  "failed_migrations": 0,
+  "active_connections": 9,
+  "completed_migrations": 10,
+  "long_transactions_over_60s": 0
+}

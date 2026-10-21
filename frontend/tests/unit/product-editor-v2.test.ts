@@ -6,6 +6,7 @@ import {
 } from "@/modules/catalog/product-editor-domain";
 import {
   cmToMm,
+  weightToGrams,
   mmToCm,
   shippingMetadataSchema,
   assertPublishWeight,
@@ -201,4 +202,27 @@ describe("shipping exact units and compatibility", () => {
       }).success,
     ).toBe(true);
   });
+});
+
+it.each([
+  "0",
+  "-1",
+  "1.1",
+  "Infinity",
+  "NaN",
+  "1e3",
+  "1000001",
+  "9".repeat(400),
+])(
+  "rejects invalid/overflow weight text before JSON serialization: %s",
+  (value) => {
+    expect(() =>
+      JSON.stringify({ weightGrams: weightToGrams(value) }),
+    ).toThrow();
+  },
+);
+it("weight parser preserves empty null and exact integer grams", () => {
+  expect(weightToGrams("")).toBeNull();
+  expect(weightToGrams(" 500 ")).toBe(500);
+  expect(weightToGrams("1000000")).toBe(1000000);
 });

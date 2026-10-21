@@ -22,7 +22,11 @@ import {
   canonicalProductForm,
   suggestSku,
 } from "@/modules/catalog/product-editor-domain";
-import { cmToMm, mmToCm } from "@/modules/catalog/product-shipping";
+import {
+  cmToMm,
+  mmToCm,
+  weightToGrams,
+} from "@/modules/catalog/product-shipping";
 import { ProductBulkEditor } from "./product-bulk-editor";
 import { CustomVariationEditor } from "./custom-variation-editor";
 import {
@@ -108,10 +112,8 @@ function shippingFor(p?: ProductEditorData) {
   };
 }
 function shippingData(s: ReturnType<typeof shippingFor>) {
-  if (s.weight.trim() && !/^\d+$/.test(s.weight.trim()))
-    throw new Error("Berat harus berupa integer gram positif.");
   return {
-    weightGrams: s.weight.trim() ? Number(s.weight) : null,
+    weightGrams: weightToGrams(s.weight),
     packageLengthMm: cmToMm(s.length),
     packageWidthMm: cmToMm(s.width),
     packageHeightMm: cmToMm(s.height),

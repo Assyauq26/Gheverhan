@@ -4,7 +4,7 @@ Seluruh data dummy; Node.js 22, PostgreSQL disposable lokal, mock Supabase Stora
 
 ## Gate lokal
 
-- Unit: 343 PASS.
+- Unit: 352 PASS (termasuk overflow berat sebelum JSON).
 - Containment: 25 PASS pada Docker `--network none`, read-only, non-root, cap-drop ALL, no-new-privileges. Eksekusi awal pada host gagal pada assertion containment karena kondisi host tidak sesuai; tidak ada assertion yang dilemahkan.
 - Braces mitigation: 9 PASS.
 - PostgreSQL: 184 pemeriksaan (termasuk parent test) pada 17 suite berurutan, 0 fail: database entrypoints, auth security, release preflight, registration migration, custom migration, custom variations, normalized indexes, cart concurrency, product lifecycle, direct checkout migration, direct checkout, transaction correctness, refund/shipping, registration OTP/conflicts, V2 migration/media/shipping.

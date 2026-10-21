@@ -35,6 +35,22 @@ export const shippingMetadataSchema = z
           "Lengkapi panjang, lebar, dan tinggi atau kosongkan seluruh dimensi.",
       });
   });
+/** Reject overflow before JSON encoding can silently convert Infinity to null. */
+export function weightToGrams(value: string): number | null {
+  const text = value.trim();
+  if (!text) return null;
+  const grams = Number(text);
+  if (
+    !/^\d+$/.test(text) ||
+    !Number.isSafeInteger(grams) ||
+    grams <= 0 ||
+    grams > MAX_WEIGHT_GRAMS
+  )
+    throw new Error(
+      "Berat paket harus berupa integer positif, maksimal 1.000.000 gram.",
+    );
+  return grams;
+}
 /** Exact cm→mm: one decimal place, optional Indonesian decimal comma; no exponent/coercion. */
 export function cmToMm(value: string): number | null {
   const text = value.trim().replace(",", ".");

@@ -30,3 +30,7 @@ Thumbnail lokal Blob langsung tampil saat request masih berjalan, untuk galeri m
 Draft boleh tanpa berat. Transisi menuju PUBLISHED memerlukan berat; produk yang sudah PUBLISHED dan legacy null tetap boleh diedit unrelated. Tidak ada default 1.000 gram yang menulis fakta palsu pada produk lama. `shippingReturn` tetap menyimpan kebijakan pengiriman/retur.
 
 Checkout manual, harga ongkir dan total historis tidak berubah. `weightGram: 1000` pada adapter MVP tetap dipertahankan secara eksplisit. Integrasi J&T/KiriminAja kelak harus menjumlahkan berat dari data server × quantity dengan safe arithmetic, menentukan kebijakan missing metadata, packaging multi-item dan volumetrik. Metadata ini belum diaktifkan untuk billing kurir.
+
+## Recovery media setelah aktivasi
+
+Objek finalized mempertahankan path immutable staged-prefix. Reader source baru menerima path itu setelah ProductImage terikat sah; reader baseline lama belum kompatibel. Nullable schema tidak berarti seluruh deployment lama aman untuk rollback. Sesudah finalisasi pertama, gunakan roll-forward atau kandidat rollback-compatible yang telah diuji; lihat MIGRATION.md.

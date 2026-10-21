@@ -15,7 +15,9 @@ Additive: empat nullable integer pada Product, tabel StagedProductMedia dan Prod
 5. Verifikasi ledger/checksum, empat kolom nullable, dua tabel/RLS/CRUD, CHECK, indeks valid; jalankan `npm run release:preflight` read-only.
 6. Deploy source yang disetujui, verifikasi upload create/edit, finalize, pricing dan ongkir manual dengan dummy yang disetujui.
 
-Rollback aplikasi ke source sebelumnya kompatibel dengan kolom nullable dan tabel tambahan yang dibiarkan ada. Jangan menghapus kolom atau media terfinalisasi sebagai rollback. Bila migration gagal, transaksi DDL rollback; periksa state/ledger dan gunakan documented official Prisma resolve hanya setelah membuktikan rollback, lalu retry dengan persetujuan yang sesuai. Tidak menjanjikan rollback data tanpa backup.
+Rollback schema-only ke baseline `b2d1819` hanya kompatibel **sebelum ada staged media yang difinalisasi**. Sesudah fitur dipakai, reader pada baseline lama menolak path permanen `product-images/staged-<imageId>/<imageId>.<ext>`, walaupun kolom/tabel additive tetap kompatibel. Karena itu jangan langsung mempromosikan deployment baseline setelah aktivasi: foto baru dapat menjadi 404.
+
+Strategi recovery setelah aktivasi adalah roll-forward memakai source kandidat ini atau perbaikan yang mempertahankan reader path baru, session revocation, receipt dan schema. Jika rollback aplikasi diperlukan, siapkan dan uji kandidat rollback-compatible dengan reader staged-prefix dan seluruh kontrol sesi sebelum release. Pertahankan closed maintenance bila integritas belum terbukti; jangan menghapus file, kolom atau metadata finalized sebagai rollback. Tidak ada kandidat rollback lama yang otomatis disetujui oleh dokumen ini. Bila migration gagal, transaksi DDL rollback; periksa state/ledger dan gunakan documented official Prisma resolve hanya setelah membuktikan rollback, lalu retry dengan persetujuan yang sesuai. Tidak menjanjikan rollback data tanpa backup.
 
 ## Bukti disposable
 

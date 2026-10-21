@@ -767,6 +767,10 @@ export async function verifyCustomVariations(c: Context) {
           where: { cart: { userId: customer.id } },
         });
         await store.goto(`${base}/product/${sparseSlug}`);
+        // A sparse catalog must start on a real SKU rather than a missing
+        // Cartesian product; deliberately selecting a missing combo still fails.
+        await expect(store.getByTestId("selected-sku")).toContainText("SPARSE-");
+        await expect(store.getByTestId("buy-now-btn")).toBeEnabled();
         await store.getByTestId(`option-${groups[0].values[1].id}`).click();
         await store.getByTestId(`option-${groups[1].values[1].id}`).click();
         await expect(

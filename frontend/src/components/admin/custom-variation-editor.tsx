@@ -354,6 +354,9 @@ export function CustomVariationEditor(p: Props) {
         {p.groups.map((group, index) => (
           <details
             open
+            onInvalidCapture={(event) => {
+              event.currentTarget.open = true;
+            }}
             className="variation-card"
             key={group.id}
             aria-labelledby={`group-title-${group.id}`}

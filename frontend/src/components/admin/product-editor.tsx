@@ -536,7 +536,7 @@ export function ProductEditor({
     return true;
   }
   return (
-    <div className="mx-auto max-w-6xl space-y-5 pb-8">
+    <div className="product-editor-v2 mx-auto max-w-6xl space-y-5 pb-8">
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/admin/products"
@@ -746,7 +746,12 @@ export function ProductEditor({
                   id="product-image-upload"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  disabled={!canEdit || !!pending || !mediaRecovered || values.images.length >= 10}
+                  disabled={
+                    !canEdit ||
+                    !!pending ||
+                    !mediaRecovered ||
+                    values.images.length >= 10
+                  }
                   onChange={(e) => {
                     void upload(e.target.files?.[0]);
                     e.target.value = "";
@@ -1068,17 +1073,17 @@ export function ProductEditor({
                 >
                   Gunakan variasi kustom
                 </Button>
+                <ProductBulkEditor
+                  rows={values.variants}
+                  basePrice={values.basePrice}
+                  canStock={canStock}
+                  disabled={!canEdit || !!pending}
+                  selected={bulkSelected}
+                  selectedOnly={bulkSelectedOnly}
+                  onMode={setBulkSelectedOnly}
+                  onChange={(rows) => change("variants", rows)}
+                />
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-3">
-                  <ProductBulkEditor
-                    rows={values.variants}
-                    basePrice={values.basePrice}
-                    canStock={canStock}
-                    disabled={!canEdit || !!pending}
-                    selected={bulkSelected}
-                    selectedOnly={bulkSelectedOnly}
-                    onMode={setBulkSelectedOnly}
-                    onChange={(rows) => change("variants", rows)}
-                  />
                   <ProductVariantBuilder
                     disabled={!canEdit || !!pending}
                     variants={values.variants}

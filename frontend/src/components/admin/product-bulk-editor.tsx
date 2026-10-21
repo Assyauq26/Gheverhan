@@ -63,18 +63,32 @@ export function ProductBulkEditor({
           </div>
         ))}
       </div>
-      <label className="mt-4 flex min-h-11 items-center gap-3">
-        <input
-          type="checkbox"
-          checked={selectedOnly}
-          disabled={disabled}
-          onChange={(e) => onMode(e.target.checked)}
-        />
-        Hanya SKU dipilih{" "}
-        {selectedOnly
-          ? `(${selected.size} dipilih)`
-          : "— nonaktif: terapkan ke semua SKU"}
-      </label>
+      <fieldset className="mt-3 flex flex-wrap gap-x-6">
+        <legend className="sr-only">Target penerapan</legend>
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            type="radio"
+            name="bulk-target"
+            aria-label="Terapkan ke semua SKU"
+            checked={!selectedOnly}
+            disabled={disabled}
+            onChange={() => onMode(false)}
+          />
+          Terapkan ke semua SKU
+        </label>
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            type="radio"
+            name="bulk-target"
+            aria-label="Hanya SKU dipilih"
+            checked={selectedOnly}
+            disabled={disabled}
+            onChange={() => onMode(true)}
+          />
+          Hanya SKU dipilih
+        </label>
+      </fieldset>
+      {selectedOnly && <p aria-live="polite">{selected.size} SKU dipilih</p>}
       <Button
         type="button"
         disabled={disabled || !rows.length}

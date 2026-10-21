@@ -1,6 +1,6 @@
 /* Lumen semantic composition, adapted to React 18 and Gheverhan's existing primitives.
    related=8px, group=16px, section=32px. One surface owns each visible border. */
-:where(.variation-editor, .variation-confirm) {
+:where(.variation-editor, .variation-confirm, .variation-bulk) {
   --ui-space-related: 0.5rem;
   --ui-space-group: 1rem;
   --ui-space-section: 2rem;
@@ -535,4 +535,18 @@
   .variation-group-summary > svg {
     transition: none;
   }
+}
+
+.product-editor-v2 section[id] {
+  scroll-margin-top: 7rem;
+}
+.product-editor-v2 :where(input, textarea, select, summary) {
+  scroll-margin-top: 8rem;
+}
+.variation-bulk {
+  width: 100%;
+}
+.variation-bulk h3 {
+  font-size: 1rem;
+  font-weight: 700;
 }

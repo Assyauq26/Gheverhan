@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { verifyPrivateProductBucket } from "./storage-preflight";
 // Read-only release check. Secret values and customer rows never enter output.
 async function main() {
   const env = process.env;
@@ -189,11 +190,15 @@ async function main() {
       maintenanceMode !== "UNCONFIGURED" &&
       Object.values(presence).every(Boolean) &&
       (env.JWT_SECRET?.length || 0) >= 16;
+    const productStorage = local
+      ? { status: "NOT APPLICABLE", reason: "LOCAL_MOCK_STORAGE_TESTED_SEPARATELY" }
+      : await verifyPrivateProductBucket(env);
+    const storageReady = local || productStorage.status === "PASS";
     console.log(
       JSON.stringify(
         {
           status:
-            ledgerMatches && schemaReady && configReady ? "PASS" : "BLOCKED",
+            ledgerMatches && schemaReady && configReady && storageReady ? "PASS" : "BLOCKED",
           readOnly: true,
           databaseIdentity: true,
           local,
@@ -203,16 +208,18 @@ async function main() {
           schema: facts.schema,
           databaseSettings: facts.settings,
           configPresenceReady: configReady,
+          productStorage,
           limitations: [
             "Presence is not provider delivery/key-entropy verification",
-            "Does not prove backup, storage policies, pool budget or owner approval",
+            "Private bucket metadata does not prove object policies, upload delivery, cleanup capacity or recovery",
+            "Does not prove backup, pool budget or owner approval",
           ],
         },
         null,
         2,
       ),
     );
-    if (!ledgerMatches || !schemaReady || !configReady) process.exitCode = 1;
+    if (!ledgerMatches || !schemaReady || !configReady || !storageReady) process.exitCode = 1;
   } finally {
     await db.$disconnect();
   }

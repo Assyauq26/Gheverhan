@@ -746,7 +746,7 @@ export function ProductEditor({
                   id="product-image-upload"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  disabled={!canEdit || !!pending || values.images.length >= 10}
+                  disabled={!canEdit || !!pending || !mediaRecovered || values.images.length >= 10}
                   onChange={(e) => {
                     void upload(e.target.files?.[0]);
                     e.target.value = "";
@@ -1013,7 +1013,7 @@ export function ProductEditor({
                         values.optionImages,
                     )
                   }
-                  disabled={!canEdit || !!pending}
+                  disabled={!canEdit || !!pending || !mediaRecovered}
                   canStock={canStock}
                   productName={values.name}
                   basePrice={values.basePrice}
@@ -1122,7 +1122,7 @@ export function ProductEditor({
                   {values.variants.map((v, index) => (
                     <details
                       key={v.id || `new-${index}`}
-                      open
+                      open={index === 0}
                       onInvalidCapture={(event) => {
                         event.currentTarget.open = true;
                       }}

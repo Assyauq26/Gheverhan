@@ -21,7 +21,7 @@ let media: typeof import("../../src/modules/catalog/staged-product-media");
 const sessionHash = "a".repeat(64),
   otherSession = "b".repeat(64),
   objects = new Map<string, Buffer>();
-let failUpload = false;
+let failUpload = false, failDelete = false;
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=",
   "base64",
@@ -55,7 +55,14 @@ before(async () => {
   };
   server = createServer(async (req, res) => {
     const pathname = new URL(req.url!, "http://localhost").pathname;
+    if (pathname.startsWith("/storage/v1/object/public/") ||
+        req.headers.authorization !== "Bearer dummy-local" ||
+        req.headers.apikey !== "dummy-local") {
+      res.writeHead(403).end();
+      return;
+    }
     if (req.method === "DELETE") {
+      if (failDelete) { res.writeHead(503).end(); return; }
       const parts: Buffer[] = [];
       for await (const part of req) parts.push(Buffer.from(part));
       for (const key of JSON.parse(Buffer.concat(parts).toString()).prefixes)
@@ -325,6 +332,44 @@ test("product editor V2 database, media and compatibility", async (t) => {
       await media.cancelStagedMedia(actor, sessionHash, stagedId);
       await media.cleanupStagedMedia();
       assert.equal(await snapshot(), beforeRecovery, "Cleanup must preserve finalized media after recovery");
+    },
+  );
+  await t.test(
+    "private Storage denies anonymous/public paths but serves legacy and staged readers with server credentials",
+    async () => {
+      const id = randomUUID();
+      await media.stageProductMedia(actor, sessionHash, id, png, "image/png", "gallery");
+      await svc.createManagedProduct(actor, { ...input(), images: [{ id, alt: "Private fixture" }] }, { sessionHash, requestId: randomUUID() });
+      const row = await db.productImage.findUniqueOrThrow({ where: { id } });
+      const objectPath = new URL(row.url, "http://localhost").searchParams.get("object")!;
+      assert.equal((await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/product-images/${objectPath}`)).status, 403);
+      assert.equal((await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/public/product-images/${objectPath}`)).status, 403);
+      const { readManagedProductImage } = await import("../../src/modules/catalog/product-images.service");
+      assert.deepEqual(Buffer.from((await readManagedProductImage(row)).data), png);
+    },
+  );
+  await t.test(
+    "cleanup reports bounded failures, preserves grace tombstones and retries without touching finalized media",
+    async () => {
+      const ids = [randomUUID(), randomUUID()];
+      for (const id of ids) {
+        await media.stageProductMedia(actor, sessionHash, id, png, "image/png", "gallery");
+      }
+      await db.stagedProductMedia.updateMany({ where: { id: { in: ids } }, data: { expiresAt: new Date(0), cancelledAt: new Date(0) } });
+      const finalizedBefore = await db.stagedProductMedia.count({ where: { productId: { not: null } } });
+      failDelete = true;
+      let failed;
+      try { failed = await media.cleanupStagedMedia(); }
+      finally { failDelete = false; }
+      assert.ok(failed.scanned <= 5);
+      assert.ok(failed.failed >= 2);
+      assert.equal(failed.deleted, 0);
+      assert.equal(await db.stagedProductMedia.count({ where: { id: { in: ids } } }), 2);
+      const recovered = await media.cleanupStagedMedia();
+      assert.ok(recovered.deleted >= 2);
+      assert.equal(recovered.failed, 0);
+      assert.equal(await db.stagedProductMedia.count({ where: { id: { in: ids } } }), 0);
+      assert.equal(await db.stagedProductMedia.count({ where: { productId: { not: null } } }), finalizedBefore);
     },
   );
   await t.test(

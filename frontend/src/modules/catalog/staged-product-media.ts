@@ -193,6 +193,7 @@ export async function cancelStagedMedia(
 }
 /** Bounded, retryable cleanup; no object is removed before durable cancellation. */
 export async function cleanupStagedMedia() {
+  const summary = { scanned: 0, cancelled: 0, deleted: 0, failed: 0 };
   // An aborted HTTP PUT can still commit remotely. Keep cancelled identity for a
   // full day and delete again after that grace window instead of losing its path.
   const graceBefore = new Date(Date.now() - 24 * 60 * 60_000);
@@ -205,6 +206,7 @@ export async function cleanupStagedMedia() {
     take: 5,
     orderBy: { expiresAt: "asc" },
   });
+  summary.scanned = rows.length;
   await Promise.all(
     rows.map(async (row) => {
       const claimed = await prisma.stagedProductMedia.updateMany({
@@ -217,20 +219,24 @@ export async function cleanupStagedMedia() {
         data: { cancelledAt: row.cancelledAt ?? new Date() },
       });
       if (!claimed.count) return;
+      if (!row.cancelledAt) summary.cancelled++;
       try {
         await removeObject(row.objectPath, AbortSignal.timeout(15000));
-        await prisma.stagedProductMedia.deleteMany({
+        const deleted = await prisma.stagedProductMedia.deleteMany({
           where: {
             id: row.id,
             productId: null,
             cancelledAt: { lte: graceBefore },
           },
         });
+        summary.deleted += deleted.count;
       } catch {
+        summary.failed++;
         /* Keep cancelled metadata so an operator / next upload can retry cleanup. */
       }
     }),
   );
+  return summary;
 }
 export async function finalizeStagedMedia(
   tx: Prisma.TransactionClient,

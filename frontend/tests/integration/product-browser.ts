@@ -392,6 +392,7 @@ async function main() {
     }
     await verifyCustomVariations({page,browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,prefix,check});
     await verifyProductEditorV2({page,db,base,artifactDir,prefix,check,png});
+    assert.deepEqual(pageErrors, [], "Final product/editor browser flows have no unhandled errors");
     completed = true;
     await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: true }, null, 2));
     console.log(`PASS ${checks} browser/data-flow checks; no production data or external storage used`);

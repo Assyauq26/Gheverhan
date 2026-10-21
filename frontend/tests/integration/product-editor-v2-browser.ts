@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type ConsoleMessage } from "@playwright/test";
 import type { PrismaClient } from "@prisma/client";
 export async function verifyProductEditorV2({
   page,
@@ -19,6 +19,11 @@ export async function verifyProductEditorV2({
   check: (name: string, run: () => Promise<void>) => Promise<void>;
   png: Buffer;
 }) {
+  const browserErrors: string[] = [];
+  const onError = (error: Error) => browserErrors.push(error.message);
+  const onConsole = (message: ConsoleMessage) => { if (message.type() === "error") browserErrors.push(message.text()); };
+  page.on("pageerror", onError);
+  page.on("console", onConsole);
   const capture = async (label: string) => {
     await page.evaluate(() => window.scrollTo(0, 0));
     return page.screenshot({
@@ -185,4 +190,8 @@ export async function verifyProductEditorV2({
       }
     },
   );
+  assert.deepEqual(browserErrors, [], "Editor V2 must not emit console, hydration or unhandled browser errors");
+  page.off("pageerror", onError);
+  page.off("console", onConsole);
+
 }

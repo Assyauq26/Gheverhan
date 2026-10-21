@@ -4,7 +4,7 @@
 
 Satu `ProductEditor` digunakan route create/edit. Snapshot canonical membandingkan isi form dengan hasil server, mengabaikan URL dan metadata inventory read-only, mempertahankan urutan gambar/opsi. Save mengikuti document flow, disabled bila clean; kegagalan tidak mengganti input. Controlled links dan `beforeunload` mempertahankan guard; universal interception native browser Back tidak diklaim.
 
-SKU baru memakai inisial nama dan semua nilai opsi, uppercase ASCII/NFKD, maksimal 80 karakter. Collision lokal menggunakan suffix deterministik; generation click memeriksa collision database melalui action berizin dengan maksimum tiga putaran. Race setelah preview tetap dilindungi unique constraint dan HTTP 409. Re-generation mempertahankan row yang combination identity-nya sama, termasuk SKU manual dan existing.
+SKU baru, termasuk kombinasi baru pada editor legacy, memakai inisial nama dan semua nilai opsi, uppercase ASCII/NFKD, maksimal 80 karakter. Collision lokal menggunakan suffix deterministik; generation click memeriksa collision database melalui action berizin dengan maksimum tiga putaran. Race setelah preview tetap dilindungi unique constraint dan HTTP 409. Re-generation mempertahankan row yang combination identity-nya sama, termasuk SKU manual dan existing.
 
 Bulk memakai set stok absolut dan hanya field berisi. Selected rows tidak bergantung identitas setelah daftar berubah: selection di-reset. Perubahan local baru dipersist oleh Simpan. ExpectedOnHand, reserved checks, inventory permission, serializable transaction, movement, audit dan proteksi flash sale tetap server-authoritative. Stok berubah karena transaksi lain menghasilkan conflict, bukan overwrite diam-diam; operator reload/review/apply ulang.
 

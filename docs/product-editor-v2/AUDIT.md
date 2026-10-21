@@ -22,3 +22,4 @@ Migrasi hanya disiapkan dan diuji pada PostgreSQL disposable. Tidak ada perubaha
 - Uji browser lama mengharapkan save kedua sesudah undo foto/restore field. Canonical snapshot sekarang clean; regression diubah untuk membuktikan tombol disabled, bukan memaksakan write yang tidak perlu.
 - Bulk status dan global status merupakan dua live region yang sah; assertions diarahkan ke region yang relevan. Next route announcer juga role alert, sehingga error form diperiksa dalam region form.
 - Baseline screenshots sudah tersedia dari pengujian kandidat ec3e56f. Diff komponen admin/catalog ec3e56f→baseline main kosong; bukti tersebut dipakai sebagai before aktual. Itu bukan screenshot desain referensi pengguna.
+- Browser context yang benar-benar baru juga menemukan `/favicon.ico` 404 pada baseline. File metadata Next.js `app/icon.svg` menyediakan favicon brand yang valid; console assertion tetap ketat dan tidak menyaring error resource.

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
+import type { Request as BrowserRequest } from "@playwright/test";
 import { expect, type Page, type ConsoleMessage } from "@playwright/test";
 import type { PrismaClient } from "@prisma/client";
 export async function verifyProductEditorV2({
@@ -21,7 +22,12 @@ export async function verifyProductEditorV2({
 }) {
   const browserErrors: string[] = [];
   const onError = (error: Error) => browserErrors.push(error.message);
-  const onConsole = (message: ConsoleMessage) => { if (message.type() === "error") browserErrors.push(message.text()); };
+  const onConsole = (message: ConsoleMessage) => {
+    if (message.type() === "error")
+      browserErrors.push(
+        message.text() + " " + new URL(message.location().url || base).pathname,
+      );
+  };
   page.on("pageerror", onError);
   page.on("console", onConsole);
   const capture = async (label: string) => {
@@ -171,16 +177,12 @@ export async function verifyProductEditorV2({
         await page
           .locator("#product-shipping")
           .evaluate((node) => node.scrollIntoView({ block: "start" }));
-        await page
-          .locator("#product-shipping")
-          .screenshot({
-            path: path.join(artifactDir, `editor-v2-shipping-${width}.png`),
-          });
-        await save
-          .locator("..")
-          .screenshot({
-            path: path.join(artifactDir, `editor-v2-save-clean-${width}.png`),
-          });
+        await page.locator("#product-shipping").screenshot({
+          path: path.join(artifactDir, `editor-v2-shipping-${width}.png`),
+        });
+        await save.locator("..").screenshot({
+          path: path.join(artifactDir, `editor-v2-save-clean-${width}.png`),
+        });
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
@@ -190,8 +192,70 @@ export async function verifyProductEditorV2({
       }
     },
   );
-  assert.deepEqual(browserErrors, [], "Editor V2 must not emit console, hydration or unhandled browser errors");
+  await check(
+    "editor V2: fifty SKU cards, one expanded, stable focus and no requests while typing",
+    async () => {
+      await page.goto(base + "/admin/products/new");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.locator("#product-name").fill("Produk Uji Lima Puluh");
+      await page.locator("#product-price").fill("150000");
+      const root = page.getByTestId("custom-variation-editor");
+      await root
+        .getByRole("button", { name: "Tambah variasi pertama", exact: true })
+        .click();
+      await root.getByLabel("Nama variasi 1", { exact: true }).fill("Ukuran");
+      await root.getByLabel("Opsi Ukuran 1", { exact: true }).fill("Nilai 1");
+      for (let i = 2; i <= 50; i++) {
+        await root
+          .getByRole("button", { name: "Tambahkan opsi", exact: true })
+          .click();
+        await root
+          .getByLabel(`Opsi Ukuran ${i}`, { exact: true })
+          .fill(`Nilai ${i}`);
+      }
+      await root
+        .getByRole("button", { name: "Buat 50 kombinasi", exact: true })
+        .click();
+      await expect(root.locator(".variation-sku")).toHaveCount(50);
+      await expect(root.locator(".variation-sku[open]")).toHaveCount(1);
+      let requests = 0;
+      const countRequest = (request: BrowserRequest) => {
+        if (request.method() === "POST") requests++;
+      };
+      page.on("request", countRequest);
+      const field = root.getByLabel("SKU kombinasi 1", { exact: true });
+      await field.fill("PERF-MANUAL-SKU");
+      await field.pressSequentially("-EDIT");
+      await expect(field).toBeFocused();
+      await expect(field).toHaveValue("PERF-MANUAL-SKU-EDIT");
+      assert.equal(
+        requests,
+        0,
+        "Typing SKU must not query/mutate the database",
+      );
+      page.off("request", countRequest);
+      for (const width of [360, 1360]) {
+        await page.setViewportSize({ width, height: 900 });
+        assert.ok(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        );
+        await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
+        await page.screenshot({
+          path: path.join(
+            artifactDir,
+            `product-editor-v2-fifty-sku-${width}.png`,
+          ),
+        });
+      }
+    },
+  );
+  assert.deepEqual(
+    browserErrors,
+    [],
+    "Editor V2 must not emit console, hydration or unhandled browser errors",
+  );
   page.off("pageerror", onError);
   page.off("console", onConsole);
-
 }

@@ -18,7 +18,10 @@ import {
   Save,
   Sparkles,
 } from "lucide-react";
-import { canonicalProductForm } from "@/modules/catalog/product-editor-domain";
+import {
+  canonicalProductForm,
+  suggestSku,
+} from "@/modules/catalog/product-editor-domain";
 import { cmToMm, mmToCm } from "@/modules/catalog/product-shipping";
 import { ProductBulkEditor } from "./product-bulk-editor";
 import { CustomVariationEditor } from "./custom-variation-editor";
@@ -498,7 +501,7 @@ export function ProductEditor({
           `${v.color.trim().toLocaleLowerCase("id")}::${v.size.trim().toLocaleLowerCase("id")}`,
       ),
     );
-    const skus = new Set(list.map((v) => v.sku.trim().toLocaleLowerCase("id")));
+    const skus = new Set(list.map((v) => v.sku.trim().toUpperCase()));
     for (const choice of combinations) {
       const color = choice.color.trim();
       const size = choice.size.trim();
@@ -508,18 +511,23 @@ export function ProductEditor({
         setError("Maksimal 50 varian per produk.");
         return false;
       }
-      const stem =
-        [values.slug || suggestSlug(values.name) || "produk", color, size]
-          .map(suggestSlug)
-          .filter(Boolean)
-          .join("-")
-          .slice(0, 70) || "produk";
-      let sku = stem;
-      let suffix = 2;
-      while (skus.has(sku.toLocaleLowerCase("id"))) {
-        const ending = `-${suffix++}`;
-        sku = stem.slice(0, 80 - ending.length) + ending;
-      }
+      const dimensions = [
+        ["color", color],
+        ["size", size],
+      ]
+        .filter(([, value]) => value)
+        .map(([axis, value]) => ({
+          id: axis,
+          name: axis,
+          allowsImage: false,
+          values: [{ id: `${axis}:${value.toLocaleLowerCase("id")}`, value }],
+        }));
+      const sku = suggestSku(
+        values.name,
+        dimensions,
+        dimensions.map((group) => group.values[0].id),
+        skus,
+      );
       list.push({
         sku,
         color,
@@ -529,7 +537,7 @@ export function ProductEditor({
         ...(canStock ? { onHand: 0 } : {}),
       });
       pairs.add(key);
-      skus.add(sku.toLocaleLowerCase("id"));
+      skus.add(sku.toUpperCase());
     }
     if (!list.length) return false;
     change("variants", list);

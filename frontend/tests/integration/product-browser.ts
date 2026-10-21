@@ -188,6 +188,8 @@ async function main() {
       await dialog.getByRole("button", { name: "Tambahkan 4 kombinasi", exact: true }).click();
       await expect(dialog).toHaveCount(0);
       assert.equal(await page.getByLabel("SKU", { exact: true }).count(), 5);
+      const generatedSkus = await page.getByLabel("SKU", { exact: true }).evaluateAll(nodes => nodes.slice(1).map(node => (node as HTMLInputElement).value));
+      assert.ok(generatedSkus.every(sku => sku === sku.toUpperCase() && sku.startsWith("KS")), "New legacy combinations use the same initials-based uppercase SKU generator");
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "mobile editor has no horizontal overflow");
       await page.getByTestId("save-product").click();
       await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");

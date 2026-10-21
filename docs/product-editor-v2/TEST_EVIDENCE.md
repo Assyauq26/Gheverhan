@@ -27,3 +27,16 @@ Selector price/stock/status yang semula tunggal sekarang ambigu karena bulk cont
 ## Batas release
 
 Draft source review, bukan persetujuan merge/Production. Migration baru wajib database-first sesudah approval operator. Konfigurasi Storage, kapasitas cleanup backlog, session binding dan trusted role/RLS harus diverifikasi pada release aktual. Tidak ada rahasia baru yang diperlukan atau dikirim ke browser.
+
+## Preview yang disimpan untuk reviewer
+
+| Tampilan | Bukti |
+| --- | --- |
+| Create baseline 390px | [before-create-390](screenshots/before-create-390.png) |
+| Create baseline 1360px | [before-create-1360](screenshots/before-create-1360.png) |
+| Create V2 390px | [after-create-390](screenshots/after-create-390.png) |
+| Edit V2 1360px | [after-edit-1360](screenshots/after-edit-1360.png) |
+| Pengiriman V2 390px | [after-shipping-390](screenshots/after-shipping-390.png) |
+| Variasi/SKU V2 1360px | [after-variations-1360](screenshots/after-variations-1360.png) |
+
+Before berasal dari source `ec3e56f` yang komponen admin/catalog-nya identik dengan baseline `b2d1819`. After berasal dari browser lokal V2 dengan dummy data; final CI artifact memuat capture ulang pada HEAD PR, termasuk keenam viewport dan tes 50 SKU (disclosure, focus retention, no requests while typing). Perbandingan ini menunjukkan perubahan source, bukan penilaian fidelity terhadap desain pengguna yang belum tersedia.

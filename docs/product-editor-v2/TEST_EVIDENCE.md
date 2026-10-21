@@ -22,7 +22,7 @@ Referensi desain pengguna belum tersedia. Tidak ada skor fidelity 90% atau klaim
 
 ## Investigasi kegagalan
 
-Selector price/stock/status yang semula tunggal sekarang ambigu karena bulk controls dan live regions. Tests memakai field ID / named feedback region tanpa mengurangi assertion. URL `/admin/products/new` tidak boleh dianggap sebagai detail produk; assertion menolak `new`. Fixture baru yang akan dipublikasikan diberi berat valid sesuai kontrak baru; fixture legacy tetap menguji null compatibility. Historical migration drills memakai select eksplisit untuk field yang memang ada pada schema historis dan jumlah migration diperbarui menjadi sebelas.
+Selector price/stock/status yang semula tunggal sekarang ambigu karena bulk controls dan live regions. Tests memakai field ID / named feedback region tanpa mengurangi assertion. URL `/admin/products/new` tidak boleh dianggap sebagai detail produk; assertion menolak `new`. Fixture baru yang akan dipublikasikan diberi berat valid sesuai kontrak baru; fixture legacy tetap menguji null compatibility. CI fresh-dependency unit image tidak menginstal marker `server-only`; unit test product service kini memock marker tersebut sebagaimana tes auth existing, sambil mempertahankan guard runtime. Historical migration drills memakai select eksplisit untuk field yang memang ada pada schema historis dan jumlah migration diperbarui menjadi sebelas.
 
 ## Batas release
 

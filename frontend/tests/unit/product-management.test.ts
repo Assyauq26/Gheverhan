@@ -1,3 +1,4 @@
+vi.mock("server-only", () => ({}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { productInputSchema, categoryInputSchema } from "@/modules/catalog/product-management.validation";

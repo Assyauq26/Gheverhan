@@ -49,7 +49,7 @@ test('legacy schema and ambiguous migration ledger are rejected without fail-ope
         created = true;
         await cp('prisma/schema.prisma', path.join(directory, 'schema.prisma'));
         const migrations = (await readdir('prisma/migrations')).filter(n => /^\d{14}_/.test(n)).sort();
-        assert.equal(migrations.length, 10);
+        assert.equal(migrations.length, 11);
         for (const migration of migrations.slice(0, 5))
             await cp(path.join('prisma/migrations', migration), path.join(directory, 'migrations', migration), { recursive: true });
         await cp('prisma/migrations/migration_lock.toml', path.join(directory, 'migrations/migration_lock.toml'));
@@ -208,4 +208,11 @@ test('preflight rejects missing direct-checkout index with an otherwise matching
     try {
         const result=run(); assert.equal(result.status,1); assert.equal(result.data.ledgerMatches,true); assert.equal(result.data.schema.directCheckout,false);
     } finally { await db.$executeRaw`ALTER INDEX fixture_hidden_checkout_index RENAME TO "CheckoutIntent_orderId_key"`; }
+});
+
+test('preflight rejects missing staged-media expiry index on the reviewed ledger', async () => {
+ await db.$executeRaw`ALTER INDEX "StagedProductMedia_expiresAt_idx" RENAME TO fixture_hidden_media_index`;
+ try {const result=run();assert.equal(result.status,1);assert.equal(result.data.ledgerMatches,true);assert.equal(result.data.schema.productEditorV2,false);}
+ finally {await db.$executeRaw`ALTER INDEX fixture_hidden_media_index RENAME TO "StagedProductMedia_expiresAt_idx"`;}
+ assert.equal(run().status,0);
 });

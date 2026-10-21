@@ -63,7 +63,7 @@ async function disposable(count: number, run: (f: Fixture) => Promise<void>) {
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 10);
+    assert.equal(names.length, 11);
     assert.equal(names[9], migration);
     for (const n of names.slice(0, count))
       await cp(
@@ -85,35 +85,102 @@ async function disposable(count: number, run: (f: Fixture) => Promise<void>) {
   }
 }
 test("direct checkout migration: fresh, upgrade preservation and official retry", async (t) => {
-  await t.test("fresh install has exact checksum, RLS without public policies, constraints and valid indexes", async () => disposable(10, async ({ db, command }) => {
-    assert.equal(command(["status"]).status, 0);
-    const facts = await db.$queryRaw<{ready: boolean; policies: number; indexes: number; checks: number}[]>`SELECT
+  await t.test(
+    "fresh install has exact checksum, RLS without public policies, constraints and valid indexes",
+    async () =>
+      disposable(10, async ({ db, command }) => {
+        assert.equal(command(["status"]).status, 0);
+        const facts = await db.$queryRaw<
+          {
+            ready: boolean;
+            policies: number;
+            indexes: number;
+            checks: number;
+          }[]
+        >`SELECT
       (SELECT relrowsecurity FROM pg_class WHERE oid='"CheckoutIntent"'::regclass) AS ready,
       (SELECT count(*)::int FROM pg_policies WHERE schemaname='public' AND tablename='CheckoutIntent') AS policies,
       (SELECT count(*)::int FROM pg_index WHERE indrelid='"CheckoutIntent"'::regclass AND indisvalid AND indisready) AS indexes,
       (SELECT count(*)::int FROM pg_constraint WHERE conrelid='"CheckoutIntent"'::regclass AND contype='c' AND convalidated) AS checks`;
-    assert.deepEqual(facts, [{ready:true,policies:0,indexes:4,checks:3}]);
-    const ledger = await db.$queryRaw<{checksum:string}[]>`SELECT checksum FROM _prisma_migrations WHERE migration_name=${migration} AND finished_at IS NOT NULL AND rolled_back_at IS NULL`;
-    assert.equal(ledger[0].checksum, createHash('sha256').update(await readFile(path.join('prisma/migrations',migration,'migration.sql'))).digest('hex'));
-    await assert.rejects(db.$executeRaw`INSERT INTO "CheckoutIntent" (id,"variantId",quantity,"expiresAt") VALUES('invalid-owner','dummy',1,NOW())`);
-  }));
-  await t.test("upgrade and retry preserve existing user rows", async () => disposable(9, async ({db,command,add}) => {
-    const user=await db.user.create({data:{name:'Dummy',email:'dummy@example.test',passwordHash:'not-for-login'}});
-    await add(); assert.equal(command(['deploy']).status,0); assert.equal(command(['deploy']).status,0);
-    assert.deepEqual(await db.user.findUnique({where:{id:user.id}}),user);
-    assert.equal(await db.checkoutIntent.count(),0);
-  }));
-  await t.test("bounded lock failure leaves no partial table, permits official rollback and retry after state verification", async () => disposable(9,async ({db,command,add})=>{
-    await add();
-    let entered!:()=>void, release!:()=>void;
-    const ready=new Promise<void>(r=>entered=r), gate=new Promise<void>(r=>release=r);
-    const blocker=db.$transaction(async tx=>{await tx.$executeRaw`LOCK TABLE "User" IN ROW EXCLUSIVE MODE`; entered(); await gate;},{timeout:20000});
-    let result!:ReturnType<typeof command>;
-    try {await ready; result=command(['deploy']);} finally {release();await blocker;}
-    assert.equal(result.status,1); assert.match(String(result.stdout)+String(result.stderr),/lock timeout|transaction is aborted/);
-    const facts=await db.$queryRaw<{absent:boolean}[]>`SELECT to_regclass('public."CheckoutIntent"') IS NULL AS absent`;
-    assert.equal(facts[0].absent,true);
-    assert.equal(command(['resolve','--rolled-back',migration]).status,0);
-    assert.equal(command(['deploy']).status,0); assert.equal(command(['status']).status,0);
-  }));
+        assert.deepEqual(facts, [
+          { ready: true, policies: 0, indexes: 4, checks: 3 },
+        ]);
+        const ledger = await db.$queryRaw<
+          { checksum: string }[]
+        >`SELECT checksum FROM _prisma_migrations WHERE migration_name=${migration} AND finished_at IS NOT NULL AND rolled_back_at IS NULL`;
+        assert.equal(
+          ledger[0].checksum,
+          createHash("sha256")
+            .update(
+              await readFile(
+                path.join("prisma/migrations", migration, "migration.sql"),
+              ),
+            )
+            .digest("hex"),
+        );
+        await assert.rejects(
+          db.$executeRaw`INSERT INTO "CheckoutIntent" (id,"variantId",quantity,"expiresAt") VALUES('invalid-owner','dummy',1,NOW())`,
+        );
+      }),
+  );
+  await t.test("upgrade and retry preserve existing user rows", async () =>
+    disposable(9, async ({ db, command, add }) => {
+      const user = await db.user.create({
+        data: {
+          name: "Dummy",
+          email: "dummy@example.test",
+          passwordHash: "not-for-login",
+        },
+      });
+      await add();
+      assert.equal(command(["deploy"]).status, 0);
+      assert.equal(command(["deploy"]).status, 0);
+      assert.deepEqual(
+        await db.user.findUnique({ where: { id: user.id } }),
+        user,
+      );
+      assert.equal(await db.checkoutIntent.count(), 0);
+    }),
+  );
+  await t.test(
+    "bounded lock failure leaves no partial table, permits official rollback and retry after state verification",
+    async () =>
+      disposable(9, async ({ db, command, add }) => {
+        await add();
+        let entered!: () => void, release!: () => void;
+        const ready = new Promise<void>((r) => (entered = r)),
+          gate = new Promise<void>((r) => (release = r));
+        const blocker = db.$transaction(
+          async (tx) => {
+            await tx.$executeRaw`LOCK TABLE "User" IN ROW EXCLUSIVE MODE`;
+            entered();
+            await gate;
+          },
+          { timeout: 20000 },
+        );
+        let result!: ReturnType<typeof command>;
+        try {
+          await ready;
+          result = command(["deploy"]);
+        } finally {
+          release();
+          await blocker;
+        }
+        assert.equal(result.status, 1);
+        assert.match(
+          String(result.stdout) + String(result.stderr),
+          /lock timeout|transaction is aborted/,
+        );
+        const facts = await db.$queryRaw<
+          { absent: boolean }[]
+        >`SELECT to_regclass('public."CheckoutIntent"') IS NULL AS absent`;
+        assert.equal(facts[0].absent, true);
+        assert.equal(
+          command(["resolve", "--rolled-back", migration]).status,
+          0,
+        );
+        assert.equal(command(["deploy"]).status, 0);
+        assert.equal(command(["status"]).status, 0);
+      }),
+  );
 });

@@ -131,7 +131,9 @@ export async function stageProductMedia(
         try {
           matches =
             createHash("sha256")
-              .update((await getObject(objectPath, AbortSignal.timeout(15000))).data)
+              .update(
+                (await getObject(objectPath, AbortSignal.timeout(15000))).data,
+              )
               .digest("hex") === contentHash;
         } catch {
           /* fail closed */
@@ -161,30 +163,68 @@ export async function cancelStagedMedia(
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "StagedProductMedia" WHERE id = ${id} FOR UPDATE`;
     await tx.stagedProductMedia.updateMany({
-      where: { id, actorId: actor.id, sessionHash, productId: null },
+      where: {
+        id,
+        actorId: actor.id,
+        sessionHash,
+        productId: null,
+        cancelledAt: null,
+      },
       data: { cancelledAt: new Date(), expiresAt: new Date() },
     });
   });
+  const cancelled = await prisma.stagedProductMedia.findFirst({
+    where: {
+      id,
+      actorId: actor.id,
+      sessionHash,
+      productId: null,
+      cancelledAt: { not: null },
+    },
+  });
+  if (cancelled) {
+    try {
+      await removeObject(cancelled.objectPath, AbortSignal.timeout(15000));
+    } catch {
+      /* Durable tombstone keeps the object eligible for reconciliation. */
+    }
+  }
   await cleanupStagedMedia();
 }
 /** Bounded, retryable cleanup; no object is removed before durable cancellation. */
 export async function cleanupStagedMedia() {
+  // An aborted HTTP PUT can still commit remotely. Keep cancelled identity for a
+  // full day and delete again after that grace window instead of losing its path.
+  const graceBefore = new Date(Date.now() - 24 * 60 * 60_000);
   const rows = await prisma.stagedProductMedia.findMany({
-    where: { productId: null, expiresAt: { lte: new Date() } },
+    where: {
+      productId: null,
+      expiresAt: { lte: new Date() },
+      OR: [{ cancelledAt: null }, { cancelledAt: { lte: graceBefore } }],
+    },
     take: 5,
     orderBy: { expiresAt: "asc" },
   });
   await Promise.all(
     rows.map(async (row) => {
       const claimed = await prisma.stagedProductMedia.updateMany({
-        where: { id: row.id, productId: null, expiresAt: { lte: new Date() } },
-        data: { cancelledAt: new Date() },
+        where: {
+          id: row.id,
+          productId: null,
+          expiresAt: { lte: new Date() },
+          cancelledAt: row.cancelledAt,
+        },
+        data: { cancelledAt: row.cancelledAt ?? new Date() },
       });
       if (!claimed.count) return;
       try {
         await removeObject(row.objectPath, AbortSignal.timeout(15000));
         await prisma.stagedProductMedia.deleteMany({
-          where: { id: row.id, productId: null, cancelledAt: { not: null } },
+          where: {
+            id: row.id,
+            productId: null,
+            cancelledAt: { lte: graceBefore },
+          },
         });
       } catch {
         /* Keep cancelled metadata so an operator / next upload can retry cleanup. */

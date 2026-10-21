@@ -194,7 +194,10 @@ test("product editor V2 database, media and compatibility", async (t) => {
       await assert.rejects(media.readStagedMedia(actor, otherSession, id), {
         status: 404,
       });
-      await assert.rejects(media.readStagedMedia({...actor,id:randomUUID()}, sessionHash, id),{status:404});
+      await assert.rejects(
+        media.readStagedMedia({ ...actor, id: randomUUID() }, sessionHash, id),
+        { status: 404 },
+      );
       await assert.rejects(
         media.stageProductMedia(
           actor,
@@ -336,6 +339,30 @@ test("product editor V2 database, media and compatibility", async (t) => {
           ),
         );
         await media.cleanupStagedMedia();
+        const tombstone = await db.stagedProductMedia.findUniqueOrThrow({
+          where: { id },
+        });
+        assert.ok(
+          tombstone.cancelledAt,
+          "Cancellation stays durable through uncertain remote completion",
+        );
+        await assert.rejects(media.readStagedMedia(actor, sessionHash, id), {
+          status: 404,
+        });
+        // Simulate a provider PUT completing after cancellation/DELETE returned.
+        const objectKey =
+          "/storage/v1/object/product-images/" + tombstone.objectPath;
+        objects.set(objectKey, png);
+        await db.stagedProductMedia.update({
+          where: { id },
+          data: { cancelledAt: new Date(0), expiresAt: new Date(0) },
+        });
+        await media.cleanupStagedMedia();
+        assert.equal(
+          objects.has(objectKey),
+          false,
+          "Grace-window reconciliation removes a late remote object",
+        );
         assert.equal(await db.stagedProductMedia.count({ where: { id } }), 0);
       }
       assert.ok(
@@ -522,7 +549,20 @@ test("product editor V2 database, media and compatibility", async (t) => {
       assert.deepEqual(results[0], results[1]);
       assert.equal(await db.stagedProductMedia.count({ where: { id } }), 1);
       await media.cancelStagedMedia(actor, sessionHash, id);
-      assert.equal(await db.stagedProductMedia.count({ where: { id } }), 0);
+      const tombstone = await db.stagedProductMedia.findUniqueOrThrow({
+        where: { id },
+      });
+      assert.ok(tombstone.cancelledAt);
+      await media.cancelStagedMedia(actor, sessionHash, id);
+      assert.deepEqual(
+        (await db.stagedProductMedia.findUniqueOrThrow({ where: { id } }))
+          .cancelledAt,
+        tombstone.cancelledAt,
+        "Retry does not extend the grace window",
+      );
+      await assert.rejects(media.readStagedMedia(actor, sessionHash, id), {
+        status: 404,
+      });
     },
   );
   await t.test(

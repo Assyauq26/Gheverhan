@@ -6,7 +6,7 @@ const ROOT = "candidate/frontend";
 const PROJECT_REF = "bztprltkevacidcpjaam";
 const VERCEL_TEAM = "team_TzXXNjuky0A7TUqf1vxHDE77";
 const VERCEL_PROJECT = "prj_J8Fao07yrACLGjiDtY3ftRcLkI2s";
-const FINAL_SHA = "cf9279a42cfcbfc3f339ba50e03c02c66dc255a7";
+const FINAL_SHA = "ff6e4defcf0b8822ef46ade65081d3cdca593fea";
 const prHeads = new Map([
   [75, "d685813d02e457e5ccc182a145598c3b139b5559"],
   [83, "62477c97ded2ac2ab552b31c7e9ac1a3fd045032"],

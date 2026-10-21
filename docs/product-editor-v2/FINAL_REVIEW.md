@@ -17,7 +17,9 @@ Baseline `main` tetap `b2d18192d99db379b6894a51abaaded22cc329e0`. Kandidat awal 
 | VISUAL-01 | Blocker penerimaan visual | BLOCKED | Screenshot referensi asli editor tidak ada di workspace/lampiran aktif. Sudah diminta kembali. Tidak ada skor fidelity 90% atau klaim side-by-side dengan referensi yang hilang. |
 | OPS-01 | Medium, kontrol operasional | BLOCKED | Cleanup terbatas lima objek dipicu upload/cancel; tidak ada jadwal trusted cleanup yang telah dibuktikan di Production. Perlu owner operasional, pemantauan backlog/Storage, interval, retry dan alert. Jangan membuat public cleanup endpoint. |
 
-Tidak ditemukan Critical atau High baru dalam source aplikasi pada jalur yang ditelaah. Ini bukan klaim audit dependency global bebas advisory: lockfile tidak diubah dan hasil dependency security sebelumnya tidak diturunkan atau dikecualikan.
+Tidak ditemukan Critical atau High baru dalam source aplikasi pada jalur yang ditelaah. Audit aktual lockfile menghasilkan **0 Critical / 7 High / 0 Moderate**; perintah npm audit berakhir nonzero karena advisory tersebut, bukan dianggap audit bersih. Tujuh node: braces, chokidar, micromatch, fast-glob, tailwindcss, eslint-config-next dan @next/eslint-plugin-next. Lockfile tidak berubah.
+
+Advisory GHSA-vfj7-8cjw-p6xm berasal dari stack exhaustion nested glob di braces 3.0.3 dan rantai dependennya. Jalur yang ditemukan adalah build/lint dengan glob konfigurasi, bukan input HTTP pelanggan. Kontrol kompensasi baseline membatasi parser/AST depth 128, guard SHA-256 fail-closed pada seluruh copy, security:prepare sebelum build/lint dan sembilan mitigation tests termasuk malicious AST. Tidak menghapus severity atau advisory; dependency major upgrade tetap di luar perubahan final review. **Penerimaan risiko residual secara eksplisit oleh pemilik masih BLOCKED untuk release ini**; tidak disimpulkan dari izin sprint sebelumnya. Lihat docs/audit/R21_SECURITY_HARDENING.md untuk matriks baseline. Hasil npm audit terbaru dan CI final ditautkan pada PR.
 
 ## Security review
 
@@ -54,6 +56,6 @@ Setelah perubahan final review, **seluruh workflow dijalankan ulang pada HEAD ba
 
 ## Keputusan dan tindakan pemilik/operator
 
-**NO-GO Production** sampai private bucket terverifikasi, akses Vercel/database efektif/role/env dipulihkan dan dibuktikan, cleanup operasional tersedia, penerimaan visual diselesaikan, CI HEAD final PASS serta review/approval diberikan. Database-first release tetap wajib. Jangan merge dahulu untuk mencoba deployment.
+**NO-GO Production** sampai private bucket terverifikasi, akses Vercel/database efektif/role/env dipulihkan dan dibuktikan, cleanup operasional tersedia, risiko dependency diterima secara eksplisit, penerimaan visual diselesaikan, CI HEAD final PASS serta review/approval diberikan. Database-first release tetap wajib. Jangan merge dahulu untuk mencoba deployment.
 
 Tindakan aman berikut: lampirkan gambar referensi, pulihkan akses resmi scope Vercel dan operator secrets melalui kanal resmi, lalu review paket perubahan bucket private beserta kompatibilitas existing media. Tidak meminta password/token melalui chat. Backup/recovery mengikuti keputusan pemilik yang dikonfirmasi untuk release ini, bukan asumsi izin task lama. Ikuti MIGRATION.md dan RECOVERY_DRILL.md; jangan rollback ke baseline lama setelah staged media dipakai.

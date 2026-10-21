@@ -102,7 +102,12 @@ async function main() {
           AND (SELECT count(*)=2 AND bool_and(convalidated) FROM pg_constraint WHERE conrelid=to_regclass('public."Product"') AND conname IN ('Product_weightGrams_check','Product_packageDimensions_check'))
           AND (SELECT count(*)=2 AND bool_and(relrowsecurity AND NOT pg_catalog.row_security_active(oid) AND has_table_privilege(oid,'SELECT,INSERT,UPDATE,DELETE')) FROM pg_class WHERE oid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')))
           AND NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename IN ('StagedProductMedia','ProductEditorSave'))
-          AND (SELECT count(*)=4 AND bool_and(indisvalid AND indisready) FROM pg_index WHERE indrelid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')))
+          AND (SELECT count(*)=3 AND bool_and(convalidated) FROM pg_constraint WHERE conrelid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')) AND conname IN ('StagedProductMedia_purpose_check','StagedProductMedia_hash_check','ProductEditorSave_hash_check'))
+          AND (SELECT count(*)=4 AND bool_and(i.indisvalid AND i.indisready)
+            AND count(*) FILTER (WHERE i.indisprimary AND i.indnatts=1)=2
+            AND count(*) FILTER (WHERE c.relname='StagedProductMedia_expiresAt_idx' AND i.indnatts=1 AND i.indkey[0]=(SELECT attnum FROM pg_attribute WHERE attrelid=i.indrelid AND attname='expiresAt'))=1
+            AND count(*) FILTER (WHERE c.relname='StagedProductMedia_actorId_sessionHash_idx' AND i.indnatts=2 AND i.indkey[0]=(SELECT attnum FROM pg_attribute WHERE attrelid=i.indrelid AND attname='actorId') AND i.indkey[1]=(SELECT attnum FROM pg_attribute WHERE attrelid=i.indrelid AND attname='sessionHash'))=1
+            FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE i.indrelid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')))
         ) AS "productEditorV2",
         (to_regclass('public."ProductOptionGroup"') IS NOT NULL AND to_regclass('public."ProductOptionValue"') IS NOT NULL AND to_regclass('public."ProductVariantOptionValue"') IS NOT NULL
           AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='Product' AND column_name='optionsEnabled')

@@ -1,0 +1,79 @@
+name: Gheverhan read-only maintenance HTTP probe
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/gheverhan-maintenance-http-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-maintenance-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Confirm closed Production HTTP GET and safe no-route POST
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          check_maintenance() {
+            local host="$1" method="$2" path="$3" label="$4"
+            local headers="$dir/${label}.headers" body="$dir/${label}.body"
+            # POST targets only an intentionally nonexistent route, not a business operation.
+            local status
+            status="$(curl --silent --show-error --location --max-time 25 --connect-timeout 10 \
+              --request "$method" --header "Cache-Control: no-cache" \
+              --header "X-Gheverhan-Cutover-Probe: read-only" \
+              --dump-header "$headers" --output "$body" --write-out '%{http_code}' \
+              "https://${host}${path}")"
+            echo "Probe ${label}: HTTP ${status}"
+            if [[ "$status" != "503" ]]; then
+              echo "::error::BLOCKED: ${host} ${method} ${path} did not return 503"
+              return 1
+            fi
+            if ! grep -Eiq '^cache-control:[^\r\n]*no-store' "$headers"; then
+              echo "::error::BLOCKED: ${host} ${method} lacks no-store"
+              return 1
+            fi
+            if ! grep -Fq 'Layanan sedang dalam pemeliharaan' "$body"; then
+              echo "::error::BLOCKED: ${host} ${method} returned wrong maintenance body"
+              return 1
+            fi
+          }
+          check_maintenance gheverhan.store GET / get-apex
+          check_maintenance gheverhan.store GET /shop get-shop
+          check_maintenance gheverhan.store POST /api/__cutover_write_probe post-apex
+          check_maintenance www.gheverhan.store GET / get-www
+          check_maintenance www.gheverhan.store POST /api/__cutover_write_probe post-www
+          echo "PASS: Public GET and non-business POST paths are closed with HTTP 503/no-store"
+
+      - name: Probe immutable old Production URLs for access protection (no business writes)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          for host in gheverhan-3txtn572v-syauqi3.vercel.app gheverhan-hy4eie0i1-syauqi3.vercel.app; do
+            headers="$dir/headers"; body="$dir/body"
+            status="$(curl --silent --show-error --max-time 25 --connect-timeout 10 \
+              --dump-header "$headers" --output "$body" --write-out '%{http_code}' "https://$host/")"
+            echo "Legacy immutable Production deployment ${host}: HTTP ${status}"
+            if [[ "$status" == "200" ]]; then
+              echo "::error::BLOCKED: Legacy immutable deployment answered 200 without an auth barrier"
+              exit 1
+            fi
+            if [[ "$status" =~ ^30[1278]$ ]]; then
+              if ! grep -Eiq '^location:.*(vercel\.com|vercel\.app|sso|login|auth)' "$headers"; then
+                echo "::error::BLOCKED: legacy URL redirected to a target not verified as auth gate"
+                exit 1
+              fi
+            elif [[ ! "$status" =~ ^(401|403|404)$ ]]; then
+              echo "::error::BLOCKED: legacy deployment protection not verified"
+              exit 1
+            fi
+          done
+          echo "PASS: Tested legacy immutable URLs are not anonymously serving HTTP 200"

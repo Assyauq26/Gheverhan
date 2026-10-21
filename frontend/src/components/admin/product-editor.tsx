@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import {
   saveProductAction,
+  allocateProductSkusAction,
   setProductStatusAction,
 } from "@/modules/catalog/product-management.actions";
 import type { ProductInput } from "@/modules/catalog/product-management.validation";
@@ -490,11 +491,15 @@ export function ProductEditor({
       values.variants.map((v, i) => (i === index ? { ...v, ...patch } : v)),
     );
   }
-  function appendCombinations(combinations: VariantChoice[]): boolean {
+  async function appendCombinations(
+    combinations: VariantChoice[],
+  ): Promise<boolean> {
+    if (busy.current) return false;
     // A blank create-mode row is only a form placeholder, not a persisted variant.
     const placeholder =
       values.variants.length === 1 && isEmptyDraftVariant(values.variants[0]);
     const list = placeholder ? [] : [...values.variants];
+    const retainedCount = list.length;
     const pairs = new Set(
       list.map(
         (v) =>
@@ -539,9 +544,28 @@ export function ProductEditor({
       pairs.add(key);
       skus.add(sku.toUpperCase());
     }
-    if (!list.length) return false;
-    change("variants", list);
-    return true;
+    if (!list.length || list.length === retainedCount) return false;
+    busy.current = true;
+    setPending("sku");
+    try {
+      const fresh = list.slice(retainedCount);
+      const keyFor = (row: Values["variants"][number]) =>
+        `${row.color.trim().toLocaleLowerCase("id")}::${row.size.trim().toLocaleLowerCase("id")}`;
+      const result = await allocateProductSkusAction(
+        fresh.map((row) => ({ key: keyFor(row), sku: row.sku })),
+      );
+      if (!result.ok || !result.data)
+        throw new Error(result.error || "SKU gagal dibuat. Coba lagi.");
+      for (const row of fresh)
+        row.sku = result.data.find(
+          (candidate) => candidate.key === keyFor(row),
+        )!.sku;
+      change("variants", list);
+      return true;
+    } finally {
+      busy.current = false;
+      setPending(null);
+    }
   }
   return (
     <div className="product-editor-v2 mx-auto max-w-6xl space-y-5 pb-8">

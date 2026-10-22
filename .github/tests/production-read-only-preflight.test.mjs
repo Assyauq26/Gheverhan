@@ -38,11 +38,13 @@ test('workflow source, credentials and side effects remain bounded',()=>{
  assert.ok(!/pull_request_target|id-token: write|contents: write|upload-artifact|migrate deploy|db push|vercel deploy|vercel promote/.test(workflow));
  assert.match(workflow,/npm run release:preflight/);
  assert.ok(workflow.includes('SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}'));
- assert.ok(workflow.includes('SAFE_TRANSPORT_DIAGNOSTIC'));
- assert.ok(workflow.includes("'-verify_hostname',u.hostname"));
- assert.ok(workflow.includes("'stdio:'ignore'" ) || workflow.includes("stdio:'ignore'"));
- assert.ok(workflow.includes("rmSync(dir,{force:true,recursive:true})"));
- assert.match(workflow,/test "\$runtime" -eq 0 && test "\$release" -eq 0/);
+ assert.ok(workflow.includes('ref: fa920bcd6cc56cabcb8bb563f39d95f74bc8ac46'));
+ assert.ok(workflow.includes('git -C ../reviewed-ops rev-parse HEAD'));
+ assert.ok(workflow.includes('git diff --exit-code -- prisma src package.json package-lock.json scripts/release/preflight.ts scripts/release/storage-preflight.ts'));
+ assert.ok(workflow.includes('node scripts/release/verify-prisma-installation.mjs'));
+ assert.ok(workflow.includes('node scripts/release/run-production-preflight.mjs'));
+ assert.match(workflow,/exit "\$result"/);
+ assert.ok(!workflow.includes('SAFE_TRANSPORT_DIAGNOSTIC'));
 });
 
 test('wrong dispatch branch or target fails instead of yielding a skipped green workflow',()=>{

@@ -83,6 +83,8 @@ async function main() {
         const schema = await tx.$queryRaw<
           {
             productEditorV2: boolean;
+            schemaUsage: boolean;
+            catalogPrivileges: boolean;
             customOptions: boolean;
             directCheckout: boolean;
             revocation: boolean;
@@ -98,10 +100,15 @@ async function main() {
             pendingColumns: boolean;
           }[]
         >`
-        SELECT (
+        SELECT has_schema_privilege('public','USAGE') AS "schemaUsage",
+        (SELECT count(*)=4 AND bool_and(NOT pg_catalog.row_security_active(c.oid)
+          AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT')
+          AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
+          FROM pg_class c WHERE c.oid IN (to_regclass('public."Product"'),to_regclass('public."ProductImage"'),to_regclass('public."ProductVariant"'),to_regclass('public."Inventory"'))) AS "catalogPrivileges",
+        (
           (SELECT count(*)=4 FROM information_schema.columns WHERE table_schema='public' AND table_name='Product' AND column_name IN ('weightGrams','packageLengthMm','packageWidthMm','packageHeightMm') AND data_type='integer' AND is_nullable='YES')
           AND (SELECT count(*)=2 AND bool_and(convalidated) FROM pg_constraint WHERE conrelid=to_regclass('public."Product"') AND conname IN ('Product_weightGrams_check','Product_packageDimensions_check'))
-          AND (SELECT count(*)=2 AND bool_and(relrowsecurity AND NOT pg_catalog.row_security_active(oid) AND has_table_privilege(oid,'SELECT,INSERT,UPDATE,DELETE')) FROM pg_class WHERE oid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')))
+          AND (SELECT count(*)=2 AND bool_and(relrowsecurity AND NOT pg_catalog.row_security_active(oid) AND has_table_privilege(oid,'SELECT') AND has_table_privilege(oid,'INSERT') AND has_table_privilege(oid,'UPDATE') AND has_table_privilege(oid,'DELETE')) FROM pg_class WHERE oid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')))
           AND NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename IN ('StagedProductMedia','ProductEditorSave'))
           AND (SELECT count(*)=3 AND bool_and(convalidated) FROM pg_constraint WHERE conrelid IN (to_regclass('public."StagedProductMedia"'),to_regclass('public."ProductEditorSave"')) AND conname IN ('StagedProductMedia_purpose_check','StagedProductMedia_hash_check','ProductEditorSave_hash_check'))
           AND (SELECT count(*)=4 AND bool_and(i.indisvalid AND i.indisready)
@@ -169,6 +176,8 @@ async function main() {
         (row) => expectedLedger.get(row.migration_name) === row.checksum,
       );
     const schemaReady =
+      facts.schema.schemaUsage &&
+      facts.schema.catalogPrivileges &&
       facts.schema.productEditorV2 &&
       facts.schema.directCheckout &&
       facts.schema.customOptions &&

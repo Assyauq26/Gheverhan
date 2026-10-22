@@ -69,19 +69,21 @@ jobs:
       - name: Checkout immutable reviewed preflight implementation
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21
+          ref: 5132575e17eabd9b82dc5d6cce88fabc497b9985
           persist-credentials: false
           sparse-checkout: frontend
       - name: Setup Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version: '22.23.4'
       - name: Verify source and prepare pinned dependencies without Production secrets
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
+          test "$(git rev-parse HEAD)" = '5132575e17eabd9b82dc5d6cce88fabc497b9985'
           npm ci --ignore-scripts --no-audit --no-fund
           npx --no-install prisma generate
+          node --check scripts/release/runtime-role-probe.mjs
+          npx --no-install vitest run tests/unit/runtime-role-probe.test.ts
       - name: Read-only runtime/direct identity and full release gate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -138,7 +140,7 @@ jobs:
           fi
           {
             echo '## Production read-only preflight'
-            echo 'Reviewed probe source: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
+            echo 'Reviewed probe source: 5132575e17eabd9b82dc5d6cce88fabc497b9985'
             if [ "$runtime" -eq 0 ]; then echo '- Runtime/direct probe: PASS'; else echo '- Runtime/direct probe: BLOCKED (inspect safe metadata above)'; fi
             if [ "$release" -eq 0 ]; then echo '- Release gate: PASS'; elif [ "$release" -eq 125 ]; then echo '- Release gate: SKIPPED (runtime/direct binding validation failed; no unverified connection attempted)'; else echo '- Release gate: BLOCKED (ledger/schema/config/Storage remain mandatory)'; fi
             echo '- GitHub secret bindings do not independently prove deployed Vercel snapshot equality or Preview isolation.'

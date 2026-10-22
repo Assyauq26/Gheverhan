@@ -80,8 +80,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             frontend/scripts/release
-            frontend/tests/unit/prisma-transport.test.ts
-            frontend/tests/unit/runtime-role-probe.test.ts
+            frontend/tests/unit
             frontend/tests/fixtures/prisma-tls
       - name: Setup Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

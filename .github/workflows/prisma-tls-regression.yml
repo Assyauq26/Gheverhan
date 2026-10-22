@@ -8,6 +8,8 @@ on:
       - 'frontend/tests/integration/prisma-tls.test.mjs'
       - 'frontend/tests/fixtures/prisma-tls/**'
       - '.github/workflows/prisma-tls-regression.yml'
+      - '.github/workflows/production-read-only-preflight.yml'
+      - '.github/tests/production-read-only-preflight.test.mjs'
       - '.github/scripts/run-prisma-tls-fixture.sh'
   workflow_dispatch:
 permissions:

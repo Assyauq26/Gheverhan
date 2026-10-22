@@ -111,3 +111,7 @@ Baseline 7b3d93490af204fc2449567fb9ca63629526081c memiliki dua CI SUCCESS beriku
 - https://github.com/Assyauq26/Gheverhan/actions/runs/39703538244 — SUCCESS
 
 CI itu bukti baseline source/isolated regression, bukan effective Production identity. Pengujian baru terdaftar di unit dan release-preflight integration suite yang sudah dijalankan workflow PR. Keputusan runtime preflight: **BLOCKED / NO-GO**, dengan akses CLI operator PASS dan MCP tetap isu integrasi terpisah.
+
+## Workflow read-only dengan approval
+
+Lihat [PRODUCTION_READ_ONLY_WORKFLOW.md](PRODUCTION_READ_ONLY_WORKFLOW.md) untuk workflow manual baru, bukti protection existing, keterbatasan akses secret (403), bootstrap main-only, klasifikasi 207 Preview dan paket approval cutover. Workflow tidak melakukan migration/deploy/bucket/cleanup. Status NO-GO tidak berubah sebelum actual target verification.

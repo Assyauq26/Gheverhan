@@ -52,3 +52,7 @@ Recovery additive mempertahankan data/schema/file. Sesudah finalized staged medi
 ## Runtime/grants gate remediation
 
 Perbaikan lanjutan pada branch ini mengganti ANY dengan individual AND pada dua tabel V2, menambah schema USAGE dan katalog CRUD/RLS gate, serta operator runtime/direct probe. Handoff versi repository: OPERATOR_RUNTIME_HANDOFF.md. Snapshot Preview207/READY142 tidak membuktikan traffic atau DB capability. Source dan final CI remediation memiliki SHA baru; bukti akhir di PR, jangan memakai CI7b3d934 sebagai penggantinya. Effective Production bindings dan operasi tetap BLOCKED; tidak ada konfigurasi Production yang diubah.
+
+## Workflow read-only dengan approval
+
+Lihat [PRODUCTION_READ_ONLY_WORKFLOW.md](PRODUCTION_READ_ONLY_WORKFLOW.md) untuk workflow manual baru, bukti protection existing, keterbatasan akses secret (403), bootstrap main-only, klasifikasi 207 Preview dan paket approval cutover. Workflow tidak melakukan migration/deploy/bucket/cleanup. Status NO-GO tidak berubah sebelum actual target verification.

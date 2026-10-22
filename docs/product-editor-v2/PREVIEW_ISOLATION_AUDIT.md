@@ -16,3 +16,19 @@ scripts/assert-safe-db-operation.mjs menolak migration/seed/bootstrap via npm sc
 4. Buktikan request mutation Preview yang berizin dummy ditolak sebelum DB target; gunakan lingkungan disposable dahulu. Tidak menguji mutation Production pada task ini.
 
 Tidak membuat staging/project baru. Tidak mengubah perilaku dummy shared yang pernah disetujui secara diam-diam. Bila owner memilih larangan shared mutlak, perubahan guard perlu review/regression dan kontrol deployment lama; perubahan source baru saja tidak mencabut credential lama.
+
+
+## Audit inventory dan kemampuan writer — snapshot runtime preflight
+
+Pembacaan API resmi CLI dengan explicit project ID/scope, filter Preview dan pagination selesai menginventaris 207 deployment; 142 READY dan 65 status lain. Target metadata null/non-Production; current Production dpl_621bV44pjJVzHJ5NuCQNTFU4JEb1 tidak termasuk hasil. Ini **inventaris historis**, bukan 142 writer Production yang terbukti.
+
+| Kategori | Bukti |
+| --- | --- |
+| Historical READY | 142 metadata entries |
+| URL yang benar-benar menerima traffic sekarang | Belum diuji per URL; READY bukan HTTP reachability/protection proof |
+| Authorized application traffic | Belum terbukti; platform protection/auth harus diperiksa terpisah |
+| Effective deployed env snapshot | Belum tersedia; current project env list tidak cukup |
+| DB connection capability | Belum terbukti sebagai role Preview |
+| DB write capability | Belum terbukti; gunakan individual privileges + RLS metadata, bukan mutation probe |
+
+Jangan menyimpulkan tidak ada writer dari absent current DATABASE_URL, atau menyimpulkan semua 142 dapat menulis dari flag shared. Operator perlu menghubungkan setiap deployment yang masih bisa dilayani dengan snapshot/binding dan role resminya. Tidak mengakses customer rows, tidak bypass protection, tidak menggunakan credential Production untuk meniru role Preview. Paket approval isolasi: hapus shared opt-in **Preview only**, review DB/storage/JWT bindings, kendalikan semua legacy writers lewat fitur resmi provider, buktikan fail-closed tanpa write probe. Source guard baru saja tidak mencabut deployment lama. Tidak menghapus deployment/credential atau mengubah env pada task ini.

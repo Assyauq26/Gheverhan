@@ -1,6 +1,6 @@
 # PR #87 — operator read-only preflight
 
-Snapshot 22 Oktober 2026. Source yang diperiksa `24189db1875efa760c1375ba874fb08d0673a299`; perubahan berikut hanya dokumentasi. Jangan memakai hasil ini sebagai PASS Production menyeluruh.
+Lihat OPERATOR_RUNTIME_HANDOFF.md untuk probe runtime/direct dan perbaikan grants terbaru; SHA/CI final di PR #87. Snapshot historis 22 Oktober 2026. Source yang diperiksa `24189db1875efa760c1375ba874fb08d0673a299`; perubahan berikut hanya dokumentasi. Jangan memakai hasil ini sebagai PASS Production menyeluruh.
 
 ## Status terpisah
 
@@ -50,7 +50,7 @@ R21_ALLOW_PRODUCTION_READ_ONLY=1 npm run release:preflight
 
 Kedua flag hanya mengizinkan pemeriksaan read-only, tidak mengisi credential atau membuktikan database benar. Script memeriksa ledger/checksum, schema, role/grants, konfigurasi dan private bucket metadata. Tidak memanggil Prisma migrate/deploy, Storage mutation atau cleanup. Saat schema V2 belum diterapkan atau bucket masih public, hasil BLOCKED adalah benar; jangan memperlemah pemeriksaan agar PASS. Preflight tidak membuktikan delivery email, recovery, kebijakan semua objek, kapasitas cleanup, isolasi writer atau approval.
 
-Jangan menjalankan endpoint cleanup, upload/cancel/save dummy atau smoke test mutasi Production pada fase ini. Real private-bucket/proxy compatibility probes memerlukan persetujuan terpisah. Tetapkan cadence/capacity minimal 5 kandidat per invocation, owner dan monitoring sebelum mengaktifkan jadwal.
+Jangan menjalankan endpoint cleanup, upload/cancel/save dummy atau smoke test mutasi Production pada fase ini. Real private-bucket/proxy compatibility probes memerlukan persetujuan terpisah. Tetapkan cadence/capacity sesuai batas maksimum 5 candidate visits per invocation, dua tahap tombstone dan volume/retry; lihat CLEANUP_OPERATIONS.md. Tetapkan owner dan monitoring sebelum aktivasi.
 
 ## Bukti CI dan keputusan
 

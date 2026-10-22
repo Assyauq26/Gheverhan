@@ -47,3 +47,8 @@ Setelah blocker bukti di atas tertutup, minta persetujuan spesifik dengan SHA/ta
 Recovery additive mempertahankan data/schema/file. Sesudah finalized staged media, baseline lama tidak boleh dipromosikan karena reader menolak staged prefix. Gunakan roll-forward reader kompatibel dan traffic-stop yang disetujui bila integritas belum terbukti; tidak ada jaminan restore data sebelum migrasi tanpa backup.
 
 **Rekomendasi berikutnya:** tutup gate effective application target/role melalui kanal operator resmi; gunakan CLI yang sudah berfungsi. Jangan merge/deploy untuk mencoba apakah konfigurasi benar.
+
+
+## Runtime/grants gate remediation
+
+Perbaikan lanjutan pada branch ini mengganti ANY dengan individual AND pada dua tabel V2, menambah schema USAGE dan katalog CRUD/RLS gate, serta operator runtime/direct probe. Handoff versi repository: OPERATOR_RUNTIME_HANDOFF.md. Snapshot Preview207/READY142 tidak membuktikan traffic atau DB capability. Source dan final CI remediation memiliki SHA baru; bukti akhir di PR, jangan memakai CI7b3d934 sebagai penggantinya. Effective Production bindings dan operasi tetap BLOCKED; tidak ada konfigurasi Production yang diubah.

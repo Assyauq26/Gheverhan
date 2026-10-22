@@ -28,3 +28,8 @@ node scripts/run-private-storage-drill.mjs
 Workflow lengkap tetap memeriksa Prisma, TypeScript, lint/build, auth/session/OTP, product/editor/cart/direct checkout, payment/refund/shipping, migration fresh/upgrade/lock/retry, browser enam viewport, hydration dan navigation 10×44. Tidak menghapus/melemahkan test.
 
 Batas: real provider drill memeriksa Storage/helper contract. Authorization/finalization/cleanup full routes menggunakan fixture pada suite PG/browser; bukan klaim seluruh app end-to-end terhadap Supabase remote private. Source unit/CI tidak membuktikan env efektif, private Production, Preview isolation, email deliverability, backup, operational approval atau visual fidelity.
+
+
+## Grants gate remediation berikutnya
+
+Baseline 7b3d934 sudah SUCCESS; perbaikan berikut mengubah scripts/release/preflight.ts dan menambah runtime-role-probe.mjs, empat unit operator-binding tests serta empat PostgreSQL regression cases dengan matriks role di dalamnya. Lokal: 371 unit/25 containment/9 mitigation, 15 targeted release-preflight PostgreSQL checks, TypeScript dan ESLint PASS. Red/green proof mengulang V2 partial-role test pada source baseline: false PASS direproduksi (test gagal 0 vs 1), kemudian fixed suite 15/15 PASS. Full CI pada HEAD baru tetap wajib; run IDs/completion record dicantumkan di PR sesudah push. Jangan memakai run 7b3 sebagai bukti source baru.

@@ -101,16 +101,46 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          # Independent checks: missing V2/private Storage must remain BLOCKED.
+          # Safe local DSN-shape classification; never prints raw values, usernames, or hosts.
+          node --input-type=module <<'NODE'
+          const ref = 'bztprltkevacidcpjaam';
+          function classify(raw, isDirect) {
+            if (!raw) return 'MISSING_BINDING';
+            try {
+              const u = new URL(raw);
+              if (!['postgres:', 'postgresql:'].includes(u.protocol) || u.pathname !== '/postgres' || (u.searchParams.get('schema') || 'public') !== 'public') return 'DATABASE_OR_SCHEMA_UNVERIFIED';
+              const keys = [...u.searchParams.keys()];
+              if (!u.username || u.hash || new Set(keys).size !== keys.length) return 'USER_OR_PARAMS_UNVERIFIED';
+              const port = u.port || '5432';
+              const direct = u.hostname === `db.${ref}.supabase.co` && port === '5432';
+              const pool = u.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(u.username).endsWith(`.${ref}`) && ['5432', '6543'].includes(port);
+              if (!direct && !pool) return 'PROJECT_HOST_PORT_UNVERIFIED';
+              if (isDirect && pool && port === '6543') return 'DIRECT_URL_TRANSACTION_POOLER_NOT_ALLOWED';
+              if (u.searchParams.get('sslmode') !== 'require' || u.searchParams.get('sslaccept') !== 'strict') return 'EXPLICIT_STRICT_TLS_OPTIONS_UNVERIFIED';
+              return 'URL_SHAPE_AND_TLS_OPTIONS_PASS';
+            } catch { return 'UNPARSEABLE_BINDING'; }
+          }
+          console.log('SAFE_DSN_DIAGNOSTIC runtime=' + classify(process.env.DATABASE_URL, false));
+          console.log('SAFE_DSN_DIAGNOSTIC direct=' + classify(process.env.DIRECT_URL, true));
+          console.log('SAFE_DSN_DIAGNOSTIC does not establish deployed Vercel binding parity or successful TLS negotiation');
+          NODE
+          # GitHub bash invokes -e; disable it explicitly to record probe result.
+          set +e
           node scripts/release/runtime-role-probe.mjs
           runtime=$?
-          npm run release:preflight
-          release=$?
+          # Fail closed: do not connect through the full preflight if strict transport and target validation fail.
+          if [ "$runtime" -eq 0 ]; then
+            npm run release:preflight
+            release=$?
+          else
+            release=125
+            echo 'SKIPPED: full release gate requires validated runtime/direct connection bindings'
+          fi
           {
             echo '## Production read-only preflight'
             echo 'Reviewed probe source: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
             if [ "$runtime" -eq 0 ]; then echo '- Runtime/direct probe: PASS'; else echo '- Runtime/direct probe: BLOCKED (inspect safe metadata above)'; fi
-            if [ "$release" -eq 0 ]; then echo '- Release gate: PASS'; else echo '- Release gate: BLOCKED (ledger/schema/config/Storage remain mandatory)'; fi
+            if [ "$release" -eq 0 ]; then echo '- Release gate: PASS'; elif [ "$release" -eq 125 ]; then echo '- Release gate: SKIPPED (runtime/direct binding validation failed; no unverified connection attempted)'; else echo '- Release gate: BLOCKED (ledger/schema/config/Storage remain mandatory)'; fi
             echo '- GitHub secret bindings do not independently prove deployed Vercel snapshot equality or Preview isolation.'
             echo '- No migration, deployment, Storage write, customer-row read or cleanup executed.'
           } >> "$GITHUB_STEP_SUMMARY"

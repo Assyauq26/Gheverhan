@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, symlinkSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
 import { inspectRuntimeBinding } from '../../scripts/release/runtime-role-probe.mjs';
 const ref='bztprltkevacidcpjaam';
 const base=`postgresql://dummy:fixture@db.${ref}.supabase.co:5432/postgres?sslmode=require&sslaccept=strict`;
@@ -14,6 +17,17 @@ describe('operator runtime binding probe before any connection',()=>{
  it('fails closed without environment bindings and never emits inherited secrets',()=>{
   const child=spawnSync(process.execPath,['scripts/release/runtime-role-probe.mjs'],{env:{NODE_ENV:"test",PATH:process.env.PATH,JWT_SECRET:'secret-sentinel-never-log'},encoding:'utf8',timeout:5000});
   expect(child.status).toBe(1);expect(child.stdout).toContain('MISSING_PROTECTED_OPERATOR_BINDINGS');expect(child.stdout+child.stderr).not.toContain('secret-sentinel');
+ });
+ it('executes fail-closed through a symlink or Windows directory-case alias',()=>{
+  const directory=mkdtempSync(path.join(tmpdir(),'runtime-probe-entry-'));
+  const source=path.resolve('scripts/release/runtime-role-probe.mjs');
+  let entry=path.join(directory,'probe.mjs');
+  try {
+   if(process.platform==='win32') entry=path.join(path.dirname(source).toUpperCase(),path.basename(source));
+   else symlinkSync(source,entry);
+   const child=spawnSync(process.execPath,[entry],{env:{NODE_ENV:'test',PATH:process.env.PATH},encoding:'utf8',timeout:5000});
+   expect(child.status).toBe(1);expect(child.stdout).toContain('MISSING_PROTECTED_OPERATOR_BINDINGS');
+  }finally{rmSync(directory,{recursive:true,force:true});}
  });
  it('rejects transaction-pooler DIRECT_URL before connecting or leaking a DSN',()=>{
   const pooled=`postgresql://dummy.${ref}:fixture@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require&sslaccept=strict`;

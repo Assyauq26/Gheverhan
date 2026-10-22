@@ -73,7 +73,7 @@ Probe memerlukan Node22 dan PrismaClient5.22.0 pinned. Duplicate query parameter
 
 Probe membuka dua koneksi secara berurutan memakai Prisma resmi, READ ONLY transaction, statement timeout 5s; memeriksa current_database/current_schema/current_user, read-only state, backend pg_stat_ssl, presence/RLS/CRUD individual pada tabel terkait. Tidak membaca customer rows, tidak DDL/DML/migrate. Metadata role hanya ditampilkan lokal; redaksi sesuai kebijakan sebelum dibagikan. pg_stat_ssl pada pooler menggambarkan hop backend PostgreSQL, bukan bukti tunggal TLS browser/client ke pooler. Strict requested TLS + koneksi Prisma sukses merupakan bukti hop client untuk konfigurasi yang diuji, bukan seluruh deployment snapshot.
 
-Script syntax check PASS. Saat dicoba pada environment tanpa binding, exit 1 BLOCKED sebelum koneksi; koneksi target Production **belum diuji**.
+Entrypoint memakai realpath/case normalization agar pemanggilan symlink atau perbedaan directory case Windows tidak diam-diam melewati main. Regression symlink PASS di Linux/Node22; eksekusi native Windows tetap langkah operator, tidak diklaim sudah diuji di CI Linux. Script syntax check PASS. Saat dicoba pada environment tanpa binding, exit 1 BLOCKED sebelum koneksi; koneksi target Production **belum diuji**.
 
 ## Official repository preflight
 

@@ -4,6 +4,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { realpathSync } from 'node:fs';
 const ref = 'bztprltkevacidcpjaam';
 export const inspectRuntimeBinding = raw => {
   const u = new URL(raw);
@@ -54,4 +55,8 @@ async function main() {
   console.log(JSON.stringify({status:pass?'PASS':'BLOCKED',readOnly:true,results,limitations:['Backend TLS reports PostgreSQL hop; pooler client TLS is separately enforced by strict DSN settings and successful Prisma connection.','Does not compare migration ledger, prove deployment snapshot binding or Preview isolation. Run repository release:preflight separately.','Effective role metadata is operator-local; redact if required before sharing. No customer rows read.']},null,2));
   if(!pass)process.exitCode=1;
 }
-if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) main().catch(()=>{console.error('Runtime role probe BLOCKED: protected configuration, connection or metadata privilege unavailable; raw error suppressed.');process.exitCode=1;});
+const canonical = value => {
+  const resolved = realpathSync(value);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+};
+if(process.argv[1] && canonical(process.argv[1])===canonical(fileURLToPath(import.meta.url))) main().catch(()=>{console.error('Runtime role probe BLOCKED: protected configuration, connection or metadata privilege unavailable; raw error suppressed.');process.exitCode=1;});

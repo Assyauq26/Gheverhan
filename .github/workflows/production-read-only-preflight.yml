@@ -75,7 +75,7 @@ jobs:
       - name: Checkout immutable reviewed operational remediation
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: fa920bcd6cc56cabcb8bb563f39d95f74bc8ac46
+          ref: 4e1788d21b272bfafa11a519b7fc3ed63a6c253c
           path: reviewed-ops
           persist-credentials: false
           sparse-checkout: |
@@ -91,7 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = '5132575e17eabd9b82dc5d6cce88fabc497b9985'
-          test "$(git -C ../reviewed-ops rev-parse HEAD)" = 'fa920bcd6cc56cabcb8bb563f39d95f74bc8ac46'
+          test "$(git -C ../reviewed-ops rev-parse HEAD)" = '4e1788d21b272bfafa11a519b7fc3ed63a6c253c'
           # Only reviewed diagnostic scripts/tests overlay; candidate schema/ledger/gates stay intact.
           for script in prisma-transport.mjs prisma-safe-error.mjs runtime-role-probe.mjs run-production-preflight.mjs verify-prisma-installation.mjs; do
             cp "../reviewed-ops/frontend/scripts/release/$script" "scripts/release/$script"
@@ -134,7 +134,7 @@ jobs:
           {
             echo '## Production read-only preflight'
             echo 'Reviewed candidate: 5132575e17eabd9b82dc5d6cce88fabc497b9985'
-            echo 'Reviewed operational source: fa920bcd6cc56cabcb8bb563f39d95f74bc8ac46'
+            echo 'Reviewed operational source: 4e1788d21b272bfafa11a519b7fc3ed63a6c253c'
             if [ "$result" -eq 0 ]; then echo '- All read-only gates: PASS'; else echo '- BLOCKED: inspect separate connection, metadata and full release gate enums above'; fi
             echo '- GitHub binding names do not prove deployed Vercel parity or Preview writer isolation.'
             echo '- No migration, deployment, Storage write, customer-row read or cleanup executed.'

@@ -33,8 +33,8 @@ test('workflow source, credentials and side effects remain bounded',()=>{
  const before=workflow.split('- name: Read-only runtime\/direct')[0];
  assert.ok(!before.includes('secrets.'));
  assert.match(before,/npm ci --ignore-scripts/);
- assert.match(before,/node-version: '22\\.23\\.4'/);
- assert.match(before,/vitest run tests\\/unit\\/runtime-role-probe\\.test\\.ts/);
+ assert.ok(before.includes("node-version: '22.23.4'"));
+ assert.ok(before.includes('vitest run tests/unit/runtime-role-probe.test.ts'));
  assert.ok(!/pull_request_target|id-token: write|contents: write|upload-artifact|migrate deploy|db push|vercel deploy|vercel promote/.test(workflow));
  assert.match(workflow,/npm run release:preflight/);
  assert.match(workflow,/test "\$runtime" -eq 0 && test "\$release" -eq 0/);

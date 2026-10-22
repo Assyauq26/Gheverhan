@@ -12,13 +12,17 @@ Tanggal: 22 Oktober 2026 (Asia/Jakarta). Baseline input `65a7e1ed169528a0bcdebd9
 
 ## Direct infrastructure evidence
 
-### Vercel — BLOCKED
+### Vercel — akses CLI PASS; integrasi MCP BLOCKED
 
-GET project dengan **explicit teamId `team_TzXXNjuky0A7TUqf1vxHDE77`** masih 403, scope syauqi3. Official get_auth_user berhasil dan mengenali akun `mrifatsyauqi21-1024`; list_teams mengembalikan daftar kosong. Jadi koneksi terautentikasi, tetapi tidak membuktikan otorisasi project/team. SAML/ssoEnforced false pada error; tidak menyimpulkan token expired. Tidak dapat membedakan membership yang kurang vs OAuth team grants yang terfilter tanpa operator. Tidak mencoba account/scope lain atau bypass.
+Update read-only 22 Oktober 2026: Vercel CLI 65.0.0 login sebagai `mrifatsyauqi21-1024`, team `syauqi3` dan project `gheverhan` berhasil diakses. Project ID `prj_J8Fao07yrACLGjiDtY3ftRcLkI2s`, repo `Assyauq26/Gheverhan`, Production branch `main`, root `frontend`, Node `22.x`, framework Next.js. Domain `gheverhan.store` terverifikasi pada deployment READY `dpl_621bV44pjJVzHJ5NuCQNTFU4JEb1`, source `b2d18192d99db379b6894a51abaaded22cc329e0`; bukan source PR #87. Function output yang terlihat memakai `sin1`; region Sandbox `iad1` bukan region runtime function.
 
-Operator perlu memverifikasi koneksi resmi menggunakan akun yang berhak pada Gheverhan di team tersebut dan memberikan akses team/project yang diperlukan. Tool authorize_team_access/authorize_team_sso tidak tersedia pada sesi ini. Tidak meminta token di chat; jika perlu CLI/operator Prisma, gunakan environment secrets resmi.
+Metadata Production mencantumkan DATABASE_URL, DIRECT_URL, JWT_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_PRODUCT_IMAGES_BUCKET, SUPABASE_PAYMENT_PROOFS_BUCKET, STORAGE_APP_NAME, CRON_SECRET, RESEND_API_KEY, PASSWORD_RESET_FROM dan PASSWORD_RESET_BASE_URL. MAINTENANCE_MODE tercantum 0. PRODUCT_MEDIA_CLEANUP_ENABLED tidak tercantum pada daftar Production yang dibaca. Nilai secret tidak dibaca/pull. Presence pada project saat ini tidak membuktikan nilai, pengiriman email, bucket efektif, atau snapshot environment deployment yang sudah dibangun.
 
-Project ID terkini, repo binding, Production/Preview env, deployment protection, branch/auto-deployment, active deployment/domain, selected bucket override dan env presence **belum dapat dibaca**, bukan PASS. `get_auth_user` bukan verifikasi deployment. Environment cloud resmi juga tidak memiliki secret/runtime bindings; release:preflight tidak bisa membuktikan DSN efektif. Account username/IDs bukan secret; email/token tidak dicetak.
+Preview mencantumkan JWT_SECRET dan GHEVERHAN_SHARED_DEV_DATABASE=true. Tidak terlihat DATABASE_URL/DIRECT_URL pada daftar Preview saat ini; ini tidak membuktikan deployment lama kehilangan akses atau seluruh writer terisolasi. Verifikasi snapshot lama dan kontrol writer tetap diperlukan.
+
+MCP Codex memakai global shared endpoint `https://mcp.vercel.com`, streamable HTTP, tetapi Not logged in: callback localhost container remote tidak diterima. Percobaan OAuth berulang dihentikan. Konektor ChatGPT terpisah sebelumnya 403/teams kosong; itu bukan kegagalan akun/operator CLI. MCP integration tetap BLOCKED terpisah dan **bukan syarat wajib akses Vercel** selama jalur CLI berwenang tersedia.
+
+Effective DSN, role/grants aplikasi, selected bucket, deployment protection dan kontrol writer/auto-deployment belum dibuktikan. Tidak ada env pull, linking, perubahan secret atau deployment. Perintah dan target preflight di OPERATOR_READ_ONLY_PREFLIGHT.md.
 
 ### Database — read-only PASS sebagian; activation BLOCKED
 
@@ -43,7 +47,7 @@ Source UI tidak diubah pada remediation ini. Browser CI final mengulang enam vie
 | Cleanup TTL/cancel/tombstone/late PUT/retry/finalized safety | PASS pada disposable | Private fixture + bounded counters + preserved metadata on failure |
 | Cleanup schedule/monitoring/plan quota/live execution | BLOCKED | Dormant endpoint dan runbook disiapkan, tidak ada jadwal/env/invocation Production |
 | Migration SQL dan historical checksum | PASS review/disposable | Additive/nullable, checksum tidak berubah; official Prisma drills |
-| Production target/role/grants/env/preflight | BLOCKED | Vercel 403 dan operator secrets absent; MCP postgres bukan application identity |
+| Production target/role/grants/env/preflight | BLOCKED | CLI PASS; effective target DSN/role dan operator secrets belum tersedia; inspection postgres bukan application identity |
 | High risk assessment | PASS untuk dokumentasi/mitigation evidence; acceptance BLOCKED | Tujuh High tetap dilaporkan, matriks per node di HIGH_RISK_REVIEW.md |
 | Visual reference acceptance | BLOCKED | Membutuhkan screenshot asli editor |
 | CI final | Status aktual pada PR | Seluruh workflow diulang pada HEAD final; tidak mengklaim PASS dari SHA input |
@@ -53,7 +57,7 @@ Source UI tidak diubah pada remediation ini. Browser CI final mengulang enam vie
 
 ## Tindakan operator berurutan
 
-1. Pulihkan official Vercel team/project authorization; verifikasi project/repo/domain/deployment, Production/Preview/writers dan env presence melalui kanal aman. Konfigurasikan credential operator Prisma di environment resmi tanpa chat secret.
+1. Gunakan official Vercel CLI yang sudah terverifikasi; lanjutkan verifikasi effective Production/Preview/writers dan target environment melalui kanal aman. Konfigurasikan credential operator Prisma di environment resmi tanpa chat secret.
 2. Review prosedur private bucket dan berikan approval spesifik hanya setelah compatibility/default/override terbukti; jangan membuka public RLS policy.
 3. Review/accept residual High risk secara eksplisit atau minta migration toolchain terpisah. Source mitigation bukan keputusan pemilik.
 4. Lampirkan original editor screenshots untuk visual acceptance.

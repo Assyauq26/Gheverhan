@@ -15,7 +15,7 @@ Seluruh I/O Storage aplikasi melewati server-only `src/lib/storage.ts` dengan se
 
 Read-only pada project `bztprltkevacidcpjaam`: 18 ProductImage (16 galeri, 2 variasi); 8 proxy aplikasi, 10 external HTTPS, 0 direct public Storage URL, 0 relative legacy lainnya. OrderItem memiliki 0 referensi direct public product bucket; 0 staged-prefix objects. Tidak membaca isi foto, customer identity atau signed URL.
 
-`product-images` masih **public**, `payment-proofs` private; storage.objects RLS enabled dan tidak ada Storage policies. Flag public melewati pembatasan read RLS untuk endpoint publik, sehingga ketiadaan policy bukan perlindungan foto staged. Effective bucket override/service-role aplikasi tetap BLOCKED karena Vercel tidak dapat diakses. Agregat bukan bukti tidak ada URL lama di bookmark/CDN/pihak eksternal.
+`product-images` masih **public**, `payment-proofs` private; storage.objects RLS enabled dan tidak ada Storage policies. Flag public melewati pembatasan read RLS untuk endpoint publik, sehingga ketiadaan policy bukan perlindungan foto staged. Effective bucket override/service-role aplikasi tetap belum terverifikasi: CLI kini dapat diakses, tetapi nilai environment tidak dibaca. Agregat bukan bukti tidak ada URL lama di bookmark/CDN/pihak eksternal.
 
 ## Bukti private-access disposable
 
@@ -25,7 +25,7 @@ Ini **emulator Storage bercredential dengan PostgreSQL nyata**, bukan klaim inte
 
 ## Paket perubahan private bucket untuk approval terpisah
 
-1. Pulihkan akses resmi Vercel; verifikasi project ID, domain, deployment/SHA, actual SUPABASE_URL/ref, selected SUPABASE_PRODUCT_IMAGES_BUCKET (default product-images), role dan service-role presence melalui kanal aman. Jangan hanya memakai nama project.
+1. Gunakan akses CLI resmi yang telah pulih; verifikasi project ID, domain, deployment/SHA, actual SUPABASE_URL/ref, selected SUPABASE_PRODUCT_IMAGES_BUCKET (default product-images), role dan service-role presence melalui kanal aman. Jangan hanya memakai nama project.
 2. Konfirmasi hanya bucket produk target yang berubah dan semua URL aplikasi/default/override kompatibel; review konsumen lain/CDN/cache dan approved dummy probes. Jangan membuka policies atau membuat bucket lain sebagai workaround.
 3. Setelah approval spesifik: ubah **hanya** `product-images.public` true→false melalui dashboard/API resmi yang berwenang. Jangan mengganti bucket/path, memindah/menghapus file, mengganti credential, atau mengubah payment-proofs.
 4. Read-only verifikasi metadata public=false. Dengan dummy yang disetujui, anonymous/public reads harus ditolak; authenticated legacy dan staged proxies tetap berhasil. Jalankan release:preflight dengan identitas/role aplikasi terverifikasi. Uji foto variasi dan histori sebelum membuka writer.

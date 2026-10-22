@@ -69,23 +69,50 @@ jobs:
       - name: Checkout immutable reviewed preflight implementation
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21
+          ref: 5132575e17eabd9b82dc5d6cce88fabc497b9985
           persist-credentials: false
           sparse-checkout: frontend
+      - name: Checkout immutable reviewed operational remediation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: f5e0dde57f258d94c0b226e0c9e7a15fff62a881
+          path: reviewed-ops
+          persist-credentials: false
+          sparse-checkout: |
+            frontend/scripts/release
+            frontend/tests/unit
+            frontend/tests/fixtures/prisma-tls
       - name: Setup Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version: '22.23.4'
       - name: Verify source and prepare pinned dependencies without Production secrets
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
+          test "$(git rev-parse HEAD)" = '5132575e17eabd9b82dc5d6cce88fabc497b9985'
+          test "$(git -C ../reviewed-ops rev-parse HEAD)" = 'f5e0dde57f258d94c0b226e0c9e7a15fff62a881'
+          # Only reviewed diagnostic scripts/tests overlay; candidate schema/ledger/gates stay intact.
+          for script in prisma-transport.mjs prisma-safe-error.mjs runtime-role-probe.mjs run-production-preflight.mjs verify-prisma-installation.mjs preflight-diagnostics.mjs; do
+            cp "../reviewed-ops/frontend/scripts/release/$script" "scripts/release/$script"
+          done
+          cp ../reviewed-ops/frontend/tests/unit/preflight-diagnostics.test.ts tests/unit/
+          cp ../reviewed-ops/frontend/tests/unit/prisma-transport.test.ts tests/unit/
+          cp ../reviewed-ops/frontend/tests/unit/runtime-role-probe.test.ts tests/unit/
+          mkdir -p tests/fixtures/prisma-tls
+          cp ../reviewed-ops/frontend/tests/fixtures/prisma-tls/public-test-ca.txt tests/fixtures/prisma-tls/
+          git diff --exit-code -- prisma src package.json package-lock.json scripts/release/preflight.ts scripts/release/storage-preflight.ts
           npm ci --ignore-scripts --no-audit --no-fund
           npx --no-install prisma generate
+          node scripts/release/verify-prisma-installation.mjs
+          node --check scripts/release/runtime-role-probe.mjs
+          node --input-type=module -e "import {prepareReleaseDiagnostics} from './scripts/release/preflight-diagnostics.mjs'; const restore=prepareReleaseDiagnostics('scripts/release/preflight.ts'); restore();"
+          git diff --exit-code -- scripts/release/preflight.ts
+          npx --no-install vitest run tests/unit/runtime-role-probe.test.ts tests/unit/prisma-transport.test.ts tests/unit/preflight-diagnostics.test.ts
       - name: Read-only runtime/direct identity and full release gate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -101,17 +128,17 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          # Independent checks: missing V2/private Storage must remain BLOCKED.
-          node scripts/release/runtime-role-probe.mjs
-          runtime=$?
-          npm run release:preflight
-          release=$?
+          # Same protected CA file configures BOTH native Prisma connections and npm run release:preflight.
+          # The parent emits allowlisted metadata only; never raw child output/role names.
+          set +e
+          node scripts/release/run-production-preflight.mjs
+          result=$?
           {
             echo '## Production read-only preflight'
-            echo 'Reviewed probe source: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
-            if [ "$runtime" -eq 0 ]; then echo '- Runtime/direct probe: PASS'; else echo '- Runtime/direct probe: BLOCKED (inspect safe metadata above)'; fi
-            if [ "$release" -eq 0 ]; then echo '- Release gate: PASS'; else echo '- Release gate: BLOCKED (ledger/schema/config/Storage remain mandatory)'; fi
-            echo '- GitHub secret bindings do not independently prove deployed Vercel snapshot equality or Preview isolation.'
+            echo 'Reviewed candidate: 5132575e17eabd9b82dc5d6cce88fabc497b9985'
+            echo 'Reviewed operational source: f5e0dde57f258d94c0b226e0c9e7a15fff62a881'
+            if [ "$result" -eq 0 ]; then echo '- All read-only gates: PASS'; else echo '- BLOCKED: inspect separate connection, metadata and full release gate enums above'; fi
+            echo '- GitHub binding names do not prove deployed Vercel parity or Preview writer isolation.'
             echo '- No migration, deployment, Storage write, customer-row read or cleanup executed.'
           } >> "$GITHUB_STEP_SUMMARY"
-          test "$runtime" -eq 0 && test "$release" -eq 0
+          exit "$result"

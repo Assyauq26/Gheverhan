@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 const workflow = readFileSync(new URL('../workflows/production-read-only-preflight.yml', import.meta.url), 'utf8');
 const script = workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n          NODE/)[1];
@@ -28,14 +31,27 @@ test('API denial is BLOCKED and cannot fall through to secret job',async()=>asse
 test('workflow source, credentials and side effects remain bounded',()=>{
  assert.match(workflow,/process.env.GITHUB_REF !== 'refs\/heads\/main'/);
  assert.match(workflow,/needs: protection\n    environment: production-migration/);
- assert.match(workflow,/ref: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21/);
+ assert.match(workflow,/ref: 5132575e17eabd9b82dc5d6cce88fabc497b9985/);
  assert.match(workflow,/persist-credentials: false/);
  const before=workflow.split('- name: Read-only runtime\/direct')[0];
  assert.ok(!before.includes('secrets.'));
  assert.match(before,/npm ci --ignore-scripts/);
+ assert.ok(before.includes("node-version: '22.23.4'"));
+ assert.ok(before.includes('vitest run tests/unit/runtime-role-probe.test.ts'));
  assert.ok(!/pull_request_target|id-token: write|contents: write|upload-artifact|migrate deploy|db push|vercel deploy|vercel promote/.test(workflow));
  assert.match(workflow,/npm run release:preflight/);
- assert.match(workflow,/test "\$runtime" -eq 0 && test "\$release" -eq 0/);
+ assert.ok(workflow.includes('SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}'));
+ assert.ok(workflow.includes('ref: f5e0dde57f258d94c0b226e0c9e7a15fff62a881'));
+ assert.ok(workflow.includes('git -C ../reviewed-ops rev-parse HEAD'));
+ assert.ok(workflow.includes('git diff --exit-code -- prisma src package.json package-lock.json scripts/release/preflight.ts scripts/release/storage-preflight.ts'));
+ assert.ok(workflow.includes('node scripts/release/verify-prisma-installation.mjs'));
+ assert.ok(workflow.includes('node scripts/release/run-production-preflight.mjs'));
+ assert.ok(before.includes('const restore=prepareReleaseDiagnostics'));
+ assert.ok(before.includes('tests/unit/preflight-diagnostics.test.ts'));
+ assert.ok(before.includes('preflight-diagnostics.mjs;'));
+ assert.ok(before.includes('restore();'));
+ assert.match(workflow,/exit "\$result"/);
+ assert.ok(!workflow.includes('SAFE_TRANSPORT_DIAGNOSTIC'));
 });
 
 test('wrong dispatch branch or target fails instead of yielding a skipped green workflow',()=>{
@@ -44,4 +60,21 @@ test('wrong dispatch branch or target fails instead of yielding a skipped green 
   const result=spawnSync(process.execPath,['-e',command],{env:{GITHUB_REF:ref,CONFIRMED_PROJECT_REF:target},encoding:'utf8'});
   assert.equal(result.status,expected);
  }
+});
+
+test('cone checkout rejects individual files and actually installs required overlay directories',()=>{
+ const repo=fileURLToPath(new URL('../../',import.meta.url));
+ const block=workflow.split('- name: Checkout immutable reviewed operational remediation')[1].split('- name: Setup Node 22')[0];
+ const paths=block.split('sparse-checkout: |')[1].trim().split('\n').map(p=>p.trim()).filter(Boolean);
+ assert.deepEqual(paths,['frontend/scripts/release','frontend/tests/unit','frontend/tests/fixtures/prisma-tls']);
+ const dir=mkdtempSync(path.join(tmpdir(),'gheverhan-cone-regression-')),clone=path.join(dir,'clone');
+ const run=args=>spawnSync('git',args,{encoding:'utf8',env:{...process.env,LC_ALL:'C'}});
+ try{
+  assert.equal(run(['clone','--shared','--no-checkout',repo,clone]).status,0);
+  assert.equal(run(['-C',clone,'checkout','--detach','HEAD']).status,0);
+  const negative=run(['-C',clone,'sparse-checkout','set','--cone','frontend/scripts/release','frontend/tests/unit/prisma-transport.test.ts']);
+  assert.notEqual(negative.status,0);assert.match(negative.stderr,/not a directory/);
+  assert.equal(run(['-C',clone,'sparse-checkout','set','--cone',...paths]).status,0);
+  for(const name of ['frontend/scripts/release/run-production-preflight.mjs','frontend/tests/unit/prisma-transport.test.ts','frontend/tests/fixtures/prisma-tls/public-test-ca.txt'])assert.equal(existsSync(path.join(clone,name)),true);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

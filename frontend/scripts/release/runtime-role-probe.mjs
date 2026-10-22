@@ -1,65 +1,28 @@
-/** Operator-only metadata probe. Run from frontend with protected process bindings.
- * No credential retrieval, URL logging, customer reads, migrations or writes.
- */
+/** Official Prisma metadata probe; CA lifetime is owned by the caller. */
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
-const ref = 'bztprltkevacidcpjaam';
-export const inspectRuntimeBinding = raw => {
-  const u = new URL(raw);
-  if (!['postgres:', 'postgresql:'].includes(u.protocol) || u.pathname !== '/postgres' || (u.searchParams.get('schema') || 'public') !== 'public') throw new Error();
-  if (!u.username || u.hash || new Set(u.searchParams.keys()).size !== [...u.searchParams.keys()].length) throw new Error('Unverified binding');
-  const port = u.port || '5432';
-  let mode;
-  if (u.hostname === `db.${ref}.supabase.co` && port === '5432') mode = 'direct';
-  else if (u.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(u.username).endsWith(`.${ref}`) && ['5432','6543'].includes(port)) mode = port === '6543' ? 'transaction-pooler' : 'session-pooler';
-  else throw new Error();
-  // Do not connect if a strict TLS transport policy cannot be proven locally.
-  if (u.searchParams.get('sslmode') !== 'require' || u.searchParams.get('sslaccept') !== 'strict') throw new Error();
-  return mode;
-};
-// Diagnostic fields are strict enums. Never emit Prisma message, stack, URL, host or user.
-const knownPrismaCodes = new Set(['P1000','P1001','P1002','P1003','P1008','P1010','P1011','P1017','P2010','P2024','P2028','P2034']);
-const knownSqlStates = new Set(['28P01','28000','42501','42P01','42883','08006','08P01','53300','57014','0A000']);
-const knownPhases = new Set(['PRISMA_INIT','CONNECT','START_TRANSACTION','SET_READ_ONLY','SET_TIMEOUT','IDENTITY_METADATA','TABLE_GRANTS_METADATA','CONNECTION_CHECK','DISCONNECT','UNEXPECTED']);
-export const safeProbeFailure = (error, phase, connection) => {
-  let rawCode, rawState;
-  try { rawCode = error?.code; rawState = error?.meta?.code; } catch { /* malformed error object */ }
-  return {
-    status:'BLOCKED',
-    reason:'RUNTIME_PROBE_FAILED',
-    connection:connection==='direct'?'direct':'runtime',
-    phase:knownPhases.has(phase)?phase:'UNEXPECTED',
-    prismaCode:knownPrismaCodes.has(rawCode)?rawCode:'UNCLASSIFIED',
-    sqlState:knownSqlStates.has(rawState)?rawState:'UNCLASSIFIED',
-    readOnly:true
-  };
-};
-
-async function main() {
-  if (Number(process.versions.node.split(".")[0]) !== 22) throw new Error();
-  if (!process.env.DATABASE_URL || !process.env.DIRECT_URL) {
-    console.log(JSON.stringify({status:'BLOCKED',reason:'MISSING_PROTECTED_OPERATOR_BINDINGS',readOnly:true}));process.exitCode=1;return;
-  }
-  let runtimeMode, directMode;
-  try {
-    runtimeMode=inspectRuntimeBinding(process.env.DATABASE_URL);directMode=inspectRuntimeBinding(process.env.DIRECT_URL);
-    if(directMode==='transaction-pooler')throw new Error();
-  } catch {
-    console.log(JSON.stringify({status:'BLOCKED',reason:'TARGET_SCHEMA_CONNECTION_MODE_OR_EXPLICIT_STRICT_TLS_NOT_VERIFIED',readOnly:true}));process.exitCode=1;return;
-  }
+import { prepareProductionTransport } from './prisma-transport.mjs';
+import { safeProbeFailure } from './prisma-safe-error.mjs';
+export { inspectRuntimeBinding } from './prisma-transport.mjs';
+export { safeProbeFailure } from './prisma-safe-error.mjs';
+export async function runRuntimeProbe(connections, emit=console.log) {
   const require = createRequire(path.join(process.cwd(),'package.json'));
-  if(require('@prisma/client/package.json').version !== '5.22.0') throw new Error();
+  if(require('@prisma/client/package.json').version !== '5.22.0' || require('prisma/package.json').version !== '5.22.0') throw new Error('Prisma engine version mismatch');
   const {PrismaClient}=require('@prisma/client');
   const results=[];
-  for(const [name,url,mode] of [['runtime',process.env.DATABASE_URL,runtimeMode],['direct',process.env.DIRECT_URL,directMode]]) {
+  let connectionsReady=true;
+  let metadataReady=true;
+  for(const [name,url,mode] of connections.map(c=>[c.name,c.url,c.mode])) {
     let db;
+    let connected=false;
     let phase='PRISMA_INIT';
     try {
       db=new PrismaClient({datasources:{db:{url}},log:[]});
       phase='CONNECT';
       await db.$connect();
+      connected=true;
       phase='START_TRANSACTION';
       const result=await db.$transaction(async tx=>{
         phase='SET_READ_ONLY';
@@ -76,28 +39,38 @@ async function main() {
       },{timeout:10000});
       const identityReady=result.identity.database==='postgres' && result.identity.schema==='public' && result.identity.read_only==='on' && result.identity.schema_usage===true;
       const runtimeContract=result.tables.every(t=>t.present && t.crud && t.rls_enabled && t.rls_active===false);
-      results.push({connection:name,mode,strictTlsRequested:true,identityReady,runtimeContract,...result});
+      const {role,...safeIdentity}=result.identity;
+      results.push({connection:name,mode,strictTlsRequested:true,connectionReady:true,metadataReady:true,identityReady,runtimeContract,identity:{...safeIdentity,roleObserved:typeof role==='string'},tables:result.tables});
     } catch (error) {
-      console.log(JSON.stringify(safeProbeFailure(error,phase,name)));
-      process.exitCode=1;
-      return;
+      emit(JSON.stringify(safeProbeFailure(error,phase,name)));
+      if(!connected)connectionsReady=false;
+      metadataReady=false;
+      results.push({connection:name,connectionReady:connected,metadataReady:false});
     } finally {
       if(db) {
         try { await db.$disconnect(); }
         catch(error) {
-          console.log(JSON.stringify(safeProbeFailure(error,'DISCONNECT',name)));
-          process.exitCode=1;
+          emit(JSON.stringify(safeProbeFailure(error,'DISCONNECT',name)));
+          connectionsReady=false;
         }
       }
     }
-    if(process.exitCode) return;
+
   }
-  const pass=results.every(r=>r.identityReady&&r.runtimeContract);
-  console.log(JSON.stringify({status:pass?'PASS':'BLOCKED',readOnly:true,results,limitations:['Backend TLS reports PostgreSQL hop; pooler client TLS is separately enforced by strict DSN settings and successful Prisma connection.','Does not compare migration ledger, prove deployment snapshot binding or Preview isolation. Run repository release:preflight separately.','Effective role metadata is operator-local; redact if required before sharing. No customer rows read.']},null,2));
-  if(!pass)process.exitCode=1;
+  const contractReady=connectionsReady && metadataReady && results.every(r=>r.identityReady&&r.runtimeContract);
+  emit(JSON.stringify({status:contractReady?'PASS':'BLOCKED',connectionStatus:connectionsReady?'PASS':'BLOCKED',metadataStatus:metadataReady?'PASS':'BLOCKED',contractStatus:contractReady?'PASS':'BLOCKED',readOnly:true,results}));
+  return {connectionsReady,metadataReady,contractReady,results};
 }
-const canonical = value => {
-  const resolved = realpathSync(value);
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
-};
-if(process.argv[1] && canonical(process.argv[1])===canonical(fileURLToPath(import.meta.url))) main().catch(()=>{console.error('Runtime role probe BLOCKED: protected configuration, connection or metadata privilege unavailable; raw error suppressed.');process.exitCode=1;});
+
+async function main() {
+  let transport;
+  try {
+    if(Number(process.versions.node.split('.')[0])!==22) throw new Error('Prisma engine runtime mismatch');
+    transport=prepareProductionTransport(process.env);
+    const result=await runRuntimeProbe(transport.connections);
+    if(!result.contractReady)process.exitCode=1;
+  } catch(error) { console.log(JSON.stringify(safeProbeFailure(error,'PRISMA_INIT','runtime')));process.exitCode=1; }
+  finally {transport?.cleanup();}
+}
+const canonical = value => {const resolved=realpathSync(value);return process.platform==='win32'?resolved.toLowerCase():resolved;};
+if(process.argv[1] && canonical(process.argv[1])===canonical(fileURLToPath(import.meta.url))) main().catch(error=>{console.log(JSON.stringify(safeProbeFailure(error,'UNEXPECTED','runtime')));process.exitCode=1;});

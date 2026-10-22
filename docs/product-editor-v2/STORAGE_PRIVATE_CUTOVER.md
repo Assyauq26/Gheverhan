@@ -1,0 +1,13 @@
+# Storage private cutover gate
+
+Runbook kanonik: STORAGE_PRIVACY_AND_CLEANUP_RUNBOOK.md; tidak menggandakan prosedur. Snapshot 22 Oktober 2026: product-images public=true, 9 objects, 0 staged; payment-proofs private, 4 objects. Tidak membaca isi file/identitas. Inventory ref terakhir 18 ProductImage: 8 proxy aplikasi/10 Unsplash/0 direct public Supabase URL; perlu refresh tepat sebelum perubahan. Tidak ada bukti semua konsumen eksternal/bookmark/CDN telah hilang.
+
+Reader: storefront/list/detail/gallery/variation, cart/checkout/order snapshots memakai ProductImage proxy yang sama. Route mengizinkan published anonymous; nonpublished hanya staff berpermission atau owner cart/order. Path query request bukan otoritas; path dari DB divalidasi terhadap imageId/productId atau staged immutable prefix. Server-only Storage credentials, no public URL generation; cache private/no-store. External HTTPS images bukan Storage dan tidak diubah. Coverage source+disposable di CI bukan proof private Supabase remote.
+
+## Percobaan provider nyata lokal
+
+Dicoba official supabase/storage-api:v1.81.0 (digest 98ffec5d0678803783c30e404c27f4ec65e97efbe014088f2a86b4b8b54b9f54) dengan PostgreSQL 17 disposable. Percobaan awal tertahan disk local 32GB, No space left on device pada storage-schema, rollback startup dan HTTP health 000. Ini **BLOCKED lingkungan**, bukan aplikasi PASS/FAIL. Container/image percobaan dibersihkan, tidak ada state Production berubah. Retry dengan PostgreSQL 17 Alpine dan tmpfs kemudian berhasil: private metadata, actual helper upload/read bytehash legacy+staged, anonymous public/private denial, invalid Bearer, duplicate upload dan delete PASS. Drill reproducible scripts/run-private-storage-drill.mjs memakai image digest pinned; hasil CI final di CI_EVIDENCE.md. Tidak menyimpulkan dari mock.
+
+Provider/helper contract nyata telah PASS lokal; integrasi full route authorization/finalization/cleanup tetap berasal dari suite PostgreSQL/browser memakai fixture. Belum ada bukti end-to-end seluruh route terhadap provider nyata. Target Production dan kompatibilitas efektifnya tetap BLOCKED. Tidak membuat remote staging berbayar atau mengubah bucket Production untuk mencoba.
+
+Cutover setelah approval harus compatibility-first, pilih bucket efektif melalui env operator, verifikasi reader deployment lama atau deploy reader kompatibel dalam maintenance yang disetujui; hentikan writer sebelum schema/deploy. Ubah hanya bucket produk, jangan payment-proofs/policy/path. Immediate probes dengan dummy disetujui, monitoring 404/403/5xx dan provider errors; jika gagal pertahankan private dan roll-forward reader, bukan membuka publik kembali setelah staged media digunakan. Byte yang pernah public/cache tidak dapat ditarik retroaktif.

@@ -72,6 +72,16 @@ jobs:
           ref: 5132575e17eabd9b82dc5d6cce88fabc497b9985
           persist-credentials: false
           sparse-checkout: frontend
+      - name: Checkout immutable reviewed operational remediation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 4e1788d21b272bfafa11a519b7fc3ed63a6c253c
+          path: reviewed-ops
+          persist-credentials: false
+          sparse-checkout: |
+            frontend/scripts/release
+            frontend/tests/unit
+            frontend/tests/fixtures/prisma-tls
       - name: Setup Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -80,10 +90,21 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = '5132575e17eabd9b82dc5d6cce88fabc497b9985'
+          test "$(git -C ../reviewed-ops rev-parse HEAD)" = '4e1788d21b272bfafa11a519b7fc3ed63a6c253c'
+          # Only reviewed diagnostic scripts/tests overlay; candidate schema/ledger/gates stay intact.
+          for script in prisma-transport.mjs prisma-safe-error.mjs runtime-role-probe.mjs run-production-preflight.mjs verify-prisma-installation.mjs; do
+            cp "../reviewed-ops/frontend/scripts/release/$script" "scripts/release/$script"
+          done
+          cp ../reviewed-ops/frontend/tests/unit/prisma-transport.test.ts tests/unit/
+          cp ../reviewed-ops/frontend/tests/unit/runtime-role-probe.test.ts tests/unit/
+          mkdir -p tests/fixtures/prisma-tls
+          cp ../reviewed-ops/frontend/tests/fixtures/prisma-tls/public-test-ca.txt tests/fixtures/prisma-tls/
+          git diff --exit-code -- prisma src package.json package-lock.json scripts/release/preflight.ts scripts/release/storage-preflight.ts
           npm ci --ignore-scripts --no-audit --no-fund
           npx --no-install prisma generate
+          node scripts/release/verify-prisma-installation.mjs
           node --check scripts/release/runtime-role-probe.mjs
-          npx --no-install vitest run tests/unit/runtime-role-probe.test.ts
+          npx --no-install vitest run tests/unit/runtime-role-probe.test.ts tests/unit/prisma-transport.test.ts
       - name: Read-only runtime/direct identity and full release gate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -104,100 +125,17 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          # Safe local DSN-shape classification; never prints raw values, usernames, or hosts.
-          node --input-type=module <<'NODE'
-          const ref = 'bztprltkevacidcpjaam';
-          function classify(raw, isDirect) {
-            if (!raw) return 'MISSING_BINDING';
-            try {
-              const u = new URL(raw);
-              if (!['postgres:', 'postgresql:'].includes(u.protocol) || u.pathname !== '/postgres' || (u.searchParams.get('schema') || 'public') !== 'public') return 'DATABASE_OR_SCHEMA_UNVERIFIED';
-              const keys = [...u.searchParams.keys()];
-              if (!u.username || u.hash || new Set(keys).size !== keys.length) return 'USER_OR_PARAMS_UNVERIFIED';
-              const port = u.port || '5432';
-              const direct = u.hostname === `db.${ref}.supabase.co` && port === '5432';
-              const pool = u.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(u.username).endsWith(`.${ref}`) && ['5432', '6543'].includes(port);
-              if (!direct && !pool) return 'PROJECT_HOST_PORT_UNVERIFIED';
-              if (isDirect && pool && port === '6543') return 'DIRECT_URL_TRANSACTION_POOLER_NOT_ALLOWED';
-              if (u.searchParams.get('sslmode') !== 'require' || u.searchParams.get('sslaccept') !== 'strict') return 'EXPLICIT_STRICT_TLS_OPTIONS_UNVERIFIED';
-              return 'URL_SHAPE_AND_TLS_OPTIONS_PASS';
-            } catch { return 'UNPARSEABLE_BINDING'; }
-          }
-          console.log('SAFE_DSN_DIAGNOSTIC runtime=' + classify(process.env.DATABASE_URL, false));
-          console.log('SAFE_DSN_DIAGNOSTIC direct=' + classify(process.env.DIRECT_URL, true));
-          console.log('SAFE_DSN_DIAGNOSTIC does not establish deployed Vercel binding parity or successful TLS negotiation');
-          NODE
-          # Protected, no-auth network and certificate diagnostics; emit enums only.
-          # No DSN, host, user, IP, cert, raw error or secret is printed.
-          node --input-type=module <<'TRANSPORT'
-          import { lookup } from 'node:dns/promises';
-          import { connect } from 'node:net';
-          import { spawnSync } from 'node:child_process';
-          import { X509Certificate } from 'node:crypto';
-          import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-          import { tmpdir } from 'node:os';
-          import path from 'node:path';
-          const ref='bztprltkevacidcpjaam';
-          const dir=mkdtempSync(path.join(tmpdir(),'gheverhan-tls-check-'));
-          const certPath=path.join(dir,'db-ca.pem');
-          let ca='CA_MISSING';
-          try {
-            let pem=(process.env.SUPABASE_DB_CA_CERT||'').trim();
-            if(pem && pem.length<100000 && !pem.startsWith('-----BEGIN CERTIFICATE-----') && /^[A-Za-z0-9+/=\s]+$/.test(pem)) pem=Buffer.from(pem,'base64').toString('utf8');
-            if(pem && pem.length<100000) {
-              new X509Certificate(pem);
-              writeFileSync(certPath,pem,{mode:0o600});
-              ca='CA_PARSE_PASS';
-            } else if(pem) ca='CA_INVALID';
-          } catch { ca='CA_INVALID'; }
-          try {
-            console.log('SAFE_TRANSPORT_DIAGNOSTIC ca='+ca);
-            for(const [name,raw] of [['runtime',process.env.DATABASE_URL],['direct',process.env.DIRECT_URL]]) {
-              let u;
-              try {
-                u=new URL(raw||'');
-                const port=u.port||'5432';
-                const allowed=(u.hostname===`db.${ref}.supabase.co` && port==='5432') ||
-                  (u.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(u.username).endsWith(`.${ref}`) && ['5432','6543'].includes(port));
-                if(!allowed || !['postgres:','postgresql:'].includes(u.protocol)) throw new Error();
-              } catch { console.log('SAFE_TRANSPORT_DIAGNOSTIC '+name+'=TARGET_NOT_VERIFIED'); continue; }
-              const d=await Promise.all([4,6].map(family=>lookup(u.hostname,{family}).then(()=>true).catch(()=>false)));
-              const dns=d[0]?'IPV4_PRESENT':d[1]?'IPV6_ONLY':'DNS_UNAVAILABLE';
-              const tcp=await new Promise(resolve=>{
-                const socket=connect({host:u.hostname,port:Number(u.port||5432),timeout:4000});
-                let done=false;
-                const finish=state=>{if(done)return;done=true;socket.destroy();resolve(state);};
-                socket.once('connect',()=>finish('TCP_REACHABLE'));
-                socket.once('timeout',()=>finish('TCP_TIMEOUT'));
-                socket.once('error',()=>finish('TCP_UNREACHABLE'));
-              });
-              let tls='TLS_NOT_CHECKED';
-              if(tcp==='TCP_REACHABLE' && ca==='CA_PARSE_PASS') {
-                const cmd=spawnSync('openssl',['s_client','-starttls','postgres','-connect',`${u.hostname}:${u.port||5432}`,'-verify_return_error','-verify_hostname',u.hostname,'-CAfile',certPath,'-brief'],{input:'',stdio:'ignore',timeout:10000});
-                tls=cmd.status===0?'CA_AND_HOSTNAME_VERIFIED':'CA_OR_TLS_UNVERIFIED';
-              }
-              console.log('SAFE_TRANSPORT_DIAGNOSTIC '+name+'='+dns+','+tcp+','+tls);
-            }
-          } finally { rmSync(dir,{force:true,recursive:true}); }
-          TRANSPORT
-          # GitHub bash invokes -e; disable it explicitly to record probe result.
+          # Same protected CA file configures BOTH native Prisma connections and npm run release:preflight.
+          # The parent emits allowlisted metadata only; never raw child output/role names.
           set +e
-          node scripts/release/runtime-role-probe.mjs
-          runtime=$?
-          # Fail closed: do not connect through the full preflight if strict transport and target validation fail.
-          if [ "$runtime" -eq 0 ]; then
-            npm run release:preflight
-            release=$?
-          else
-            release=125
-            echo 'SKIPPED: full release gate requires validated runtime/direct connection bindings'
-          fi
+          node scripts/release/run-production-preflight.mjs
+          result=$?
           {
             echo '## Production read-only preflight'
-            echo 'Reviewed probe source: 5132575e17eabd9b82dc5d6cce88fabc497b9985'
-            if [ "$runtime" -eq 0 ]; then echo '- Runtime/direct probe: PASS'; else echo '- Runtime/direct probe: BLOCKED (inspect safe metadata above)'; fi
-            if [ "$release" -eq 0 ]; then echo '- Release gate: PASS'; elif [ "$release" -eq 125 ]; then echo '- Release gate: SKIPPED (runtime/direct binding validation failed; no unverified connection attempted)'; else echo '- Release gate: BLOCKED (ledger/schema/config/Storage remain mandatory)'; fi
-            echo '- GitHub secret bindings do not independently prove deployed Vercel snapshot equality or Preview isolation.'
+            echo 'Reviewed candidate: 5132575e17eabd9b82dc5d6cce88fabc497b9985'
+            echo 'Reviewed operational source: 4e1788d21b272bfafa11a519b7fc3ed63a6c253c'
+            if [ "$result" -eq 0 ]; then echo '- All read-only gates: PASS'; else echo '- BLOCKED: inspect separate connection, metadata and full release gate enums above'; fi
+            echo '- GitHub binding names do not prove deployed Vercel parity or Preview writer isolation.'
             echo '- No migration, deployment, Storage write, customer-row read or cleanup executed.'
           } >> "$GITHUB_STEP_SUMMARY"
-          test "$runtime" -eq 0 && test "$release" -eq 0
+          exit "$result"

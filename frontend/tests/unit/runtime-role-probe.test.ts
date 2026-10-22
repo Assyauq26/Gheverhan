@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, symlinkSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { inspectRuntimeBinding } from '../../scripts/release/runtime-role-probe.mjs';
+import { inspectRuntimeBinding, safeProbeFailure } from '../../scripts/release/runtime-role-probe.mjs';
 const ref='bztprltkevacidcpjaam';
 const base=`postgresql://dummy:fixture@db.${ref}.supabase.co:5432/postgres?sslmode=require&sslaccept=strict`;
 describe('operator runtime binding probe before any connection',()=>{
@@ -33,5 +33,23 @@ describe('operator runtime binding probe before any connection',()=>{
   const pooled=`postgresql://dummy.${ref}:fixture@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require&sslaccept=strict`;
   const child=spawnSync(process.execPath,['scripts/release/runtime-role-probe.mjs'],{env:{NODE_ENV:"test",PATH:process.env.PATH,DATABASE_URL:base,DIRECT_URL:pooled},encoding:'utf8',timeout:5000});
   expect(child.status).toBe(1);expect(child.stdout).toContain('TARGET_SCHEMA_CONNECTION_MODE_OR_EXPLICIT_STRICT_TLS_NOT_VERIFIED');expect(child.stdout+child.stderr).not.toContain('fixture');expect(child.stdout+child.stderr).not.toContain('postgresql://');
+ });
+});
+
+describe('protected runtime probe safe error classification',()=>{
+ it('classifies known Prisma TLS/auth/query errors without serializing credentials or raw errors',()=>{
+  const leak='postgresql://very-secret:password@example.invalid/postgres?session=secret';
+  for (const [code,phase] of [['P1011','CONNECT'],['P1000','CONNECT'],['P2010','IDENTITY_METADATA']]) {
+    const data=safeProbeFailure({code,message:leak,stack:leak,meta:{code:'42501',details:leak}},phase,'direct');
+    expect(data).toEqual({status:'BLOCKED',reason:'RUNTIME_PROBE_FAILED',connection:'direct',phase,prismaCode:code,sqlState:'42501',readOnly:true});
+    expect(JSON.stringify(data)).not.toContain(leak);
+  }
+ });
+ it('blocks arbitrary error fields, invalid phases and malicious metadata without printing them',()=>{
+  const leak='DO_NOT_LOG_POSTGRES_URL_OR_PASSWORD';
+  const data=safeProbeFailure({code:leak,meta:{code:leak},message:leak,stack:leak},leak,leak);
+  expect(data).toEqual({status:'BLOCKED',reason:'RUNTIME_PROBE_FAILED',connection:'runtime',phase:'UNEXPECTED',prismaCode:'UNCLASSIFIED',sqlState:'UNCLASSIFIED',readOnly:true});
+  expect(JSON.stringify(data)).not.toContain(leak);
+  expect(safeProbeFailure(null,'CONNECT','runtime').prismaCode).toBe('UNCLASSIFIED');
  });
 });

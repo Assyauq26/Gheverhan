@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,14 +67,21 @@ test('cone checkout rejects individual files and actually installs required over
  const block=workflow.split('- name: Checkout immutable reviewed operational remediation')[1].split('- name: Setup Node 22')[0];
  const paths=block.split('sparse-checkout: |')[1].trim().split('\n').map(p=>p.trim()).filter(Boolean);
  assert.deepEqual(paths,['frontend/scripts/release','frontend/tests/unit','frontend/tests/fixtures/prisma-tls']);
- const dir=mkdtempSync(path.join(tmpdir(),'gheverhan-cone-regression-')),clone=path.join(dir,'clone');
+ const dir=mkdtempSync(path.join(tmpdir(),'gheverhan-cone-regression-')),clone=path.join(dir,'clone'),fixture=path.join(dir,'fixture');
+ const files=['frontend/scripts/release/run-production-preflight.mjs','frontend/tests/unit/prisma-transport.test.ts','frontend/tests/fixtures/prisma-tls/public-test-ca.txt'];
  const run=args=>spawnSync('git',args,{encoding:'utf8',env:{...process.env,LC_ALL:'C'}});
  try{
-  assert.equal(run(['clone','--shared','--no-checkout',repo,clone]).status,0);
+  // Actions may use a shallow/promisor checkout; the Git behavior fixture must not
+  // clone that transport-specific object store or depend on its network/auth state.
+  mkdirSync(fixture);assert.equal(run(['init',fixture]).status,0);
+  for(const name of files){assert.equal(existsSync(path.join(repo,name)),true);mkdirSync(path.dirname(path.join(fixture,name)),{recursive:true});writeFileSync(path.join(fixture,name),readFileSync(path.join(repo,name)));}
+  assert.equal(run(['-C',fixture,'add','.']).status,0);
+  assert.equal(run(['-C',fixture,'-c','user.name=Git fixture','-c','user.email=fixture@example.invalid','commit','-m','Public cone checkout fixture']).status,0);
+  assert.equal(run(['clone','--shared','--no-checkout',fixture,clone]).status,0);
   assert.equal(run(['-C',clone,'checkout','--detach','HEAD']).status,0);
   const negative=run(['-C',clone,'sparse-checkout','set','--cone','frontend/scripts/release','frontend/tests/unit/prisma-transport.test.ts']);
   assert.notEqual(negative.status,0);assert.match(negative.stderr,/not a directory/);
   assert.equal(run(['-C',clone,'sparse-checkout','set','--cone',...paths]).status,0);
-  for(const name of ['frontend/scripts/release/run-production-preflight.mjs','frontend/tests/unit/prisma-transport.test.ts','frontend/tests/fixtures/prisma-tls/public-test-ca.txt'])assert.equal(existsSync(path.join(clone,name)),true);
+  for(const name of files){assert.equal(existsSync(path.join(clone,name)),true);assert.deepEqual(readFileSync(path.join(clone,name)),readFileSync(path.join(repo,name)));}
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

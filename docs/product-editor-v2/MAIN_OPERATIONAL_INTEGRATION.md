@@ -21,3 +21,7 @@ Protected read-only run `39873649870` pada main parent berhasil menampilkan full
 PR #93 HEAD CI: 336 unit,25 containment,9 mitigation,11 policy,30 targeted,12 TLS controls PASS; full PostgreSQL/browser/production build PASS; artifact 10x44 satu SHA/build,0 pageErrors/0 hydrationErrors.
 
 HEAD integrasi PR #87 dan CI final dicatat pada body PR setelah push. Jangan memakai hasil parent 5132575 sebagai bukti HEAD gabungan. Tidak merge #87, migrate, deploy, private-bucket, credential changes atau cleanup activation. NO-GO tetap berlaku sampai gate runtime parity, Preview writer isolation, migration/private Storage, visual sign-off dan residual dependency risk/operational approvals selesai.
+
+## Regression fixture setelah integrasi
+
+Run 39874569804 mendeteksi test cone Git berhenti pada clone --shared dari checkout Actions (Git 2.55, exit128), sebelum assertion cone. Fixture lama bergantung pada object store/transport repo sumber; pada clone sparse/shallow lokal Git2.52 kegagalan rendah tersebut tidak terulang. Fixture diperbaiki menggunakan repo Git mandiri berisi tiga file publik yang benar-benar ada pada checkout sumber. Tetap menjalankan Git cone asli: regular file harus ditolak, containing directories harus berhasil, dan bytes ketiga file dibandingkan dengan checkout sumber. Tidak skip/memperlemah assertion dan tidak mengubah gate Production. Seluruh11 assertion PASS lokal, termasuk rehearsal pada checkout shallow+sparse aktual; hasil Git2.55/CI final dicatat pada PR.

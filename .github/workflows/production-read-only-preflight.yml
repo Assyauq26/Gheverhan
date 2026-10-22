@@ -88,6 +88,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -126,6 +127,59 @@ jobs:
           console.log('SAFE_DSN_DIAGNOSTIC direct=' + classify(process.env.DIRECT_URL, true));
           console.log('SAFE_DSN_DIAGNOSTIC does not establish deployed Vercel binding parity or successful TLS negotiation');
           NODE
+          # Protected, no-auth network and certificate diagnostics; emit enums only.
+          # No DSN, host, user, IP, cert, raw error or secret is printed.
+          node --input-type=module <<'TRANSPORT'
+          import { lookup } from 'node:dns/promises';
+          import { connect } from 'node:net';
+          import { spawnSync } from 'node:child_process';
+          import { X509Certificate } from 'node:crypto';
+          import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+          import { tmpdir } from 'node:os';
+          import path from 'node:path';
+          const ref='bztprltkevacidcpjaam';
+          const dir=mkdtempSync(path.join(tmpdir(),'gheverhan-tls-check-'));
+          const certPath=path.join(dir,'db-ca.pem');
+          let ca='CA_MISSING';
+          try {
+            let pem=(process.env.SUPABASE_DB_CA_CERT||'').trim();
+            if(pem && pem.length<100000 && !pem.startsWith('-----BEGIN CERTIFICATE-----') && /^[A-Za-z0-9+/=\\s]+$/.test(pem)) pem=Buffer.from(pem,'base64').toString('utf8');
+            if(pem && pem.length<100000) {
+              new X509Certificate(pem);
+              writeFileSync(certPath,pem,{mode:0o600});
+              ca='CA_PARSE_PASS';
+            } else if(pem) ca='CA_INVALID';
+          } catch { ca='CA_INVALID'; }
+          try {
+            console.log('SAFE_TRANSPORT_DIAGNOSTIC ca='+ca);
+            for(const [name,raw] of [['runtime',process.env.DATABASE_URL],['direct',process.env.DIRECT_URL]]) {
+              let u;
+              try {
+                u=new URL(raw||'');
+                const port=u.port||'5432';
+                const allowed=(u.hostname===`db.${ref}.supabase.co` && port==='5432') ||
+                  (u.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(u.username).endsWith(`.${ref}`) && ['5432','6543'].includes(port));
+                if(!allowed || !['postgres:','postgresql:'].includes(u.protocol)) throw new Error();
+              } catch { console.log('SAFE_TRANSPORT_DIAGNOSTIC '+name+'=TARGET_NOT_VERIFIED'); continue; }
+              const d=await Promise.all([4,6].map(family=>lookup(u.hostname,{family}).then(()=>true).catch(()=>false)));
+              const dns=d[0]?'IPV4_PRESENT':d[1]?'IPV6_ONLY':'DNS_UNAVAILABLE';
+              const tcp=await new Promise(resolve=>{
+                const socket=connect({host:u.hostname,port:Number(u.port||5432),timeout:4000});
+                let done=false;
+                const finish=state=>{if(done)return;done=true;socket.destroy();resolve(state);};
+                socket.once('connect',()=>finish('TCP_REACHABLE'));
+                socket.once('timeout',()=>finish('TCP_TIMEOUT'));
+                socket.once('error',()=>finish('TCP_UNREACHABLE'));
+              });
+              let tls='TLS_NOT_CHECKED';
+              if(tcp==='TCP_REACHABLE' && ca==='CA_PARSE_PASS') {
+                const cmd=spawnSync('openssl',['s_client','-starttls','postgres','-connect',`${u.hostname}:${u.port||5432}`,'-verify_return_error','-verify_hostname',u.hostname,'-CAfile',certPath,'-brief'],{input:'',stdio:'ignore',timeout:10000});
+                tls=cmd.status===0?'CA_AND_HOSTNAME_VERIFIED':'CA_OR_TLS_UNVERIFIED';
+              }
+              console.log('SAFE_TRANSPORT_DIAGNOSTIC '+name+'='+dns+','+tcp+','+tls);
+            }
+          } finally { rmSync(dir,{force:true,recursive:true}); }
+          TRANSPORT
           # GitHub bash invokes -e; disable it explicitly to record probe result.
           set +e
           node scripts/release/runtime-role-probe.mjs

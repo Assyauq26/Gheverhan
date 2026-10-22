@@ -64,3 +64,15 @@ describe('full release report redaction and fail-closed gate',()=>{
  });
  it('rejects malformed/incomplete PASS and raw subprocess errors',()=>{for(const out of ['secret-sentinel',JSON.stringify({status:'PASS'}),''])expect(safeReleaseReport(out).status).toBe('BLOCKED');});
 });
+
+describe('safe candidate preflight failure instrumentation',()=>{
+ it('preserves typed SQL errors without raw messages, roles or arbitrary fields',()=>{
+  const out=safeReleaseReport(JSON.stringify({status:'BLOCKED',reason:'RUNTIME_PROBE_FAILED',prismaCode:'P2010',sqlState:'42883',category:base,message:base,role:'secret-sentinel'}));
+  expect(out.status).toBe('BLOCKED');expect('category' in out && out.category).toBe('SQL_METADATA_QUERY_FAILED');
+  expect('sqlState' in out && out.sqlState).toBe('42883');expect(JSON.stringify(out)).not.toContain('secret-sentinel');expect(JSON.stringify(out)).not.toContain('postgresql://');
+ });
+ it('never accepts forged PASS or unknown diagnostic codes',()=>{
+  const out=safeReleaseReport(JSON.stringify({status:'PASS',reason:'RUNTIME_PROBE_FAILED',prismaCode:base,sqlState:base}));
+  expect(out.status).toBe('BLOCKED');expect(JSON.stringify(out)).not.toContain('postgresql://');
+ });
+});

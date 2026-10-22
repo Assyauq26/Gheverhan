@@ -5,6 +5,7 @@ on:
       - 'frontend/scripts/release/**'
       - 'frontend/tests/unit/*prisma*'
       - 'frontend/tests/unit/runtime-role-probe.test.ts'
+      - 'frontend/tests/unit/preflight-diagnostics.test.ts'
       - 'frontend/tests/integration/prisma-tls.test.mjs'
       - 'frontend/tests/fixtures/prisma-tls/**'
       - '.github/workflows/prisma-tls-regression.yml'
@@ -40,6 +41,6 @@ jobs:
           npx --no-install prisma generate
           node scripts/release/verify-prisma-installation.mjs
       - name: Safe diagnostics and CA binding unit regressions
-        run: npx --no-install vitest run tests/unit/prisma-transport.test.ts tests/unit/runtime-role-probe.test.ts
+        run: npx --no-install vitest run tests/unit/prisma-transport.test.ts tests/unit/runtime-role-probe.test.ts tests/unit/preflight-diagnostics.test.ts
       - name: TLS CA, hostname, SCRAM, engine and metadata controls on disposable PostgreSQL
         run: bash ../.github/scripts/run-prisma-tls-fixture.sh

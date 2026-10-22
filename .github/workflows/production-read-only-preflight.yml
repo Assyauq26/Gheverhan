@@ -143,7 +143,7 @@ jobs:
           let ca='CA_MISSING';
           try {
             let pem=(process.env.SUPABASE_DB_CA_CERT||'').trim();
-            if(pem && pem.length<100000 && !pem.startsWith('-----BEGIN CERTIFICATE-----') && /^[A-Za-z0-9+/=\\s]+$/.test(pem)) pem=Buffer.from(pem,'base64').toString('utf8');
+            if(pem && pem.length<100000 && !pem.startsWith('-----BEGIN CERTIFICATE-----') && /^[A-Za-z0-9+/=\s]+$/.test(pem)) pem=Buffer.from(pem,'base64').toString('utf8');
             if(pem && pem.length<100000) {
               new X509Certificate(pem);
               writeFileSync(certPath,pem,{mode:0o600});

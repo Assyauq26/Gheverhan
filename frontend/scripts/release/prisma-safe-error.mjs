@@ -24,8 +24,8 @@ export function safeProbeFailure(error, phase, connection) {
   else if (prismaCode === 'P1010' || sqlState === '42501') category = 'POSTGRES_PRIVILEGE_DENIED';
   else if (['26000','42P05','08P01','0A000'].includes(sqlState)) category = 'CONNECTION_MODE_OR_STATEMENT_FAILURE';
   else if (['42P01','42703','42883'].includes(sqlState) || ['P2021','P2022'].includes(prismaCode)) category = 'SQL_METADATA_QUERY_FAILED';
+  else if (name === 'PrismaClientRustPanicError') category = 'PRISMA_ENGINE_STARTUP_FAILED';
   else if (/query.engine|libquery_engine|dlopen|shared library|cannot find module|could not load.*engine|Unable to require/i.test(message)) category = 'PRISMA_ENGINE_LOAD_FAILED';
   else if (name === 'PrismaClientInitializationError') category = 'PRISMA_CLIENT_INITIALIZATION_FAILED';
-  else if (name === 'PrismaClientRustPanicError') category = 'PRISMA_ENGINE_STARTUP_FAILED';
   return {status:'BLOCKED',reason:'RUNTIME_PROBE_FAILED',category,connection:connection==='direct'?'direct':'runtime',phase:phases.has(phase)?phase:'UNEXPECTED',prismaCode,sqlState,readOnly:true};
 }

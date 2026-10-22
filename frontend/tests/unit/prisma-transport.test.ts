@@ -36,6 +36,10 @@ describe('safe Prisma classification',()=>{
   expect(safeProbeFailure({message:'Could not load libquery_engine /secret-sentinel'},'PRISMA_INIT','runtime').category).toBe('PRISMA_ENGINE_LOAD_FAILED');
   expect(safeProbeFailure({name:'PrismaClientRustPanicError'},'CONNECT','runtime').category).toBe('PRISMA_ENGINE_STARTUP_FAILED');
  });
+ it('prioritizes a typed engine panic over generic engine words in its private message',()=>{
+  const result=safeProbeFailure({name:'PrismaClientRustPanicError',message:'Query Engine panic synthetic-secret'},'CONNECT','runtime');
+  expect(result.category).toBe('PRISMA_ENGINE_STARTUP_FAILED');expect(JSON.stringify(result)).not.toContain('synthetic-secret');
+ });
  it('classifies typed DNS and network causes without inferring them from arbitrary text',()=>{
   for(const [code,category] of [['ENOTFOUND','DNS_LOOKUP_FAILED'],['EAI_AGAIN','DNS_LOOKUP_FAILED'],['ETIMEDOUT','CONNECTION_TIMEOUT'],['ECONNREFUSED','NETWORK_UNREACHABLE']])expect(safeProbeFailure({cause:{code}},'CONNECT','runtime').category).toBe(category);
  });

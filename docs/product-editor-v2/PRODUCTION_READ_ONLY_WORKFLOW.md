@@ -10,7 +10,7 @@ Daftar repository secrets dan environment secrets mengembalikan **403 Resource n
 
 ## Kontrak workflow
 
-- Hanya workflow_dispatch dari main dengan project_ref tepat `bztprltkevacidcpjaam`; ref feature/tag ditolak.
+- Hanya workflow_dispatch dari main dengan project_ref tepat `bztprltkevacidcpjaam`; ref feature/tag atau target salah menghasilkan failure eksplisit sebelum credential job, bukan skipped workflow hijau.
 - Job protection tanpa Production secret memverifikasi required reviewer, larangan self-review/admin bypass, dan hanya branch main. Kegagalan API/permission/metadata berarti BLOCKED. Token GitHub job ini hanya contents:read/actions:read; tidak memakai PAT tambahan untuk menutupi 403.
 - Job preflight depends-on protection dan menunggu approval environment `production-migration`. Owner/dispatcher tidak dapat menyetujui sendiri; reviewer independen harus tersedia.
 - Checkout immutable **2069bdeae3ab74fabd640b23b71d5c7f073f7f21**, yang telah lulus kedua workflow dan memuat perbaikan ALL privileges. Tidak menerima source SHA/ref dari input dispatcher. Pembaruan pin memerlukan code review dan CI baru.

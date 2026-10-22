@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 const workflow = readFileSync(new URL('../workflows/production-read-only-preflight.yml', import.meta.url), 'utf8');
 const script = workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n          NODE/)[1];
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -25,7 +26,7 @@ test('blocks wildcard, tag, extra branch and missing branch policy',async()=>{
 });
 test('API denial is BLOCKED and cannot fall through to secret job',async()=>assert.equal(await execute(validEnvironment,validPolicies,true),1));
 test('workflow source, credentials and side effects remain bounded',()=>{
- assert.match(workflow,/github.ref == 'refs\/heads\/main'/);
+ assert.match(workflow,/process.env.GITHUB_REF !== 'refs\/heads\/main'/);
  assert.match(workflow,/needs: protection\n    environment: production-migration/);
  assert.match(workflow,/ref: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21/);
  assert.match(workflow,/persist-credentials: false/);
@@ -35,4 +36,12 @@ test('workflow source, credentials and side effects remain bounded',()=>{
  assert.ok(!/pull_request_target|id-token: write|contents: write|upload-artifact|migrate deploy|db push|vercel deploy|vercel promote/.test(workflow));
  assert.match(workflow,/npm run release:preflight/);
  assert.match(workflow,/test "\$runtime" -eq 0 && test "\$release" -eq 0/);
+});
+
+test('wrong dispatch branch or target fails instead of yielding a skipped green workflow',()=>{
+ const command=workflow.match(/node -e "([^"\n]+)"/)[1];
+ for(const [ref,target,expected] of [['refs/heads/main','bztprltkevacidcpjaam',0],['refs/heads/feature','bztprltkevacidcpjaam',1],['refs/heads/main','wrong-target',1],['refs/tags/main','bztprltkevacidcpjaam',1]]){
+  const result=spawnSync(process.execPath,['-e',command],{env:{GITHUB_REF:ref,CONFIRMED_PROJECT_REF:target},encoding:'utf8'});
+  assert.equal(result.status,expected);
+ }
 });

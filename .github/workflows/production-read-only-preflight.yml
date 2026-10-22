@@ -1,0 +1,117 @@
+name: Production read-only release preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Confirm approved Supabase project ref (read-only only)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-production-read-only-preflight
+  cancel-in-progress: false
+
+jobs:
+  protection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Reject unapproved dispatch target before any credential job
+        env:
+          CONFIRMED_PROJECT_REF: ${{ inputs.project_ref }}
+        run: |
+          node -e "if (process.env.GITHUB_REF !== 'refs/heads/main' || process.env.CONFIRMED_PROJECT_REF !== 'bztprltkevacidcpjaam') { console.error('BLOCKED: unapproved dispatch branch or target'); process.exit(1); }"
+      - name: Verify environment protection without Production credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          // Kept inline so this gate never executes a dispatch-selected checkout.
+          const base = 'https://api.github.com/repos/Assyauq26/Gheverhan/environments/production-migration';
+          async function get(url) {
+            const response = await fetch(url, { headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, redirect: 'error' });
+            if (!response.ok) throw new Error('Environment metadata unavailable');
+            return response.json();
+          }
+          try {
+            const environment = await get(base);
+            const policies = await get(base + '/deployment-branch-policies');
+            const reviewer = environment.protection_rules?.find(rule => rule.type === 'required_reviewers');
+            const ready = environment.can_admins_bypass === false && reviewer?.prevent_self_review === true && reviewer.reviewers?.length > 0 &&
+              environment.deployment_branch_policy?.custom_branch_policies === true && environment.deployment_branch_policy?.protected_branches === false &&
+              policies.branch_policies?.length === 1 && policies.branch_policies[0].name === 'main' && policies.branch_policies[0].type === 'branch';
+            if (!ready) throw new Error('Required protection unverified');
+            console.log('PASS: reviewer, no self-review/admin bypass, main-only environment');
+          } catch {
+            console.error('BLOCKED: cannot verify required environment protection; no Production credentials loaded');
+            process.exitCode = 1;
+          }
+          NODE
+
+  preflight:
+    needs: protection
+    environment: production-migration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout immutable reviewed preflight implementation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21
+          persist-credentials: false
+          sparse-checkout: frontend
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify source and prepare pinned dependencies without Production secrets
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx --no-install prisma generate
+      - name: Read-only runtime/direct identity and full release gate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          PASSWORD_RESET_FROM: ${{ secrets.PASSWORD_RESET_FROM }}
+          PASSWORD_RESET_BASE_URL: ${{ secrets.PASSWORD_RESET_BASE_URL }}
+          MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE }}
+          SUPABASE_PRODUCT_IMAGES_BUCKET: ${{ vars.SUPABASE_PRODUCT_IMAGES_BUCKET }}
+          R21_EXPECTED_SUPABASE_REF: bztprltkevacidcpjaam
+          R21_ALLOW_PRODUCTION_READ_ONLY: '1'
+          GHEVERHAN_ISOLATED_TESTS: '0'
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Independent checks: missing V2/private Storage must remain BLOCKED.
+          node scripts/release/runtime-role-probe.mjs
+          runtime=$?
+          npm run release:preflight
+          release=$?
+          {
+            echo '## Production read-only preflight'
+            echo 'Reviewed probe source: 2069bdeae3ab74fabd640b23b71d5c7f073f7f21'
+            if [ "$runtime" -eq 0 ]; then echo '- Runtime/direct probe: PASS'; else echo '- Runtime/direct probe: BLOCKED (inspect safe metadata above)'; fi
+            if [ "$release" -eq 0 ]; then echo '- Release gate: PASS'; else echo '- Release gate: BLOCKED (ledger/schema/config/Storage remain mandatory)'; fi
+            echo '- GitHub secret bindings do not independently prove deployed Vercel snapshot equality or Preview isolation.'
+            echo '- No migration, deployment, Storage write, customer-row read or cleanup executed.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$runtime" -eq 0 && test "$release" -eq 0

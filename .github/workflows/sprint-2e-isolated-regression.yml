@@ -88,6 +88,9 @@ jobs:
           echo 'module.exports = {};' > node_modules/server-only/index.js
           git show HEAD:frontend/next-env.d.ts > next-env.d.ts
 
+      - name: Real private Supabase Storage API provider contract on disposable containers
+        run: node scripts/run-private-storage-drill.mjs
+
       - name: Direct database entrypoint safety in a disposable local schema
         run: node --import tsx --test tests/integration/database-entrypoints.test.ts
 

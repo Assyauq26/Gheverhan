@@ -15,6 +15,23 @@ it("accepts only an explicitly private matching bucket using a bounded read-only
   expect(options.method).toBeUndefined();
   expect(options.redirect).toBe("error");
   expect(options.signal).toBeInstanceOf(AbortSignal);
+  expect(options.headers).toEqual({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` });
+});
+it("uses the same modern key policy as runtime Storage without a Bearer JWT", async () => {
+  const key = ["sb", "secret", "preflight-fixture"].join("_");
+  const probe = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "product-images", public: false })));
+  vi.stubGlobal("fetch", probe);
+  expect((await verifyPrivateProductBucket({ ...env, SUPABASE_SERVICE_ROLE_KEY: key })).status).toBe("PASS");
+  expect(probe.mock.calls[0][1].headers).toEqual({ apikey: key });
+});
+it("rejects a publishable key without sending a privileged metadata request", async () => {
+  const probe = vi.fn();
+  vi.stubGlobal("fetch", probe);
+  const key = ["sb", "publishable", "preflight-fixture"].join("_");
+  const result = await verifyPrivateProductBucket({ ...env, SUPABASE_SERVICE_ROLE_KEY: key });
+  expect(result.status).toBe("BLOCKED");
+  expect(probe).not.toHaveBeenCalled();
+  expect(JSON.stringify(result)).not.toContain(key);
 });
 it("rejects public, missing privacy flags and mismatched buckets without disclosing provider bodies", async () => {
   for (const body of [{ id: "product-images", public: true }, { id: "product-images" }, { id: "other", public: false }]) {

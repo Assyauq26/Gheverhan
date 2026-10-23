@@ -6,7 +6,9 @@ import { rootCertificates } from "node:tls";
 import { prismaRuntimeDatasourceUrl } from "../../src/lib/prisma-runtime-tls";
 
 const ref = "bztprltkevacidcpjaam";
+const previewRef = "abcdefghijklmnopqrst";
 const base = "postgresql://postgres." + ref + ":only-a-fixture@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require&sslaccept=strict&schema=public";
+const previewBase = base.replace("postgres." + ref + ":", "postgres." + previewRef + ":");
 const ca = rootCertificates.find(pem => {
   const cert = new X509Certificate(pem);
   return cert.ca && Date.now() >= Date.parse(cert.validFrom) && Date.now() <= Date.parse(cert.validTo);
@@ -15,8 +17,10 @@ const created: string[] = [];
 afterEach(() => { for (const file of created.splice(0)) rmSync(path.dirname(file), { recursive: true, force: true }); });
 const bind = (DATABASE_URL = base, SUPABASE_DB_CA_CERT: string | undefined = ca, VERCEL_ENV = "production") =>
   prismaRuntimeDatasourceUrl({ DATABASE_URL, SUPABASE_DB_CA_CERT, VERCEL_ENV });
+const preview = (DATABASE_URL: string | undefined = previewBase, SUPABASE_DB_CA_CERT: string | undefined = ca, GHEVERHAN_PREVIEW_SUPABASE_REF: string | undefined = previewRef, GHEVERHAN_SHARED_DEV_DATABASE?: string) =>
+  prismaRuntimeDatasourceUrl({ DATABASE_URL, SUPABASE_DB_CA_CERT, GHEVERHAN_PREVIEW_SUPABASE_REF, GHEVERHAN_SHARED_DEV_DATABASE, VERCEL_ENV: "preview" });
 
-describe("Prisma 5 production TLS trust binding", () => {
+describe("Prisma 5 production and isolated Preview TLS trust binding", () => {
   it("rejects a missing CA in production before opening a connection", () => {
     expect(() => prismaRuntimeDatasourceUrl({ DATABASE_URL: base, VERCEL_ENV: "production" })).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
   });
@@ -36,8 +40,30 @@ describe("Prisma 5 production TLS trust binding", () => {
     expect(url.username).toBe("postgres." + ref);
     expect(url.password).toBe("only-a-fixture");
   });
-  it("does not force Production CA on unconfigured Preview", () => {
-    expect(prismaRuntimeDatasourceUrl({ DATABASE_URL: base, VERCEL_ENV: "preview" })).toBeUndefined();
+  it("requires a reviewed CA for Preview, and accepts only its own explicitly isolated project", () => {
+    expect(() => preview(previewBase, undefined)).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
+    const url = new URL(preview()!);
+    const file = url.searchParams.get("sslcert")!;
+    created.push(file);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(readFileSync(file, "utf8")).toBe(ca.trim() + "\n");
+    expect(url.username).toBe("postgres." + previewRef);
+    expect(url.searchParams.get("pgbouncer")).toBe("true");
+  });
+  it("rejects shared and off-target Preview databases without leaking a DSN", () => {
+    for (const invoke of [
+      () => preview(base),
+      () => preview(previewBase, ca, ref),
+      () => preview(previewBase, ca, undefined),
+      () => preview(previewBase, ca, previewRef, "true"),
+      () => preview(previewBase.replace("sslaccept=strict", "sslaccept=accept_invalid_certs")),
+      () => preview(previewBase + "&host=alternate.invalid"),
+    ]) {
+      expect(invoke).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
+    }
+  });
+  it("does not force a CA override on unconfigured local execution", () => {
+    expect(prismaRuntimeDatasourceUrl({ DATABASE_URL: base, VERCEL_ENV: "development" })).toBeUndefined();
   });
   it.each([
     base.replace("sslaccept=strict", "sslaccept=accept_invalid_certs"),
@@ -52,7 +78,7 @@ describe("Prisma 5 production TLS trust binding", () => {
     base + "&host=%2Ftmp%2Ffixture-postgres-socket",
     base + "&h%6fst=unexpected.invalid",
     base.replace("." + ref + ":", ".otherproject:"),
-  ])("rejects unsafe or off-target datasource bindings", DATABASE_URL => {
+  ])("rejects unsafe or off-target Production datasource bindings", DATABASE_URL => {
     expect(() => bind(DATABASE_URL)).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
   });
   it("rejects non-certificate data without dumping raw input", () => {

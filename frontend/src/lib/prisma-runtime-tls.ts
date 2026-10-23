@@ -35,17 +35,17 @@ function checkedCa(input: string | undefined): string {
   return blocks.join("\n") + "\n";
 }
 
-function checkedDatabaseUrl(raw: string | undefined): URL {
-  if (!raw) return failure();
+function checkedDatabaseUrl(raw: string | undefined, ref: string): URL {
+  if (!raw || !/^[a-z0-9]{20}$/.test(ref)) return failure();
   try {
     const url = new URL(raw);
     const keys = [...url.searchParams.keys()];
     const hostname = url.hostname.toLowerCase();
     const username = decodeURIComponent(url.username);
-    const direct = hostname === "db." + PROJECT_REF + ".supabase.co" &&
+    const direct = hostname === "db." + ref + ".supabase.co" &&
       (url.port || "5432") === "5432" && username === "postgres";
     const pooler = hostname === SHARED_POOLER && ["5432", "6543"].includes(url.port) &&
-      username === "postgres." + PROJECT_REF;
+      username === "postgres." + ref;
     const flag = url.searchParams.getAll("pgbouncer");
     // Prisma 5.22 gives ?host= precedence over URL.hostname, including socket paths.
     // Reject it so validation and the native engine select the same endpoint.
@@ -60,13 +60,18 @@ function checkedDatabaseUrl(raw: string | undefined): URL {
 }
 
 /**
- * Vercel Production always fails closed without an explicitly supplied CA.
- * In other environments, an optional CA triggers the same strict validation.
- * The returned CA file must remain alive for the full PrismaClient process lifetime.
+ * Vercel Production and explicitly isolated Preview both fail closed without
+ * their own reviewed CA binding. Production still targets the fixed project.
+ * Preview may use only the distinct ref already validated by preview-db-guard.
+ * Keep the CA file alive for the full PrismaClient process lifetime.
  */
 export function prismaRuntimeDatasourceUrl(env: Env): string | undefined {
-  if (env.VERCEL_ENV !== "production" && !env.SUPABASE_DB_CA_CERT) return undefined;
-  const url = checkedDatabaseUrl(env.DATABASE_URL);
+  const preview = env.VERCEL_ENV === "preview";
+  const production = env.VERCEL_ENV === "production";
+  if (!production && !preview && !env.SUPABASE_DB_CA_CERT) return undefined;
+  const ref = preview ? env.GHEVERHAN_PREVIEW_SUPABASE_REF?.trim() || "" : PROJECT_REF;
+  if (preview && (ref === PROJECT_REF || env.GHEVERHAN_SHARED_DEV_DATABASE === "true")) return failure();
+  const url = checkedDatabaseUrl(env.DATABASE_URL, ref);
   const pem = checkedCa(env.SUPABASE_DB_CA_CERT);
   const dir = mkdtempSync(path.join(tmpdir(), "gheverhan-prisma-runtime-ca-"));
   try {

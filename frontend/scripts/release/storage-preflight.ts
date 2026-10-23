@@ -1,3 +1,5 @@
+import { storageAuthHeaders } from "../../src/lib/storage-auth-headers";
+
 /** Read-only metadata probe. Never returns provider bodies or credentials. */
 export async function verifyPrivateProductBucket(
   env: Record<string, string | undefined>,
@@ -14,7 +16,7 @@ export async function verifyPrivateProductBucket(
   ) return { status: "BLOCKED", reason: "STORAGE_TARGET_UNVERIFIED" };
   try {
     const response = await fetch(`${origin}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      headers: storageAuthHeaders(key),
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
       redirect: "error",

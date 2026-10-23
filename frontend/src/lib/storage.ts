@@ -1,5 +1,6 @@
 import "server-only";
 import { resolveStorageObject, type StorageBucket } from "./storage-path";
+import { storageAuthHeaders } from "./storage-auth-headers";
 
 export const STORAGE_APP = process.env.STORAGE_APP_NAME || "gheverhan";
 
@@ -42,8 +43,7 @@ function objectUrl(bucket: StorageBucket, key: string): string {
 function headers(contentType?: string): HeadersInit {
   const { key } = config();
   return {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
+    ...storageAuthHeaders(key),
     ...(contentType ? { "Content-Type": contentType } : {}),
   };
 }

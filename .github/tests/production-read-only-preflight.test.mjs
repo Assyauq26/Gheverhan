@@ -41,7 +41,7 @@ test('workflow source, credentials and side effects remain bounded',()=>{
  assert.ok(!/pull_request_target|id-token: write|contents: write|upload-artifact|migrate deploy|db push|vercel deploy|vercel promote/.test(workflow));
  assert.match(workflow,/npm run release:preflight/);
  assert.ok(workflow.includes('SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}'));
- assert.ok(workflow.includes('ref: f5e0dde57f258d94c0b226e0c9e7a15fff62a881'));
+ assert.ok(workflow.includes('ref: e856cd7048181ca77e8900be2a43a7590df2247e'));
  assert.ok(workflow.includes('git -C ../reviewed-ops rev-parse HEAD'));
  assert.ok(workflow.includes('git diff --exit-code -- prisma src package.json package-lock.json scripts/release/preflight.ts scripts/release/storage-preflight.ts'));
  assert.ok(workflow.includes('node scripts/release/verify-prisma-installation.mjs'));

@@ -47,6 +47,10 @@ describe("Prisma 5 production TLS trust binding", () => {
     base + "&sslcert=unreviewed.pem",
     base + "&sslrootcert=unreviewed.pem",
     base + "&sslmode=require",
+    base + "&host=unexpected.invalid",
+    base + "&host=",
+    base + "&host=%2Ftmp%2Ffixture-postgres-socket",
+    base + "&h%6fst=unexpected.invalid",
     base.replace("." + ref + ":", ".otherproject:"),
   ])("rejects unsafe or off-target datasource bindings", DATABASE_URL => {
     expect(() => bind(DATABASE_URL)).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");

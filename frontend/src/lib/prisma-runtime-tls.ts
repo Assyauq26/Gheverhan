@@ -47,11 +47,13 @@ function checkedDatabaseUrl(raw: string | undefined): URL {
     const pooler = hostname === SHARED_POOLER && ["5432", "6543"].includes(url.port) &&
       username === "postgres." + PROJECT_REF;
     const flag = url.searchParams.getAll("pgbouncer");
+    // Prisma 5.22 gives ?host= precedence over URL.hostname, including socket paths.
+    // Reject it so validation and the native engine select the same endpoint.
     if (!["postgres:", "postgresql:"].includes(url.protocol) || url.pathname !== "/postgres" || url.hash ||
         !url.password || (!direct && !pooler) || keys.length !== new Set(keys).size ||
         (url.searchParams.get("schema") || "public") !== "public" ||
         url.searchParams.get("sslmode") !== "require" || url.searchParams.get("sslaccept") !== "strict" ||
-        ["sslcert", "sslrootcert", "sslidentity", "sslpassword"].some(key => url.searchParams.has(key)) ||
+        ["host", "sslcert", "sslrootcert", "sslidentity", "sslpassword"].some(key => url.searchParams.has(key)) ||
         (url.port === "6543" ? flag.length !== 1 || flag[0] !== "true" : flag.length !== 0)) return failure();
     return url;
   } catch { return failure(); }

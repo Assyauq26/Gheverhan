@@ -21,3 +21,31 @@ This patch applies an explicit CA trust file to PrismaClient's runtime db dataso
 - Local development and Preview without an explicitly provided CA retain their existing behavior; providing a CA in either opts in to strict checking. Preview writer isolation remains a separate release gate.
 
 References: https://docs.prisma.io/docs/orm/v6/overview/databases/postgresql ; https://supabase.com/docs/guides/platform/ssl-enforcement .
+
+## Tindak lanjut audit independen source — 23 Oktober 2026
+
+Temuan P2 pada validasi target: `PostgresNativeUrl::host()` Prisma 5.22 mendahulukan query parameter `host` yang sudah di-decode daripada hostname utama URL. Helper c66bc98 hanya memvalidasi URL.hostname, sehingga pemeriksaan target dapat lolos sementara native engine memilih host jaringan atau Unix socket lain. Jalur ini memerlukan kontrol atas DSN server; bukan input request publik. Helper kini menolak seluruh parameter `host`, termasuk kosong dan key percent-encoded. Regression mereproduksi tiga kegagalan penolakan sebelum perbaikan; empat kasus baru kini ditolak sebelum pembuatan file CA/client. Credential, endpoint/port yang disetujui, flag TLS dan environment tersimpan tidak diubah.
+
+Referensi: https://github.com/prisma/prisma-engines/blob/5.22.0/quaint/src/connector/postgres/url.rs (`host()` dan `parse_query_params()`).
+
+Metadata read-only Vercel mengonfirmasi SUPABASE_DB_CA_CERT tersedia sebagai binding sensitive khusus Production pada syauqi3/gheverhan. Presence tidak membuktikan isi sertifikat, issuer, atau kecocokannya dengan chain pooler. Nilai secret tidak diambil. Executor ini tidak memiliki TCP grant untuk port PostgreSQL; handshake TLS tanpa credential secara independen tetap BLOCKED di sini. Tidak ada bypass proxy/policy atau penerimaan sertifikat tidak aman. Verifikasi CA yang dikonfigurasi terhadap server aktual tetap merupakan gate runtime/operator.
+
+Audit source bukan persetujuan operasional. Snapshot c66bc98 belum memiliki approval reviewer independen di GitHub. HEAD perbaikan memerlukan CI baru dan review independen, kemudian persetujuan eksplisit untuk deployment uji protected `--prod --skip-domain` pada exact SHA tersebut. Jangan memakai CI c66bc98 sebagai bukti source baru; jangan merge PR ini/#87, mengubah secret/database/Storage atau promote.
+
+### Probe TLS-only Windows untuk operator (tanpa credential atau SQL)
+
+Jalankan hanya pada workstation operator tepercaya dengan OpenSSL yang sudah tersedia dan root CA resmi yang diunduh dari dashboard Supabase. Jangan mengambil nilai Secret Vercel atau menempelkan isi sertifikat/DSN ke chat. Host tetap mengikuti endpoint yang diizinkan patch; pengujian kedua port tidak membuktikan port yang dipakai snapshot Vercel. Probe mengirim PostgreSQL SSLRequest dan memverifikasi TLS/hostname tanpa username/password database atau SQL. Tidak ada flag TLS tidak aman, perubahan environment, atau penulisan konfigurasi provider.
+
+```powershell
+$officialCaFile = Read-Host "Local path to the official Supabase root CA file"
+if (-not (Test-Path -LiteralPath $officialCaFile -PathType Leaf)) { throw "BLOCKED: official CA file unavailable" }
+$poolerHost = "aws-0-ap-southeast-1.pooler.supabase.com"
+foreach ($poolerPort in @(5432, 6543)) {
+    "" | & openssl.exe s_client -starttls postgres -connect ($poolerHost + ":" + $poolerPort) -servername $poolerHost -CAfile $officialCaFile -verify_return_error -verify_hostname $poolerHost -brief 2>&1 |
+        Select-String -Pattern "Verification: OK|Verification error|verify error|Protocol version|Ciphersuite"
+    if ($LASTEXITCODE -ne 0) { throw ("BLOCKED: TLS verification failed on port " + $poolerPort) }
+    Write-Output ("TLS handshake PASS on port " + $poolerPort)
+}
+```
+
+Command disiapkan untuk PowerShell dan belum dijalankan pada workstation operator. Hasil TLS-only membuktikan kompatibilitas trust/hostname dengan file CA lokal tersebut; bukan autentikasi role database, kesamaan isi Secret Vercel, atau keberhasilan query Prisma. Pengujian API read-only aktual tetap wajib sesudah review exact SHA dan persetujuan deployment.

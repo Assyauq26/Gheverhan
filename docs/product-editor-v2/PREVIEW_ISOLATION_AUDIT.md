@@ -32,3 +32,15 @@ Pembacaan API resmi CLI dengan explicit project ID/scope, filter Preview dan pag
 | DB write capability | Belum terbukti; gunakan individual privileges + RLS metadata, bukan mutation probe |
 
 Jangan menyimpulkan tidak ada writer dari absent current DATABASE_URL, atau menyimpulkan semua 142 dapat menulis dari flag shared. Operator perlu menghubungkan setiap deployment yang masih bisa dilayani dengan snapshot/binding dan role resminya. Tidak mengakses customer rows, tidak bypass protection, tidak menggunakan credential Production untuk meniru role Preview. Paket approval isolasi: hapus shared opt-in **Preview only**, review DB/storage/JWT bindings, kendalikan semua legacy writers lewat fitur resmi provider, buktikan fail-closed tanpa write probe. Source guard baru saja tidak mencabut deployment lama. Tidak menghapus deployment/credential atau mengubah env pada task ini.
+
+## Preview source fail-closed hardening — 23 Oktober 2026, PR #87
+
+New candidate source refuses shared Production/Preview database access even if legacy GHEVERHAN_SHARED_DEV_DATABASE=true is configured. This changes only PR #87; Production and local execution remain unchanged.
+
+For any new Vercel Preview to connect, operator must provide a genuine separate Supabase project and explicitly set GHEVERHAN_PREVIEW_SUPABASE_REF (20 lowercase alphanumeric characters, not Production project ref), with both DATABASE_URL and DIRECT_URL targeted to that new project. Strict sslmode=require, sslaccept=strict, and pgbouncer=true on transaction pooler port 6543 are required, without host override or duplicate flags. No project is provisioned by this patch and no new secrets are written.
+
+Absent a separate Preview project, new Preview Prisma initialization fails closed by design; Preview editor pages may not function. The real Prisma import regression and invalid DSN tests enforce the behavior.
+
+LIMITATION: This does not change immutable historical Preview deployments, existing credential bindings, Vercel Authentication/protection, direct DB clients, cron/webhooks or URLs. The 207 historical deployments remain UNKNOWN until Vercel-side authorized operator controls are evidenced. Do not call Preview isolation PASS solely from source tests. Review application route coverage and old writer capability separately.
+
+No merge, production deployment, database mutation, Storage bucket change, deployment deletion or new paid resources performed.

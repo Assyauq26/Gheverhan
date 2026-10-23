@@ -18,7 +18,7 @@ const bind = (DATABASE_URL = base, SUPABASE_DB_CA_CERT: string | undefined = ca,
 
 describe("Prisma 5 production TLS trust binding", () => {
   it("rejects a missing CA in production before opening a connection", () => {
-    expect(() => bind(base, undefined)).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
+    expect(() => prismaRuntimeDatasourceUrl({ DATABASE_URL: base, VERCEL_ENV: "production" })).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
   });
   it("injects a private root CA file only into the Prisma datasource URL", () => {
     const url = new URL(bind()!);

@@ -1,0 +1,89 @@
+name: Prisma V2 Production migration PR87
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gheverhan-final-production-cutover
+  cancel-in-progress: false
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-migration
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 4f8cdc25ab435cca5aadac295f29f893cd3791a4
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install locked Prisma tooling
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/@prisma/engines/scripts/postinstall.js
+      - name: Prepare verified TLS database bindings
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = process.env.RUNNER_TEMP + '/pr87-db-ca.crt';
+          if (!process.env.SUPABASE_DB_CA_CERT) throw Error('Missing trusted database CA');
+          fs.writeFileSync(path, process.env.SUPABASE_DB_CA_CERT, {mode:0o600});
+          for (const key of ['DATABASE_URL','DIRECT_URL']) {
+            const u = new URL(process.env[key]);
+            const ref = 'bztprltkevacidcpjaam';
+            if (!['postgres:','postgresql:'].includes(u.protocol) ||
+                !(u.hostname === 'db.'+ref+'.supabase.co' ||
+                (u.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(u.username).endsWith('.'+ref))) ||
+                u.pathname !== '/postgres' || !u.password) throw Error('Wrong database target');
+            u.searchParams.set('sslmode','require');
+            u.searchParams.set('sslcert',path);
+            u.searchParams.delete('sslaccept');
+            fs.appendFileSync(process.env.GITHUB_ENV,key+'='+u.toString()+'\n');
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV,'PGSSLROOTCERT='+path+'\n');
+          NODE
+          openssl x509 -in "${RUNNER_TEMP}/pr87-db-ca.crt" -noout >/dev/null
+      - name: Verify exact historical ledger and only V2 pending
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'), crypto=require('node:crypto'), {spawnSync}=require('node:child_process');
+          const dirs=fs.readdirSync('prisma/migrations').filter(x=>/^\d{14}_/.test(x)).sort();
+          if(dirs.length!==11 || dirs.at(-1)!=='20261021093000_product_editor_staged_media_shipping') throw Error('Unexpected migrations');
+          const expected=dirs.slice(0,10).map(n=>"('"+n+"','"+crypto.createHash('sha256').update(fs.readFileSync('prisma/migrations/'+n+'/migration.sql')).digest('hex')+"')").join(',');
+          const u=new URL(process.env.DIRECT_URL);
+          const sql='SELECT count(*)=10 AND bool_and(m.finished_at IS NOT NULL AND m.rolled_back_at IS NULL AND e.sha IS NOT NULL) FROM public._prisma_migrations m LEFT JOIN (VALUES '+expected+') e(name,sha) ON m.migration_name=e.name AND m.checksum=e.sha;';
+          const r=spawnSync('psql',['-XAtq','-v','ON_ERROR_STOP=1'],{input:sql,encoding:'utf8',timeout:20000,env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),PGPASSWORD:decodeURIComponent(u.password),PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGCONNECT_TIMEOUT:'10'}});
+          if(r.status!==0 || r.stdout.trim()!=='t') throw Error('Historical ledger or TLS check failed');
+          console.log('PASS: 10 historical checksums and verified database target');
+          NODE
+          set +e
+          npx --no-install prisma migrate status > "${RUNNER_TEMP}/pr87-status.log" 2>&1
+          result=$?
+          set -e
+          test "$result" = 1
+          grep -Eq '^Following migrations? have not yet been applied:' "${RUNNER_TEMP}/pr87-status.log"
+          pending="$(grep -E '^[[:space:]]*[0-9]{14}_[A-Za-z0-9_]+[[:space:]]*$' "${RUNNER_TEMP}/pr87-status.log" | tr -d '[:space:]')"
+          test "$pending" = '20261021093000_product_editor_staged_media_shipping'
+      - name: Apply V2 with official Prisma migration engine
+        run: |
+          set -euo pipefail
+          npm run prisma:deploy > "${RUNNER_TEMP}/pr87-deploy.log" 2>&1 || { echo 'Prisma migration failed; inspect database ledger before retry'; exit 1; }
+          echo 'PASS: official Prisma migrate deploy completed'
+      - name: Verify fully applied schema
+        run: |
+          npx --no-install prisma migrate status > "${RUNNER_TEMP}/pr87-status.log" 2>&1
+          grep -q 'Database schema is up to date' "${RUNNER_TEMP}/pr87-status.log"
+          echo 'PASS: all 11 migrations applied; database schema is up to date' >> "$GITHUB_STEP_SUMMARY"
+      - name: Clean temporary files
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/pr87-db-ca.crt" "${RUNNER_TEMP}/pr87-status.log" "${RUNNER_TEMP}/pr87-deploy.log"

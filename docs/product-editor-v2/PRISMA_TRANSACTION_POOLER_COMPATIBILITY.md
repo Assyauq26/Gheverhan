@@ -55,9 +55,9 @@ try {
 $dsnMetadataPushed = $false
 $dsnMetadataExit = 1
 try {
-  Push-Location -LiteralPath $dsnMetadataDirectory
+  Push-Location -LiteralPath $dsnMetadataDirectory -ErrorAction Stop
   $dsnMetadataPushed = $true
-  Set-Content -LiteralPath $dsnMetadataPath -Value $dsnMetadataCode -Encoding UTF8
+  Set-Content -LiteralPath $dsnMetadataPath -Value $dsnMetadataCode -Encoding UTF8 -ErrorAction Stop
   & vercel.cmd env run --environment production --project gheverhan --scope syauqi3 -- node.exe $dsnMetadataPath
   $dsnMetadataExit = $LASTEXITCODE
 } finally {

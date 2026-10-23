@@ -41,7 +41,7 @@ describe("Prisma 5 production and isolated Preview TLS trust binding", () => {
     expect(url.password).toBe("only-a-fixture");
   });
   it("requires a reviewed CA for Preview, and accepts only its own explicitly isolated project", () => {
-    expect(() => preview(previewBase, undefined)).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
+    expect(() => prismaRuntimeDatasourceUrl({ DATABASE_URL: previewBase, GHEVERHAN_PREVIEW_SUPABASE_REF: previewRef, VERCEL_ENV: "preview" })).toThrow("Konfigurasi TLS database belum dapat diverifikasi.");
     const url = new URL(preview()!);
     const file = url.searchParams.get("sslcert")!;
     created.push(file);
@@ -54,7 +54,7 @@ describe("Prisma 5 production and isolated Preview TLS trust binding", () => {
     for (const invoke of [
       () => preview(base),
       () => preview(previewBase, ca, ref),
-      () => preview(previewBase, ca, undefined),
+      () => prismaRuntimeDatasourceUrl({ DATABASE_URL: previewBase, SUPABASE_DB_CA_CERT: ca, VERCEL_ENV: "preview" }),
       () => preview(previewBase, ca, previewRef, "true"),
       () => preview(previewBase.replace("sslaccept=strict", "sslaccept=accept_invalid_certs")),
       () => preview(previewBase + "&host=alternate.invalid"),

@@ -1,17 +1,17 @@
 # Product Editor V2 — release decision record
 
-Tanggal: 22 Oktober 2026. **NO-GO — BLOCKED.** Bukan READY FOR OWNER APPROVAL secara keseluruhan dan bukan LIVE VERIFIED. Reviewed baseline source `9e3d87fec959b2a60d694b65270bcca72a23fc3c`; commit final dan checks setelah penambahan provider drill dicatat pada PR #87. Tidak menggunakan hasil SHA lama untuk menyatakan final CI PASS.
+Diperbarui: 23 Oktober 2026. **NO-GO — BLOCKED.** Bukan READY FOR OWNER APPROVAL secara keseluruhan dan bukan LIVE VERIFIED. Baseline feature `5132575e17eabd9b82dc5d6cce88fabc497b9985`, diintegrasikan dengan reviewed main `7bb457e05cd46477b0764041d5f4a38187782e67`. HEAD final dan CI dicatat pada PR #87. Tidak menggunakan hasil SHA lama untuk menyatakan final CI PASS.
 
 ## Baseline dan bukti
 
-PR #87 open/Draft/mergeable, branch feat/product-editor-ux-shipping-v2. Tidak ada approval review pada snapshot. Current Production dpl_621bV44pjJVzHJ5NuCQNTFU4JEb1 READY, main@b2d18192d99db379b6894a51abaaded22cc329e0, domain gheverhan.store. Vercel project prj_J8Fao07yrACLGjiDtY3ftRcLkI2s, team syauqi3; CLI akses PASS. MCP OAuth remote tetap BLOCKED terpisah dan tidak diulang.
+PR #87 open/Draft/mergeable, branch feat/product-editor-ux-shipping-v2. Tidak ada approval review pada snapshot. Alias Production terakhir terverifikasi pada dpl_X38boxR5WrW1qWxdiGpzibMMc1sa READY, source `14026ca2598989e9bf987254bcb326a4e4865f01`, domain gheverhan.store. Auto-deployment squash PR #93 `7bb457e…` CANCELED oleh Ignored Build Step `exit 0`; bukan aktivasi fitur PR #87. Vercel project prj_J8Fao07yrACLGjiDtY3ftRcLkI2s, team syauqi3; CLI akses PASS. MCP OAuth remote tetap BLOCKED terpisah dan tidak diulang.
 
 | Gate | Status | Bukti/batas |
 | --- | --- | --- |
 | Source/business regression | PASS baseline; final CI wajib diverifikasi | Product/editor/variation/SKU/stock/shipping/dirty-save/receipts di suite PG/browser; tidak mengubah transaksi |
 | Source provider contract nyata | PASS lokal | Private Supabase Storage API pinned, legacy/staged bytehash, public/private anonymous denial, invalid Bearer, duplicate/delete; tidak mencakup seluruh route Production |
 | Storage Production private | BLOCKED | product-images public=true; selected bucket efektif belum dibuktikan |
-| Effective Production DSN/role/grants/TLS | BLOCKED | Inspection postgres bukan runtime application role; env values tidak tersedia di environment operator sesi |
+| Effective Production DSN/role/grants/TLS | BLOCKED / bukti parsial | Protected GitHub runtime/direct probes identity/TLS/CRUD AND PASS; parity binding Vercel belum terbukti. Attempt2 full preflight P2010/42P05; operator mengonfirmasi DATABASE_URL GitHub tanpa pgbouncer=true. Lihat PRISMA_TRANSACTION_POOLER_COMPATIBILITY.md |
 | Preview writer isolation | BLOCKED | Shared dummy opt-in masih true; legacy deployment snapshots dan writer perlu kontrol |
 | Migration review/rehearsal | PASS baseline disposable; final CI wajib diverifikasi | Additive, checksum V2 tetap; current ledger 10 completed/0 failed dan V2 absent |
 | Production migration readiness | BLOCKED | Identity binding dan DDL operator readiness belum terbukti; izin operasional belum diberikan |
@@ -56,3 +56,10 @@ Perbaikan lanjutan pada branch ini mengganti ANY dengan individual AND pada dua 
 ## Workflow read-only dengan approval
 
 Lihat [PRODUCTION_READ_ONLY_WORKFLOW.md](PRODUCTION_READ_ONLY_WORKFLOW.md) untuk workflow manual baru, bukti protection existing, keterbatasan akses secret (403), bootstrap main-only, klasifikasi 207 Preview dan paket approval cutover. Workflow tidak melakukan migration/deploy/bucket/cleanup. Status NO-GO tidak berubah sebelum actual target verification.
+
+
+## Follow-up protected run 39873649870
+
+Attempt1 membuka full metadata: 10 checksums cocok, satu migration V2 pending, product-images masih public, schemaV2 absent. MAINTENANCE_MODE GitHub yang semula kosong telah ditambahkan operator sebagai variable 0. Attempt2 setelah approval ulang mengonfirmasi variable 0 tetapi full child mendapat P2010/42P05 (duplicate prepared statement). Bukan bukti TLS/password/RLS failure dan bukan alasan mencoba migration. Operator mengonfirmasi flag `pgbouncer=true` GitHub belum ada. Source kini memvalidasi profil transaction pooler secara fail-closed, tanpa mengubah DSN otomatis. Konfirmasi Vercel terpisah dan perubahan konfigurasi yang disetujui masih diperlukan; jangan rerun sebelum ada perubahan/proof baru.
+
+Pada HEAD integrasi `eea74890f9c38d5684607db74d49e4f14dc03f96`, ketiga CI SUCCESS (unit 39874929452, TLS 39874929450, full 39874929465). Guard runtime baru mengubah source berikutnya; hasil tersebut merupakan baseline, bukan bukti final guard. CI final wajib pada HEAD baru. Tidak ada mutasi Production dalam follow-up ini.

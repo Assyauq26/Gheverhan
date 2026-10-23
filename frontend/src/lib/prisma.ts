@@ -1,9 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { assertPreviewDatabaseIsolation } from "./preview-db-guard";
+import { assertPrismaPoolerCompatibility } from "./prisma-pooler-guard";
 
 // Refuse to initialize a Prisma connection in a Vercel preview until both
 // connection strings point at a distinct, explicitly approved preview project.
 assertPreviewDatabaseIsolation(process.env);
+assertPrismaPoolerCompatibility(process.env.DATABASE_URL);
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

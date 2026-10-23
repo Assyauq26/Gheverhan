@@ -30,7 +30,13 @@ Reject absent/false/wrong-case/nonboolean/duplicate flags; error tidak berisi DS
 Gunakan Vercel CLI resmi yang sudah login, Node22, tanpa debug/transcript. Command berikut hanya mem-parsing binding CURRENT project configuration di workstation operator: tidak membuka koneksi database, menyimpan .env, mengirim email atau mengubah Production. Ini BELUM membuktikan snapshot deployment historis atau role/grants runtime. Tinjau literal code sebelum menjalankannya; tidak menjalankan script/package repo dengan secret. Jangan menjalankannya di workspace Codex remote.
 
 ```powershell
-$dsnMetadataPath = Join-Path ([IO.Path]::GetTempPath()) ("gheverhan-dsn-metadata-" + [guid]::NewGuid().ToString("N") + ".cjs")
+# Vercel CLI v65.0.0 env run gives local process/.env bindings precedence.
+# Refuse an inherited DATABASE_URL instead of reporting local metadata as Vercel.
+if (Test-Path Env:DATABASE_URL) { throw "BLOCKED: use a clean operator terminal without inherited DATABASE_URL" }
+if (Test-Path Env:NODE_OPTIONS) { throw "BLOCKED: use a clean operator terminal without NODE_OPTIONS" }
+$dsnMetadataDirectory = Join-Path ([IO.Path]::GetTempPath()) ("gheverhan-dsn-metadata-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $dsnMetadataDirectory -ErrorAction Stop | Out-Null
+$dsnMetadataPath = Join-Path $dsnMetadataDirectory "probe.cjs"
 $dsnMetadataCode = @'
 try {
   const u = new URL(process.env.DATABASE_URL);
@@ -46,17 +52,22 @@ try {
   process.exitCode = 1;
 }
 '@
+$dsnMetadataPushed = $false
+$dsnMetadataExit = 1
 try {
+  Push-Location -LiteralPath $dsnMetadataDirectory
+  $dsnMetadataPushed = $true
   Set-Content -LiteralPath $dsnMetadataPath -Value $dsnMetadataCode -Encoding UTF8
   & vercel.cmd env run --environment production --project gheverhan --scope syauqi3 -- node.exe $dsnMetadataPath
   $dsnMetadataExit = $LASTEXITCODE
 } finally {
-  Remove-Item -LiteralPath $dsnMetadataPath -ErrorAction SilentlyContinue
+  if ($dsnMetadataPushed) { Pop-Location }
+  Remove-Item -LiteralPath $dsnMetadataDirectory -Recurse -ErrorAction SilentlyContinue
 }
 if ($dsnMetadataExit -ne 0) { throw "BLOCKED: metadata command failed" }
 ```
 
-File sementara di atas hanya berisi kode publik, tanpa secret. Secret tetap diinjeksi oleh CLI resmi ke proses Node; tidak ada penulisan `.env`. Penggunaan file `.cjs` menghindari perbedaan quoting native command pada Windows PowerShell 5.1 dan PowerShell 7.
+Direktori sementara hanya berisi kode publik, tanpa secret atau `.env`. Konteks cwd sengaja kosong; project/team ditentukan eksplisit. Inherited DATABASE_URL ditolak, tidak disalin/dicetak/diubah. Source Vercel CLI65.0.0 `dist/commands/env/index.js` memuat `{...records.env,...safeLocalEnv,...safeProcessEnv}`; karena itu menjalankan dari folder repo/terminal dengan DB env lama tidak dapat dipakai sebagai bukti binding project. Jika CLI tidak dapat membaca secret dan hasil kosong, Node gagal tertutup; jangan mengisi fallback lokal. Secret tetap diinjeksi oleh CLI resmi ke proses Node; tidak ada penulisan `.env`. Penggunaan file `.cjs` menghindari perbedaan quoting native command pada Windows PowerShell 5.1 dan PowerShell 7.
 
 
 Jika provider menolak akses secret, STOP; jangan mencoba bypass/credential alternatif. Operator memakai secret manager resmi/kanal provider yang sah dan hanya membagikan hasil boolean non-sensitif, bukan secret. Presence/boolean compatibility belum membuktikan ref/database/schema/role; probe reviewed lengkap tetap diperlukan.

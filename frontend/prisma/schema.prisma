@@ -238,6 +238,10 @@ model Brand {
 }
 
 model Product {
+  weightGrams Int?
+  packageLengthMm Int?
+  packageWidthMm Int?
+  packageHeightMm Int?
   id              String        @id @default(cuid())
   name            String
   slug            String        @unique
@@ -753,4 +757,32 @@ model ProductVariantOptionValue {
   value ProductOptionValue @relation(fields: [valueId, groupId, productId], references: [id, groupId, productId], onDelete: Restrict)
   @@id([variantId, groupId])
   @@index([valueId, groupId, productId])
+}
+
+// Session-bound temporary uploads. Finalization and ProductImage creation share a transaction.
+model StagedProductMedia {
+  id String @id
+  actorId String
+  sessionHash String
+  contentHash String
+  objectPath String
+  mime String
+  purpose String
+  ready Boolean @default(false)
+  expiresAt DateTime
+  cancelledAt DateTime?
+  productId String?
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+  @@index([actorId, sessionHash])
+}
+
+// A retry after a lost response returns the committed result, never a second create.
+model ProductEditorSave {
+  id String @id
+  actorId String
+  sessionHash String
+  payloadHash String
+  result Json
+  createdAt DateTime @default(now())
 }

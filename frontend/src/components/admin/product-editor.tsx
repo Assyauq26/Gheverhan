@@ -7,6 +7,8 @@ import {
   Plus,
   Trash2,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   ChevronDown,
   ImagePlus,
   Layers3,
@@ -17,9 +19,15 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  uploadRecoveryCandidate,
-  uploadBytesMatch,
-} from "./variation-upload-recovery";
+  canonicalProductForm,
+  suggestSku,
+} from "@/modules/catalog/product-editor-domain";
+import {
+  cmToMm,
+  mmToCm,
+  weightToGrams,
+} from "@/modules/catalog/product-shipping";
+import { ProductBulkEditor } from "./product-bulk-editor";
 import { CustomVariationEditor } from "./custom-variation-editor";
 import {
   ProductVariantBuilder,
@@ -28,8 +36,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import {
-  readProductEditorAction,
   saveProductAction,
+  allocateProductSkusAction,
   setProductStatusAction,
 } from "@/modules/catalog/product-management.actions";
 import type { ProductInput } from "@/modules/catalog/product-management.validation";
@@ -52,6 +60,10 @@ function valuesFor(p?: ProductEditorData): Values {
     return values;
   }
   return {
+    weightGrams: null,
+    packageLengthMm: null,
+    packageWidthMm: null,
+    packageHeightMm: null,
     name: "",
     slug: "",
     description: "",
@@ -91,6 +103,35 @@ function suggestSlug(name: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
+function shippingFor(p?: ProductEditorData) {
+  return {
+    weight: p?.weightGrams == null ? "" : String(p.weightGrams),
+    length: mmToCm(p?.packageLengthMm),
+    width: mmToCm(p?.packageWidthMm),
+    height: mmToCm(p?.packageHeightMm),
+  };
+}
+function shippingData(s: ReturnType<typeof shippingFor>) {
+  return {
+    weightGrams: weightToGrams(s.weight),
+    packageLengthMm: cmToMm(s.length),
+    packageWidthMm: cmToMm(s.width),
+    packageHeightMm: cmToMm(s.height),
+  };
+}
+function formSnapshot(
+  values: Values,
+  custom: boolean,
+  shipping: ReturnType<typeof shippingFor>,
+) {
+  let normalized: unknown;
+  try {
+    normalized = shippingData(shipping);
+  } catch {
+    normalized = shipping;
+  }
+  return canonicalProductForm({ values, custom, shipping: normalized });
+}
 const statusLabels = { DRAFT: "Draft", PUBLISHED: "Terbit", ARCHIVED: "Arsip" };
 export function ProductEditor({
   initial,
@@ -109,6 +150,8 @@ export function ProductEditor({
 }) {
   const router = useRouter();
   const [productId, setProductId] = useState(initial?.id || "");
+  const [bulkSelected, setBulkSelected] = useState(new Set<number>());
+  const [bulkSelectedOnly, setBulkSelectedOnly] = useState(false);
   const [custom, setCustom] = useState(initial?.optionsEnabled ?? !initial);
   const busy = useRef(false);
   const persistedSnapshot = useRef<ProductEditorData | undefined>(initial);
@@ -117,7 +160,103 @@ export function ProductEditor({
   const [status, setStatus] = useState<ProductStatus>(
     initial?.status || "DRAFT",
   );
-  const [dirty, setDirty] = useState(false);
+  const [shipping, setShipping] = useState(() => shippingFor(initial));
+  const [baseline, setBaseline] = useState(() =>
+    formSnapshot(
+      valuesFor(initial),
+      initial?.optionsEnabled ?? !initial,
+      shippingFor(initial),
+    ),
+  );
+  const dirty = formSnapshot(values, custom, shipping) !== baseline;
+  const saveRequest = useRef<{ payload: string; id: string }>();
+  const uploadRequests = useRef(new WeakMap<File, string>());
+  const [retryFile, setRetryFile] = useState<File>();
+  const [galleryPreview, setGalleryPreview] = useState("");
+  useEffect(
+    () => () => {
+      if (galleryPreview) URL.revokeObjectURL(galleryPreview);
+    },
+    [galleryPreview],
+  );
+  const [mediaRecovered, setMediaRecovered] = useState(false);
+  useEffect(() => {
+    const key = `gh-product-media:${productId || "new"}`;
+    let cancelled = false;
+    async function restoreMedia() {
+      try {
+        const ids = JSON.parse(sessionStorage.getItem(key) || "[]");
+        if (
+          !Array.isArray(ids) ||
+          !ids.length ||
+          ids.length > 60 ||
+          ids.some(
+            (id) => typeof id !== "string" || !/^[a-f0-9-]{36}$/.test(id),
+          )
+        )
+          return;
+        const response = await fetch(
+          `/api/v1/admin/product-media?ids=${encodeURIComponent(ids.join(","))}`,
+          { cache: "no-store" },
+        );
+        const result = await response.json();
+        if (!cancelled && response.ok && result.success) {
+          const photos = result.data as (ProductEditorData["images"][number] & {
+            purpose: string;
+          })[];
+          setValues((current) => ({
+            ...current,
+            images: [
+              ...current.images,
+              ...photos
+                .filter(
+                  (photo) =>
+                    photo.purpose === "gallery" &&
+                    !current.images.some((i) => i.id === photo.id),
+                )
+                .map(({ id, url, alt }) => ({ id, url, alt })),
+            ],
+            optionImages: [
+              ...current.optionImages,
+              ...photos
+                .filter(
+                  (photo) =>
+                    photo.purpose === "option" &&
+                    !current.optionImages.some((i) => i.id === photo.id),
+                )
+                .map(({ id, url, alt }) => ({ id, url, alt })),
+            ],
+          }));
+          if (photos.length)
+            setNotice(
+              "Foto sementara dipulihkan. Lengkapi kembali data produk sebelum Simpan.",
+            );
+        }
+      } catch {
+        /* Browser storage is optional; never restore unverified ownership. */
+      } finally {
+        if (!cancelled) setMediaRecovered(true);
+      }
+    }
+    void restoreMedia();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+  useEffect(() => {
+    if (!mediaRecovered) return;
+    const ids = [...values.images, ...values.optionImages]
+      .filter((photo) => photo.url.startsWith("/api/v1/admin/product-media/"))
+      .map((photo) => photo.id);
+    try {
+      sessionStorage.setItem(
+        `gh-product-media:${productId || "new"}`,
+        JSON.stringify(ids),
+      );
+    } catch {
+      /* optional */
+    }
+  }, [values.images, values.optionImages, productId, mediaRecovered]);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -130,7 +269,7 @@ export function ProductEditor({
   }, [error]);
   function change<K extends keyof Values>(key: K, value: Values[K]) {
     setValues((v) => ({ ...v, [key]: value }));
-    setDirty(true);
+    setError("");
     setNotice("");
   }
   function accept(p: ProductEditorData) {
@@ -140,7 +279,9 @@ export function ProductEditor({
     setValues(valuesFor(p));
     setVersion(p.updatedAt);
     setStatus(p.status);
-    setDirty(false);
+    setShipping(shippingFor(p));
+    setBaseline(formSnapshot(valuesFor(p), p.optionsEnabled, shippingFor(p)));
+    saveRequest.current = undefined;
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -153,10 +294,16 @@ export function ProductEditor({
       const form = new FormData();
       form.set("id", productId);
       form.set("updatedAt", version);
+      const payload =
+        formSnapshot(values, custom, shipping) + productId + version;
+      if (saveRequest.current?.payload !== payload)
+        saveRequest.current = { payload, id: crypto.randomUUID() };
+      form.set("requestId", saveRequest.current.id);
       form.set(
         "product",
         JSON.stringify({
           ...values,
+          ...shippingData(shipping),
           optionsEnabled: custom && Boolean(values.optionGroups?.length),
           optionGroups:
             custom && values.optionGroups?.length
@@ -169,12 +316,21 @@ export function ProductEditor({
         setError(result.error || "Produk gagal disimpan");
         return;
       }
+      try {
+        sessionStorage.removeItem(`gh-product-media:${productId || "new"}`);
+      } catch {
+        /* optional */
+      }
       accept(result.data);
       setNotice("Produk berhasil disimpan.");
       if (!initial) router.push(`/admin/products/${result.data.id}`);
       else router.refresh();
-    } catch {
-      setError("Tidak dapat menyimpan produk. Coba lagi.");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Tidak dapat menyimpan produk. Coba lagi.",
+      );
     } finally {
       busy.current = false;
       setPending(null);
@@ -202,198 +358,109 @@ export function ProductEditor({
       setPending(null);
     }
   }
-  async function upload(file?: File) {
-    if (!file || !productId) return;
+  async function uploadFile(
+    file: File,
+    purpose: "gallery" | "option",
+    progress: (percent: number) => void = () => {},
+  ) {
     if (busy.current) return;
-    busy.current = true;
-    setPending("upload");
-    setError("");
-    setNotice("");
-    try {
-      if (file.size > 4 * 1024 * 1024) {
-        setError("Ukuran gambar maksimal 4 MB.");
-        return;
-      }
-      const form = new FormData();
-      form.set("image", file);
-      form.set("updatedAt", version);
-      form.set("alt", values.name);
-      const response = await fetch(
-        `/api/v1/admin/products/${productId}/images`,
-        { method: "POST", body: form },
-      );
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        setError(result.error?.message || "Gambar gagal diunggah");
-        return;
-      }
-      if (persistedSnapshot.current)
-        persistedSnapshot.current = {
-          ...persistedSnapshot.current,
-          updatedAt: result.data.updatedAt,
-          images: [...persistedSnapshot.current.images, result.data.image],
-        };
-      setValues((v) => ({ ...v, images: [...v.images, result.data.image] }));
-      setVersion(result.data.updatedAt);
-      setDirty(true);
-      setNotice("Gambar diunggah. Simpan perubahan sebelum menerbitkan.");
-    } catch {
-      setError("Upload gagal. Periksa koneksi dan coba lagi.");
-    } finally {
-      busy.current = false;
-      setPending(null);
-    }
-  }
-  async function prepareDraft(): Promise<boolean> {
-    if (productId) return true;
-    if (busy.current) return false;
-    busy.current = true;
-    setPending("draft");
-    setError("");
-    try {
-      const form = new FormData();
-      form.set(
-        "product",
-        JSON.stringify({
-          ...values,
-          optionsEnabled: false,
-          optionGroups: undefined,
-          optionImages: [],
-          images: [],
-          variants: [
-            {
-              sku: "GHV-DRAFT-" + crypto.randomUUID(),
-              color: "",
-              size: "",
-              onHand: 0,
-              price: null,
-              salePrice: null,
-            },
-          ],
-        }),
-      );
-      const result = await saveProductAction(form);
-      if (!result.ok || !result.data) {
-        setError(
-          result.error || "Lengkapi informasi dasar sebelum menyiapkan draft.",
-        );
-        return false;
-      }
-      persistedSnapshot.current = result.data;
-      setProductId(result.data.id);
-      setVersion(result.data.updatedAt);
-      setStatus("DRAFT");
-      setDirty(true);
-      setNotice(
-        "Draft siap. Variasi yang belum disimpan tetap berada di editor; Anda dapat mengunggah foto.",
-      );
-      return true;
-    } catch {
-      setError(
-        "Hasil penyimpanan draft belum diketahui. Periksa daftar produk sebelum mencoba membuat draft baru.",
-      );
-      return false;
-    } finally {
-      busy.current = false;
-      setPending(null);
-    }
-  }
-  async function uploadOption(file: File, progress: (percent: number) => void) {
-    if (!productId || busy.current) return;
     if (file.size > 4 * 1024 * 1024) {
       setError("Ukuran gambar maksimal 4 MB.");
       return;
     }
     busy.current = true;
-    setPending("upload-option");
+    if (purpose === "gallery") setGalleryPreview(URL.createObjectURL(file));
+    setPending("upload-" + purpose);
     setError("");
+    setNotice("");
     try {
+      let requestId = uploadRequests.current.get(file);
+      if (!requestId) {
+        requestId = crypto.randomUUID();
+        uploadRequests.current.set(file, requestId);
+      }
       const form = new FormData();
       form.set("image", file);
-      form.set("updatedAt", version);
-      form.set("alt", values.name);
-      form.set("purpose", "option");
-      const result = await new Promise<{
-        image: ProductEditorData["images"][number];
-        updatedAt: string;
-      }>((resolve, reject) => {
-        const request = new XMLHttpRequest();
-        request.open("POST", `/api/v1/admin/products/${productId}/images`);
-        request.timeout = 30000;
-        request.upload.onprogress = (event) => {
-          if (event.lengthComputable)
-            progress(Math.round((event.loaded / event.total) * 100));
-        };
-        request.onerror = request.ontimeout = () =>
-          reject(new Error("Upload gagal. Periksa koneksi dan coba lagi."));
-        request.onload = () => {
-          try {
-            const data = JSON.parse(request.responseText);
-            if (request.status < 200 || request.status >= 300 || !data.success)
-              reject(new Error(data.error?.message || "Upload gagal"));
-            else resolve(data.data);
-          } catch {
-            reject(new Error("Respons upload tidak valid"));
-          }
-        };
-        request.send(form);
-      });
-      if (persistedSnapshot.current)
-        persistedSnapshot.current = {
-          ...persistedSnapshot.current,
-          updatedAt: result.updatedAt,
-          optionImages: [
-            ...persistedSnapshot.current.optionImages,
-            result.image,
-          ],
-        };
-      setValues((current) => ({
-        ...current,
-        optionImages: [...current.optionImages, result.image],
-      }));
-      setVersion(result.updatedAt);
-      setDirty(true);
-      setNotice(
-        "Foto tersimpan di draft. Simpan Variasi untuk memasang mapping opsi.",
+      form.set("requestId", requestId);
+      form.set("purpose", purpose);
+      const image = await new Promise<ProductEditorData["images"][number]>(
+        (resolve, reject) => {
+          const request = new XMLHttpRequest();
+          request.open("POST", "/api/v1/admin/product-media");
+          request.timeout = 45000;
+          request.upload.onprogress = (event) => {
+            if (event.lengthComputable)
+              progress(Math.round((event.loaded / event.total) * 100));
+          };
+          request.onerror = request.ontimeout = () =>
+            reject(
+              new Error(
+                "Upload belum dapat dikonfirmasi. Coba lagi dengan file yang sama.",
+              ),
+            );
+          request.onload = () => {
+            try {
+              const result = JSON.parse(request.responseText);
+              if (
+                request.status < 200 ||
+                request.status >= 300 ||
+                !result.success
+              )
+                reject(new Error(result.error?.message || "Upload gagal"));
+              else
+                resolve({
+                  id: result.data.id,
+                  url: result.data.url,
+                  alt: result.data.alt,
+                });
+            } catch {
+              reject(new Error("Respons upload tidak valid. Coba lagi."));
+            }
+          };
+          request.send(form);
+        },
       );
-      return result.image;
+      setValues((current) => {
+        const key = purpose === "gallery" ? "images" : "optionImages";
+        return {
+          ...current,
+          [key]: [...current[key].filter((i) => i.id !== image.id), image],
+        };
+      });
+      setNotice(
+        "Foto sementara siap. Klik Simpan untuk memasang foto pada produk.",
+      );
+      setRetryFile(undefined);
+      return image;
     } catch (error) {
-      try {
-        const baseline = persistedSnapshot.current;
-        const result = await readProductEditorAction(productId);
-        const image =
-          baseline && result.ok && result.data
-            ? uploadRecoveryCandidate(baseline, result.data)
-            : undefined;
-        if (image && result.data && (await uploadBytesMatch(file, image.url))) {
-          persistedSnapshot.current = result.data;
-          setValues((current) => ({
-            ...current,
-            optionImages: [
-              ...current.optionImages.filter((i) => i.id !== image.id),
-              image,
-            ],
-          }));
-          setVersion(result.data.updatedAt);
-          setDirty(true);
-          progress(100);
-          setNotice(
-            "Hasil upload dipulihkan dari server. Data variasi Anda tetap berada di editor.",
-          );
-          return { ...image, recovered: true };
-        }
-      } catch {
-        /* Retain the draft and original revision if reconciliation is uncertain. */
-      }
-      setError(error instanceof Error ? error.message : "Upload gagal");
-      return;
+      setError(error instanceof Error ? error.message : "Upload gagal.");
+      if (purpose === "gallery") setRetryFile(file);
     } finally {
       busy.current = false;
       setPending(null);
+      if (purpose === "gallery") setGalleryPreview("");
+    }
+  }
+  async function upload(file?: File) {
+    if (file) return uploadFile(file, "gallery");
+  }
+  async function uploadOption(file: File, progress: (percent: number) => void) {
+    return uploadFile(file, "option", progress);
+  }
+  function removePhoto(id: string, purpose: "images" | "optionImages") {
+    const photo = values[purpose].find((image) => image.id === id);
+    change(
+      purpose,
+      values[purpose].filter((image) => image.id !== id),
+    );
+    if (photo?.url.startsWith("/api/v1/admin/product-media/")) {
+      void fetch(photo.url, { method: "DELETE" }).catch(() => {
+        /* TTL cleanup retries safely. */
+      });
     }
   }
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !pending?.startsWith("upload-")) return;
     const unload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -423,7 +490,10 @@ export function ProductEditor({
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", navigate, true);
     };
-  }, [dirty]);
+  }, [dirty, pending]);
+  useEffect(() => {
+    setBulkSelected(new Set());
+  }, [values.variants.length]);
   function variantChange(
     index: number,
     patch: Partial<Values["variants"][number]>,
@@ -433,18 +503,22 @@ export function ProductEditor({
       values.variants.map((v, i) => (i === index ? { ...v, ...patch } : v)),
     );
   }
-  function appendCombinations(combinations: VariantChoice[]): boolean {
+  async function appendCombinations(
+    combinations: VariantChoice[],
+  ): Promise<boolean> {
+    if (busy.current) return false;
     // A blank create-mode row is only a form placeholder, not a persisted variant.
     const placeholder =
       values.variants.length === 1 && isEmptyDraftVariant(values.variants[0]);
     const list = placeholder ? [] : [...values.variants];
+    const retainedCount = list.length;
     const pairs = new Set(
       list.map(
         (v) =>
           `${v.color.trim().toLocaleLowerCase("id")}::${v.size.trim().toLocaleLowerCase("id")}`,
       ),
     );
-    const skus = new Set(list.map((v) => v.sku.trim().toLocaleLowerCase("id")));
+    const skus = new Set(list.map((v) => v.sku.trim().toUpperCase()));
     for (const choice of combinations) {
       const color = choice.color.trim();
       const size = choice.size.trim();
@@ -454,18 +528,23 @@ export function ProductEditor({
         setError("Maksimal 50 varian per produk.");
         return false;
       }
-      const stem =
-        [values.slug || suggestSlug(values.name) || "produk", color, size]
-          .map(suggestSlug)
-          .filter(Boolean)
-          .join("-")
-          .slice(0, 70) || "produk";
-      let sku = stem;
-      let suffix = 2;
-      while (skus.has(sku.toLocaleLowerCase("id"))) {
-        const ending = `-${suffix++}`;
-        sku = stem.slice(0, 80 - ending.length) + ending;
-      }
+      const dimensions = [
+        ["color", color],
+        ["size", size],
+      ]
+        .filter(([, value]) => value)
+        .map(([axis, value]) => ({
+          id: axis,
+          name: axis,
+          allowsImage: false,
+          values: [{ id: `${axis}:${value.toLocaleLowerCase("id")}`, value }],
+        }));
+      const sku = suggestSku(
+        values.name,
+        dimensions,
+        dimensions.map((group) => group.values[0].id),
+        skus,
+      );
       list.push({
         sku,
         color,
@@ -475,14 +554,33 @@ export function ProductEditor({
         ...(canStock ? { onHand: 0 } : {}),
       });
       pairs.add(key);
-      skus.add(sku.toLocaleLowerCase("id"));
+      skus.add(sku.toUpperCase());
     }
-    if (!list.length) return false;
-    change("variants", list);
-    return true;
+    if (!list.length || list.length === retainedCount) return false;
+    busy.current = true;
+    setPending("sku");
+    try {
+      const fresh = list.slice(retainedCount);
+      const keyFor = (row: Values["variants"][number]) =>
+        `${row.color.trim().toLocaleLowerCase("id")}::${row.size.trim().toLocaleLowerCase("id")}`;
+      const result = await allocateProductSkusAction(
+        fresh.map((row) => ({ key: keyFor(row), sku: row.sku })),
+      );
+      if (!result.ok || !result.data)
+        throw new Error(result.error || "SKU gagal dibuat. Coba lagi.");
+      for (const row of fresh)
+        row.sku = result.data.find(
+          (candidate) => candidate.key === keyFor(row),
+        )!.sku;
+      change("variants", list);
+      return true;
+    } finally {
+      busy.current = false;
+      setPending(null);
+    }
   }
   return (
-    <div className="mx-auto max-w-6xl space-y-5 pb-28">
+    <div className="product-editor-v2 mx-auto max-w-6xl space-y-5 pb-8">
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/admin/products"
@@ -508,7 +606,7 @@ export function ProductEditor({
           <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
             {initial
               ? "Perbarui informasi dan penjualan produk dengan mudah."
-              : "Lengkapi informasi produk, simpan draft, lalu tambahkan foto untuk dipublikasikan."}
+              : "Tambahkan foto dan informasi produk, lalu simpan sebelum publikasi."}
           </p>
         </div>
         <div className="hidden items-center gap-2 rounded-xl bg-white px-4 py-3 text-xs text-zinc-500 shadow-sm sm:flex">
@@ -593,13 +691,8 @@ export function ProductEditor({
                         disabled={!canEdit || !!pending}
                         aria-label={`Hapus gambar ${index + 1}`}
                         title="Hapus foto"
-                        onClick={() =>
-                          change(
-                            "images",
-                            values.images.filter((i) => i.id !== image.id),
-                          )
-                        }
-                        className="absolute bottom-1 right-1 grid h-8 w-8 place-items-center rounded-lg bg-white/95 text-red-600 shadow-sm transition hover:bg-white"
+                        onClick={() => removePhoto(image.id, "images")}
+                        className="absolute bottom-1 right-1 grid h-11 w-11 place-items-center rounded-lg bg-white/95 text-red-600 shadow-sm transition hover:bg-white"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -630,6 +723,36 @@ export function ProductEditor({
                         className="h-9 px-2 text-xs"
                       />
                     </div>
+                    <div className="mt-1 flex gap-1">
+                      {[-1, 1].map((delta) => (
+                        <button
+                          key={delta}
+                          type="button"
+                          className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-zinc-200 hover:bg-zinc-100 disabled:opacity-40"
+                          aria-label={`Pindahkan foto ${index + 1} ke ${delta < 0 ? "atas" : "bawah"}`}
+                          disabled={
+                            !canEdit ||
+                            !!pending ||
+                            index + delta < 0 ||
+                            index + delta >= values.images.length
+                          }
+                          onClick={() => {
+                            const next = [...values.images];
+                            [next[index], next[index + delta]] = [
+                              next[index + delta],
+                              next[index],
+                            ];
+                            change("images", next);
+                          }}
+                        >
+                          {delta < 0 ? (
+                            <ArrowUp size={16} />
+                          ) : (
+                            <ArrowDown size={16} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                     {index !== 0 && (
                       <button
                         type="button"
@@ -647,7 +770,24 @@ export function ProductEditor({
                     )}
                   </div>
                 ))}
-                {productId && canEdit && values.images.length < 10 && (
+                {galleryPreview && (
+                  <div className="relative aspect-square min-w-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+                    {/* Local preview is never submitted or persisted as a ProductImage. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={galleryPreview}
+                      alt="Pratinjau foto sedang diunggah"
+                      className="h-full w-full object-cover"
+                    />
+                    <span
+                      role="status"
+                      className="absolute inset-x-0 bottom-0 bg-black/80 p-2 text-center text-xs text-white"
+                    >
+                      Mengunggah foto…
+                    </span>
+                  </div>
+                )}
+                {canEdit && values.images.length < 10 && (
                   <label
                     htmlFor="product-image-upload"
                     className="flex aspect-square min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 px-2 text-center text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100"
@@ -657,17 +797,22 @@ export function ProductEditor({
                   </label>
                 )}
               </div>
-              {productId && (
+              {
                 <label htmlFor="product-image-upload" className="sr-only">
                   Unggah JPG, PNG, atau WebP
                 </label>
-              )}
-              {productId && (
+              }
+              {
                 <input
                   id="product-image-upload"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  disabled={!canEdit || !!pending || values.images.length >= 10}
+                  disabled={
+                    !canEdit ||
+                    !!pending ||
+                    !mediaRecovered ||
+                    values.images.length >= 10
+                  }
                   onChange={(e) => {
                     void upload(e.target.files?.[0]);
                     e.target.value = "";
@@ -675,12 +820,16 @@ export function ProductEditor({
                   className="sr-only"
                   aria-describedby="product-image-help"
                 />
-              )}
-              {!productId && (
-                <div className="mt-3 flex items-start gap-2 rounded-xl bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600">
-                  <Info size={16} className="mt-0.5 shrink-0" /> Simpan produk
-                  sebagai draft terlebih dahulu untuk mengunggah foto.
-                </div>
+              }
+              {retryFile && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!!pending}
+                  onClick={() => void upload(retryFile)}
+                >
+                  Coba unggah lagi
+                </Button>
               )}
               <p id="product-image-help" className="mt-3 text-xs text-zinc-400">
                 JPG, PNG, atau WebP. Maksimal 4 MB per foto dan 10 foto per
@@ -922,12 +1071,7 @@ export function ProductEditor({
                         ),
                     ),
                   )}
-                  onRemovePhoto={(id) =>
-                    change(
-                      "optionImages",
-                      values.optionImages.filter((i) => i.id !== id),
-                    )
-                  }
+                  onRemovePhoto={(id) => removePhoto(id, "optionImages")}
                   onUndoPhotos={() =>
                     change(
                       "optionImages",
@@ -935,19 +1079,18 @@ export function ProductEditor({
                         values.optionImages,
                     )
                   }
-                  disabled={!canEdit || !!pending}
+                  disabled={!canEdit || !!pending || !mediaRecovered}
                   canStock={canStock}
-                  hasDraft={!!productId}
+                  productName={values.name}
                   basePrice={values.basePrice}
-                  onDraft={prepareDraft}
                   onUpload={uploadOption}
                   onChange={(optionGroups, variants) => {
+                    setError("");
                     setValues((current) => ({
                       ...current,
                       optionGroups,
                       variants,
                     }));
-                    setDirty(true);
                     setNotice("");
                   }}
                 />
@@ -987,11 +1130,20 @@ export function ProductEditor({
                   disabled={!canEdit || !!pending}
                   onClick={() => {
                     setCustom(true);
-                    setDirty(true);
                   }}
                 >
                   Gunakan variasi kustom
                 </Button>
+                <ProductBulkEditor
+                  rows={values.variants}
+                  basePrice={values.basePrice}
+                  canStock={canStock}
+                  disabled={!canEdit || !!pending}
+                  selected={bulkSelected}
+                  selectedOnly={bulkSelectedOnly}
+                  onMode={setBulkSelectedOnly}
+                  onChange={(rows) => change("variants", rows)}
+                />
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-3">
                   <ProductVariantBuilder
                     disabled={!canEdit || !!pending}
@@ -1036,13 +1188,29 @@ export function ProductEditor({
                   {values.variants.map((v, index) => (
                     <details
                       key={v.id || `new-${index}`}
-                      open
+                      open={index === 0}
                       onInvalidCapture={(event) => {
                         event.currentTarget.open = true;
                       }}
                       className="group min-w-0 overflow-hidden rounded-xl border border-zinc-200 bg-white"
                     >
                       <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 bg-zinc-50 px-3 py-3 text-sm transition-colors hover:bg-zinc-100 sm:px-4 [&::-webkit-details-marker]:hidden">
+                        {bulkSelectedOnly && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Pilih SKU sederhana ${index + 1}`}
+                            checked={bulkSelected.has(index)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              setBulkSelected((current) => {
+                                const next = new Set(current);
+                                if (e.target.checked) next.add(index);
+                                else next.delete(index);
+                                return next;
+                              })
+                            }
+                          />
+                        )}
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white font-bold text-zinc-600 shadow-sm">
                           {index + 1}
                         </span>
@@ -1190,6 +1358,75 @@ export function ProductEditor({
             )}
 
             <section
+              id="product-shipping"
+              className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6"
+            >
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                  <Package size={20} aria-hidden="true" /> Pengiriman
+                </h2>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Informasi berat dan ukuran paket.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="package-weight">Berat paket (gram) *</Label>
+                <div className="relative">
+                  <Input
+                    id="package-weight"
+                    inputMode="numeric"
+                    placeholder="Contoh: 500"
+                    value={shipping.weight}
+                    onChange={(e) =>
+                      setShipping((current) => ({
+                        ...current,
+                        weight: e.target.value,
+                      }))
+                    }
+                    className="pr-16"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-3 text-sm text-zinc-500">
+                    gram
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Masukkan berat produk setelah dikemas. Boleh kosong pada
+                  draft; wajib sebelum publikasi baru.
+                </p>
+              </div>
+              <div className="grid gap-3 min-[430px]:grid-cols-3">
+                {(
+                  [
+                    ["length", "Panjang"],
+                    ["width", "Lebar"],
+                    ["height", "Tinggi"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key}>
+                    <Label htmlFor={`package-${key}`}>{label} (cm)</Label>
+                    <Input
+                      id={`package-${key}`}
+                      inputMode="decimal"
+                      placeholder="Opsional"
+                      value={shipping[key]}
+                      onChange={(e) =>
+                        setShipping((current) => ({
+                          ...current,
+                          [key]: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-600">
+                Ukuran paket setelah dikemas, dalam sentimeter. Lengkapi
+                ketiganya atau kosongkan seluruh dimensi. Tarif ongkir manual
+                tetap berlaku.
+              </p>
+            </section>
+
+            <section
               id="product-settings"
               className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_3px_14px_rgba(0,0,0,.025)] sm:p-6"
             >
@@ -1252,6 +1489,7 @@ export function ProductEditor({
                       ["product-detail", "Detail produk"],
                       ["product-pricing", "Harga"],
                       ["product-variants", "Varian & stok"],
+                      ["product-shipping", "Pengiriman"],
                       ["product-settings", "Pengaturan lainnya"],
                     ] as const
                   ).map(([href, label], index) => (
@@ -1282,28 +1520,30 @@ export function ProductEditor({
           </aside>
         </div>
         {canEdit && (
-          <div className="sticky bottom-[calc(82px+env(safe-area-inset-bottom))] z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-[0_-5px_22px_rgba(0,0,0,.055)] backdrop-blur-lg md:bottom-4 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
             <span className="min-w-0 flex-1 text-xs font-medium text-zinc-500">
-              {dirty
-                ? "Ada perubahan yang belum disimpan."
-                : productId
-                  ? "Seluruh perubahan telah disimpan."
-                  : "Simpan draft untuk melanjutkan."}
+              {pending?.startsWith("upload-")
+                ? "Foto sedang diunggah. Produk belum disimpan."
+                : dirty
+                  ? "Ada perubahan yang belum disimpan."
+                  : productId
+                    ? "Seluruh perubahan telah disimpan."
+                    : "Belum ada perubahan."}
             </span>
             <Button
               type="submit"
-              disabled={!!pending}
+              disabled={!!pending || !dirty}
+              aria-busy={pending === "save"}
               data-testid="save-product"
               className="h-11 shrink-0 rounded-xl px-5 sm:px-7"
             >
               <Save size={17} />
-              {pending === "save"
-                ? "Menyimpan..."
-                : custom
-                  ? "Simpan Variasi"
-                  : productId
-                    ? "Simpan perubahan"
-                    : "Simpan draft"}
+              Simpan
+              {pending === "save" && (
+                <span role="status" className="text-xs">
+                  Menyimpan…
+                </span>
+              )}
             </Button>
           </div>
         )}

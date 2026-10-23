@@ -116,14 +116,12 @@ export async function verifyCustomVariations(c: Context) {
   });
   try {
     await check(
-      "custom mobile editor: arbitrary groups, draft-first images, six stable SKU combinations",
+      "custom mobile editor: arbitrary groups, staged images before save, six stable SKU combinations",
       async () => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto(`${base}/admin/products/new`);
         await page.getByLabel("Nama produk", { exact: true }).fill(name);
-        await page
-          .getByLabel("Harga normal (Rp)", { exact: true })
-          .fill("175000");
+        await page.locator("#product-price").fill("175000");
         await page
           .getByLabel("Kategori", { exact: true })
           .selectOption(category.id);
@@ -146,18 +144,16 @@ export async function verifyCustomVariations(c: Context) {
         await root
           .getByRole("switch", { name: "Tambahkan gambar Warna", exact: true })
           .check();
-        await root
-          .getByRole("button", { name: "Simpan draft untuk foto", exact: true })
-          .click();
-        await expect(page.getByRole("status")).toContainText("Draft siap");
-        productId = (await db.product.findUniqueOrThrow({ where: { slug } }))
-          .id;
-        fixtureProductIds.push(productId);
+        assert.equal(
+          await db.product.count({ where: { slug } }),
+          0,
+          "No hidden product before save",
+        );
         // Pause locally to inspect a real pending upload, then resume the actual API call.
         let release!: () => void, entered!: () => void;
         const hold = new Promise<void>((r) => (release = r)),
           started = new Promise<void>((r) => (entered = r));
-        const uploadUrl = `${base}/api/v1/admin/products/${productId}/images`;
+        const uploadUrl = `${base}/api/v1/admin/product-media`;
         await page.route(
           uploadUrl,
           async (route) => {
@@ -176,6 +172,12 @@ export async function verifyCustomVariations(c: Context) {
           });
         await started;
         await expect(root.getByText(/Mengunggah/)).toBeVisible();
+        await expect(
+          root
+            .getByRole("button", { name: "Unggah foto Merah", exact: true })
+            .locator("img"),
+        ).toHaveAttribute("src", /^blob:/);
+
         await capture("uploading-390");
         release();
         await expect(
@@ -183,7 +185,7 @@ export async function verifyCustomVariations(c: Context) {
             .getByRole("button", { name: "Ganti foto Merah", exact: true })
             .locator("img"),
         ).toBeVisible();
-        // Drop a successful upload response: server snapshot + file digest must recover it.
+        // Drop a successful staged response, then retry the same upload identity.
         await page.route(
           uploadUrl,
           async (route) => {
@@ -212,20 +214,28 @@ export async function verifyCustomVariations(c: Context) {
         // Assert recovery after the real upload has committed and its response is lost,
         // rather than counting provider processing time against the UI's 5s deadline.
         await responseLost;
+        await root
+          .getByRole("button", { name: "Coba unggah lagi", exact: true })
+          .click();
         await expect(
           root
             .getByRole("button", { name: "Ganti foto Hijau", exact: true })
             .locator("img"),
         ).toBeVisible();
-        await expect(page.getByRole("status")).toContainText("dipulihkan");
-        await capture("image-preview-390");
-        const privateImage = await db.productImage.findFirstOrThrow({
-          where: { productId, isVariation: true },
-        });
-        assert.equal(
-          (await c.anonymous.request.get(base + privateImage.url)).status(),
-          404,
+        await expect(root.getByRole("status")).toContainText(
+          "Foto sementara siap",
         );
+        await capture("image-preview-390");
+        const privateUrl = await root
+          .getByRole("button", { name: "Ganti foto Merah", exact: true })
+          .locator("img")
+          .getAttribute("src");
+        assert.ok(privateUrl);
+        assert.equal(
+          (await c.anonymous.request.get(base + privateUrl)).status(),
+          401,
+        );
+        assert.equal(await db.product.count({ where: { slug } }), 0);
         await root.getByRole("button", { name: /^Tambah variasi / }).click();
         await root.getByLabel("Nama variasi 2", { exact: true }).fill("Ukuran");
         await root.getByLabel("Opsi Ukuran 1", { exact: true }).fill("M");
@@ -274,9 +284,29 @@ export async function verifyCustomVariations(c: Context) {
         await root
           .getByRole("button", { name: "Buat 6 kombinasi", exact: true })
           .click();
-        for (let i = 0; i < 6; i++) {
-          await root.locator(`#sku-stock-${i}`).fill(i === 0 ? "7" : "5");
-        }
+        const bulk = root.locator(".variation-bulk");
+        await bulk.locator("#bulk-onHand").fill("5");
+        await bulk
+          .getByRole("button", { name: "Terapkan Massal", exact: true })
+          .click();
+        for (let i = 0; i < 6; i++)
+          await expect(root.locator(`#sku-stock-${i}`)).toHaveValue("5");
+        await bulk
+          .getByRole("radio", { name: "Hanya SKU dipilih", exact: true })
+          .check();
+        await root
+          .getByRole("checkbox", { name: "Pilih SKU 1", exact: true })
+          .check();
+        await bulk.locator("#bulk-onHand").fill("7");
+        await bulk
+          .getByRole("button", { name: "Terapkan Massal", exact: true })
+          .click();
+        await expect(root.locator("#sku-stock-0")).toHaveValue("7");
+        await expect(root.locator("#sku-stock-1")).toHaveValue("5");
+        await capture("bulk-selected-390");
+        await bulk
+          .getByRole("radio", { name: "Terapkan ke semua SKU", exact: true })
+          .check();
         await root
           .getByLabel("SKU kombinasi 1", { exact: true })
           .fill("CUSTOM-" + c.prefix + "-RED-M");
@@ -284,14 +314,23 @@ export async function verifyCustomVariations(c: Context) {
         await root.locator("#sku-sale-0").fill("110000");
         await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
         await capture("sku-editor-390");
-        // Save the actual gallery through the same draft-first storage contract.
+        // Finalize the staged gallery and option photos in the product save transaction.
         await page.locator("#product-image-upload").setInputFiles({
           name: "gallery.png",
           mimeType: "image/png",
           buffer: red,
         });
-        await expect(page.getByRole("status")).toContainText("Gambar diunggah");
+        await expect(
+          page
+            .getByRole("region", { name: "Status perubahan produk" })
+            .getByRole("status"),
+        ).toContainText("Foto sementara siap");
+        await page.locator("#package-weight").fill("500");
         await page.getByTestId("save-product").click();
+        await expect(page).toHaveURL(/\/admin\/products\/(?!new$)[^/]+$/);
+        productId = (await db.product.findUniqueOrThrow({ where: { slug } }))
+          .id;
+        fixtureProductIds.push(productId);
         await expect(page).toHaveURL(`${base}/admin/products/${productId}`);
         const product = await db.product.findUniqueOrThrow({
           where: { id: productId },
@@ -317,7 +356,7 @@ export async function verifyCustomVariations(c: Context) {
         await page.reload();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Warna");
         await capture("saved-390");
-        for (const width of [768, 1024, 1360]) {
+        for (const width of [360, 390, 430, 768, 1024, 1360]) {
           await page.setViewportSize({ width, height: 900 });
           await root.locator(".variation-heading").scrollIntoViewIfNeeded();
           await page.evaluate(() => window.scrollBy(0, -120));
@@ -574,9 +613,11 @@ export async function verifyCustomVariations(c: Context) {
           })
           .click();
         await page.getByTestId("save-product").click();
-        await expect(page.getByRole("status")).toHaveText(
-          "Produk berhasil disimpan.",
-        );
+        await expect(
+          page
+            .getByRole("region", { name: "Status perubahan produk" })
+            .getByRole("status"),
+        ).toHaveText("Produk berhasil disimpan.");
         assert.deepEqual(
           (await db.productVariant.findMany({ where: { productId } }))
             .map((v) => v.id)
@@ -618,9 +659,11 @@ export async function verifyCustomVariations(c: Context) {
           }),
         ).not.toBeChecked();
         await page.getByTestId("save-product").click();
-        await expect(page.getByRole("status")).toHaveText(
-          "Produk berhasil disimpan.",
-        );
+        await expect(
+          page
+            .getByRole("region", { name: "Status perubahan produk" })
+            .getByRole("status"),
+        ).toHaveText("Produk berhasil disimpan.");
         assert.equal(
           await db.productImage.count({
             where: { productId, isVariation: true },
@@ -668,10 +711,7 @@ export async function verifyCustomVariations(c: Context) {
             exact: true,
           })
           .click();
-        await page.getByTestId("save-product").click();
-        await expect(page.getByRole("status")).toHaveText(
-          "Produk berhasil disimpan.",
-        );
+        await expect(page.getByTestId("save-product")).toBeDisabled();
         assert.deepEqual(
           (await db.productVariant.findMany({ where: { productId } }))
             .map((v) => v.id)
@@ -735,6 +775,7 @@ export async function verifyCustomVariations(c: Context) {
         const sparseSlug = "sparse-" + c.prefix;
         const result = await createManagedProduct(actor, {
           name: "Dummy sparse options",
+          weightGrams: 500,
           categoryId: category.id,
           slug: sparseSlug,
           basePrice: 1000,
@@ -771,7 +812,9 @@ export async function verifyCustomVariations(c: Context) {
         await store.goto(`${base}/product/${sparseSlug}`);
         // A sparse catalog must start on a real SKU rather than a missing
         // Cartesian product; deliberately selecting a missing combo still fails.
-        await expect(store.getByTestId("selected-sku")).toContainText("SPARSE-");
+        await expect(store.getByTestId("selected-sku")).toContainText(
+          "SPARSE-",
+        );
         await expect(store.getByTestId("buy-now-btn")).toBeEnabled();
         await store.getByTestId(`option-${groups[0].values[0].id}`).click();
         await store.getByTestId(`option-${groups[1].values[0].id}`).click();
@@ -819,18 +862,33 @@ export async function verifyCustomVariations(c: Context) {
             `storefront overflow ${width}`,
           );
           await expect(store.getByTestId("buy-now-btn")).toBeVisible();
-          await expect(store.getByTestId("selected-product-price")).toBeVisible();
+          await expect(
+            store.getByTestId("selected-product-price"),
+          ).toBeVisible();
           if (width < 768) {
             await expect(store.locator(".pdp-topbar")).toBeVisible();
-            await expect(store.locator(".storefront-root > header")).toBeHidden();
+            await expect(
+              store.locator(".storefront-root > header"),
+            ).toBeHidden();
             await expect(store.getByTestId("bottom-nav")).toBeHidden();
-            await expect(store.locator(".pdp-purchase-actions")).toHaveCSS("position", "fixed");
+            await expect(store.locator(".pdp-purchase-actions")).toHaveCSS(
+              "position",
+              "fixed",
+            );
             const button = await store.getByTestId("buy-now-btn").boundingBox();
-            assert.ok(button && button.x >= 0 && button.x + button.width <= width + 1, "floating buy pill must fit the phone");
+            assert.ok(
+              button && button.x >= 0 && button.x + button.width <= width + 1,
+              "floating buy pill must fit the phone",
+            );
           } else {
             await expect(store.locator(".pdp-topbar")).toBeHidden();
-            await expect(store.locator(".storefront-root > header")).toBeVisible();
-            await expect(store.locator(".pdp-purchase-actions")).toHaveCSS("position", "static");
+            await expect(
+              store.locator(".storefront-root > header"),
+            ).toBeVisible();
+            await expect(store.locator(".pdp-purchase-actions")).toHaveCSS(
+              "position",
+              "static",
+            );
           }
           await store.screenshot({
             path: path.join(artifactDir, `product-custom-store-${width}.png`),

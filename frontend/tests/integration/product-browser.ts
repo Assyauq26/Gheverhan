@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
+import { verifyProductEditorV2 } from "./product-editor-v2-browser";
 import { verifyCustomVariations } from "./custom-variations-browser";
 import { verifyDirectCheckout } from "./direct-checkout-browser";
 import { verifyCartSynchronization } from "./cart-sync-browser";
@@ -138,7 +139,7 @@ async function main() {
     });
     const slug = `kaos-sprint-${prefix}`;
     await check("create draft with price, category, SKU and inventory", async () => {
-      await page.goto(`${base}/admin/products/new`); await page.getByRole("button", { name: "Gunakan varian sederhana", exact: true }).click(); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.getByLabel("Stok fisik", { exact: true }).fill("6");
+      await page.goto(`${base}/admin/products/new`); await page.getByRole("button", { name: "Gunakan varian sederhana", exact: true }).click(); await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix}`); await page.locator("#product-price").fill("175000"); await page.getByLabel("Kategori", { exact: true }).selectOption(category.id); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}`); await page.locator("#variant-0-stock").fill("6"); await page.locator("#package-weight").fill("500");
       for (const width of [360, 390, 768, 1360]) {
         await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
         await page.screenshot({ path: path.join(artifactDir, `product-create-${width}.png`), fullPage: true });
@@ -153,16 +154,17 @@ async function main() {
       await page.setViewportSize({ width: 390, height: 844 }); await page.getByLabel("Harga diskon (opsional)", { exact: true }).fill("200000"); await page.getByTestId("save-product").click(); const feedback = page.getByRole("region", { name: "Status perubahan produk" }); await expect(feedback.getByRole("alert")).toContainText("Harga diskon harus lebih kecil");
        await expect(feedback).toBeFocused(); const box = await feedback.boundingBox(); assert.ok(box && box.y >= 0 && box.y + box.height <= 844);
       await expect(page.getByLabel("Harga diskon (opsional)", { exact: true })).toHaveValue("200000"); assert.equal((await db.product.findUniqueOrThrow({ where: { id: product.id } })).salePrice, null);
-      await page.getByLabel("Harga diskon (opsional)", { exact: true }).fill(""); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); await page.setViewportSize({ width: 1360, height: 900 });
+      await page.getByLabel("Harga diskon (opsional)", { exact: true }).fill(""); await expect(page.getByTestId("save-product")).toBeDisabled(); await page.setViewportSize({ width: 1360, height: 900 });
     });
     await check("draft is absent from public detail and a warmed catalog cache", async () => {
       assert.equal((await anonymous.request.get(`${base}/api/v1/products/${slug}`)).status(), 404);
       const listing = await anonymous.request.get(`${base}/api/v1/products?q=${prefix}`); assert.equal((await listing.json()).data.total, 0);
     });
     await check("edit and add/remove a fresh unreferenced variant", async () => {
-      await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix} Edited`); await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("190000"); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}-EDIT`);
-      await page.getByRole("button", { name: "Tambah varian", exact: true }).click(); await page.getByLabel("SKU", { exact: true }).nth(1).fill(`BROWSER-${prefix}-S`); await page.getByLabel("Ukuran", { exact: true }).nth(1).fill("S");
+      await page.getByLabel("Nama produk", { exact: true }).fill(`Kaos Sprint ${prefix} Edited`); await page.locator("#product-price").fill("190000"); await page.getByLabel("SKU", { exact: true }).fill(`BROWSER-${prefix}-EDIT`);
+      await page.getByRole("button", { name: "Tambah varian", exact: true }).click(); await page.locator("#variant-1-sku").locator("xpath=ancestor::details").locator("summary").click(); await page.getByLabel("SKU", { exact: true }).nth(1).fill(`BROWSER-${prefix}-S`); await page.getByLabel("Ukuran", { exact: true }).nth(1).fill("S");
       await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 2);
+      await page.locator("#variant-1-sku").locator("xpath=ancestor::details").locator("summary").click();
       await page.getByRole("button", { name: "Hapus varian 2", exact: true }).click(); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
     });
     await check("seller variant builder renders responsively and persists unique color/size combinations", async () => {
@@ -186,6 +188,8 @@ async function main() {
       await dialog.getByRole("button", { name: "Tambahkan 4 kombinasi", exact: true }).click();
       await expect(dialog).toHaveCount(0);
       assert.equal(await page.getByLabel("SKU", { exact: true }).count(), 5);
+      const generatedSkus = await page.getByLabel("SKU", { exact: true }).evaluateAll(nodes => nodes.slice(1).map(node => (node as HTMLInputElement).value));
+      assert.ok(generatedSkus.every(sku => sku === sku.toUpperCase() && sku.startsWith("KS")), "New legacy combinations use the same initials-based uppercase SKU generator");
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "mobile editor has no horizontal overflow");
       await page.getByTestId("save-product").click();
       await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
@@ -194,6 +198,8 @@ async function main() {
       await expect(page.getByRole("navigation", { name: "Bagian editor produk" })).toBeVisible();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "desktop editor has no horizontal overflow");
       for (let index = 5; index >= 2; index--) {
+        const card = page.locator(`#variant-${index - 1}-sku`).locator("xpath=ancestor::details");
+        if ((await card.getAttribute("open")) === null) await card.locator("summary").click();
         await page.getByRole("button", { name: `Hapus varian ${index}`, exact: true }).click();
       }
       await page.getByTestId("save-product").click();
@@ -201,7 +207,7 @@ async function main() {
       assert.equal(await db.productVariant.count({ where: { productId: product.id } }), 1);
     });
     await check("upload and serve draft image through the existing storage contract", async () => {
-      await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("status")).toContainText("Gambar diunggah"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      await page.getByLabel("Unggah JPG, PNG, atau WebP", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png }); await expect(page.getByRole("region", {name:"Status perubahan produk"}).getByRole("status")).toContainText("Foto sementara siap"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
       for (const width of [390, 768, 1360]) {
         await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
         await page.screenshot({ path: path.join(artifactDir, `product-edit-${width}.png`), fullPage: true });
@@ -266,7 +272,7 @@ async function main() {
         await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBeNull();
         // Restore the admin product editor for the subsequent pre-existing checkout regression.
         await page.goto(`${base}/admin/products/${product.id}`);
-        await expect(page.getByLabel("Harga normal (Rp)", { exact: true })).toBeVisible();
+        await expect(page.locator("#product-price")).toBeVisible();
       } finally {
         await db.coupon.deleteMany({ where: { code: voucherCode } });
       }
@@ -333,12 +339,12 @@ async function main() {
       await expect(customerPage.getByTestId("place-order-btn")).toBeEnabled();
       const quote = JSON.parse(await customerPage.locator('input[name="expectedLines"]').inputValue());
       assert.equal(quote[0].unitPrice, 190000); assert.match(await customerPage.locator('input[name="requestId"]').inputValue(), /^[0-9a-f-]{36}$/);
-      await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("195000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      await page.locator("#product-price").fill("195000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
       for (const [name, value] of Object.entries({ recipientName: "Fixture Buyer", phone: "0800000000", line: "Local test address", city: "Test", province: "Test", postalCode: "00000" })) await customerPage.locator(`input[name="${name}"]`).fill(value);
       const before = await db.order.count({ where: { userId: customer.id } });
       await customerPage.getByTestId("place-order-btn").click(); await expect(customerPage.getByTestId("checkout-error")).toContainText("konfirmasi ulang");
       assert.equal(await db.order.count({ where: { userId: customer.id } }), before); assert.equal(await db.cartItem.count({ where: { cart: { userId: customer.id } } }), 1);
-      await page.getByLabel("Harga normal (Rp)", { exact: true }).fill("190000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); await customerPage.close();
+      await page.locator("#product-price").fill("190000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan."); await customerPage.close();
     });
     const order = await db.order.create({ data: { orderNumber: `BROWSER-${prefix}`, userId: customer.id, subtotal: 190000, total: 190000, shippingCost: 0, discount: 0, items: { create: { variantId: product.variants[0].id, productName: product.name, variantLabel: "Default", imageUrl: product.images[0].url, unitPrice: 190000, quantity: 1, lineTotal: 190000 } } } });
     await check("archive hides cached catalog/detail and blocks new purchases", async () => {
@@ -387,8 +393,10 @@ async function main() {
       for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
     }
     await verifyCustomVariations({page,browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,prefix,check});
+    await verifyProductEditorV2({page,db,base,artifactDir,prefix,check,png});
+    assert.deepEqual(pageErrors, [], "Final product/editor browser flows have no unhandled errors");
     completed = true;
-    await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: false }, null, 2));
+    await writeFile(path.join(artifactDir, "result.json"), JSON.stringify({ checks, database: "disposable localhost gheverhan_sprint1_test", storage: "local test double for existing adapter", productId: product.id, slug, schemaChanged: true }, null, 2));
     console.log(`PASS ${checks} browser/data-flow checks; no production data or external storage used`);
   } finally {
     try {

@@ -25,7 +25,7 @@ before(async () => {
   actor = { id: user.id, isAdmin: true, permissions: Object.values(PERMISSIONS) };
 });
 after(async () => { await prisma?.$disconnect(); });
-const input = (suffix: string) => ({ name: "Integration product", slug: `integration-${prefix}-${suffix}`, basePrice: 100000, salePrice: null, variants: [{ sku: `GH-${prefix}-${suffix}`, color: "Black", size: "M", onHand: 5 }], images: [] });
+const input = (suffix: string) => ({ name: "Integration product", weightGrams: 500, slug: `integration-${prefix}-${suffix}`, basePrice: 100000, salePrice: null, variants: [{ sku: `GH-${prefix}-${suffix}`, color: "Black", size: "M", onHand: 5 }], images: [] });
 
 test("real PostgreSQL product lifecycle and transactional guards", async t => {
   await t.test("Marketing creates, edits, disables and audits voucher with RBAC and duplicate protection", async () => {

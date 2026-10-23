@@ -1,5 +1,8 @@
 "use client";
-import { useRef, useState } from "react";
+import { allocateProductSkusAction } from "@/modules/catalog/product-management.actions";
+import { ProductBulkEditor } from "./product-bulk-editor";
+import { suggestSku } from "@/modules/catalog/product-editor-domain";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -10,6 +13,7 @@ import {
   Camera,
   X,
   Layers3,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,10 +41,9 @@ type Props = {
   onUndoPhotos: () => void;
   disabled: boolean;
   canStock: boolean;
-  hasDraft: boolean;
+  productName: string;
   basePrice: number;
   onChange: (groups: OptionGroup[], rows: Row[]) => void;
-  onDraft: () => Promise<boolean>;
   onUpload: (
     file: File,
     progress: (percent: number) => void,
@@ -52,6 +55,9 @@ function move<T>(rows: T[], index: number, delta: number) {
   return next;
 }
 export function CustomVariationEditor(p: Props) {
+  const [generating, setGenerating] = useState(false);
+  const [selected, setSelected] = useState(new Set<number>());
+  const [selectedOnly, setSelectedOnly] = useState(false);
   const [error, setError] = useState("");
   const [uploadNotice, setUploadNotice] = useState("");
   const [confirmation, setConfirmation] = useState<{
@@ -60,14 +66,28 @@ export function CustomVariationEditor(p: Props) {
     confirm: string;
     run: () => void;
   } | null>(null);
-  const [upload, setUpload] = useState<{ id: string; progress: number } | null>(
-    null,
+  const [upload, setUpload] = useState<{
+    id: string;
+    progress: number;
+    preview: string;
+  } | null>(null);
+  useEffect(
+    () => () => {
+      if (upload?.preview) URL.revokeObjectURL(upload.preview);
+    },
+    [upload?.preview],
   );
   const retry = useRef<{ id: string; file: File } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const focusAfterConfirm = useRef(false);
+  const identities = p.rows
+    .map((row) => row.id || combinationKey(row.optionValueIds ?? []))
+    .join(";");
+  useEffect(() => {
+    setSelected(new Set());
+  }, [identities]);
   const count = combinationCount(p.groups);
-  const blocked = p.disabled || upload !== null;
+  const blocked = p.disabled || upload !== null || generating;
   function change(groups: OptionGroup[], rows = p.rows) {
     setError("");
     setUploadNotice("");
@@ -152,18 +172,18 @@ export function CustomVariationEditor(p: Props) {
     if (blocked) return;
     retry.current = { id: valueId, file };
     setUploadNotice("");
-    setUpload({ id: valueId, progress: 0 });
+    setUpload({ id: valueId, progress: 0, preview: URL.createObjectURL(file) });
     setError("");
     try {
       const image = await p.onUpload(file, (progress) =>
-        setUpload({ id: valueId, progress }),
+        setUpload((current) => (current ? { ...current, progress } : current)),
       );
       if (image) {
         valueChange(groupId, valueId, { imageId: image.id });
         setUploadNotice(
           image.recovered
-            ? "Hasil upload dipulihkan dari server. Simpan Variasi untuk memasang mapping foto."
-            : "Foto tersimpan di draft. Simpan Variasi untuk memasang mapping foto.",
+            ? "Hasil upload dipulihkan. Klik Simpan untuk memasang foto."
+            : "Foto sementara siap. Klik Simpan untuk memasang foto.",
         );
         retry.current = null;
       } else
@@ -226,22 +246,51 @@ export function CustomVariationEditor(p: Props) {
       );
       return;
     }
-    const apply = () =>
-      change(
-        p.groups,
-        combinations.map(
-          (ids) =>
-            existing.get(combinationKey(ids)) ?? {
-              sku: "GHV-" + crypto.randomUUID(),
-              color: "",
-              size: "",
-              price: null,
-              salePrice: null,
-              ...(p.canStock ? { onHand: 0 } : {}),
-              optionValueIds: ids,
-            },
-        ),
-      );
+    const apply = async () => {
+      setGenerating(true);
+      try {
+        const used = new Set(p.rows.map((row) => row.sku.toUpperCase()));
+        const rows = combinations.map((ids) => {
+          const old = existing.get(combinationKey(ids));
+          if (old) return old;
+          const sku = suggestSku(p.productName, p.groups, ids, used);
+          used.add(sku.toUpperCase());
+          return {
+            sku,
+            color: "",
+            size: "",
+            price: null,
+            salePrice: null,
+            ...(p.canStock ? { onHand: 0 } : {}),
+            optionValueIds: ids,
+          };
+        });
+        const fresh = rows.filter(
+          (row) => !existing.has(combinationKey(row.optionValueIds ?? [])),
+        );
+        if (fresh.length) {
+          const result = await allocateProductSkusAction(
+            fresh.map((row) => ({
+              key: combinationKey(row.optionValueIds ?? []),
+              sku: row.sku,
+            })),
+          );
+          if (!result.ok || !result.data)
+            throw new Error(result.error || "SKU gagal dibuat.");
+          for (const row of fresh)
+            row.sku = result.data.find(
+              (candidate) =>
+                candidate.key === combinationKey(row.optionValueIds ?? []),
+            )!.sku;
+        }
+        setSelected(new Set());
+        change(p.groups, rows);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "SKU gagal dibuat.");
+      } finally {
+        setGenerating(false);
+      }
+    };
     if (removed.some((row) => row.id || row.sku || row.price || row.onHand))
       setConfirmation({
         title: "Review pembentukan SKU",
@@ -269,7 +318,6 @@ export function CustomVariationEditor(p: Props) {
     >
       <div className="variation-heading">
         <div>
-          <p className="variation-eyebrow">KATALOG / VARIASI</p>
           <h2>Variasi Produk</h2>
           <p>Atur pilihan pelanggan, lalu buat SKU untuk setiap kombinasi.</p>
         </div>
@@ -312,11 +360,22 @@ export function CustomVariationEditor(p: Props) {
       )}
       <div className="variation-groups">
         {p.groups.map((group, index) => (
-          <section
+          <details
+            open
+            onInvalidCapture={(event) => {
+              event.currentTarget.open = true;
+            }}
             className="variation-card"
             key={group.id}
             aria-labelledby={`group-title-${group.id}`}
           >
+            <summary className="variation-group-summary">
+              <span>Nama variasi {index + 1}</span>
+              <span className="variation-pill">
+                {group.name || "Belum diberi nama"}
+              </span>
+              <ChevronDown size={18} aria-hidden="true" />
+            </summary>
             <header className="variation-card-header">
               <div className="variation-field">
                 <label htmlFor={`group-title-${group.id}`}>
@@ -404,22 +463,6 @@ export function CustomVariationEditor(p: Props) {
                 onChange={(e) => imageMode(group, e.target.checked)}
               />
             </label>
-            {group.allowsImage && !p.hasDraft && (
-              <div className="variation-draft">
-                <p>
-                  Simpan draft terlebih dahulu agar foto terikat ke produk yang
-                  benar. Data variasi Anda tetap berada di editor.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={blocked}
-                  onClick={() => void p.onDraft()}
-                >
-                  Simpan draft untuk foto
-                </Button>
-              </div>
-            )}
             <div className="variation-values">
               {group.values.map((value, vi) => {
                 const image = p.photos.find(
@@ -462,7 +505,7 @@ export function CustomVariationEditor(p: Props) {
                           type="button"
                           className="variation-photo-picker"
                           aria-label={`${image ? "Ganti" : "Unggah"} foto ${value.value || `opsi ${vi + 1}`}`}
-                          disabled={blocked || !p.hasDraft}
+                          disabled={blocked}
                           onClick={() =>
                             root.current
                               ?.querySelector<HTMLInputElement>(
@@ -471,11 +514,11 @@ export function CustomVariationEditor(p: Props) {
                               ?.click()
                           }
                         >
-                          {image ? (
+                          {image || upload?.id === value.id ? (
                             <Image
                               unoptimized
-                              src={image.url}
-                              alt={image.alt || value.value}
+                              src={image?.url || upload!.preview}
+                              alt={image?.alt || value.value}
                               width={56}
                               height={56}
                             />
@@ -490,7 +533,7 @@ export function CustomVariationEditor(p: Props) {
                           aria-label={`File foto ${value.value || vi + 1}`}
                           data-upload-id={value.id}
                           accept="image/jpeg,image/png,image/webp"
-                          disabled={blocked || !p.hasDraft}
+                          disabled={blocked}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) void send(group.id, value.id, file);
@@ -617,7 +660,7 @@ export function CustomVariationEditor(p: Props) {
               </Button>
               <span>{group.values.length} / 50 opsi</span>
             </footer>
-          </section>
+          </details>
         ))}
       </div>
       {p.groups.length > 0 && (
@@ -641,6 +684,16 @@ export function CustomVariationEditor(p: Props) {
           <Plus size={18} /> Tambah variasi <span>({p.groups.length}/3)</span>
         </Button>
       )}
+      <ProductBulkEditor
+        rows={p.rows}
+        basePrice={p.basePrice}
+        canStock={p.canStock}
+        disabled={blocked}
+        selected={selected}
+        selectedOnly={selectedOnly}
+        onMode={setSelectedOnly}
+        onChange={(rows) => change(p.groups, rows)}
+      />
       {p.groups.length > 0 && (
         <section className="variation-review">
           <div>
@@ -649,6 +702,26 @@ export function CustomVariationEditor(p: Props) {
               {count > 50 ? "Lebih dari 50" : count} kombinasi akan dibuat.
               Harga dan stok lama dipertahankan untuk kombinasi yang sama.
             </p>
+            {p.productName.trim() &&
+              count > 0 &&
+              count <= 50 &&
+              p.groups.every(
+                (group) =>
+                  group.name.trim() &&
+                  group.values.every((value) => value.value.trim()),
+              ) && (
+                <p>
+                  Pratinjau SKU baru:{" "}
+                  <strong>
+                    {suggestSku(
+                      p.productName,
+                      p.groups,
+                      generateCombinations(p.groups)[0],
+                    )}
+                  </strong>
+                  . SKU existing tetap dipertahankan.
+                </p>
+              )}
             {count > 50 && (
               <p role="alert" className="variation-error">
                 Jumlah kombinasi melebihi batas maksimum 50 SKU. Kurangi
@@ -659,7 +732,7 @@ export function CustomVariationEditor(p: Props) {
           <Button
             type="button"
             variant="outline"
-            disabled={blocked || !count || count > 50}
+            disabled={blocked || !count || count > 50 || !p.productName.trim()}
             onClick={generate}
           >
             Buat {count > 50 ? "" : count} kombinasi
@@ -737,13 +810,30 @@ export function CustomVariationEditor(p: Props) {
             key={
               row.id || combinationKey(row.optionValueIds ?? []) || "default"
             }
-            open
+            open={index === 0}
             className="variation-sku"
             onInvalidCapture={(e) => {
               e.currentTarget.open = true;
             }}
           >
             <summary>
+              {selectedOnly && (
+                <input
+                  type="checkbox"
+                  aria-label={`Pilih SKU ${index + 1}`}
+                  checked={selected.has(index)}
+                  disabled={blocked}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    setSelected((current) => {
+                      const next = new Set(current);
+                      if (e.target.checked) next.add(index);
+                      else next.delete(index);
+                      return next;
+                    })
+                  }
+                />
+              )}
               {(() => {
                 const imageId = p.groups
                   .find((g) => g.allowsImage)
@@ -769,6 +859,7 @@ export function CustomVariationEditor(p: Props) {
               <span className="variation-pill">
                 {row.protected ? "Dilindungi" : "SKU"}
               </span>
+              <ChevronDown size={18} aria-hidden="true" />
             </summary>
             <div className="variation-sku-fields">
               <div className="variation-field">

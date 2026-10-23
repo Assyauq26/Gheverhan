@@ -76,3 +76,18 @@ describe('safe candidate preflight failure instrumentation',()=>{
   expect(out.status).toBe('BLOCKED');expect(JSON.stringify(out)).not.toContain('postgresql://');
  });
 });
+
+describe('Prisma 5 transaction statement compatibility before any connection',()=>{
+ it('rejects absent/false/nonboolean mode instead of silently modifying protected DSNs',()=>{
+  const pooled=base.replace('fixture:','fixture.bztprltkevacidcpjaam:').replace('db.bztprltkevacidcpjaam.supabase.co:5432','aws-0-ap-southeast-1.pooler.supabase.com:6543');
+  for(const suffix of ['', '&pgbouncer=false','&pgbouncer=TRUE','&pgbouncer=1']){
+   const env={DATABASE_URL:pooled+suffix,DIRECT_URL:base,SUPABASE_DB_CA_CERT:ca},before=JSON.stringify(env);
+   try{prepareProductionTransport(env);throw new Error('Expected rejection');}catch(error){expect(safeProbeFailure(error,'PRISMA_INIT','runtime').category).toBe('TRANSACTION_POOLER_PREPARED_STATEMENTS_UNVERIFIED');}
+   expect(JSON.stringify(env)).toBe(before);
+  }
+ });
+ it('does not accept duplicate true/false settings as proof of compatibility',()=>{
+  const pooled=base.replace('fixture:','fixture.bztprltkevacidcpjaam:').replace('db.bztprltkevacidcpjaam.supabase.co:5432','aws-0-ap-southeast-1.pooler.supabase.com:6543');
+  expect(()=>prepareProductionTransport({DATABASE_URL:pooled+'&pgbouncer=true&pgbouncer=false',DIRECT_URL:base,SUPABASE_DB_CA_CERT:ca})).toThrow();
+ });
+});

@@ -1,6 +1,6 @@
 /* Lumen semantic composition, adapted to React 18 and Gheverhan's existing primitives.
    related=8px, group=16px, section=32px. One surface owns each visible border. */
-:where(.variation-editor, .variation-confirm) {
+:where(.variation-editor, .variation-confirm, .variation-bulk) {
   --ui-space-related: 0.5rem;
   --ui-space-group: 1rem;
   --ui-space-section: 2rem;
@@ -486,4 +486,67 @@
 .variation-editor :where(select, summary):focus-visible {
   outline: 2px solid hsl(var(--brand));
   outline-offset: 3px;
+}
+/* Editor V2: task order stays vertical; disclosure reduces scrolling at 50 SKUs. */
+.variation-groups {
+  grid-template-columns: minmax(0, 1fr);
+}
+.variation-group-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 56px;
+  padding: 1rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 650;
+}
+.variation-group-summary::-webkit-details-marker {
+  display: none;
+}
+.variation-group-summary > svg {
+  margin-left: auto;
+  transition: transform 150ms ease;
+}
+.variation-card[open] > .variation-group-summary > svg {
+  transform: rotate(180deg);
+}
+.variation-bulk {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.variation-bulk input[type="checkbox"],
+.variation-sku summary input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: #111;
+}
+.variation-bulk button {
+  align-self: flex-start;
+  min-height: 44px;
+}
+.variation-group-summary:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: -4px;
+  border-radius: 1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .variation-group-summary > svg {
+    transition: none;
+  }
+}
+
+.product-editor-v2 section[id] {
+  scroll-margin-top: 7rem;
+}
+.product-editor-v2 :where(input, textarea, select, summary) {
+  scroll-margin-top: 8rem;
+}
+.variation-bulk {
+  width: 100%;
+}
+.variation-bulk h3 {
+  font-size: 1rem;
+  font-weight: 700;
 }

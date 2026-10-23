@@ -49,7 +49,7 @@ test('legacy schema and ambiguous migration ledger are rejected without fail-ope
         created = true;
         await cp('prisma/schema.prisma', path.join(directory, 'schema.prisma'));
         const migrations = (await readdir('prisma/migrations')).filter(n => /^\d{14}_/.test(n)).sort();
-        assert.equal(migrations.length, 10);
+        assert.equal(migrations.length, 11);
         for (const migration of migrations.slice(0, 5))
             await cp(path.join('prisma/migrations', migration), path.join(directory, 'migrations', migration), { recursive: true });
         await cp('prisma/migrations/migration_lock.toml', path.join(directory, 'migrations/migration_lock.toml'));
@@ -142,7 +142,7 @@ test('trusted role needs every required privilege, not only SELECT', async () =>
         const missingDirect = run(limited.toString());
         assert.equal(missingDirect.status, 1);
         assert.equal(missingDirect.data.schema.directCheckout, false);
-        await db.$executeRawUnsafe(`GRANT DELETE ON "CheckoutIntent" TO "${role}"`);
+        await db.$executeRawUnsafe(`GRANT DELETE ON "CheckoutIntent", "Product", "ProductImage", "ProductVariant", "Inventory", "StagedProductMedia", "ProductEditorSave" TO "${role}"`);
         const complete = run(limited.toString());
         assert.equal(complete.status, 0);
         assert.equal(complete.data.schema.trusted, true);
@@ -208,4 +208,82 @@ test('preflight rejects missing direct-checkout index with an otherwise matching
     try {
         const result=run(); assert.equal(result.status,1); assert.equal(result.data.ledgerMatches,true); assert.equal(result.data.schema.directCheckout,false);
     } finally { await db.$executeRaw`ALTER INDEX fixture_hidden_checkout_index RENAME TO "CheckoutIntent_orderId_key"`; }
+});
+
+test('preflight rejects missing staged-media expiry index on the reviewed ledger', async () => {
+ await db.$executeRaw`ALTER INDEX "StagedProductMedia_expiresAt_idx" RENAME TO fixture_hidden_media_index`;
+ try {const result=run();assert.equal(result.status,1);assert.equal(result.data.ledgerMatches,true);assert.equal(result.data.schema.productEditorV2,false);}
+ finally {await db.$executeRaw`ALTER INDEX fixture_hidden_media_index RENAME TO "StagedProductMedia_expiresAt_idx"`;}
+ assert.equal(run().status,0);
+});
+
+
+test('V2 tables require ALL CRUD independently and reject active RLS', async () => {
+ const role='v2_grants_'+randomUUID().replaceAll('-','');
+ await db.$executeRawUnsafe(`CREATE ROLE "${role}" NOLOGIN BYPASSRLS`);
+ const limited=new URL(target); limited.searchParams.set('options',`-c role=${role}`);
+ try {
+  await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO "${role}"`);
+  await db.$executeRawUnsafe(`GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO "${role}"`);
+  await db.$executeRawUnsafe(`GRANT EXECUTE ON FUNCTION gheverhan_backfill_legacy_options(text) TO "${role}"`);
+  for (const table of ['StagedProductMedia','ProductEditorSave']) {
+   await db.$executeRawUnsafe(`REVOKE ALL ON "${table}" FROM "${role}"`);
+   for (const privilege of ['SELECT','INSERT','UPDATE']) {
+    await db.$executeRawUnsafe(`GRANT ${privilege} ON "${table}" TO "${role}"`);
+    const partial=run(limited.toString());
+    assert.equal(partial.status,1,table+': '+privilege);
+    assert.equal(partial.data.ledgerMatches,true);
+    assert.equal(partial.data.schema.catalogPrivileges,true);
+    assert.equal(partial.data.schema.trusted,true);
+    assert.equal(partial.data.schema.productEditorV2,false);
+   }
+   await db.$executeRawUnsafe(`GRANT DELETE ON "${table}" TO "${role}"`);
+   assert.equal(run(limited.toString()).status,0);
+  }
+  await db.$executeRawUnsafe(`ALTER ROLE "${role}" NOBYPASSRLS`);
+  const filtered=run(limited.toString()); assert.equal(filtered.status,1);
+  assert.equal(filtered.data.schema.productEditorV2,false);
+  await db.$executeRawUnsafe(`ALTER ROLE "${role}" BYPASSRLS`);
+  assert.equal(run(limited.toString()).status,0);
+ } finally {await db.$executeRawUnsafe(`DROP OWNED BY "${role}"`);await db.$executeRawUnsafe(`DROP ROLE "${role}"`);}
+});
+
+test('catalog tables cannot hide missing DELETE behind another privilege',async()=>{
+ const role='catalog_grants_'+randomUUID().replaceAll('-','');
+ await db.$executeRawUnsafe(`CREATE ROLE "${role}" NOLOGIN BYPASSRLS`);
+ const limited=new URL(target);limited.searchParams.set('options',`-c role=${role}`);
+ try {
+  await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO "${role}"`);
+  await db.$executeRawUnsafe(`GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO "${role}"`);
+  await db.$executeRawUnsafe(`GRANT EXECUTE ON FUNCTION gheverhan_backfill_legacy_options(text) TO "${role}"`);
+  for(const table of ['Product','ProductImage','ProductVariant','Inventory']) {
+   await db.$executeRawUnsafe(`REVOKE DELETE ON "${table}" FROM "${role}"`);
+   const partial=run(limited.toString());assert.equal(partial.status,1);assert.equal(partial.data.schema.catalogPrivileges,false);assert.equal(partial.data.schema.productEditorV2,true);
+   await db.$executeRawUnsafe(`GRANT DELETE ON "${table}" TO "${role}"`);
+  }
+  assert.equal(run(limited.toString()).status,0);
+ }finally{await db.$executeRawUnsafe(`DROP OWNED BY "${role}"`);await db.$executeRawUnsafe(`DROP ROLE "${role}"`);}
+});
+
+test('missing schema USAGE is blocked without exposing a connection string',async()=>{
+ const role='schema_grants_'+randomUUID().replaceAll('-','');
+ const prior=await db.$queryRaw<{allowed:boolean}[]>`SELECT has_schema_privilege('public','public','USAGE') AS allowed`;
+ await db.$executeRawUnsafe(`CREATE ROLE "${role}" NOLOGIN BYPASSRLS`);
+ const limited=new URL(target);limited.searchParams.set('options',`-c role=${role}`);
+ try {
+  await db.$executeRawUnsafe(`GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO "${role}"`);
+  await db.$executeRawUnsafe(`GRANT EXECUTE ON FUNCTION gheverhan_backfill_legacy_options(text) TO "${role}"`);
+  await db.$executeRawUnsafe(`REVOKE USAGE ON SCHEMA public FROM PUBLIC`);
+  const child=spawnSync(process.execPath,['--import','tsx','scripts/release/preflight.ts'],{env:{...process.env,...fixtures,MAINTENANCE_MODE:'0',DATABASE_URL:limited.toString(),DIRECT_URL:limited.toString()},encoding:'utf8',timeout:20000});
+  assert.equal(child.status,1);assert.ok((child.stdout+child.stderr).includes('BLOCKED'));assert.ok(!(child.stdout+child.stderr).includes(limited.toString()));
+  await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO "${role}"`);
+  assert.equal(run(limited.toString()).status,0);
+ }finally{if(prior[0].allowed)await db.$executeRaw`GRANT USAGE ON SCHEMA public TO PUBLIC`;await db.$executeRawUnsafe(`DROP OWNED BY "${role}"`);await db.$executeRawUnsafe(`DROP ROLE "${role}"`);}
+});
+
+test('missing V2 table blocks even if other tables and ledger match',async()=>{
+ await db.$executeRaw`ALTER TABLE "ProductEditorSave" RENAME TO fixture_hidden_editor_save`;
+ try {const r=run();assert.equal(r.status,1);assert.equal(r.data.ledgerMatches,true);assert.equal(r.data.schema.productEditorV2,false);}
+ finally{await db.$executeRaw`ALTER TABLE fixture_hidden_editor_save RENAME TO "ProductEditorSave"`;}
+ assert.equal(run().status,0);
 });

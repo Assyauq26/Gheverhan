@@ -88,6 +88,9 @@ jobs:
           echo 'module.exports = {};' > node_modules/server-only/index.js
           git show HEAD:frontend/next-env.d.ts > next-env.d.ts
 
+      - name: Real private Supabase Storage API provider contract on disposable containers
+        run: node scripts/run-private-storage-drill.mjs
+
       - name: Direct database entrypoint safety in a disposable local schema
         run: node --import tsx --test tests/integration/database-entrypoints.test.ts
 
@@ -125,6 +128,12 @@ jobs:
 
       - name: Real PostgreSQL refunds, shipping and stock invariants
         run: npm run test:integration:refund-shipping
+
+      - name: Product editor V2 staged media, shipping and migration recovery
+        working-directory: frontend
+        run: |
+          node --disable-proto=throw --import tsx --test tests/integration/product-editor-v2-migration.test.ts
+          node --disable-proto=throw --import tsx --test tests/integration/product-editor-v2.test.ts
 
       - name: Chromium product media, upload and RBAC test with loopback storage double
         id: product_browser
@@ -171,6 +180,7 @@ jobs:
             /tmp/gheverhan-navigation-*/navigation-results.json
             /tmp/gheverhan-product-browser-*/validation-results.json
             /tmp/gheverhan-product-browser-*/product-*.png
+            /tmp/gheverhan-product-browser-*/editor-v2-*.png
             /tmp/gheverhan-product-browser-*/cart-concurrency-*.json
             /tmp/gheverhan-operations-browser-*/validation-results.json
             /tmp/gheverhan-navigation-*/*-dashboard.png

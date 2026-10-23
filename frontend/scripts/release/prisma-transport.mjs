@@ -60,5 +60,7 @@ export function prepareProductionTransport(env) {
   if (!env.DATABASE_URL || !env.DIRECT_URL) block('MISSING_PROTECTED_OPERATOR_BINDINGS');
   const runtime = inspectRuntimeBinding(env.DATABASE_URL), direct = inspectRuntimeBinding(env.DIRECT_URL);
   if (direct === 'transaction-pooler') block('DIRECT_URL_TRANSACTION_POOLER_NOT_ALLOWED');
+  // Prisma 5 named statements are unsafe on Supavisor transaction pooling without this flag.
+  if (runtime === 'transaction-pooler' && new URL(env.DATABASE_URL).searchParams.get('pgbouncer') !== 'true') block('TRANSACTION_POOLER_PREPARED_STATEMENTS_UNVERIFIED');
   return bindPrismaCa([{name:'runtime',url:env.DATABASE_URL,mode:runtime},{name:'direct',url:env.DIRECT_URL,mode:direct}],env.SUPABASE_DB_CA_CERT);
 }

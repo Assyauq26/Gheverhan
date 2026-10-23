@@ -34,14 +34,14 @@ Audit source bukan persetujuan operasional. Snapshot c66bc98 belum memiliki appr
 
 ### Probe TLS-only Windows untuk operator (tanpa credential atau SQL)
 
-Jalankan hanya pada workstation operator tepercaya dengan OpenSSL yang sudah tersedia dan root CA resmi yang diunduh dari dashboard Supabase. Jangan mengambil nilai Secret Vercel atau menempelkan isi sertifikat/DSN ke chat. Host tetap mengikuti endpoint yang diizinkan patch; pengujian kedua port tidak membuktikan port yang dipakai snapshot Vercel. Probe mengirim PostgreSQL SSLRequest dan memverifikasi TLS/hostname tanpa username/password database atau SQL. Tidak ada flag TLS tidak aman, perubahan environment, atau penulisan konfigurasi provider.
+Jalankan hanya pada workstation operator tepercaya dengan OpenSSL 3.x yang sudah tersedia dan root CA resmi yang diunduh dari dashboard Supabase. Jangan mengambil nilai Secret Vercel atau menempelkan isi sertifikat/DSN ke chat. Host tetap mengikuti endpoint yang diizinkan patch; pengujian kedua port tidak membuktikan port yang dipakai snapshot Vercel. Probe mengirim PostgreSQL SSLRequest dan memverifikasi TLS/hostname tanpa username/password database atau SQL. Default CA directory/store OpenSSL dimatikan agar verifikasi tidak lolos berkat trust store lain; file CA eksplisit tetap dipakai. Tidak ada flag TLS tidak aman, perubahan environment, atau penulisan konfigurasi provider.
 
 ```powershell
 $officialCaFile = Read-Host "Local path to the official Supabase root CA file"
 if (-not (Test-Path -LiteralPath $officialCaFile -PathType Leaf)) { throw "BLOCKED: official CA file unavailable" }
 $poolerHost = "aws-0-ap-southeast-1.pooler.supabase.com"
 foreach ($poolerPort in @(5432, 6543)) {
-    "" | & openssl.exe s_client -starttls postgres -connect ($poolerHost + ":" + $poolerPort) -servername $poolerHost -CAfile $officialCaFile -verify_return_error -verify_hostname $poolerHost -brief 2>&1 |
+    "" | & openssl.exe s_client -starttls postgres -connect ($poolerHost + ":" + $poolerPort) -servername $poolerHost -CAfile $officialCaFile -no-CApath -no-CAstore -verify_return_error -verify_hostname $poolerHost -brief 2>&1 |
         Select-String -Pattern "Verification: OK|Verification error|verify error|Protocol version|Ciphersuite"
     if ($LASTEXITCODE -ne 0) { throw ("BLOCKED: TLS verification failed on port " + $poolerPort) }
     Write-Output ("TLS handshake PASS on port " + $poolerPort)

@@ -49,8 +49,8 @@
 .sort-handle { display: inline-grid; place-items: center; width: 44px; min-width: 28px; height: 44px; border-radius: .5rem; color: #52525b; cursor: grab; touch-action: none; user-select: none; }
 .sort-handle[data-dragging] { cursor: grabbing; background: #18181b; color: #fff; }
 [data-sort-id]:has(> .sort-handle[data-dragging]), [data-sort-id]:has(> div > .sort-handle[data-dragging]) { outline: 2px solid #18181b; outline-offset: -2px; }
-.size-chart-editor { display: grid; min-width: 0; gap: .75rem; margin-top: 1rem; }
-.size-chart-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--seller-line); border-radius: .75rem; }
+.size-chart-editor { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; gap: .75rem; margin-top: 1rem; }
+.size-chart-scroll { position: relative; min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--seller-line); border-radius: .75rem; }
 .size-chart-scroll table { width: 100%; border-collapse: collapse; font-size: .8rem; }
 .size-chart-scroll :where(th, td) { padding: .4rem; border: 1px solid var(--seller-line); min-width: 140px; }
 .size-chart-scroll :where(th, td):last-child { min-width: 44px; }

@@ -11,7 +11,7 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
   const page = await context.newPage();
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   let id = "";
-  const overflow = async (target: Page) => assert.ok(await target.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "No document overflow");
+  const overflow = async (target: Page) => assert.ok(await target.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), "No document overflow");
   try {
     await check("native editor: bounded multi-upload, individual retry, mouse/touch/keyboard cover ordering", async () => {
       await page.goto(base + "/admin/products/new");
@@ -36,11 +36,8 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       const source = await page.getByRole("button", { name: "Urutkan foto 3", exact: true }).boundingBox();
       const target = await page.locator(".seller-gallery-photo").first().boundingBox();
       assert.ok(source && target);
-      console.log("Drag geometry", JSON.stringify({ source, target, hit: await page.evaluate(({x,y}) => document.elementFromPoint(x,y)?.outerHTML.slice(0,300), { x: source.x + source.width/2, y: source.y + source.height/2 }) }));
-      await page.evaluate(() => { (window as unknown as { dragEvents: unknown[] }).dragEvents = []; for (const type of ["pointerdown", "pointermove", "pointerup"]) document.addEventListener(type, event => { const e=event as PointerEvent; (window as unknown as { dragEvents: unknown[] }).dragEvents.push([type,e.button,e.clientX,e.clientY,(e.target as Element)?.tagName]); }, true); });
       await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2); await page.mouse.down();
       await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 }); await page.mouse.up();
-      console.log("Drag events",JSON.stringify(await page.evaluate(() => ({ events:(window as unknown as {dragEvents:unknown[]}).dragEvents, active:document.querySelectorAll("[data-dragging]").length, order:Array.from(document.querySelectorAll<HTMLElement>(".seller-gallery-photo")).map(p=>p.dataset.sortId) }))), JSON.stringify(errors));
       await expect(page.locator(".seller-gallery-photo").first()).toHaveAttribute("data-sort-id", before[2]);
       const handle = page.getByRole("button", { name: "Urutkan foto 1", exact: true }); await handle.scrollIntoViewIfNeeded();
       const touchSource = await handle.boundingBox(), touchTarget = await page.locator(".seller-gallery-photo").nth(1).boundingBox();
@@ -53,7 +50,7 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await cdp.detach();
       await expect(page.locator(".seller-gallery-photo").nth(1)).toHaveAttribute("data-sort-id", before[2]);
       const keyboard = page.getByRole("button", { name: "Urutkan foto 2", exact: true });
-      await keyboard.focus(); await keyboard.press("Space"); await keyboard.press("Home"); await keyboard.press("Enter");
+      await keyboard.focus(); await keyboard.press("Space"); await keyboard.press("Home"); await page.keyboard.press("Enter");
       await expect(page.locator(".seller-gallery-photo").first()).toHaveAttribute("data-sort-id", before[2]);
       await expect(page.locator(".seller-cover-badge")).toHaveCount(1);
     });
@@ -67,13 +64,14 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await page.getByRole("button", { name: "Tambah kolom", exact: true }).click();
       for (let row = 1; row <= 3; row++) await page.getByLabel(`Ukuran baris ${row} kolom 4`, { exact: true }).fill(`Nilai ${row}`);
       const handle = page.getByRole("button", { name: "Urutkan kolom 4", exact: true });
-      await handle.focus(); await handle.press("Space"); await handle.press("ArrowLeft"); await handle.press("Enter");
+      await handle.focus(); await handle.press("Space"); await handle.press("ArrowLeft"); await page.keyboard.press("Enter");
       await page.getByLabel("Satuan tabel ukuran").selectOption("inch");
       for (const width of [320,360,375,390,430,768,1024,1280,1360,1440,1920]) {
         await page.setViewportSize({ width, height: 900 }); await page.evaluate(() => scrollTo(0,0)); await overflow(page);
         await page.screenshot({ path: path.join(artifactDir, `native-product-${width}.png`), fullPage: true });
       }
       await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForFunction(() => document.documentElement.clientWidth === 390);
       await page.getByTestId("save-product").click();
       await expect(page).toHaveURL(/\/admin\/products\/(?!new$)[^/]+$/);
       id = page.url().split("/").pop()!;
@@ -111,5 +109,5 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       assert.equal((await anonymous.request.get(base + image.url)).status(), 404); await customer.close();
       assert.deepEqual(errors, []);
     });
-  } catch (error) { await page.screenshot({ path: path.join(artifactDir, "native-failure.png"), fullPage: false }); throw error; } finally { await context.close(); if (id) await db.product.update({ where: { id }, data: { status: "ARCHIVED" } }); }
+  } catch (error) {  await page.screenshot({ path: path.join(artifactDir, "native-failure.png"), fullPage: false }); throw error; } finally { await context.close(); if (id) await db.product.update({ where: { id }, data: { status: "ARCHIVED" } }); }
 }

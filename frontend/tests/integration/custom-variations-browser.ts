@@ -404,7 +404,7 @@ export async function verifyCustomVariations(c: Context) {
         await expect(galleryDialog.getByRole("button", { name: "Unggah baru" })).toBeVisible();
         await galleryDialog.getByRole("button", { name: "Batal" }).click();
         await capture("saved-390");
-        for (const width of [360, 390, 430, 768, 1024, 1360]) {
+        for (const width of [360, 390, 430, 768, 1024, 1360, 1920]) {
           await page.setViewportSize({ width, height: 900 });
           await root.locator(".variation-groups").scrollIntoViewIfNeeded();
           await page.evaluate(() => window.scrollBy(0, -120));
@@ -662,7 +662,7 @@ export async function verifyCustomVariations(c: Context) {
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Motif");
         await page.getByRole("button", { name: "Urutkan", exact: true }).click();
         const handle = root.getByRole("button", { name: "Urutkan opsi Hijau", exact: true });
-        await handle.focus(); await handle.press("Space"); await handle.press("ArrowUp"); await handle.press("Enter");
+        await handle.focus(); await handle.press("Space"); await handle.press("ArrowUp"); await page.keyboard.press("Enter");
         await page.getByRole("button", { name: "Selesai", exact: true }).click();
         await closeEditor();
         await page.getByTestId("save-product").click();
@@ -1007,6 +1007,31 @@ export async function verifyCustomVariations(c: Context) {
         assert.deepEqual(errors, []);
       },
     );
+    await check("custom group sort persists IDs and disclosure/discard guards remain explicit", async () => {
+      await closeEditor();
+      const groups = await db.productOptionGroup.findMany({ where: { productId }, orderBy: { sortOrder: "asc" } });
+      const skus = await db.productVariant.findMany({ where: { productId }, orderBy: { id: "asc" } });
+      await openGroups();
+      await page.getByRole("button", { name: "Urutkan", exact: true }).click();
+      const handle = root.getByRole("button", { name: "Urutkan variasi 1", exact: true });
+      await handle.focus(); await handle.press("Space"); await handle.press("End"); await page.keyboard.press("Enter");
+      await page.getByRole("button", { name: "Selesai", exact: true }).click();
+      await expect(root.locator(".variation-card").first()).toHaveAttribute("data-sort-id", groups[1].id);
+      await closeEditor(); await page.getByTestId("save-product").click();
+      await expect(page.getByRole("region", { name: "Status perubahan produk" }).getByRole("status")).toHaveText("Produk berhasil disimpan.");
+      assert.deepEqual((await db.productOptionGroup.findMany({ where: { productId }, orderBy: { sortOrder: "asc" } })).map(g => g.id), [groups[1].id, groups[0].id]);
+      assert.deepEqual(await db.productVariant.findMany({ where: { productId }, orderBy: { id: "asc" } }), skus);
+      await openGroups();
+      const summary = root.locator(".variation-group-summary").first();
+      await summary.click(); await expect(summary).toHaveAttribute("aria-expanded", "false");
+      await summary.click(); await expect(summary).toHaveAttribute("aria-expanded", "true");
+      const field = root.getByLabel("Nama variasi 1", { exact: true });
+      const original = await field.inputValue(); await field.fill("Discard this rename");
+      page.once("dialog", dialog => void dialog.accept());
+      await page.getByRole("button", { name: "Kembali ke produk", exact: true }).click();
+      await openGroups(); await expect(root.getByLabel("Nama variasi 1", { exact: true })).toHaveValue(original);
+      await closeEditor();
+    });
   } finally {
     // Only this loopback run's fixtures: preserve history, hide media after its mock stops.
     if (fixtureProductIds.length)

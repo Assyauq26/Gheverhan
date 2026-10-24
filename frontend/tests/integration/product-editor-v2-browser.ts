@@ -106,7 +106,7 @@ export async function verifyProductEditorV2({
         .locator("#product-images img")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("src")));
       const handle = page.getByRole("button", { name: "Urutkan foto 2", exact: true });
-      await handle.focus(); await handle.press("Space"); await handle.press("ArrowLeft"); await handle.press("Enter");
+      await handle.focus(); await handle.press("Space"); await handle.press("ArrowLeft"); await page.keyboard.press("Enter");
       await expect(page.locator("#product-images img").first()).toHaveAttribute(
         "src",
         images[1]!,

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { GripVertical } from "lucide-react";
 
 export function reorderById<T extends { id: string }>(items: T[], from: string, to: string): T[] {
@@ -14,18 +14,22 @@ export function SortableHandle({ id, scope, label, disabled, onMove }: {
   id: string; scope: string; label: string; disabled?: boolean; onMove: (from: string, to: string) => void;
 }) {
   const help = useId();
+  const button = useRef<HTMLButtonElement>(null);
+  const keyboardMode = useRef(false);
   const [active, setActive] = useState(false);
   const [message, setMessage] = useState("");
   const latest = useRef(onMove); latest.current = onMove;
   const cleanup = useRef<() => void>();
+  useLayoutEffect(() => { if (active && keyboardMode.current) button.current?.focus({ preventScroll: true }); }, [label, active]);
   useEffect(() => () => cleanup.current?.(), []);
   return <>
-    <button type="button" className="sort-handle" data-dragging={active || undefined}
+    <button ref={button} type="button" className="sort-handle" data-dragging={active || undefined}
       aria-label={`Urutkan ${label}`} aria-describedby={help} aria-pressed={active} disabled={disabled}
       onClick={event => { event.preventDefault(); event.stopPropagation(); }}
       onPointerDown={event => {
         event.stopPropagation();
         if (event.button !== 0) return;
+        keyboardMode.current = false;
         cleanup.current?.();
         const start = { id: event.pointerId, x: event.clientX, y: event.clientY };
         const viewport = event.currentTarget.closest<HTMLElement>(".seller-editor-scroll");
@@ -56,7 +60,7 @@ export function SortableHandle({ id, scope, label, disabled, onMove }: {
       onKeyDown={event => {
         event.stopPropagation();
         if ([" ", "Enter", "Escape"].includes(event.key)) {
-          event.preventDefault(); setActive(event.key === "Escape" ? false : !active); return;
+          event.preventDefault(); keyboardMode.current = event.key !== "Escape" && !active; setActive(keyboardMode.current); return;
         }
         if (!active || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
         event.preventDefault();

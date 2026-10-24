@@ -1,20 +1,20 @@
 "use client";
 
+import { useAppearance } from "@/components/appearance/context";
+import { CORE_HREFS } from "@/modules/appearance/schema";
 import { useEffect, useState } from "react";
 import Link from "@/components/ui/navigation";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, ShoppingBag, User } from "lucide-react";
+import { Home, LayoutGrid, ShoppingBag, User, Heart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CART_COUNT_EVENT } from "@/modules/cart/cart-events";
 
-const items = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/shop", label: "Shop", icon: LayoutGrid },
-  { href: "/cart", label: "Keranjang", icon: ShoppingBag, badgeKey: true },
-  { href: "/account", label: "Account", icon: User },
-];
+
 
 export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
+  const {config, preview} = useAppearance();
+  const icons = {home:Home,shop:LayoutGrid,cart:ShoppingBag,account:User,heart:Heart,star:Star};
+  const items = config.mobile.items.map(i => ({...i,href:CORE_HREFS[i.id],icon:icons[i.icon],badgeKey:i.id === "cart"}));
   const pathname = usePathname();
   const [liveCount, setLiveCount] = useState(count);
 
@@ -39,6 +39,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
   return (
     <nav
       className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center justify-center gap-1 rounded-full border border-line bg-white/95 p-1.5 shadow-lg backdrop-blur md:hidden"
+      data-style={config.mobile.style}
       data-testid="bottom-nav"
     >
       {items.map((item) => {
@@ -47,7 +48,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
         const Icon = item.icon;
 
         return (
-          <Link
+          <Link prefetch={preview ? false : undefined}
             key={item.href}
             href={item.href}
             data-testid={`bottomnav-${item.label.toLowerCase()}`}

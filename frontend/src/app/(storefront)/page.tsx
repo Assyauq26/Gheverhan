@@ -55,6 +55,7 @@ export default async function HomePage() {
       {flash.items.length > 0 && <section
         className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-3 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-3"
         data-testid="flash-sale"
+        data-theme-target="promo"
       >
         <div
           aria-hidden="true"

@@ -8,6 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        accent: "bg-black text-white hover:bg-ink",
+        secondary: "bg-surface text-ink hover:bg-gray-200",
         default: "bg-black text-white hover:bg-ink",
         outline: "border border-line bg-white text-ink hover:bg-surface",
         ghost: "text-ink hover:bg-surface",
@@ -37,6 +39,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
+        data-button-variant={variant ?? "default"}
         ref={ref}
         {...props}
       />

@@ -1194,9 +1194,14 @@ export function ProductEditor({
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={!canEdit || !!pending}
+                  disabled={!canEdit || !!pending || values.variants.some((row) => row.id)}
                   onClick={() => {
+                    if (values.variants.some((row) => row.id)) {
+                      setError("SKU produk lama perlu konversi terkontrol untuk menjaga integritas keranjang dan histori transaksi.");
+                      return;
+                    }
                     setCustom(true);
+                    setSellerPanel("groups");
                   }}
                 >
                   Gunakan variasi kustom

@@ -38,6 +38,7 @@ type Row = ProductInput["variants"][number] & {
 type Photo = { id: string; url: string; alt: string; recovered?: boolean };
 type Props = {
   mode?: "all" | "groups" | "stock";
+  reordering?: boolean;
   groups: OptionGroup[];
   rows: Row[];
   photos: Photo[];
@@ -411,7 +412,7 @@ export function CustomVariationEditor(p: Props) {
                   }
                 />
               </div>
-              <details className="variation-tools">
+              <details className="variation-tools" open={p.reordering ? true : undefined}>
               <summary aria-label={`Aksi variasi ${index + 1}`}><Ellipsis size={17} aria-hidden="true" /></summary>
               <div className="variation-tools-menu">
                 <Button

@@ -135,7 +135,6 @@ export async function verifyCustomVariations(c: Context) {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto(`${base}/admin/products/new`);
         await page.getByLabel("Nama produk", { exact: true }).fill(name);
-        await page.locator("#product-price").fill("175000");
         await page
           .getByLabel("Kategori", { exact: true })
           .selectOption(category.id);
@@ -661,12 +660,10 @@ export async function verifyCustomVariations(c: Context) {
         await expect(page).toHaveURL(`${base}/admin/products/${productId}`);
         await openGroups();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Motif");
-        await root
-          .getByRole("button", {
-            name: "Pindahkan opsi Hijau ke atas",
-            exact: true,
-          })
-          .click();
+        await page.getByRole("button", { name: "Urutkan", exact: true }).click();
+        const handle = root.getByRole("button", { name: "Urutkan opsi Hijau", exact: true });
+        await handle.focus(); await handle.press("Space"); await handle.press("ArrowUp"); await handle.press("Enter");
+        await page.getByRole("button", { name: "Selesai", exact: true }).click();
         await closeEditor();
         await page.getByTestId("save-product").click();
         await expect(

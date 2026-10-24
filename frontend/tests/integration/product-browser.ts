@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
+import { verifyNativeProductEditor } from "./product-native-browser";
 import { verifyProductEditorV2 } from "./product-editor-v2-browser";
 import { verifyCustomVariations } from "./custom-variations-browser";
 import { verifyDirectCheckout } from "./direct-checkout-browser";
@@ -120,6 +121,10 @@ async function main() {
     await admin.addCookies([await cookie(staff)]); await buyer.addCookies([await cookie(customer)]); await readOnly.addCookies([await cookie(marketing)]);
     const page = await admin.newPage();
     const pageErrors: string[] = []; page.on("pageerror", err => pageErrors.push(err.message));
+    if (process.env.PRODUCT_EDITOR_ONLY === "1") {
+      await verifyNativeProductEditor({browser:browser!,admin,anonymous,db,base,artifactDir,prefix,png,check});
+      completed = true; return;
+    }
     await check("protected pages and permission-filtered dashboard", async () => {
       const unauth = await anonymous.request.get(`${base}/admin/products/new`); assert.match(unauth.url(), /\/login/);
       const denied = await readOnly.request.get(`${base}/admin/products/new`); assert.equal(denied.status(), 404);
@@ -392,6 +397,7 @@ async function main() {
       const captures = [{ width: 1360, height: 900, route: "/admin", file: "desktop.png" }, { width: 390, height: 844, route: `/admin/products/${product.id}`, file: "mobile.png" }, { width: 1360, height: 900, route: `/admin/products/${product.id}`, file: "desktop-product.png" }, { width: 390, height: 844, route: "/admin", file: "mobile-dashboard.png" }];
       for (const c of captures) { await page.setViewportSize(c); await page.goto(`${base}${c.route}`); await page.waitForLoadState("networkidle"); await page.screenshot({ path: path.join(artifactDir, c.file), fullPage: true }); }
     }
+    await verifyNativeProductEditor({browser:browser!,admin,anonymous,db,base,artifactDir,prefix,png,check});
     await verifyCustomVariations({page,browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,prefix,check});
     await verifyProductEditorV2({page,db,base,artifactDir,prefix,check,png});
     assert.deepEqual(pageErrors, [], "Final product/editor browser flows have no unhandled errors");

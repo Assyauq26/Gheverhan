@@ -44,7 +44,7 @@ export async function verifyProductEditorV2({
     async () => {
       await page.goto(base + "/admin/products/new");
       await expect(save).toBeDisabled();
-      for (const width of [360, 390, 430, 768, 1024, 1360]) {
+      for (const width of [320, 360, 375, 390, 430, 768, 1024, 1280, 1360, 1440, 1920]) {
         await page.setViewportSize({ width, height: 900 });
         await capture(`create-empty-${width}`);
         assert.ok(
@@ -105,9 +105,8 @@ export async function verifyProductEditorV2({
       const images = await page
         .locator("#product-images img")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("src")));
-      await page
-        .getByRole("button", { name: "Pindahkan foto 2 ke atas", exact: true })
-        .click();
+      const handle = page.getByRole("button", { name: "Urutkan foto 2", exact: true });
+      await handle.focus(); await handle.press("Space"); await handle.press("ArrowLeft"); await handle.press("Enter");
       await expect(page.locator("#product-images img").first()).toHaveAttribute(
         "src",
         images[1]!,
@@ -183,7 +182,7 @@ export async function verifyProductEditorV2({
     },
   );
   await check(
-    "editor V2: canonical revert is clean, save is not sticky, guard and six viewports",
+    "editor V2: canonical revert is clean, save is sticky, guard and six viewports",
     async () => {
       await page
         .locator("#product-name")
@@ -196,7 +195,7 @@ export async function verifyProductEditorV2({
         await save
           .locator("..")
           .evaluate((node) => getComputedStyle(node).position),
-        "static",
+        "sticky",
       );
       await page.locator("#package-weight").fill("750");
       page.once("dialog", (dialog) => void dialog.dismiss());
@@ -206,7 +205,7 @@ export async function verifyProductEditorV2({
       await expect(page).toHaveURL(base + "/admin/products/" + productId);
       await page.locator("#package-weight").fill("500");
       await expect(save).toBeDisabled();
-      for (const width of [360, 390, 430, 768, 1024, 1360]) {
+      for (const width of [320, 360, 375, 390, 430, 768, 1024, 1280, 1360, 1440, 1920]) {
         await page.setViewportSize({ width, height: 900 });
         await capture(`edit-filled-${width}`);
         await page
@@ -233,7 +232,6 @@ export async function verifyProductEditorV2({
       await page.goto(base + "/admin/products/new");
       await page.setViewportSize({ width: 390, height: 844 });
       await page.locator("#product-name").fill("Produk Uji Lima Puluh");
-      await page.locator("#product-price").fill("150000");
       await page.locator(".seller-sales-links button").first().click();
       const root = page.getByTestId("custom-variation-editor");
       await root

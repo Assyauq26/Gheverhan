@@ -309,6 +309,19 @@ export function ProductEditor({
         JSON.stringify({
           ...values,
           ...shippingData(shipping),
+          // Persist accessible photo names even after recovering an upload from session.
+          images: values.images.map((image, index) => ({
+            ...image,
+            alt: !image.alt.trim() || image.alt.startsWith("Produk - Foto produk")
+              ? `${values.name.trim() || "Produk"} - Foto produk ${index + 1}`.slice(0, 200)
+              : image.alt,
+          })),
+          optionImages: values.optionImages.map((image, index) => ({
+            ...image,
+            alt: !image.alt.trim() || image.alt.startsWith("Produk - Foto variasi")
+              ? `${values.name.trim() || "Produk"} - Foto variasi ${index + 1}`.slice(0, 200)
+              : image.alt,
+          })),
           optionsEnabled: custom && Boolean(values.optionGroups?.length),
           optionGroups:
             custom && values.optionGroups?.length

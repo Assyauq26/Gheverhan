@@ -18,7 +18,6 @@ import {
   Check,
   Save,
   Sparkles,
-  X,
   ChevronRight,
   SlidersHorizontal,
 } from "lucide-react";

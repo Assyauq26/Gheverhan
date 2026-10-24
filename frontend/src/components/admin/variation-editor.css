@@ -1054,3 +1054,8 @@
 .seller-editor-dialog.seller-reordering .variation-tools-menu {
   display: flex; border-color: #9bdfdf; box-shadow: 0 5px 18px rgb(0 160 160 / .13);
 }
+
+/* Nested variation confirmations must sit above the full-screen seller editor
+   and photo picker; otherwise its overlay blocks Batal/confirm clicks. */
+.variation-overlay { z-index: 130; }
+.variation-confirm { z-index: 131; }

@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Ellipsis,
   ImageIcon,
+  Check,
+  ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +36,7 @@ type Row = ProductInput["variants"][number] & {
 };
 type Photo = { id: string; url: string; alt: string; recovered?: boolean };
 type Props = {
+  mode?: "all" | "groups" | "stock";
   groups: OptionGroup[];
   rows: Row[];
   photos: Photo[];
@@ -57,6 +60,7 @@ function move<T>(rows: T[], index: number, delta: number) {
   return next;
 }
 export function CustomVariationEditor(p: Props) {
+  const [picker, setPicker] = useState<{ groupId: string; valueId: string; photoId: string | null } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [selected, setSelected] = useState(new Set<number>());
   const [selectedOnly, setSelectedOnly] = useState(false);
@@ -181,6 +185,7 @@ export function CustomVariationEditor(p: Props) {
         setUpload((current) => (current ? { ...current, progress } : current)),
       );
       if (image) {
+        setPicker((current) => current?.valueId === valueId ? { ...current, photoId: image.id } : current);
         valueChange(groupId, valueId, { imageId: image.id });
         setUploadNotice(
           image.recovered
@@ -318,6 +323,7 @@ export function CustomVariationEditor(p: Props) {
           event.preventDefault();
       }}
     >
+      {p.mode !== "stock" && (<>
       <div className="variation-heading">
         <div>
           <h2>Variasi Produk</h2>
@@ -511,13 +517,7 @@ export function CustomVariationEditor(p: Props) {
                           className="variation-photo-picker"
                           aria-label={`${image ? "Ganti" : "Unggah"} foto ${value.value || `opsi ${vi + 1}`}`}
                           disabled={blocked}
-                          onClick={() =>
-                            root.current
-                              ?.querySelector<HTMLInputElement>(
-                                `[data-upload-id="${value.id}"]`,
-                              )
-                              ?.click()
-                          }
+                          onClick={() => setPicker({ groupId: group.id, valueId: value.id, photoId: value.imageId })}
                         >
                           {image || upload?.id === value.id ? (
                             <Image
@@ -604,31 +604,19 @@ export function CustomVariationEditor(p: Props) {
                         </button>
                       )}
                     </div>
-                    <div className="variation-photo-select">
-                      <ImageIcon size={16} aria-hidden="true" />
-                      <label className="sr-only" htmlFor={`stored-photo-${value.id}`}>
-                        Foto tersimpan untuk{" "}{value.value || `opsi ${vi + 1}`}
-                      </label>
-                      <select
-                        id={`stored-photo-${value.id}`}
-                        aria-label={`Foto tersimpan untuk ${value.value || `opsi ${vi + 1}`}`}
-                        value={value.imageId || ""}
-                        disabled={blocked || !group.allowsImage || p.photos.length === 0}
-                        onChange={(e) =>
-                          valueChange(group.id, value.id, {
-                            imageId: e.target.value || null,
-                          })
-                        }
+                    {group.allowsImage && (
+                      <button
+                        type="button"
+                        className="variation-photo-select variation-select-button"
+                        disabled={blocked}
+                        aria-label={`Pilih gambar variasi untuk ${value.value || `opsi ${vi + 1}`}`}
+                        onClick={() => setPicker({ groupId: group.id, valueId: value.id, photoId: value.imageId })}
                       >
-                        <option value="">Pilih gambar (opsional)</option>
-                        {p.photos.map((photo, pi) => (
-                          <option key={photo.id} value={photo.id}>
-                            Foto {pi + 1}: {photo.alt || "Produk"}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} aria-hidden="true" />
-                    </div>
+                        <ImageIcon size={16} aria-hidden="true" />
+                        <span>{image ? `Foto ${p.photos.findIndex((photo) => photo.id === image.id) + 1}: ${image.alt || "Produk"}` : "Pilih gambar (opsional)"}</span>
+                        <ChevronDown size={14} aria-hidden="true" />
+                      </button>
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
@@ -741,6 +729,8 @@ export function CustomVariationEditor(p: Props) {
           </Button>
         </details>
       )}
+      </>)}
+      {p.mode !== "groups" && (<>
       <ProductBulkEditor
         rows={p.rows}
         basePrice={p.basePrice}
@@ -965,6 +955,63 @@ export function CustomVariationEditor(p: Props) {
           </details>
         ))}
       </section>
+      </>)}
+      <Dialog.Root
+        open={picker !== null}
+        onOpenChange={(open) => { if (!open) setPicker(null); }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="seller-image-overlay" />
+          <Dialog.Content className="seller-image-dialog" aria-describedby="seller-picker-desc">
+            <span className="seller-sheet-handle" aria-hidden="true" />
+            <header className="seller-image-dialog-header">
+              <div>
+                <Dialog.Title>Pilih gambar variasi</Dialog.Title>
+                <Dialog.Description id="seller-picker-desc">Pilih dari foto produk utama atau unggah gambar baru.</Dialog.Description>
+              </div>
+              <Dialog.Close asChild>
+                <button type="button" aria-label="Tutup pilih gambar"><X size={22} /></button>
+              </Dialog.Close>
+            </header>
+            <strong className="seller-photo-group-title">Foto produk utama</strong>
+            <div className="seller-photo-grid">
+              {p.photos.map((photo, index) => (
+                <button
+                  type="button"
+                  key={photo.id}
+                  className={`seller-photo-tile ${picker?.photoId === photo.id ? "selected" : ""}`}
+                  onClick={() => setPicker((current) => current ? { ...current, photoId: photo.id } : current)}
+                  aria-label={`Pilih foto ${index + 1}`}
+                  aria-pressed={picker?.photoId === photo.id}
+                >
+                  <Image unoptimized src={photo.url} alt={photo.alt || `Foto ${index + 1}`} width={160} height={160} />
+                  {picker?.photoId === photo.id && <Check size={18} className="seller-photo-check" aria-hidden="true" />}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={blocked}
+                className="seller-photo-upload"
+                onClick={() => {
+                  if (!picker) return;
+                  root.current?.querySelector<HTMLInputElement>(`[data-upload-id="${picker.valueId}"]`)?.click();
+                }}
+              >
+                <Plus size={27} aria-hidden="true" /><span>Unggah baru</span>
+              </button>
+            </div>
+            <p className="seller-photo-helper"><ImagePlus size={15} aria-hidden="true" /> Gambar yang dipilih akan digunakan untuk opsi variasi ini.</p>
+            <footer className="seller-image-actions">
+              <button type="button" onClick={() => setPicker(null)}>Batal</button>
+              <button type="button" disabled={!picker?.photoId || blocked} onClick={() => {
+                if (!picker?.photoId) return;
+                valueChange(picker.groupId, picker.valueId, { imageId: picker.photoId });
+                setPicker(null);
+              }}>Gunakan gambar</button>
+            </footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
       <Dialog.Root
         open={confirmation !== null}
         onOpenChange={(open) => {

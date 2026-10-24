@@ -14,6 +14,7 @@ import {
   X,
   Layers3,
   ChevronDown,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -379,7 +380,7 @@ export function CustomVariationEditor(p: Props) {
             <header className="variation-card-header">
               <div className="variation-field">
                 <label htmlFor={`group-title-${group.id}`}>
-                  Nama variasi {index + 1} <span aria-hidden="true">*</span>
+                  Nama variasi <span aria-hidden="true">*</span>
                 </label>
                 <input
                   id={`group-title-${group.id}`}
@@ -448,7 +449,6 @@ export function CustomVariationEditor(p: Props) {
                   <Trash2 size={17} />
                 </Button>
               </div>
-            </header>
             <label className="variation-image-switch">
               <span>
                 <strong>Tambahkan gambar</strong>
@@ -463,6 +463,7 @@ export function CustomVariationEditor(p: Props) {
                 onChange={(e) => imageMode(group, e.target.checked)}
               />
             </label>
+            </header>
             <div className="variation-values">
               {group.values.map((value, vi) => {
                 const image = p.photos.find(
@@ -580,35 +581,6 @@ export function CustomVariationEditor(p: Props) {
                           })
                         }
                       />
-                      {group.allowsImage && p.photos.length > 0 && (
-                        <>
-                          <label
-                            className="sr-only"
-                            htmlFor={`stored-photo-${value.id}`}
-                          >
-                            Foto tersimpan untuk{" "}
-                            {value.value || `opsi ${vi + 1}`}
-                          </label>
-                          <select
-                            id={`stored-photo-${value.id}`}
-                            aria-label={`Foto tersimpan untuk ${value.value || `opsi ${vi + 1}`}`}
-                            value={value.imageId || ""}
-                            disabled={blocked}
-                            onChange={(e) =>
-                              valueChange(group.id, value.id, {
-                                imageId: e.target.value || null,
-                              })
-                            }
-                          >
-                            <option value="">Pilih foto tersimpan</option>
-                            {p.photos.map((photo, pi) => (
-                              <option key={photo.id} value={photo.id}>
-                                Foto {pi + 1}: {photo.alt || "Produk"}
-                              </option>
-                            ))}
-                          </select>
-                        </>
-                      )}
                       {upload?.id === value.id && (
                         <span role="status">
                           Mengunggah {upload.progress}%
@@ -627,6 +599,31 @@ export function CustomVariationEditor(p: Props) {
                           Coba unggah lagi
                         </button>
                       )}
+                    </div>
+                    <div className="variation-photo-select">
+                      <ImageIcon size={16} aria-hidden="true" />
+                      <label className="sr-only" htmlFor={`stored-photo-${value.id}`}>
+                        Foto tersimpan untuk {` `}{value.value || `opsi ${vi + 1}`}
+                      </label>
+                      <select
+                        id={`stored-photo-${value.id}`}
+                        aria-label={`Foto tersimpan untuk ${value.value || `opsi ${vi + 1}`}`}
+                        value={value.imageId || ""}
+                        disabled={blocked || !group.allowsImage || p.photos.length === 0}
+                        onChange={(e) =>
+                          valueChange(group.id, value.id, {
+                            imageId: e.target.value || null,
+                          })
+                        }
+                      >
+                        <option value="">Pilih gambar (opsional)</option>
+                        {p.photos.map((photo, pi) => (
+                          <option key={photo.id} value={photo.id}>
+                            Foto {pi + 1}: {photo.alt || "Produk"}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} aria-hidden="true" />
                     </div>
                     <Button
                       type="button"
@@ -658,7 +655,7 @@ export function CustomVariationEditor(p: Props) {
               >
                 <Plus size={17} /> Tambahkan opsi
               </Button>
-              <span>{group.values.length} / 50 opsi</span>
+              <span className="variation-option-count">{group.values.length} / 50 opsi</span>
             </footer>
           </details>
         ))}
@@ -683,61 +680,6 @@ export function CustomVariationEditor(p: Props) {
         >
           <Plus size={18} /> Tambah variasi <span>({p.groups.length}/3)</span>
         </Button>
-      )}
-      <ProductBulkEditor
-        rows={p.rows}
-        basePrice={p.basePrice}
-        canStock={p.canStock}
-        disabled={blocked}
-        selected={selected}
-        selectedOnly={selectedOnly}
-        onMode={setSelectedOnly}
-        onChange={(rows) => change(p.groups, rows)}
-      />
-      {p.groups.length > 0 && (
-        <section className="variation-review">
-          <div>
-            <h3>Kombinasi SKU</h3>
-            <p aria-live="polite">
-              {count > 50 ? "Lebih dari 50" : count} kombinasi akan dibuat.
-              Harga dan stok lama dipertahankan untuk kombinasi yang sama.
-            </p>
-            {p.productName.trim() &&
-              count > 0 &&
-              count <= 50 &&
-              p.groups.every(
-                (group) =>
-                  group.name.trim() &&
-                  group.values.every((value) => value.value.trim()),
-              ) && (
-                <p>
-                  Pratinjau SKU baru:{" "}
-                  <strong>
-                    {suggestSku(
-                      p.productName,
-                      p.groups,
-                      generateCombinations(p.groups)[0],
-                    )}
-                  </strong>
-                  . SKU existing tetap dipertahankan.
-                </p>
-              )}
-            {count > 50 && (
-              <p role="alert" className="variation-error">
-                Jumlah kombinasi melebihi batas maksimum 50 SKU. Kurangi
-                beberapa opsi untuk melanjutkan.
-              </p>
-            )}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={blocked || !count || count > 50 || !p.productName.trim()}
-            onClick={generate}
-          >
-            Buat {count > 50 ? "" : count} kombinasi
-          </Button>
-        </section>
       )}
       {(p.optionPhotos.length > 0 || p.canUndoPhotos) && (
         <details className="variation-media-library">
@@ -795,10 +737,65 @@ export function CustomVariationEditor(p: Props) {
           </Button>
         </details>
       )}
+      <ProductBulkEditor
+        rows={p.rows}
+        basePrice={p.basePrice}
+        canStock={p.canStock}
+        disabled={blocked}
+        selected={selected}
+        selectedOnly={selectedOnly}
+        onMode={setSelectedOnly}
+        onChange={(rows) => change(p.groups, rows)}
+      />
+      {p.groups.length > 0 && (
+        <section className="variation-review">
+          <div>
+            <h3>Kombinasi SKU</h3>
+            <p aria-live="polite">
+              {count > 50 ? "Lebih dari 50" : count} kombinasi akan dibuat.
+              Harga dan stok lama dipertahankan untuk kombinasi yang sama.
+            </p>
+            {p.productName.trim() &&
+              count > 0 &&
+              count <= 50 &&
+              p.groups.every(
+                (group) =>
+                  group.name.trim() &&
+                  group.values.every((value) => value.value.trim()),
+              ) && (
+                <p>
+                  Pratinjau SKU baru:{" "}
+                  <strong>
+                    {suggestSku(
+                      p.productName,
+                      p.groups,
+                      generateCombinations(p.groups)[0],
+                    )}
+                  </strong>
+                  . SKU existing tetap dipertahankan.
+                </p>
+              )}
+            {count > 50 && (
+              <p role="alert" className="variation-error">
+                Jumlah kombinasi melebihi batas maksimum 50 SKU. Kurangi
+                beberapa opsi untuk melanjutkan.
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={blocked || !count || count > 50 || !p.productName.trim()}
+            onClick={generate}
+          >
+            Buat {count > 50 ? "" : count} kombinasi
+          </Button>
+        </section>
+      )}
       <section className="variation-skus" aria-label="Harga dan stok SKU">
         <div className="variation-section-title">
           <h3>Harga &amp; stok</h3>
-          <span>{p.rows.filter((r) => r.sku).length} / 50 SKU</span>
+          <span>{p.rows.filter((r) => r.sku).length} / {p.rows.length} SKU</span>
         </div>
         <p>
           Harga kosong mengikuti harga utama Rp

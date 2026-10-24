@@ -46,7 +46,7 @@ On the VPS, after this change is merged, run:
 sudo bash /opt/gheverhan/source/deploy/helipod/bootstrap-autodeploy.sh
 ```
 
-The bootstrap advances the clean source checkout to `main`, installs the forced-command deployment handler, creates a dedicated Ed25519 key, and prints two settings once:
+The bootstrap advances the clean source checkout to `main`, installs the forced-command deployment handler, creates a dedicated Ed25519 key, and prints the two GitHub Actions settings:
 
 - Save `HELI_POD_DEPLOY_KEY_B64` as a repository Actions secret with the same name.
 - Save `HELI_POD_SSH_KNOWN_HOSTS` as a repository Actions variable with the same name.
@@ -54,4 +54,4 @@ The bootstrap advances the clean source checkout to `main`, installs the forced-
 
 In GitHub, use **Settings → Secrets and variables → Actions**. The key is generated on the VPS, stored in the repository as an encrypted Actions secret, and never committed. Until the variable is enabled, pushes still build and validate images but do not contact the server.
 
-For every deployment, the VPS applies Prisma migrations from the temporary build-stage image with the database owner account, then replaces only the stateless app container. It checks the local health endpoint and restores the previous app image if the new app fails that check. Database migrations must remain forward-compatible; destructive schema changes still need a separate maintenance plan. The workflow then checks the public health endpoint.
+For every deployment, the VPS applies Prisma migrations from the temporary build-stage image with the database owner account, refreshes the runtime role's grants for new tables and sequences, then replaces only the stateless app container. It checks the local health endpoint and restores the previous app image if the new app fails that check. Database migrations must remain forward-compatible; destructive schema changes still need a separate maintenance plan. The workflow then checks the public health endpoint.

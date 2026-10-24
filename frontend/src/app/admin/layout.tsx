@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user.isAdmin) redirect("/");
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-zinc-950 md:flex">
+    <div className="admin-shell min-h-screen bg-[#fafafa] text-zinc-950 md:flex">
       <RegistrationOtpCleanup />
       <aside className="sticky top-0 hidden h-screen w-[238px] shrink-0 flex-col justify-between overflow-y-auto border-r border-zinc-200 bg-white pb-5 md:flex" aria-label="Sidebar admin">
         <div>
@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
+        <header className="admin-global-header sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
           <div className="hidden h-[72px] items-center justify-between gap-6 px-5 lg:px-7 md:flex">
             {user.permissions.includes(PERMISSIONS.PRODUCT_READ) && (
             <form action="/admin/products" method="get" role="search" aria-label="Pencarian produk dari header" className="relative w-full max-w-[420px]">
@@ -88,7 +88,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <OperationNotice />
           {children}
         </main>
-        <AdminMobileBottomNav permissions={user.permissions}/>
+        <div className="admin-bottom-nav"><AdminMobileBottomNav permissions={user.permissions}/></div>
       </div>
     </div>
   );

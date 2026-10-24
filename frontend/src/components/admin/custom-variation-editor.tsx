@@ -1,5 +1,6 @@
 "use client";
 import { allocateProductSkusAction } from "@/modules/catalog/product-management.actions";
+import { reorderById, SortableHandle } from "./sortable-handle";
 import { ProductBulkEditor } from "./product-bulk-editor";
 import { suggestSku } from "@/modules/catalog/product-editor-domain";
 import { useEffect, useRef, useState } from "react";
@@ -7,8 +8,6 @@ import Image from "next/image";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Plus,
-  ArrowUp,
-  ArrowDown,
   Trash2,
   Camera,
   Layers3,
@@ -57,12 +56,8 @@ type Props = {
     progress: (percent: number) => void,
   ) => Promise<Photo | undefined>;
 };
-function move<T>(rows: T[], index: number, delta: number) {
-  const next = [...rows];
-  [next[index], next[index + delta]] = [next[index + delta], next[index]];
-  return next;
-}
 export function CustomVariationEditor(p: Props) {
+  const [collapsed, setCollapsed] = useState(new Set<string>());
   const [picker, setPicker] = useState<{ groupId: string; valueId: string; photoId: string | null } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [selected, setSelected] = useState(new Set<number>());
@@ -369,22 +364,23 @@ export function CustomVariationEditor(p: Props) {
           </Button>
         </div>
       )}
+      {p.reordering && <p className="variation-sort-hint" role="status">Tekan dan geser untuk mengurutkan. Gunakan handle grup atau opsi.</p>}
       <div className="variation-groups">
         {p.groups.map((group, index) => (
           <details
-            open
-            onInvalidCapture={(event) => {
-              event.currentTarget.open = true;
-            }}
+            open={!collapsed.has(group.id)}
+            onInvalidCapture={() => setCollapsed(current => { const next = new Set(current); next.delete(group.id); return next; })}
             className="variation-card"
+            data-sort-scope="variation-groups" data-sort-id={group.id}
             key={group.id}
-            aria-labelledby={`group-title-${group.id}`}
+            aria-labelledby={`group-summary-${group.id}`}
           >
-            <summary className="variation-group-summary">
-              <span>Nama variasi {index + 1}</span>
-              <span className="variation-pill">
-                {group.name || "Belum diberi nama"}
-              </span>
+            <summary id={`group-summary-${group.id}`} className="variation-group-summary" aria-expanded={!collapsed.has(group.id)} onClick={event => {
+              event.preventDefault(); setCollapsed(current => { const next = new Set(current); if (next.has(group.id)) next.delete(group.id); else next.add(group.id); return next; });
+            }}>
+              {p.reordering && <SortableHandle scope="variation-groups" id={group.id} label={`variasi ${index + 1}`} disabled={blocked} onMove={(from, to) => p.onChange(reorderById(p.groups, from, to), p.rows)} />}
+              <span className="variation-summary-name">{group.name || `Variasi ${index + 1}`}</span>
+              <span className="variation-summary-count">{group.values.length} opsi{group.allowsImage ? " · Gambar aktif" : ""}</span>
               <ChevronDown size={18} aria-hidden="true" />
             </summary>
             <header className="variation-card-header">
@@ -405,7 +401,7 @@ export function CustomVariationEditor(p: Props) {
                         canonicalOption(g.name) === canonicalOption(group.name),
                     ).length > 1
                   }
-                  disabled={blocked}
+                  disabled={blocked || p.reordering}
                   placeholder="Contoh: Warna, Model, Motif, Kapasitas"
                   onChange={(e) =>
                     groupChange(group.id, { name: e.target.value })
@@ -415,26 +411,6 @@ export function CustomVariationEditor(p: Props) {
               <details className="variation-tools" open={p.reordering ? true : undefined}>
               <summary aria-label={`Aksi variasi ${index + 1}`}><Ellipsis size={17} aria-hidden="true" /></summary>
               <div className="variation-tools-menu">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Pindahkan variasi ${index + 1} ke atas`}
-                  disabled={blocked || index === 0}
-                  onClick={() => change(move(p.groups, index, -1))}
-                >
-                  <ArrowUp size={17} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Pindahkan variasi ${index + 1} ke bawah`}
-                  disabled={blocked || index === p.groups.length - 1}
-                  onClick={() => change(move(p.groups, index, 1))}
-                >
-                  <ArrowDown size={17} />
-                </Button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -485,33 +461,11 @@ export function CustomVariationEditor(p: Props) {
                 return (
                   <div
                     key={value.id}
+                    data-sort-scope={`variation-options-${group.id}`} data-sort-id={value.id}
                     className={`variation-value-row ${group.allowsImage ? "with-image" : ""}`}
                   >
                     <div className="variation-reorder">
-                      <button
-                        type="button"
-                        aria-label={`Pindahkan opsi ${value.value || vi + 1} ke atas`}
-                        disabled={blocked || vi === 0}
-                        onClick={() =>
-                          groupChange(group.id, {
-                            values: move(group.values, vi, -1),
-                          })
-                        }
-                      >
-                        <ArrowUp size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Pindahkan opsi ${value.value || vi + 1} ke bawah`}
-                        disabled={blocked || vi === group.values.length - 1}
-                        onClick={() =>
-                          groupChange(group.id, {
-                            values: move(group.values, vi, 1),
-                          })
-                        }
-                      >
-                        <ArrowDown size={15} />
-                      </button>
+                      <SortableHandle scope={`variation-options-${group.id}`} id={value.id} label={`opsi ${value.value || vi + 1}`} disabled={blocked || !p.reordering} onMove={(from, to) => p.onChange(p.groups.map(g => g.id === group.id ? { ...g, values: reorderById(g.values, from, to) } : g), p.rows)} />
                     </div>
                     {group.allowsImage && (
                       <div className="variation-photo">
@@ -581,7 +535,7 @@ export function CustomVariationEditor(p: Props) {
                           ).length > 1
                         }
                         placeholder="Nama pilihan"
-                        disabled={blocked}
+                        disabled={blocked || p.reordering}
                         onChange={(e) =>
                           valueChange(group.id, value.id, {
                             value: e.target.value,

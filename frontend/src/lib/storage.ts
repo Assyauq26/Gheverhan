@@ -1,4 +1,11 @@
 import "server-only";
+import { putLocalObject, getLocalObject, removeLocalObject } from "./storage-local";
+
+function localProvider(): boolean {
+  const provider = process.env.STORAGE_PROVIDER || "supabase";
+  if (!["supabase", "local"].includes(provider)) throw new Error("Invalid storage provider");
+  return provider === "local";
+}
 import { resolveStorageObject, type StorageBucket } from "./storage-path";
 import { storageAuthHeaders } from "./storage-auth-headers";
 
@@ -55,6 +62,7 @@ export async function putObject(
   contentType: string,
   signal?: AbortSignal,
 ): Promise<{ path: string; size: number }> {
+  if (localProvider()) return putLocalObject(path, STORAGE_APP, data, contentType, signal);
   const object = resolveStorageObject(path, STORAGE_APP);
   const mimeByExtension: Record<string, string> = {
     jpg: "image/jpeg",
@@ -89,6 +97,7 @@ export async function getObject(
   path: string,
   signal?: AbortSignal,
 ): Promise<{ data: Uint8Array; contentType: string }> {
+  if (localProvider()) return getLocalObject(path, STORAGE_APP, signal);
   const object = resolveStorageObject(path, STORAGE_APP);
   const response = await fetch(objectUrl(object.bucket, object.key), {
     headers: headers(),
@@ -106,6 +115,7 @@ export async function getObject(
 
 /** For compensating failed DB writes only. Caller must enforce ownership and authorization. */
 export async function removeObject(path: string, signal?: AbortSignal): Promise<void> {
+  if (localProvider()) return removeLocalObject(path, STORAGE_APP, signal);
   const object = resolveStorageObject(path, STORAGE_APP);
   const { origin } = config();
   const response = await fetch(

@@ -858,3 +858,23 @@
   .variation-card-header > .variation-tools { right: 2.1rem; }
   .variation-tools > summary { width: 22px; height: 24px; min-height: 24px; }
 }
+
+
+/* Three simultaneous bulk fields on the mobile reference, not Tailwind's sm-only grid. */
+.variation-bulk > div.mt-4 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+}
+.variation-bulk > div.mt-4 > .variation-field { min-width: 0; }
+@media (min-width: 420px) and (max-width: 570px) {
+  .variation-bulk { grid-template-columns: minmax(0, 1fr) auto; }
+  .variation-bulk fieldset { grid-column: 1; }
+  .variation-bulk > button { grid-column: 2; align-self: end; width: auto; }
+  .variation-bulk fieldset label { padding: 0 .45rem; font-size: .65rem; }
+  .variation-bulk > button { font-size: .69rem; padding-inline: .55rem; }
+}
+@media (max-width: 419px) {
+  .variation-bulk .variation-field label { font-size: .62rem; }
+  .variation-bulk .variation-field input { font-size: .68rem; padding-inline: .4rem; }
+}

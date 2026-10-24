@@ -1041,3 +1041,16 @@
 @media (prefers-reduced-motion: reduce) {
   .seller-toggle-track, .seller-toggle-track::before { transition: none; }
 }
+
+
+/* Keep the Sort control readable and give focused group actions enough space. */
+.seller-editor-toolbar { grid-template-columns: 44px minmax(0, 1fr) 76px; }
+.seller-editor-toolbar button.seller-editor-toolbar-action {
+  justify-self: end; min-height: 40px; border-radius: .5rem;
+  font-size: .78rem; font-weight: 680; color: #282b30; white-space: nowrap;
+}
+.seller-editor-toolbar button.seller-editor-toolbar-action[aria-pressed="true"] { color: #009d9d; }
+.seller-editor-dialog.seller-reordering .variation-tools > summary { color: #009d9d; }
+.seller-editor-dialog.seller-reordering .variation-tools-menu {
+  display: flex; border-color: #9bdfdf; box-shadow: 0 5px 18px rgb(0 160 160 / .13);
+}

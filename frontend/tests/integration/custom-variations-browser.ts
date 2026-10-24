@@ -661,7 +661,6 @@ export async function verifyCustomVariations(c: Context) {
           })
           .click();
         await closeEditor();
-        await closeEditor();
         await page.getByTestId("save-product").click();
         await expect(
           page
@@ -709,6 +708,7 @@ export async function verifyCustomVariations(c: Context) {
             exact: true,
           }),
         ).not.toBeChecked();
+        await closeEditor();
         await page.getByTestId("save-product").click();
         await expect(
           page

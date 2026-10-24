@@ -519,7 +519,7 @@ export function CustomVariationEditor(p: Props) {
                           className="variation-photo-picker"
                           aria-label={`${image ? "Ganti" : "Unggah"} foto ${value.value || `opsi ${vi + 1}`}`}
                           disabled={blocked}
-                          onClick={() => setPicker({ groupId: group.id, valueId: value.id, photoId: value.imageId })}
+                          onClick={() => setPicker({ groupId: group.id, valueId: value.id, photoId: value.imageId ?? null })}
                         >
                           {image || upload?.id === value.id ? (
                             <Image
@@ -612,7 +612,7 @@ export function CustomVariationEditor(p: Props) {
                         className="variation-photo-select variation-select-button"
                         disabled={blocked}
                         aria-label={`Pilih gambar variasi untuk ${value.value || `opsi ${vi + 1}`}`}
-                        onClick={() => setPicker({ groupId: group.id, valueId: value.id, photoId: value.imageId })}
+                        onClick={() => setPicker({ groupId: group.id, valueId: value.id, photoId: value.imageId ?? null })}
                       >
                         <ImageIcon size={16} aria-hidden="true" />
                         <span>{image ? `Foto ${p.photos.findIndex((photo) => photo.id === image.id) + 1}: ${image.alt || "Produk"}` : "Pilih gambar (opsional)"}</span>

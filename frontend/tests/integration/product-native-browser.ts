@@ -125,6 +125,26 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await expect(page.locator("#product-name")).toHaveValue("Unsaved browser back");
       const allowBack = page.waitForEvent("dialog"); await page.evaluate(() => history.back()); await (await allowBack).accept();
       await expect(page).toHaveURL(base + "/admin/products");
+      // Forward traversal must return to the editor when the seller cancels,
+      // not advance to another history entry or leave a stale restore flag.
+      await page.goto(base + "/admin/products/" + id);
+      await page.evaluate(() => {
+        history.pushState({ ...history.state, nativeForwardCheck: true }, "", location.pathname + "?native-forward-check=1");
+        history.back();
+      });
+      await expect(page).toHaveURL(base + "/admin/products/" + id);
+      await page.locator("#product-name").fill("Unsaved browser forward");
+      const cancelForward = page.waitForEvent("dialog");
+      await page.evaluate(() => history.forward());
+      await (await cancelForward).dismiss();
+      await expect(page).toHaveURL(base + "/admin/products/" + id);
+      await expect(page.locator("#product-name")).toHaveValue("Unsaved browser forward");
+      // The correction popstate must clear its guard so the next attempt
+      // requests confirmation again and can proceed when accepted.
+      const allowForward = page.waitForEvent("dialog");
+      await page.evaluate(() => history.forward());
+      await (await allowForward).accept();
+      await expect(page).toHaveURL(base + "/admin/products/" + id + "?native-forward-check=1");
       assert.deepEqual(errors, []);
     });
   } catch (error) {  await page.screenshot({ path: path.join(artifactDir, "native-failure.png"), fullPage: false }); throw error; } finally { await context.close(); if (id) await db.product.update({ where: { id }, data: { status: "ARCHIVED" } }); }

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Info, Settings2 } from "lucide-react";
 import { applyBulk } from "@/modules/catalog/product-editor-domain";
 import type { ProductInput } from "@/modules/catalog/product-management.validation";
 type Row = ProductInput["variants"][number] & {
@@ -53,7 +54,7 @@ export function ProductBulkEditor({
             <input
               id={`bulk-${key}`}
               inputMode="numeric"
-              placeholder="Tidak diubah"
+              placeholder={key === "price" ? "Contoh: 20000" : key === "salePrice" ? "Contoh: 17000" : "Contoh: 10"}
               value={fields[key]}
               disabled={disabled || (key === "onHand" && !canStock)}
               onChange={(e) =>
@@ -128,8 +129,9 @@ export function ProductBulkEditor({
           }
         }}
       >
-        Terapkan Massal
+        <Settings2 size={16} aria-hidden="true" /> Terapkan Massal
       </Button>
+      <p className="variation-bulk-hint"><Info size={14} aria-hidden="true" /> Data harga dan stok diperbarui pada kombinasi SKU sesuai pilihan di atas setelah produk disimpan.</p>
       {message && (
         <p className="mt-3" role={failed ? "alert" : "status"}>
           {message}

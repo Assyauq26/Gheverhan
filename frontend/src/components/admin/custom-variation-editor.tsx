@@ -11,9 +11,11 @@ import {
   ArrowDown,
   Trash2,
   Camera,
-  X,
   Layers3,
   ChevronDown,
+  ChevronRight,
+  Ellipsis,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -379,7 +381,7 @@ export function CustomVariationEditor(p: Props) {
             <header className="variation-card-header">
               <div className="variation-field">
                 <label htmlFor={`group-title-${group.id}`}>
-                  Nama variasi {index + 1} <span aria-hidden="true">*</span>
+                  Nama variasi <span aria-hidden="true">*</span>
                 </label>
                 <input
                   id={`group-title-${group.id}`}
@@ -401,7 +403,9 @@ export function CustomVariationEditor(p: Props) {
                   }
                 />
               </div>
-              <div className="variation-tools">
+              <details className="variation-tools">
+              <summary aria-label={`Aksi variasi ${index + 1}`}><Ellipsis size={17} aria-hidden="true" /></summary>
+              <div className="variation-tools-menu">
                 <Button
                   type="button"
                   variant="ghost"
@@ -448,7 +452,7 @@ export function CustomVariationEditor(p: Props) {
                   <Trash2 size={17} />
                 </Button>
               </div>
-            </header>
+            </details>
             <label className="variation-image-switch">
               <span>
                 <strong>Tambahkan gambar</strong>
@@ -463,6 +467,7 @@ export function CustomVariationEditor(p: Props) {
                 onChange={(e) => imageMode(group, e.target.checked)}
               />
             </label>
+            </header>
             <div className="variation-values">
               {group.values.map((value, vi) => {
                 const image = p.photos.find(
@@ -580,35 +585,6 @@ export function CustomVariationEditor(p: Props) {
                           })
                         }
                       />
-                      {group.allowsImage && p.photos.length > 0 && (
-                        <>
-                          <label
-                            className="sr-only"
-                            htmlFor={`stored-photo-${value.id}`}
-                          >
-                            Foto tersimpan untuk{" "}
-                            {value.value || `opsi ${vi + 1}`}
-                          </label>
-                          <select
-                            id={`stored-photo-${value.id}`}
-                            aria-label={`Foto tersimpan untuk ${value.value || `opsi ${vi + 1}`}`}
-                            value={value.imageId || ""}
-                            disabled={blocked}
-                            onChange={(e) =>
-                              valueChange(group.id, value.id, {
-                                imageId: e.target.value || null,
-                              })
-                            }
-                          >
-                            <option value="">Pilih foto tersimpan</option>
-                            {p.photos.map((photo, pi) => (
-                              <option key={photo.id} value={photo.id}>
-                                Foto {pi + 1}: {photo.alt || "Produk"}
-                              </option>
-                            ))}
-                          </select>
-                        </>
-                      )}
                       {upload?.id === value.id && (
                         <span role="status">
                           Mengunggah {upload.progress}%
@@ -628,6 +604,31 @@ export function CustomVariationEditor(p: Props) {
                         </button>
                       )}
                     </div>
+                    <div className="variation-photo-select">
+                      <ImageIcon size={16} aria-hidden="true" />
+                      <label className="sr-only" htmlFor={`stored-photo-${value.id}`}>
+                        Foto tersimpan untuk{" "}{value.value || `opsi ${vi + 1}`}
+                      </label>
+                      <select
+                        id={`stored-photo-${value.id}`}
+                        aria-label={`Foto tersimpan untuk ${value.value || `opsi ${vi + 1}`}`}
+                        value={value.imageId || ""}
+                        disabled={blocked || !group.allowsImage || p.photos.length === 0}
+                        onChange={(e) =>
+                          valueChange(group.id, value.id, {
+                            imageId: e.target.value || null,
+                          })
+                        }
+                      >
+                        <option value="">Pilih gambar (opsional)</option>
+                        {p.photos.map((photo, pi) => (
+                          <option key={photo.id} value={photo.id}>
+                            Foto {pi + 1}: {photo.alt || "Produk"}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} aria-hidden="true" />
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -636,7 +637,7 @@ export function CustomVariationEditor(p: Props) {
                       disabled={blocked}
                       onClick={() => removeValue(group.id, value.id)}
                     >
-                      <X size={17} />
+                      <Trash2 size={17} />
                     </Button>
                   </div>
                 );
@@ -658,7 +659,7 @@ export function CustomVariationEditor(p: Props) {
               >
                 <Plus size={17} /> Tambahkan opsi
               </Button>
-              <span>{group.values.length} / 50 opsi</span>
+              <span className="variation-option-count">{group.values.length} / 50 opsi</span>
             </footer>
           </details>
         ))}
@@ -683,6 +684,62 @@ export function CustomVariationEditor(p: Props) {
         >
           <Plus size={18} /> Tambah variasi <span>({p.groups.length}/3)</span>
         </Button>
+      )}
+      {(p.optionPhotos.length > 0 || p.canUndoPhotos) && (
+        <details className="variation-media-library">
+          <summary><ImageIcon size={16} aria-hidden="true" /> Foto variasi tersimpan ({p.optionPhotos.length}) <ChevronRight size={16} aria-hidden="true" /></summary>
+          <p>
+            Melepas foto dari opsi tidak menghapus file. Penghapusan permanen
+            harus dikonfirmasi; foto pesanan historis tetap dilindungi server.
+          </p>
+          <div className="variation-media-list">
+            {p.optionPhotos.map((photo, pi) => {
+              const used = p.groups.some((g) =>
+                g.values.some((v) => v.imageId === photo.id),
+              );
+              return (
+                <div key={photo.id}>
+                  <Image
+                    unoptimized
+                    src={photo.url}
+                    width={56}
+                    height={56}
+                    alt={photo.alt || `Foto tersimpan ${pi + 1}`}
+                  />
+                  <span>
+                    Foto {pi + 1}
+                    {used ? " · dipakai" : " · belum dipakai"}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={blocked || used}
+                    aria-label={`Hapus permanen foto tersimpan ${pi + 1}`}
+                    onClick={() =>
+                      setConfirmation({
+                        title: "Hapus foto tersimpan?",
+                        description:
+                          "File akan dihapus setelah produk disimpan. Server menolak penghapusan foto yang dipakai riwayat pesanan. Perubahan lain tetap berada di editor.",
+                        confirm: "Hapus foto",
+                        run: () => p.onRemovePhoto(photo.id),
+                      })
+                    }
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={blocked || !p.canUndoPhotos}
+            onClick={p.onUndoPhotos}
+          >
+            Pulihkan penghapusan foto yang belum disimpan
+          </Button>
+        </details>
       )}
       <ProductBulkEditor
         rows={p.rows}
@@ -739,66 +796,10 @@ export function CustomVariationEditor(p: Props) {
           </Button>
         </section>
       )}
-      {(p.optionPhotos.length > 0 || p.canUndoPhotos) && (
-        <details className="variation-media-library">
-          <summary>Foto variasi tersimpan ({p.optionPhotos.length})</summary>
-          <p>
-            Melepas foto dari opsi tidak menghapus file. Penghapusan permanen
-            harus dikonfirmasi; foto pesanan historis tetap dilindungi server.
-          </p>
-          <div className="variation-media-list">
-            {p.optionPhotos.map((photo, pi) => {
-              const used = p.groups.some((g) =>
-                g.values.some((v) => v.imageId === photo.id),
-              );
-              return (
-                <div key={photo.id}>
-                  <Image
-                    unoptimized
-                    src={photo.url}
-                    width={56}
-                    height={56}
-                    alt={photo.alt || `Foto tersimpan ${pi + 1}`}
-                  />
-                  <span>
-                    Foto {pi + 1}
-                    {used ? " · dipakai" : " · belum dipakai"}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={blocked || used}
-                    aria-label={`Hapus permanen foto tersimpan ${pi + 1}`}
-                    onClick={() =>
-                      setConfirmation({
-                        title: "Hapus foto tersimpan?",
-                        description:
-                          "File akan dihapus setelah produk disimpan. Server menolak penghapusan foto yang dipakai riwayat pesanan. Perubahan lain tetap berada di editor.",
-                        confirm: "Hapus foto",
-                        run: () => p.onRemovePhoto(photo.id),
-                      })
-                    }
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={blocked || !p.canUndoPhotos}
-            onClick={p.onUndoPhotos}
-          >
-            Pulihkan penghapusan foto yang belum disimpan
-          </Button>
-        </details>
-      )}
       <section className="variation-skus" aria-label="Harga dan stok SKU">
         <div className="variation-section-title">
-          <h3>Harga &amp; stok</h3>
-          <span>{p.rows.filter((r) => r.sku).length} / 50 SKU</span>
+          <h3>Harga &amp; Stok</h3>
+          <span>{p.rows.filter((r) => r.sku).length} / {p.rows.length} SKU</span>
         </div>
         <p>
           Harga kosong mengikuti harga utama Rp

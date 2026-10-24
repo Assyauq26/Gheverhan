@@ -281,10 +281,63 @@ export async function verifyCustomVariations(c: Context) {
             exact: true,
           }),
         ).not.toBeChecked();
+        // Visual refactor contract: keep actions, photo mode and section order
+        // without touching SKU identity, inventory or persisted data.
+        await expect(
+          root
+            .locator(".variation-card")
+            .nth(1)
+            .locator(".variation-photo-select select")
+            .first(),
+        ).toBeDisabled();
+        await expect(
+          root
+            .locator(".variation-card")
+            .first()
+            .locator(".variation-photo-select select")
+            .first(),
+        ).toBeEnabled();
         await root
           .getByRole("button", { name: "Buat 6 kombinasi", exact: true })
           .click();
+        const visibleSections = await root.evaluate((editor) => {
+          const children = Array.from(editor.children);
+          return [
+            ".variation-groups",
+            ".variation-media-library",
+            ".variation-bulk",
+            ".variation-review",
+            ".variation-skus",
+          ].map((selector) =>
+            children.findIndex((child) => child.matches(selector)),
+          );
+        });
+        assert.ok(
+          visibleSections.filter((index) => index >= 0).every(
+            (index, offset, indices) =>
+              offset === 0 || index > indices[offset - 1],
+          ),
+          "Variation sections remain in reference order",
+        );
+        const rowWidths = await root
+          .locator(".variation-value-row")
+          .evaluateAll((rows) =>
+            rows.map((row) => ({
+              scroll: row.scrollWidth,
+              client: row.clientWidth,
+            })),
+          );
+        assert.ok(
+          rowWidths.every((size) => size.scroll <= size.client + 1),
+          "Variation options must not overflow their cards at 390px",
+        );
         const bulk = root.locator(".variation-bulk");
+        const columns = await bulk
+          .locator("> div.mt-4")
+          .evaluate((fields) =>
+            getComputedStyle(fields).gridTemplateColumns.split(" ").length,
+          );
+        assert.equal(columns, 3, "Bulk input fields stay three columns on mobile");
         await bulk.locator("#bulk-onHand").fill("5");
         await bulk
           .getByRole("button", { name: "Terapkan Massal", exact: true })

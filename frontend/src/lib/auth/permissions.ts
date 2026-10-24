@@ -1,4 +1,7 @@
 export const PERMISSIONS = {
+  STORE_CUSTOMIZE_READ: "store.customize.read",
+  STORE_CUSTOMIZE_UPDATE: "store.customize.update",
+  STORE_CUSTOMIZE_PUBLISH: "store.customize.publish",
   PRODUCT_READ: "product.read",
   PRODUCT_CREATE: "product.create",
   PRODUCT_UPDATE: "product.update",

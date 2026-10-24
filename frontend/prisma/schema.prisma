@@ -787,3 +787,45 @@ model ProductEditorSave {
   result Json
   createdAt DateTime @default(now())
 }
+
+// Store customization is independent of catalog, cart, payment and order models.
+model StoreAppearance {
+  key              String   @id @default("primary") @db.VarChar(16)
+  draft            Json
+  published        Json
+  draftVersion     Int      @default(0)
+  publishedVersion Int      @default(0)
+  updatedAt        DateTime @updatedAt
+}
+
+model StoreAppearanceRevision {
+  id        String   @id @default(uuid()) @db.Uuid
+  version   Int      @unique
+  config    Json
+  actorId   String?  @db.VarChar(128)
+  action    String   @db.VarChar(24)
+  createdAt DateTime @default(now())
+}
+
+model StoreBrandAsset {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorId     String   @db.VarChar(128)
+  sessionHash String   @db.VarChar(64)
+  requestId   String   @db.Uuid
+  path        String   @unique @db.VarChar(400)
+  checksum    String   @db.VarChar(64)
+  size        Int
+  ready       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  retiredAt   DateTime?
+  @@unique([actorId, sessionHash, requestId])
+  @@index([expiresAt])
+}
+
+model StoreCustomizeRateLimit {
+  key       String   @id @db.VarChar(200)
+  count     Int
+  expiresAt DateTime
+  @@index([expiresAt])
+}

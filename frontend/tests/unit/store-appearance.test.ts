@@ -1,0 +1,130 @@
+import { describe, it, expect } from "vitest";
+import {
+  appearanceSchema,
+  makeDefault,
+  legacyDefault,
+  safeInternalUrl,
+  TOKEN_KEYS,
+} from "@/modules/appearance/schema";
+import { PRESETS } from "@/modules/appearance/presets";
+import { contrast, contrastErrors } from "@/modules/appearance/contrast";
+import { themeStyle, isLegacy } from "@/modules/appearance/runtime";
+import { PERMISSIONS, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
+import { resolveStorageObject } from "@/lib/storage-path";
+describe("store appearance contract", () => {
+  it("all ten complete presets pass AA", () => {
+    expect(PRESETS).toHaveLength(10);
+    for (const p of PRESETS) {
+      expect(appearanceSchema.safeParse(p.config).success, p.name).toBe(true);
+      expect(Object.keys(p.config.colors)).toHaveLength(TOKEN_KEYS.length);
+      expect(contrastErrors(p.config), p.name).toEqual([]);
+    }
+  });
+  it("legacy has exact compatibility path, no implicit CSS activation", () => {
+    expect(isLegacy(legacyDefault())).toBe(true);
+    expect(themeStyle(legacyDefault())).toEqual({});
+    expect(contrastErrors(legacyDefault()).length).toBeGreaterThan(0);
+    expect(contrastErrors(makeDefault())).toEqual([]);
+  });
+  it.each([
+    "javascript:alert(1)",
+    "data:text/html,x",
+    "//evil.test",
+    "/\\evil.test",
+    "/%2f%2fevil.test",
+    "/%252f%252fevil.test",
+    "/shop?redirect=https://evil.test",
+    "/api/v1/admin",
+    "/%61dmin",
+    "/%61pi%2fv1",
+    "/admin",
+    "/../shop",
+    "/%2e%2e/shop",
+    "/shop\n",
+  ])("rejects unsafe URL %s", (url) =>
+    expect(safeInternalUrl(url)).toBe(false),
+  );
+  it.each([
+    "/",
+    "/shop",
+    "/shop?flash=1",
+    "/syarat-ketentuan",
+    "/kebijakan-privasi",
+  ])("allows internal URL %s", (url) =>
+    expect(safeInternalUrl(url)).toBe(true),
+  );
+  it("rejects unknown schema, keys, color injection, non-hex", () => {
+    for (const patch of [
+      { schemaVersion: 2 },
+      { css: "body{}" },
+      { colors: { ...makeDefault().colors, text: "red;display:none" } },
+      {
+        identity: {
+          ...makeDefault().identity,
+          logoAssetId: "https://evil.test/logo.png",
+        },
+      },
+    ])
+      expect(
+        appearanceSchema.safeParse({ ...makeDefault(), ...patch }).success,
+      ).toBe(false);
+  });
+  it("requires core navigation exactly once", () => {
+    const v = makeDefault();
+    v.mobile.items[0] = v.mobile.items[1];
+    expect(appearanceSchema.safeParse(v).success).toBe(false);
+  });
+  it("validates gradient stops and sampled contrast", () => {
+    const v = makeDefault();
+    v.gradients.buttons.enabled = true;
+    expect(contrastErrors(v)).toEqual([]);
+    v.gradients.buttons.stops.splice(1, 0, { color: "#FFFFFF", position: 50 });
+    expect(contrastErrors(v).some((e) => e.includes("buttons"))).toBe(true);
+    v.gradients.buttons.stops[1].position = 100;
+    expect(appearanceSchema.safeParse(v).success).toBe(false);
+  });
+  it("known WCAG contrast values", () => {
+    expect(contrast("#000000", "#FFFFFF")).toBe(21);
+    expect(contrast("#FFFFFF", "#FFFFFF")).toBe(1);
+  });
+  it("only Admin and Super Admin granted Customize", () => {
+    for (const [role, permissions] of Object.entries(ROLE_PERMISSIONS))
+      expect(
+        permissions.includes(PERMISSIONS.STORE_CUSTOMIZE_PUBLISH),
+        role,
+      ).toBe(["Admin", "Super Admin"].includes(role));
+  });
+  it("separate branding storage cannot contain PDF/traversal", () => {
+    expect(
+      resolveStorageObject(
+        "app/store-branding/owner/00000000-0000-0000-0000-000000000000.webp",
+        "app",
+      ).bucket,
+    ).toBe("store-branding");
+    expect(() =>
+      resolveStorageObject(
+        "app/store-branding/owner/00000000-0000-0000-0000-000000000000.pdf",
+        "app",
+      ),
+    ).toThrow();
+    expect(() =>
+      resolveStorageObject(
+        "app/store-branding/../00000000-0000-0000-0000-000000000000.webp",
+        "app",
+      ),
+    ).toThrow();
+  });
+  it("mapper produces only validated tokens and generated gradient", () => {
+    const v = makeDefault();
+    v.gradients.buttons.enabled = true;
+    const style = themeStyle(v);
+    expect(
+      Object.keys(style).every(
+        (k) =>
+          k.startsWith("--store-") ||
+          ["--font-sans", "--font-display", "fontSize"].includes(k),
+      ),
+    ).toBe(true);
+    expect(style).toHaveProperty("--store-gradient-buttons");
+  });
+});

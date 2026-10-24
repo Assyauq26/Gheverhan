@@ -1,0 +1,55 @@
+import type { CSSProperties } from "react";
+import {
+  GRADIENT_TARGETS,
+  legacyDefault,
+  parseAppearance,
+  TOKEN_KEYS,
+  type StoreAppearanceV1,
+} from "./schema";
+import { rgb } from "./contrast";
+export function isLegacy(config: StoreAppearanceV1) {
+  return JSON.stringify(config) === JSON.stringify(legacyDefault());
+}
+export function themeStyle(input: StoreAppearanceV1): CSSProperties {
+  const v = parseAppearance(input),
+    out: Record<string, string> = {};
+  if (isLegacy(v)) return {};
+  for (const key of TOKEN_KEYS) {
+    out[`--store-${key}`] = v.colors[key];
+    out[`--store-${key}-rgb`] = rgb(v.colors[key]).join(" ");
+  }
+  for (const target of GRADIENT_TARGETS) {
+    const g = v.gradients[target];
+    if (g.enabled) {
+      out[`--store-gradient-${target}`] =
+        `linear-gradient(${g.angle}deg, ${g.stops.map((s) => `${s.color} ${s.position}%`).join(", ")})`;
+      out[`--store-gradient-${target}-text`] = g.foreground;
+      out[`--store-gradient-${target}-fallback`] = g.fallback;
+    }
+  }
+  out["--store-radius"] = { none: "0px", soft: "12px", round: "24px" }[
+    v.styling.radius
+  ];
+  out["--store-button-radius"] = {
+    square: "0px",
+    soft: "10px",
+    pill: "9999px",
+  }[v.styling.button];
+  out["--store-shadow"] = {
+    none: "none",
+    soft: "0 4px 16px rgb(0 0 0 / .08)",
+    raised: "0 8px 28px rgb(0 0 0 / .18)",
+  }[v.styling.shadow];
+  out["--font-sans"] =
+    v.styling.font === "serif"
+      ? "Georgia, serif"
+      : "ui-sans-serif, system-ui, sans-serif";
+  out["--font-display"] = out["--font-sans"];
+  out["--store-font-scale"] = { small: "0.875", normal: "1", large: "1.125" }[
+    v.styling.scale
+  ];
+  out.fontSize = { small: "14px", normal: "16px", large: "18px" }[
+    v.styling.scale
+  ];
+  return out as CSSProperties;
+}

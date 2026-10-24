@@ -67,6 +67,20 @@ function png(red: number, green: number, blue: number) {
 export async function verifyCustomVariations(c: Context) {
   const { page, db, base, check, artifactDir } = c,
     root = page.getByTestId("custom-variation-editor");
+  const closeEditor = async () => {
+    const save = page.locator(".seller-editor-actions button");
+    if (await save.count()) await save.click();
+  };
+  const openGroups = async () => {
+    if (await page.getByRole("dialog", { name: "Varian", exact: true }).count()) return;
+    await closeEditor();
+    await page.locator(".seller-sales-links button").first().click();
+  };
+  const openStock = async () => {
+    if (await page.getByRole("dialog", { name: "Harga/Stok", exact: true }).count()) return;
+    await closeEditor();
+    await page.locator(".seller-sales-links button").nth(1).click();
+  };
   const category = await db.category.findUniqueOrThrow({
     where: { slug: `browser-${c.prefix}` },
   });
@@ -125,6 +139,7 @@ export async function verifyCustomVariations(c: Context) {
         await page
           .getByLabel("Kategori", { exact: true })
           .selectOption(category.id);
+        await openGroups();
         await root
           .getByRole("button", { name: "Tambah variasi pertama", exact: true })
           .scrollIntoViewIfNeeded();
@@ -255,7 +270,7 @@ export async function verifyCustomVariations(c: Context) {
         await root
           .getByRole("switch", { name: "Tambahkan gambar Ukuran", exact: true })
           .click();
-        const dialog = page.getByRole("dialog");
+        const dialog = page.getByRole("dialog").last();
         await expect(dialog).toContainText(
           "Foto variasi hanya dapat digunakan pada satu jenis variasi.",
         );
@@ -281,56 +296,23 @@ export async function verifyCustomVariations(c: Context) {
             exact: true,
           }),
         ).not.toBeChecked();
-        // Visual refactor contract: keep actions, photo mode and section order
-        // without touching SKU identity, inventory or persisted data.
-        await expect(
-          root
-            .locator(".variation-card")
-            .nth(1)
-            .locator(".variation-photo-select select")
-            .first(),
-        ).toBeDisabled();
-        await expect(
-          root
-            .locator(".variation-card")
-            .first()
-            .locator(".variation-photo-select select")
-            .first(),
-        ).toBeEnabled();
-        await root
-          .getByRole("button", { name: "Buat 6 kombinasi", exact: true })
-          .click();
+        // Gallery selector is available only on image-enabled groups, and
+        // option values remain within their mobile cards.
+        await expect(root.getByRole("button", { name: "Pilih gambar variasi untuk Merah" })).toBeEnabled();
+        await expect(root.getByRole("button", { name: "Pilih gambar variasi untuk M" })).toHaveCount(0);
+        const rowWidths = await root.locator(".variation-value-row").evaluateAll((rows) =>
+          rows.map((row) => ({ scroll: row.scrollWidth, client: row.clientWidth })),
+        );
+        assert.ok(rowWidths.every((size) => size.scroll <= size.client + 1), "Option rows must fit 390px");
+        await openStock();
+        await root.getByRole("button", { name: "Buat 6 kombinasi", exact: true }).click();
         const visibleSections = await root.evaluate((editor) => {
           const children = Array.from(editor.children);
-          return [
-            ".variation-groups",
-            ".variation-media-library",
-            ".variation-bulk",
-            ".variation-review",
-            ".variation-skus",
-          ].map((selector) =>
-            children.findIndex((child) => child.matches(selector)),
+          return [".variation-bulk", ".variation-review", ".variation-skus"].map(
+            (selector) => children.findIndex((child) => child.matches(selector)),
           );
         });
-        assert.ok(
-          visibleSections.filter((index) => index >= 0).every(
-            (index, offset, indices) =>
-              offset === 0 || index > indices[offset - 1],
-          ),
-          "Variation sections remain in reference order",
-        );
-        const rowWidths = await root
-          .locator(".variation-value-row")
-          .evaluateAll((rows) =>
-            rows.map((row) => ({
-              scroll: row.scrollWidth,
-              client: row.clientWidth,
-            })),
-          );
-        assert.ok(
-          rowWidths.every((size) => size.scroll <= size.client + 1),
-          "Variation options must not overflow their cards at 390px",
-        );
+        assert.ok(visibleSections.every((index, i) => index >= 0 && (i === 0 || index > visibleSections[i - 1])), "Bulk, review and SKU appear in order");
         const bulk = root.locator(".variation-bulk");
         const columns = await bulk
           .locator(":scope > div.mt-4")
@@ -368,6 +350,7 @@ export async function verifyCustomVariations(c: Context) {
         await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
         await capture("sku-editor-390");
         // Finalize the staged gallery and option photos in the product save transaction.
+        await closeEditor();
         await page.locator("#product-image-upload").setInputFiles({
           name: "gallery.png",
           mimeType: "image/png",
@@ -407,11 +390,12 @@ export async function verifyCustomVariations(c: Context) {
         assert.ok(product.variants.every((v) => v.optionValues.length === 2));
         beforeIds = product.variants.map((v) => v.id).sort();
         await page.reload();
+        await openGroups();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Warna");
         await capture("saved-390");
         for (const width of [360, 390, 430, 768, 1024, 1360]) {
           await page.setViewportSize({ width, height: 900 });
-          await root.locator(".variation-heading").scrollIntoViewIfNeeded();
+          await root.locator(".variation-groups").scrollIntoViewIfNeeded();
           await page.evaluate(() => window.scrollBy(0, -120));
           const inputBox = await root
             .getByLabel("Opsi Warna 1", { exact: true })
@@ -427,10 +411,13 @@ export async function verifyCustomVariations(c: Context) {
             false,
           );
           await capture(`photos-overview-${width}`);
+          await openStock();
           await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
           await capture(`photos-skus-${width}`);
+          await openGroups();
         }
         await page.setViewportSize({ width: 390, height: 844 });
+        await closeEditor();
       },
     );
     await check(
@@ -652,12 +639,15 @@ export async function verifyCustomVariations(c: Context) {
       "custom rename/reorder and dirty guards preserve SKU identity and order snapshots",
       async () => {
         await page.reload();
+        await openGroups();
         await root.getByLabel("Nama variasi 1").fill("Motif");
         page.once("dialog", (dialog) => dialog.dismiss());
+        await closeEditor();
         await page
           .getByRole("link", { name: "Kembali ke produk", exact: true })
           .click();
         await expect(page).toHaveURL(`${base}/admin/products/${productId}`);
+        await openGroups();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Motif");
         await root
           .getByRole("button", {
@@ -665,6 +655,7 @@ export async function verifyCustomVariations(c: Context) {
             exact: true,
           })
           .click();
+        await closeEditor();
         await page.getByTestId("save-product").click();
         await expect(
           page
@@ -682,6 +673,7 @@ export async function verifyCustomVariations(c: Context) {
         });
         assert.equal(item.variantLabel, orderLabel);
         assert.equal(item.imageUrl, orderImage);
+        await openGroups();
         await root
           .getByRole("button", { name: "Hapus opsi Hijau", exact: true })
           .click();

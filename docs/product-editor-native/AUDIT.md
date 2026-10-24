@@ -11,6 +11,7 @@ Baseline: main b719e9db83e7c7065a38421f28727f80b880c355 (PR #101). No new refere
 - Drafts require name (2+), slug, positive base price, and at least one valid SKU. Images and shipping weight may be absent. Preserve this minimum contract rather than widening all creation and transaction consumers.
 - Variant price overrides are authoritative for checkout. Derive product fallback from the cheapest effective SKU only when every row has an explicit price; preserve legacy inherited prices otherwise. Preserve scheduled flash-sale protection.
 - Product has careInstruction but no size-chart metadata. Add nullable JSON, bounded server validation, and reuse owned ProductImage assets through the existing option-media staging path. Keep chart images out of the gallery.
+- Existing sparse combinations are supported: each saved SKU must select one value from every group and combinations must be unique, but the full Cartesian product is not mandatory. Missing combinations remain unavailable in the storefront; do not impose a new full-matrix requirement on legacy products.
 - Existing SKU stock/history guards, serializable writes, inventory adjustment permissions, cart/order references and order image protection must remain intact. Changing display order never regenerates SKU identities.
 - variation-editor.css accumulated three visual generations and teal overrides. Consolidate scoped neutral styles and responsive dialog behavior.
 

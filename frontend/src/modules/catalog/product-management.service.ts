@@ -8,7 +8,7 @@ import {
   savePayloadHash,
   type MediaContext,
 } from "./staged-product-media";
-import { combinationCount, combinationKey } from "./variation-domain";
+import { combinationKey } from "./variation-domain";
 import {
   legacyOptions,
   legacySelection,
@@ -576,9 +576,7 @@ export async function changeProductStatus(
         422,
       );
     if (status === "PUBLISHED") {
-      const input = parseProduct(serializeProduct(p, actor));
-      if (p.optionsEnabled && input.optionGroups?.length && input.variants.length !== combinationCount(input.optionGroups))
-        throw new HttpError("Buat seluruh kombinasi SKU sebelum menerbitkan produk.", 422);
+      parseProduct(serializeProduct(p, actor));
       if (p.status !== "PUBLISHED") {
         try {
           assertPublishWeight(p.weightGrams);

@@ -37,5 +37,9 @@ describe("canonical variant pricing and publish readiness", () => {
     expect(productPublishReadiness({ ...input, images: [] }).ready).toBe(false);
     expect(productPublishReadiness({ ...input, salePrice: 200 }).ready).toBe(false);
     expect(productPublishReadiness({ ...input, variants: [{ sku: "" }] }).ready).toBe(false);
+    expect(productPublishReadiness({ ...input, optionsEnabled: true, optionGroups: [
+      { id: "color", name: "Warna", values: [{ id: "red", value: "Merah" }, { id: "blue", value: "Biru" }] },
+      { id: "size", name: "Ukuran", values: [{ id: "small", value: "S" }, { id: "large", value: "L" }] },
+    ], variants: [{ sku: "SPARSE", optionValueIds: ["red", "large"] }] }).ready).toBe(true);
   });
 });

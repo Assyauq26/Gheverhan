@@ -1,3 +1,4 @@
+import { ProductSizeChart } from "@/components/storefront/product-size-chart";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Package, Truck } from "lucide-react";
 import "@/components/storefront/product-detail.css";
@@ -152,6 +153,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
               wishlisted={wl.has(product.id)}
             />
             <div className="mt-6 border-t border-zinc-100">
+              <ProductSizeChart chart={product.sizeChart} image={product.sizeChartImage} name={product.name} />
               <details className="pdp-detail-row group py-4" open>
                 <summary className="flex min-h-7 cursor-pointer items-center justify-between gap-3 text-sm font-bold text-zinc-900">
                   Deskripsi <ChevronRight className="pdp-detail-chevron shrink-0 text-zinc-500 transition-transform" size={19}/>

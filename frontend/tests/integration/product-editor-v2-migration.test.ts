@@ -63,7 +63,7 @@ async function disposable(count: number, run: (f: Fixture) => Promise<void>) {
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 11);
+    assert.equal(names.length, 12);
     assert.equal(names[10], migration);
     for (const n of names.slice(0, count))
       await cp(
@@ -91,6 +91,7 @@ test("editor V2 migration fresh/upgrade/retry and lock rollback", async (t) => {
       disposable(11, async ({ db, command }) => {
         assert.equal(command(["status"]).status, 0);
         const p = await db.product.create({
+          select: { id: true, weightGrams: true, packageLengthMm: true },
           data: {
             name: "Legacy nullable",
             slug: "legacy-nullable",
@@ -135,6 +136,7 @@ test("editor V2 migration fresh/upgrade/retry and lock rollback", async (t) => {
         assert.equal(command(["deploy"]).status, 0);
         const p = await db.product.findUniqueOrThrow({
           where: { id: "legacy-v2" },
+          select: { shippingReturn: true, weightGrams: true, packageWidthMm: true },
         });
         assert.equal(p.shippingReturn, "Existing policy");
         assert.equal(p.weightGrams, null);

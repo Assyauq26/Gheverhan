@@ -248,6 +248,7 @@ model Product {
   description     String        @default("")
   material        String        @default("")
   careInstruction String        @default("")
+  sizeChart       Json?
   shippingReturn  String        @default("")
   basePrice       Int
   salePrice       Int?

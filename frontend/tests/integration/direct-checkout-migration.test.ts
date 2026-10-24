@@ -63,7 +63,7 @@ async function disposable(count: number, run: (f: Fixture) => Promise<void>) {
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 11);
+    assert.equal(names.length, 12);
     assert.equal(names[9], migration);
     for (const n of names.slice(0, count))
       await cp(

@@ -1,3 +1,4 @@
+import { readSizeChart } from "./product-size-chart";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -171,10 +172,16 @@ export async function listProducts(params: ProductListParams = {}) {
  * issuing the same expensive product query during one navigation.
  */
 export const getProductBySlug = cache(async (slug: string) => {
-  return prisma.product.findFirst({
+  const product = await prisma.product.findFirst({
     where: { slug, status: ProductStatus.PUBLISHED },
     include: productDetailInclude,
   });
+  if (!product) return null;
+  const sizeChart = readSizeChart(product.sizeChart);
+  const sizeChartImage = sizeChart?.mode === "image" ? await prisma.productImage.findFirst({
+    where: { id: sizeChart.imageId, productId: product.id }, select: { url: true, alt: true },
+  }) : null;
+  return { ...product, sizeChart, sizeChartImage };
 });
 
 export async function getRelatedProducts(product: {

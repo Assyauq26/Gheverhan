@@ -687,3 +687,29 @@ test("product editor V2 database, media and compatibility", async (t) => {
     },
   );
 });
+
+test("size chart table and owned private image persist atomically with legacy products", async () => {
+  const { defaultSizeChart } = await import("../../src/modules/catalog/product-size-chart");
+  const created = await svc.createManagedProduct(actor, input());
+  let p = await svc.getManagedProduct(actor, created.id);
+  assert.equal(p.sizeChart, null);
+  const table = defaultSizeChart(); table.table.columns[1].label = "Kapasitas";
+  await svc.updateManagedProduct(actor, p.id, p.updatedAt, { ...p, sizeChart: table });
+  p = await svc.getManagedProduct(actor, p.id);
+  assert.deepEqual(p.sizeChart, table);
+  const before = p.updatedAt;
+  await assert.rejects(svc.updateManagedProduct(actor, p.id, before, { ...p, sizeChart: { mode: "image", imageId: "foreign-image" } }), { status: 422 });
+  assert.deepEqual((await svc.getManagedProduct(actor, p.id)).sizeChart, table);
+  const photo = await media.stageProductMedia(actor, sessionHash, randomUUID(), png, "image/png", "option");
+  await svc.updateManagedProduct(actor, p.id, before, { ...p, sizeChart: { mode: "image", imageId: photo.id }, optionImages: [{ id: photo.id, alt: "Panduan ukuran" }] }, { sessionHash, requestId: randomUUID() });
+  p = await svc.getManagedProduct(actor, p.id);
+  assert.deepEqual(p.sizeChart, { mode: "image", imageId: photo.id });
+  assert.equal(p.images.length, 0, "chart does not become product cover");
+  assert.equal(p.optionImages.length, 1);
+  await assert.rejects(svc.updateManagedProduct(actor, p.id, p.updatedAt, { ...p, optionImages: [] }), { status: 422 });
+  const inventory = await db.inventory.findFirstOrThrow({ where: { variant: { productId: p.id } } });
+  await svc.updateManagedProduct(actor, p.id, p.updatedAt, { ...p, sizeChart: null });
+  assert.equal((await svc.getManagedProduct(actor, p.id)).sizeChart, null);
+  assert.deepEqual(await db.inventory.findUnique({ where: { id: inventory.id } }), inventory);
+  await assert.rejects(db.product.update({ where: { id: p.id }, data: { sizeChart: { oversized: "x".repeat(100001) } } }));
+});

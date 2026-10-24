@@ -8,10 +8,7 @@ import {
   Plus,
   Trash2,
   ArrowLeft,
-  ArrowUp,
-  ArrowDown,
   ChevronDown,
-  ImagePlus,
   Layers3,
   Package,
   Info,
@@ -43,6 +40,10 @@ import {
   allocateProductSkusAction,
   setProductStatusAction,
 } from "@/modules/catalog/product-management.actions";
+import { SizeChartEditor } from "./size-chart-editor";
+import { ProductPhotoEditor } from "./product-photo-editor";
+import { canonicalProductPricing } from "@/modules/catalog/product-canonical-pricing";
+import { productPublishReadiness } from "@/modules/catalog/product-publish-readiness";
 import type { ProductInput } from "@/modules/catalog/product-management.validation";
 import type { ProductEditorData } from "@/modules/catalog/product-management.service";
 import type { ProductStatus } from "@prisma/client";
@@ -72,6 +73,7 @@ function valuesFor(p?: ProductEditorData): Values {
     description: "",
     material: "",
     careInstruction: "",
+    sizeChart: null,
     shippingReturn: "",
     basePrice: 0,
     salePrice: null,
@@ -158,6 +160,12 @@ export function ProductEditor({
   const [custom, setCustom] = useState(initial?.optionsEnabled ?? !initial);
   const [sellerPanel, setSellerPanel] = useState<"groups" | "stock" | null>(null);
   const [reordering, setReordering] = useState(false);
+  const [queueBusy, setQueueBusy] = useState(false);
+  const panelBaseline = useRef("");
+  const panelSnapshot = useRef<Values | null>(null);
+  const restoreBack = useRef(false);
+  const backState = useRef({ dirty: false, panel: false, uploading: false });
+  const closePanelRef = useRef<() => void>();
   const busy = useRef(false);
   const persistedSnapshot = useRef<ProductEditorData | undefined>(initial);
   const [values, setValues] = useState<Values>(() => valuesFor(initial));
@@ -176,14 +184,6 @@ export function ProductEditor({
   const dirty = formSnapshot(values, custom, shipping) !== baseline;
   const saveRequest = useRef<{ payload: string; id: string }>();
   const uploadRequests = useRef(new WeakMap<File, string>());
-  const [retryFile, setRetryFile] = useState<File>();
-  const [galleryPreview, setGalleryPreview] = useState("");
-  useEffect(
-    () => () => {
-      if (galleryPreview) URL.revokeObjectURL(galleryPreview);
-    },
-    [galleryPreview],
-  );
   const [mediaRecovered, setMediaRecovered] = useState(false);
   useEffect(() => {
     const key = `gh-product-media:${productId || "new"}`;
@@ -209,6 +209,7 @@ export function ProductEditor({
           const photos = result.data as (ProductEditorData["images"][number] & {
             purpose: string;
           })[];
+          photos.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
           setValues((current) => ({
             ...current,
             images: [
@@ -288,9 +289,9 @@ export function ProductEditor({
     setBaseline(formSnapshot(valuesFor(p), p.optionsEnabled, shippingFor(p)));
     saveRequest.current = undefined;
   }
-  async function save(event: FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent<HTMLFormElement>, publish = false) {
     event.preventDefault();
-    if (busy.current) return;
+    if (busy.current || queueBusy) return;
     busy.current = true;
     setPending("save");
     setError("");
@@ -306,7 +307,7 @@ export function ProductEditor({
       form.set("requestId", saveRequest.current.id);
       form.set(
         "product",
-        JSON.stringify({
+        JSON.stringify(canonicalProductPricing({
           ...values,
           ...shippingData(shipping),
           // Persist accessible photo names even after recovering an upload from session.
@@ -327,7 +328,7 @@ export function ProductEditor({
             custom && values.optionGroups?.length
               ? values.optionGroups
               : undefined,
-        }),
+        })),
       );
       const result = await saveProductAction(form);
       if (!result.ok || !result.data) {
@@ -340,7 +341,15 @@ export function ProductEditor({
         /* optional */
       }
       accept(result.data);
-      setNotice("Produk berhasil disimpan.");
+      if (publish) {
+        const published = await setProductStatusAction(result.data.id, result.data.updatedAt, "PUBLISHED");
+        if (!published.ok || !published.data) {
+          setError(published.error || "Draft tersimpan, tetapi produk belum dapat diterbitkan.");
+          return;
+        }
+        accept(published.data);
+      }
+      setNotice(publish ? "Produk berhasil diterbitkan." : "Produk berhasil disimpan.");
       if (!initial) router.push(`/admin/products/${result.data.id}`);
       else router.refresh();
     } catch (error) {
@@ -382,12 +391,12 @@ export function ProductEditor({
     progress: (percent: number) => void = () => {},
   ) {
     if (busy.current) return;
-    if (file.size > 4 * 1024 * 1024) {
-      setError("Ukuran gambar maksimal 4 MB.");
+    if (purpose === "option" && values.optionImages.length >= 50) { setError("Maksimal 50 foto variasi dan tabel ukuran per produk."); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || !file.size || file.size > 4 * 1024 * 1024) {
+      setError("Gunakan JPG, PNG, atau WebP berukuran 1 byte–4 MB.");
       return;
     }
     busy.current = true;
-    if (purpose === "gallery") setGalleryPreview(URL.createObjectURL(file));
     setPending("upload-" + purpose);
     setError("");
     setNotice("");
@@ -449,22 +458,23 @@ export function ProductEditor({
       setNotice(
         "Foto sementara siap. Klik Simpan untuk memasang foto pada produk.",
       );
-      setRetryFile(undefined);
       return image;
     } catch (error) {
       setError(error instanceof Error ? error.message : "Upload gagal.");
-      if (purpose === "gallery") setRetryFile(file);
     } finally {
       busy.current = false;
       setPending(null);
-      if (purpose === "gallery") setGalleryPreview("");
     }
-  }
-  async function upload(file?: File) {
-    if (file) return uploadFile(file, "gallery");
   }
   async function uploadOption(file: File, progress: (percent: number) => void) {
     return uploadFile(file, "option", progress);
+  }
+  function restorePhotos(purpose: "images" | "optionImages") {
+    const previous = persistedSnapshot.current?.[purpose] ?? [];
+    const next = [...previous, ...values[purpose].filter(photo => !previous.some(old => old.id === photo.id))];
+    const limit = purpose === "images" ? 10 : 50;
+    if (next.length > limit) { setError(`Pemulihan melewati batas ${limit} foto. Hapus foto baru yang tidak dipakai terlebih dahulu.`); return; }
+    change(purpose, next);
   }
   function removePhoto(id: string, purpose: "images" | "optionImages") {
     // A product photo may be the selected image for a customer-facing option.
@@ -475,19 +485,18 @@ export function ProductEditor({
       setError("Foto ini dipakai oleh opsi variasi. Pilih gambar pengganti pada Varian sebelum menghapus foto utama.");
       return;
     }
-    const photo = values[purpose].find((image) => image.id === id);
+    // Deletion is provisional until the product is saved. Cancelling staged media
+    // here breaks both "Pulihkan foto" and discarding changes in the variation
+    // panel: the restored media ID would already be cancelled server-side.
+    // Unreferenced staged uploads are expired by the existing TTL cleanup;
+    // finalized product media is removed only by the save transaction.
     change(
       purpose,
       values[purpose].filter((image) => image.id !== id),
     );
-    if (photo?.url.startsWith("/api/v1/admin/product-media/")) {
-      void fetch(photo.url, { method: "DELETE" }).catch(() => {
-        /* TTL cleanup retries safely. */
-      });
-    }
   }
   useEffect(() => {
-    if (!dirty && !pending?.startsWith("upload-")) return;
+    if (!dirty && !queueBusy && !sellerPanel && !pending?.startsWith("upload-")) return;
     const unload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -517,7 +526,43 @@ export function ProductEditor({
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", navigate, true);
     };
-  }, [dirty, pending]);
+  }, [dirty, pending, queueBusy, sellerPanel]);
+  useEffect(() => {
+    // Navigation.currentEntry.index identifies the direction of a browser
+    // traverse even when it was initiated by Forward or history.go(n).
+    // Restoring with a constant go(1) loses the editor on cancelled Forward.
+    type NavigationIndex = { currentEntry?: { index?: number } };
+    const index = () => {
+      const nav = (window as Window & { navigation?: NavigationIndex }).navigation;
+      return typeof nav?.currentEntry?.index === "number" ? nav.currentEntry.index : null;
+    };
+    let previousIndex = index();
+    const pop = (event: PopStateEvent) => {
+      const destinationIndex = index();
+      const returnOffset =
+        previousIndex !== null && destinationIndex !== null
+          ? previousIndex - destinationIndex
+          : 1; // Legacy Back fallback where Navigation API is unavailable.
+      previousIndex = destinationIndex;
+      if (restoreBack.current) {
+        event.stopImmediatePropagation();
+        restoreBack.current = false;
+        return;
+      }
+      const current = backState.current;
+      if (!current.dirty && !current.panel && !current.uploading) return;
+      if (current.panel || !window.confirm("Ada perubahan produk yang belum disimpan. Tinggalkan halaman?")) {
+        event.stopImmediatePropagation();
+        if (returnOffset !== 0) {
+          restoreBack.current = true;
+          window.history.go(returnOffset);
+        }
+        if (current.panel) closePanelRef.current?.();
+      }
+    };
+    window.addEventListener("popstate", pop, true);
+    return () => window.removeEventListener("popstate", pop, true);
+  }, []);
   useEffect(() => {
     setBulkSelected(new Set());
   }, [values.variants.length]);
@@ -606,9 +651,28 @@ export function ProductEditor({
       setPending(null);
     }
   }
+  let payload: unknown;
+  try { payload = canonicalProductPricing({ ...values, ...shippingData(shipping), optionsEnabled: custom && Boolean(values.optionGroups?.length) }); } catch { payload = null; }
+  const readiness = productPublishReadiness(payload);
+  function openPanel(panel: "groups" | "stock") {
+    panelBaseline.current = canonicalProductForm(values);
+    panelSnapshot.current = values; setReordering(false); setSellerPanel(panel);
+  }
+  const panelDirty = sellerPanel !== null && canonicalProductForm(values) !== panelBaseline.current;
+  function closePanel(apply = false) {
+    if (pending || queueBusy) return;
+    if (!apply && panelDirty) {
+      if (!window.confirm("Buang perubahan variasi sejak editor ini dibuka?")) return;
+      if (panelSnapshot.current) setValues(panelSnapshot.current);
+    }
+    setSellerPanel(null); setReordering(false);
+    if (apply && panelDirty) setNotice("Perubahan variasi ada dalam formulir. Simpan produk untuk menyimpan ke database.");
+  }
+  closePanelRef.current = () => closePanel();
+  backState.current = { dirty, panel: sellerPanel !== null, uploading: queueBusy || Boolean(pending?.startsWith("upload-")) };
   return (
     <div className="product-editor-v2 mx-auto max-w-6xl space-y-5 pb-8">
-      <div className="flex items-center justify-between gap-3">
+      <div className="seller-product-toolbar flex items-center justify-between gap-3">
         <Link
           href="/admin/products"
           className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-zinc-600 transition-colors hover:text-black"
@@ -625,7 +689,7 @@ export function ProductEditor({
           {statusLabels[status]}
         </span>
       </div>
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-5">
+      <header className="seller-product-heading flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.035em] text-zinc-950 sm:text-[30px]">
             {initial ? "Edit produk" : "Tambah produk"}
@@ -666,183 +730,19 @@ export function ProductEditor({
           </p>
         )}
       </div>
-      <form onSubmit={save} data-testid="product-editor" className="space-y-5">
+      <form onSubmit={event => void save(event, (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-intent") === "publish")} data-testid="product-editor" className="space-y-5">
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_300px]">
           <fieldset
-            disabled={!canEdit || !!pending}
+            disabled={!canEdit || !!pending || queueBusy}
             className="min-w-0 space-y-5"
           >
-            <section
-              id="product-images"
-              className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_3px_14px_rgba(0,0,0,.025)] sm:p-6"
-            >
-              <div className="mb-4 flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-100">
-                  <ImagePlus size={20} />
-                </span>
-                <div>
-                  <h2 className="text-base font-bold text-zinc-950 sm:text-lg">
-                    Foto produk{" "}
-                    <span aria-hidden="true" className="text-red-500">
-                      *
-                    </span>
-                  </h2>
-                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
-                    Foto pertama menjadi gambar utama pada halaman produk.
-                  </p>
-                </div>
-                <span className="ml-auto shrink-0 text-xs font-semibold text-zinc-400">
-                  {values.images.length}/10
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-                {values.images.map((image, index) => (
-                  <div key={image.id} className="min-w-0">
-                    <div className="group relative aspect-square overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
-                      {/* Draft photos require the session; optimization does not forward it. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.url}
-                        alt={
-                          image.alt || values.name || `Foto produk ${index + 1}`
-                        }
-                        className="h-full w-full object-cover"
-                      />
-                      {index === 0 && (
-                        <span className="absolute left-1.5 top-1.5 rounded-md bg-zinc-950 px-1.5 py-1 text-[10px] font-semibold text-white">
-                          Utama
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        disabled={!canEdit || !!pending}
-                        aria-label={`Hapus gambar ${index + 1}`}
-                        title="Hapus foto"
-                        onClick={() => removePhoto(image.id, "images")}
-                        className="absolute bottom-1 right-1 grid h-11 w-11 place-items-center rounded-lg bg-white/95 text-red-600 shadow-sm transition hover:bg-white"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                    <div className="mt-1 flex gap-1">
-                      {[-1, 1].map((delta) => (
-                        <button
-                          key={delta}
-                          type="button"
-                          className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-zinc-200 hover:bg-zinc-100 disabled:opacity-40"
-                          aria-label={`Pindahkan foto ${index + 1} ke ${delta < 0 ? "atas" : "bawah"}`}
-                          disabled={
-                            !canEdit ||
-                            !!pending ||
-                            index + delta < 0 ||
-                            index + delta >= values.images.length
-                          }
-                          onClick={() => {
-                            const next = [...values.images];
-                            [next[index], next[index + delta]] = [
-                              next[index + delta],
-                              next[index],
-                            ];
-                            change("images", next);
-                          }}
-                        >
-                          {delta < 0 ? (
-                            <ArrowUp size={16} />
-                          ) : (
-                            <ArrowDown size={16} />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                    {index !== 0 && (
-                      <button
-                        type="button"
-                        disabled={!canEdit || !!pending}
-                        onClick={() =>
-                          change("images", [
-                            image,
-                            ...values.images.filter((i) => i.id !== image.id),
-                          ])
-                        }
-                        className="mt-1.5 min-h-8 text-left text-[11px] font-semibold text-zinc-600 underline-offset-2 hover:underline"
-                      >
-                        Jadikan utama
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {galleryPreview && (
-                  <div className="relative aspect-square min-w-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
-                    {/* Local preview is never submitted or persisted as a ProductImage. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={galleryPreview}
-                      alt="Pratinjau foto sedang diunggah"
-                      className="h-full w-full object-cover"
-                    />
-                    <span
-                      role="status"
-                      className="absolute inset-x-0 bottom-0 bg-black/80 p-2 text-center text-xs text-white"
-                    >
-                      Mengunggah foto…
-                    </span>
-                  </div>
-                )}
-                {canEdit && values.images.length < 10 && (
-                  <label
-                    htmlFor="product-image-upload"
-                    className={`seller-main-upload flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 px-2 text-center text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100 ${values.images.length === 0 ? "col-span-3 min-h-[172px] sm:col-span-5" : "aspect-square min-h-28"}`}
-                  >
-                    <ImagePlus size={values.images.length === 0 ? 34 : 23} />
-                    <span>{values.images.length === 0 ? "Tambah foto produk" : "Tambah foto"}</span>
-                    {values.images.length === 0 && (
-                      <>
-                        <span className="max-w-xs text-center text-[11px] font-normal text-zinc-400">Foto produk akan ditampilkan pada halaman produk untuk menarik lebih banyak pembeli.</span>
-                        <span className="rounded-xl border border-zinc-200 bg-white px-4 py-2 font-semibold">Pilih foto</span>
-                      </>
-                    )}
-                  </label>
-                )}
-              </div>
-              {
-                <label htmlFor="product-image-upload" className="sr-only">
-                  Unggah JPG, PNG, atau WebP
-                </label>
-              }
-              {
-                <input
-                  id="product-image-upload"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={
-                    !canEdit ||
-                    !!pending ||
-                    !mediaRecovered ||
-                    values.images.length >= 10
-                  }
-                  onChange={(e) => {
-                    void upload(e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
-                  className="sr-only"
-                  aria-describedby="product-image-help"
-                />
-              }
-              {retryFile && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!!pending}
-                  onClick={() => void upload(retryFile)}
-                >
-                  Coba unggah lagi
-                </Button>
-              )}
-              <p id="product-image-help" className="mt-3 text-xs text-zinc-400">
-                JPG, PNG, atau WebP. Maksimal 4 MB per foto dan 10 foto per
-                produk.
-              </p>
-            </section>
+            <ProductPhotoEditor photos={values.images} name={values.name}
+              disabled={!canEdit || !!pending || !mediaRecovered}
+              canUndo={Boolean(persistedSnapshot.current?.images.some(i => !values.images.some(photo => photo.id === i.id)))}
+              onUndo={() => restorePhotos("images")}
+              onBusy={setQueueBusy} onChange={photos => setValues(current => ({ ...current, images: photos }))}
+              onRemove={id => removePhoto(id, "images")}
+              onUpload={(file, progress) => uploadFile(file, "gallery", progress)} />
 
             <section
               id="product-basic"
@@ -956,7 +856,7 @@ export function ProductEditor({
                   Detail produk
                 </h2>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Jelaskan bahan, keunggulan, dan cara merawat produk.
+                  Jelaskan bahan, keunggulan, dan panduan ukuran produk.
                 </p>
               </div>
               <div>
@@ -978,7 +878,7 @@ export function ProductEditor({
                 {(
                   [
                     ["material", "Material"],
-                    ["careInstruction", "Petunjuk perawatan"],
+
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key}>
@@ -998,16 +898,11 @@ export function ProductEditor({
                   </div>
                 ))}
               </div>
+              <SizeChartEditor value={values.sizeChart ?? null} photos={[...values.images, ...values.optionImages]}
+                disabled={!canEdit || !!pending || queueBusy || !mediaRecovered}
+                onChange={chart => change("sizeChart", chart)} onUpload={uploadOption} />
             </section>
 
-            <section id="product-attributes" className="seller-attributes-card min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
-              <h2 className="text-base font-bold sm:text-lg">Atribut <Info size={16} aria-hidden="true" /></h2>
-              <details>
-                <summary>Atribut lainnya <ChevronDown size={20} aria-hidden="true" /></summary>
-                <p>Material dan petunjuk perawatan produk dapat diisi pada bagian Detail produk.</p>
-                <a href="#product-details">Buka detail produk <ChevronRight size={16} aria-hidden="true" /></a>
-              </details>
-            </section>
 
             <section
               id="product-pricing"
@@ -1042,7 +937,7 @@ export function ProductEditor({
                           return;
                         }
                         setCustom(true);
-                        setSellerPanel("groups");
+                        openPanel("groups");
                         setError("");
                       } else {
                         if (values.variants.some((row) => row.id) || values.variants.some((row) => row.protected)) {
@@ -1073,15 +968,15 @@ export function ProductEditor({
               </div>
               {custom && (
                 <div className="seller-sales-links">
-                  <button type="button" onClick={() => setSellerPanel("groups")}>
+                  <button type="button" onClick={() => openPanel("groups")}>
                     <span>Variasi <b aria-hidden="true">*</b></span>
                     <span>{values.optionGroups?.length ? `${values.optionGroups.length} jenis` : "Tambah"} <ChevronRight size={18} /></span>
                   </button>
                   <button type="button" onClick={() => {
                     if (!values.optionGroups?.length) {
                       setNotice("Tambahkan jenis variasi terlebih dahulu sebelum mengatur Harga/Stok.");
-                      setSellerPanel("groups");
-                    } else setSellerPanel("stock");
+                      openPanel("groups");
+                    } else openPanel("stock");
                   }}>
                     <span>Harga/Stok <b aria-hidden="true">*</b></span>
                     <span>{values.variants.some((row) => row.sku) ? `${values.variants.length} SKU` : "Tambah"} <ChevronRight size={18} /></span>
@@ -1098,6 +993,7 @@ export function ProductEditor({
                   Gunakan varian sederhana
                 </Button>
               )}
+              {!custom && <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="product-price">
@@ -1147,17 +1043,18 @@ export function ProductEditor({
                 <Info size={14} className="mr-1 inline-block" /> Harga diskon
                 harus lebih rendah dari harga normal.
               </p>
+              </>}
             </section>
 
             {custom ? (
               <section id="product-variants" className="min-w-0">
-                <Dialog.Root open={sellerPanel !== null} onOpenChange={(open) => { if (!open) setSellerPanel(null); }}>
+                <Dialog.Root open={sellerPanel !== null} onOpenChange={(open) => { if (!open) closePanel(); }}>
                   <Dialog.Portal>
                     <Dialog.Overlay className="seller-editor-overlay" />
                     <Dialog.Content className={`seller-editor-dialog ${reordering ? "seller-reordering" : ""}`} aria-describedby="seller-editor-desc">
                       <header className="seller-editor-toolbar">
                         <Dialog.Close asChild>
-                          <button type="button" className="seller-editor-back" aria-label="Kembali ke produk"><ChevronRight size={24} /></button>
+                          <button type="button" className="seller-editor-back" aria-label="Kembali ke produk"><ArrowLeft size={22} /></button>
                         </Dialog.Close>
                         <Dialog.Title>{sellerPanel === "groups" ? "Varian" : "Harga/Stok"}</Dialog.Title>
                         {sellerPanel === "groups" ? (
@@ -1181,7 +1078,7 @@ export function ProductEditor({
                               (i) => !values.optionImages.some((current) => current.id === i.id),
                             ))}
                             onRemovePhoto={(id) => removePhoto(id, "optionImages")}
-                            onUndoPhotos={() => change("optionImages", persistedSnapshot.current?.optionImages ?? values.optionImages)}
+                            onUndoPhotos={() => restorePhotos("optionImages")}
                             disabled={!canEdit || !!pending || !mediaRecovered}
                             canStock={canStock}
                             productName={values.name}
@@ -1189,15 +1086,18 @@ export function ProductEditor({
                             onUpload={uploadOption}
                             onChange={(optionGroups, variants) => {
                               setError("");
-                              setValues((current) => ({ ...current, optionGroups, variants }));
+                              setValues((current) => {
+                                const next = { ...current, optionGroups, variants };
+                                return next;
+                              });
                               setNotice("");
                             }}
                           />
                         )}
                       </div>
                       <footer className="seller-editor-actions">
-                        <button type="button" onClick={() => setSellerPanel(null)}>Simpan</button>
-                        <span>Perubahan tersimpan dalam formulir. Simpan produk untuk menerbitkannya.</span>
+                        <button type="button" disabled={!!pending || queueBusy} onClick={() => closePanel(true)}>Simpan</button>
+                        <span>Perubahan belum tersimpan permanen. Simpan produk untuk menyimpannya.</span>
                       </footer>
                     </Dialog.Content>
                   </Dialog.Portal>
@@ -1231,7 +1131,7 @@ export function ProductEditor({
                       return;
                     }
                     setCustom(true);
-                    setSellerPanel("groups");
+                    openPanel("groups");
                   }}
                 >
                   Gunakan variasi kustom
@@ -1590,7 +1490,7 @@ export function ProductEditor({
                       ["product-basic", "Informasi dasar"],
                       ["product-detail", "Detail produk"],
                       ["product-pricing", "Harga"],
-                      ["product-variants", "Varian & stok"],
+                      ...(!custom ? [["product-variants", "Varian & stok"] as const] : []),
                       ["product-shipping", "Pengiriman"],
                       ["product-settings", "Pengaturan lainnya"],
                     ] as const
@@ -1622,7 +1522,7 @@ export function ProductEditor({
           </aside>
         </div>
         {canEdit && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
+          <div className="seller-product-actions">
             <span className="min-w-0 flex-1 text-xs font-medium text-zinc-500">
               {pending?.startsWith("upload-")
                 ? "Foto sedang diunggah. Produk belum disimpan."
@@ -1631,16 +1531,19 @@ export function ProductEditor({
                   : productId
                     ? "Seluruh perubahan telah disimpan."
                     : "Belum ada perubahan."}
+              {status === "DRAFT" && <span className="mt-1 block">{readiness.ready ? readiness.reason : `Lengkapi informasi wajib untuk menerbitkan produk. ${readiness.reason}`}</span>}
             </span>
+            {status === "DRAFT" && readiness.ready && <Button type="submit" variant="outline" data-testid="save-product" data-intent="save" disabled={!!pending || queueBusy || !dirty}>Simpan Draft</Button>}
             <Button
               type="submit"
-              disabled={!!pending || !dirty}
+              disabled={!!pending || queueBusy || (!dirty && (status !== "DRAFT" || !readiness.ready))}
+              data-intent={status === "DRAFT" && readiness.ready ? "publish" : "save"}
               aria-busy={pending === "save"}
-              data-testid="save-product"
+              data-testid={status === "DRAFT" && readiness.ready ? "publish-product" : "save-product"}
               className="h-11 shrink-0 rounded-xl px-5 sm:px-7"
             >
               <Save size={17} />
-              Simpan
+              {status !== "DRAFT" ? "Simpan Perubahan" : readiness.ready ? "Terbitkan" : "Simpan sebagai Draft"}
               {pending === "save" && (
                 <span role="status" className="text-xs">
                   Menyimpan…
@@ -1663,25 +1566,14 @@ export function ProductEditor({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {canEdit && status !== "PUBLISHED" && (
-              <Button
-                type="button"
-                disabled={!!pending || dirty}
-                onClick={() => void changeStatus("PUBLISHED")}
-                data-testid="publish-product"
-                className="min-h-11 rounded-xl"
-              >
-                <Check size={17} />
-                {pending === "PUBLISHED"
-                  ? "Menerbitkan..."
-                  : "Terbitkan produk"}
-              </Button>
+            {canEdit && status === "ARCHIVED" && (
+              <Button type="button" disabled={!!pending || queueBusy || dirty || !readiness.ready} onClick={() => void changeStatus("PUBLISHED")} data-testid="publish-product">Terbitkan produk</Button>
             )}
             {canEdit && status !== "DRAFT" && (
               <Button
                 type="button"
                 variant="outline"
-                disabled={!!pending || dirty}
+                disabled={!!pending || queueBusy || dirty}
                 onClick={() => void changeStatus("DRAFT")}
                 data-testid="draft-product"
                 className="min-h-11 rounded-xl"
@@ -1693,7 +1585,7 @@ export function ProductEditor({
               <Button
                 type="button"
                 variant="outline"
-                disabled={!!pending || dirty}
+                disabled={!!pending || queueBusy || dirty}
                 onClick={() => void changeStatus("ARCHIVED")}
                 data-testid="archive-product"
                 className="min-h-11 rounded-xl"

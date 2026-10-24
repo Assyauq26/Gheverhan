@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: gheverhan-helipod-\${{ github.ref }}
+  group: gheverhan-helipod-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -59,8 +59,8 @@ jobs:
       - name: Install the restricted SSH deploy key and pinned host key
         if: github.event_name != 'pull_request' && vars.HELI_POD_AUTODEPLOY == 'enabled'
         env:
-          HELI_POD_DEPLOY_KEY_B64: \${{ secrets.HELI_POD_DEPLOY_KEY_B64 }}
-          HELI_POD_SSH_KNOWN_HOSTS: \${{ vars.HELI_POD_SSH_KNOWN_HOSTS }}
+          HELI_POD_DEPLOY_KEY_B64: ${{ secrets.HELI_POD_DEPLOY_KEY_B64 }}
+          HELI_POD_SSH_KNOWN_HOSTS: ${{ vars.HELI_POD_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           test -n "$HELI_POD_DEPLOY_KEY_B64" || { echo "Missing HELI_POD_DEPLOY_KEY_B64 repository secret."; exit 1; }

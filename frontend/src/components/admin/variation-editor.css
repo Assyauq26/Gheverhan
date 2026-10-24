@@ -814,3 +814,47 @@
   .variation-sku-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .variation-sku-fields > .variation-field:nth-child(4) { grid-column: 1 / -1; }
 }
+
+
+/* Compact overflow actions keep reordering/deleting available without crowding the reference layout. */
+.variation-card-header > .variation-field { order: 0; }
+.variation-card-header > .variation-image-switch { order: 1; }
+.variation-card-header > .variation-tools {
+  position: absolute; z-index: 5; right: 2.6rem; top: -2.18rem;
+  display: block; width: auto; margin: 0; padding: 0;
+}
+.variation-tools > summary {
+  display: grid; place-items: center;
+  width: 27px; height: 27px; min-height: 27px;
+  border-radius: .5rem; color: #777b85; cursor: pointer;
+  list-style: none;
+}
+.variation-tools > summary::-webkit-details-marker { display: none; }
+.variation-tools > summary:hover { background: #f3f4f6; }
+.variation-tools-menu {
+  position: absolute; z-index: 6; right: 0; top: 30px;
+  display: flex; gap: 2px; align-items: center; white-space: nowrap;
+  padding: 5px; background: #fff; border: 1px solid #e5e7eb;
+  border-radius: .75rem; box-shadow: 0 12px 30px rgb(0 0 0 / .12);
+}
+.variation-tools-menu > button {
+  width: 37px; height: 37px; min-height: 37px;
+  display: grid; place-items: center; border-radius: .5rem;
+}
+.variation-tools-menu > button:hover:not(:disabled) { background: #f3f4f6; }
+.variation-tools-menu > button:last-child { color: #ba313b; }
+.variation-media-library > summary svg:first-child { flex: none; }
+.variation-bulk > .variation-bulk-hint {
+  display: flex; align-items: flex-start; gap: .38rem; color: #888b95;
+  grid-column: 1 / -1; line-height: 1.4;
+}
+.variation-bulk-hint > svg { flex: none; margin-top: .08rem; }
+.variation-bulk > button { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; }
+.variation-sku summary > span:not(.variation-pill) { overflow: hidden; }
+.variation-sku summary small {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+@media (max-width: 570px) {
+  .variation-card-header > .variation-tools { right: 2.1rem; }
+  .variation-tools > summary { width: 22px; height: 24px; min-height: 24px; }
+}

@@ -9,7 +9,9 @@ fi
 SOURCE_DIR=/opt/gheverhan/source
 DEPLOY_DIR=/opt/gheverhan/deploy
 DEPLOY_SCRIPT="$SOURCE_DIR/deploy/helipod/deploy-release.sh"
+RUNTIME_HELPER_SOURCE="$SOURCE_DIR/deploy/helipod/prepare-runtime.py"
 INSTALL_PATH=/usr/local/sbin/gheverhan-deploy-release
+RUNTIME_HELPER_PATH=/usr/local/sbin/gheverhan-prepare-runtime.py
 KEY_PATH="$DEPLOY_DIR/github-actions-deploy"
 SERVER_IP=43.173.21.197
 
@@ -29,12 +31,13 @@ if [[ -n "$(sudo -u ubuntu git -C "$SOURCE_DIR" status --porcelain)" ]]; then
 fi
 sudo -u ubuntu git -C "$SOURCE_DIR" fetch origin main
 sudo -u ubuntu git -C "$SOURCE_DIR" merge --ff-only origin/main
-[[ -f "$DEPLOY_SCRIPT" ]] || {
-  echo "The merged deploy-release.sh file is missing." >&2
+[[ -f "$DEPLOY_SCRIPT" && -f "$RUNTIME_HELPER_SOURCE" ]] || {
+  echo "The merged deployment scripts are missing." >&2
   exit 66
 }
 
 install -o root -g root -m 0755 "$DEPLOY_SCRIPT" "$INSTALL_PATH"
+install -o root -g root -m 0755 "$RUNTIME_HELPER_SOURCE" "$RUNTIME_HELPER_PATH"
 
 if [[ ! -f "$KEY_PATH" && ! -f "$KEY_PATH.pub" ]]; then
   umask 077

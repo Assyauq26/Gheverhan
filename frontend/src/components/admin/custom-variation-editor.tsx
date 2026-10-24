@@ -11,7 +11,6 @@ import {
   ArrowDown,
   Trash2,
   Camera,
-  X,
   Layers3,
   ChevronDown,
   ChevronRight,

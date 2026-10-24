@@ -19,6 +19,9 @@ const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("SPRINT1_TEST_DATABASE_URL is required; use a disposable local database");
 const dbUrl = new URL(target);
 if (!["127.0.0.1", "localhost", "[::1]"].includes(dbUrl.hostname) || dbUrl.pathname !== "/gheverhan_sprint1_test") throw new Error("Browser tests refuse production/non-local databases");
+// Direct service checks and spawned app must share the same guarded disposable database.
+process.env.DATABASE_URL = target;
+process.env.DIRECT_URL = target;
 const root = path.resolve(__dirname, "../..");
 if (!existsSync(path.join(root, ".next/BUILD_ID"))) throw new Error("Run npm run build before this production-server browser test");
 const artifactDir = process.env.SPRINT1_ARTIFACT_DIR || `/tmp/gheverhan-product-browser-${process.pid}`;
@@ -123,6 +126,12 @@ async function main() {
     const pageErrors: string[] = []; page.on("pageerror", err => pageErrors.push(err.message));
     if (process.env.PRODUCT_EDITOR_ONLY === "1") {
       await verifyNativeProductEditor({browser:browser!,admin,anonymous,db,base,artifactDir,prefix,png,check});
+      completed = true; return;
+    }
+    if (process.env.PRODUCT_VARIATIONS_ONLY === "1") {
+      await db.category.create({ data: { name: "Variant fixture", slug: `browser-${prefix}` } });
+      await verifyCustomVariations({page,browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,prefix,check});
+      await verifyProductEditorV2({page,db,base,artifactDir,prefix,check,png});
       completed = true; return;
     }
     await check("protected pages and permission-filtered dashboard", async () => {

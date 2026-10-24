@@ -107,6 +107,13 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await customer.reload(); await expect(customer.getByTestId("product-size-chart")).toHaveCount(0);
       await page.getByTestId("draft-product").click(); await expect(page.getByTestId("product-status")).toHaveText("Draft");
       assert.equal((await anonymous.request.get(base + image.url)).status(), 404); await customer.close();
+      await page.goto(base + "/admin/products"); await page.goto(base + "/admin/products/" + id);
+      await page.locator("#product-name").fill("Unsaved browser back");
+      const cancelBack = page.waitForEvent("dialog"); await page.evaluate(() => history.back()); await (await cancelBack).dismiss();
+      await expect(page).toHaveURL(base + "/admin/products/" + id);
+      await expect(page.locator("#product-name")).toHaveValue("Unsaved browser back");
+      const allowBack = page.waitForEvent("dialog"); await page.evaluate(() => history.back()); await (await allowBack).accept();
+      await expect(page).toHaveURL(base + "/admin/products");
       assert.deepEqual(errors, []);
     });
   } catch (error) {  await page.screenshot({ path: path.join(artifactDir, "native-failure.png"), fullPage: false }); throw error; } finally { await context.close(); if (id) await db.product.update({ where: { id }, data: { status: "ARCHIVED" } }); }

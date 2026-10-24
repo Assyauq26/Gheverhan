@@ -164,6 +164,7 @@ export function ProductEditor({
   const panelBaseline = useRef("");
   const panelSnapshot = useRef<Values | null>(null);
   const restoreBack = useRef(false);
+  const backState = useRef({ dirty: false, panel: false, uploading: false });
   const closePanelRef = useRef<() => void>();
   const busy = useRef(false);
   const persistedSnapshot = useRef<ProductEditorData | undefined>(initial);
@@ -208,6 +209,7 @@ export function ProductEditor({
           const photos = result.data as (ProductEditorData["images"][number] & {
             purpose: string;
           })[];
+          photos.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
           setValues((current) => ({
             ...current,
             images: [
@@ -512,22 +514,26 @@ export function ProductEditor({
         event.stopPropagation();
       }
     };
-    const pop = (event: PopStateEvent) => {
-      if (restoreBack.current) { event.stopImmediatePropagation(); restoreBack.current = false; return; }
-      if (sellerPanel || !window.confirm("Ada perubahan produk yang belum disimpan. Tinggalkan halaman?")) {
-        event.stopImmediatePropagation(); restoreBack.current = true; window.history.go(1);
-        if (sellerPanel) closePanelRef.current?.();
-      }
-    };
-    window.addEventListener("popstate", pop, true);
     window.addEventListener("beforeunload", unload);
     document.addEventListener("click", navigate, true);
     return () => {
-      window.removeEventListener("popstate", pop, true);
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", navigate, true);
     };
   }, [dirty, pending, queueBusy, sellerPanel]);
+  useEffect(() => {
+    const pop = (event: PopStateEvent) => {
+      if (restoreBack.current) { event.stopImmediatePropagation(); restoreBack.current = false; return; }
+      const current = backState.current;
+      if (!current.dirty && !current.panel && !current.uploading) return;
+      if (current.panel || !window.confirm("Ada perubahan produk yang belum disimpan. Tinggalkan halaman?")) {
+        event.stopImmediatePropagation(); restoreBack.current = true; window.history.go(1);
+        if (current.panel) closePanelRef.current?.();
+      }
+    };
+    window.addEventListener("popstate", pop, true);
+    return () => window.removeEventListener("popstate", pop, true);
+  }, []);
   useEffect(() => {
     setBulkSelected(new Set());
   }, [values.variants.length]);
@@ -634,6 +640,7 @@ export function ProductEditor({
     if (apply && panelDirty) setNotice("Perubahan variasi ada dalam formulir. Simpan produk untuk menyimpan ke database.");
   }
   closePanelRef.current = () => closePanel();
+  backState.current = { dirty, panel: sellerPanel !== null, uploading: queueBusy || Boolean(pending?.startsWith("upload-")) };
   return (
     <div className="product-editor-v2 mx-auto max-w-6xl space-y-5 pb-8">
       <div className="seller-product-toolbar flex items-center justify-between gap-3">
@@ -1495,19 +1502,19 @@ export function ProductEditor({
                   : productId
                     ? "Seluruh perubahan telah disimpan."
                     : "Belum ada perubahan."}
-              {status !== "PUBLISHED" && <span className="mt-1 block">{readiness.ready ? readiness.reason : `Lengkapi informasi wajib untuk menerbitkan produk. ${readiness.reason}`}</span>}
+              {status === "DRAFT" && <span className="mt-1 block">{readiness.ready ? readiness.reason : `Lengkapi informasi wajib untuk menerbitkan produk. ${readiness.reason}`}</span>}
             </span>
-            {status !== "PUBLISHED" && readiness.ready && <Button type="submit" variant="outline" data-testid="save-product" data-intent="save" disabled={!!pending || queueBusy || !dirty}>Simpan Draft</Button>}
+            {status === "DRAFT" && readiness.ready && <Button type="submit" variant="outline" data-testid="save-product" data-intent="save" disabled={!!pending || queueBusy || !dirty}>Simpan Draft</Button>}
             <Button
               type="submit"
-              disabled={!!pending || queueBusy || (!dirty && (status === "PUBLISHED" || !readiness.ready))}
-              data-intent={status !== "PUBLISHED" && readiness.ready ? "publish" : "save"}
+              disabled={!!pending || queueBusy || (!dirty && (status !== "DRAFT" || !readiness.ready))}
+              data-intent={status === "DRAFT" && readiness.ready ? "publish" : "save"}
               aria-busy={pending === "save"}
-              data-testid={status !== "PUBLISHED" && readiness.ready ? "publish-product" : "save-product"}
+              data-testid={status === "DRAFT" && readiness.ready ? "publish-product" : "save-product"}
               className="h-11 shrink-0 rounded-xl px-5 sm:px-7"
             >
               <Save size={17} />
-              {status === "PUBLISHED" ? "Simpan Perubahan" : readiness.ready ? "Terbitkan" : "Simpan sebagai Draft"}
+              {status !== "DRAFT" ? "Simpan Perubahan" : readiness.ready ? "Terbitkan" : "Simpan sebagai Draft"}
               {pending === "save" && (
                 <span role="status" className="text-xs">
                   Menyimpan…
@@ -1530,6 +1537,9 @@ export function ProductEditor({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {canEdit && status === "ARCHIVED" && (
+              <Button type="button" disabled={!!pending || queueBusy || dirty || !readiness.ready} onClick={() => void changeStatus("PUBLISHED")} data-testid="publish-product">Terbitkan produk</Button>
+            )}
             {canEdit && status !== "DRAFT" && (
               <Button
                 type="button"

@@ -326,6 +326,7 @@ export async function verifyCustomVariations(c: Context) {
             getComputedStyle(fields).gridTemplateColumns.split(" ").length,
           );
         assert.equal(columns, 3, "Bulk input fields stay three columns on mobile");
+        await bulk.locator("#bulk-price").fill("175000");
         await bulk.locator("#bulk-onHand").fill("5");
         await bulk
           .getByRole("button", { name: "Terapkan Massal", exact: true })

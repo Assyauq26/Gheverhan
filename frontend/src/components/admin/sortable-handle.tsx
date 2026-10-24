@@ -20,7 +20,7 @@ export function SortableHandle({ id, scope, label, disabled, onMove }: {
   const [message, setMessage] = useState("");
   const latest = useRef(onMove); latest.current = onMove;
   const cleanup = useRef<() => void>();
-  useLayoutEffect(() => { if (active && keyboardMode.current) button.current?.focus({ preventScroll: true }); }, [label, active]);
+  useLayoutEffect(() => { if (active && keyboardMode.current) button.current?.focus({ preventScroll: true }); }, [label, active, onMove]);
   useEffect(() => () => cleanup.current?.(), []);
   return <>
     <button ref={button} type="button" className="sort-handle" data-dragging={active || undefined}

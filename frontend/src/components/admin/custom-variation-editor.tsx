@@ -14,6 +14,8 @@ import {
   X,
   Layers3,
   ChevronDown,
+  ChevronRight,
+  Ellipsis,
   ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -402,7 +404,9 @@ export function CustomVariationEditor(p: Props) {
                   }
                 />
               </div>
-              <div className="variation-tools">
+              <details className="variation-tools">
+              <summary aria-label={`Aksi variasi ${index + 1}`}><Ellipsis size={17} aria-hidden="true" /></summary>
+              <div className="variation-tools-menu">
                 <Button
                   type="button"
                   variant="ghost"
@@ -449,6 +453,7 @@ export function CustomVariationEditor(p: Props) {
                   <Trash2 size={17} />
                 </Button>
               </div>
+            </details>
             <label className="variation-image-switch">
               <span>
                 <strong>Tambahkan gambar</strong>
@@ -603,7 +608,7 @@ export function CustomVariationEditor(p: Props) {
                     <div className="variation-photo-select">
                       <ImageIcon size={16} aria-hidden="true" />
                       <label className="sr-only" htmlFor={`stored-photo-${value.id}`}>
-                        Foto tersimpan untuk {` `}{value.value || `opsi ${vi + 1}`}
+                        Foto tersimpan untuk{" "}{value.value || `opsi ${vi + 1}`}
                       </label>
                       <select
                         id={`stored-photo-${value.id}`}
@@ -633,7 +638,7 @@ export function CustomVariationEditor(p: Props) {
                       disabled={blocked}
                       onClick={() => removeValue(group.id, value.id)}
                     >
-                      <X size={17} />
+                      <Trash2 size={17} />
                     </Button>
                   </div>
                 );
@@ -683,7 +688,7 @@ export function CustomVariationEditor(p: Props) {
       )}
       {(p.optionPhotos.length > 0 || p.canUndoPhotos) && (
         <details className="variation-media-library">
-          <summary>Foto variasi tersimpan ({p.optionPhotos.length})</summary>
+          <summary><ImageIcon size={16} aria-hidden="true" /> Foto variasi tersimpan ({p.optionPhotos.length}) <ChevronRight size={16} aria-hidden="true" /></summary>
           <p>
             Melepas foto dari opsi tidak menghapus file. Penghapusan permanen
             harus dikonfirmasi; foto pesanan historis tetap dilindungi server.
@@ -794,7 +799,7 @@ export function CustomVariationEditor(p: Props) {
       )}
       <section className="variation-skus" aria-label="Harga dan stok SKU">
         <div className="variation-section-title">
-          <h3>Harga &amp; stok</h3>
+          <h3>Harga &amp; Stok</h3>
           <span>{p.rows.filter((r) => r.sku).length} / {p.rows.length} SKU</span>
         </div>
         <p>

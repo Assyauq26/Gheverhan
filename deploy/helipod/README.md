@@ -19,8 +19,18 @@ Copy all storage objects preserving their exact application-relative keys. Datab
 Existing Supabase storage remains default on Vercel; explicitly select STORAGE_PROVIDER=local on the VPS.
 
 The Compose database owner is reserved for migrations. Before a public launch, configure a separate restricted
-runtime role, with privileges on application tables only and no direct network exposure. Tables created by the
-existing Prisma migrations have RLS enabled; grant runtime access through reviewed policies rather than
-disabling RLS.
+runtime role, with privileges on application tables only and no direct network exposure. Run prepare-runtime.py after migrations to create the trusted server role. It has table-level CRUD grants,
+no schema creation or migration-ledger access, and BYPASSRLS to preserve the existing server-side
+application authorization and session-revocation checks. PostgreSQL remains on the private Docker network.
+RLS stays enabled for all application tables.
 
 Do not activate the proxy until DNS/HTTPS cutover is authorized and the VPS checks pass.
+
+Set APP_ORIGIN=https://gheverhan.store for the VPS. Browser mutation checks use this configured origin
+instead of Next.js's internal bind address; forwarded headers never expand the allowed origin.
+The Caddyfile redirects www to the canonical apex domain.
+
+After cutover, install the included expired-order service and timer in /etc/systemd/system, reload
+systemd and enable gheverhan-expire-orders.timer. Its 02:00 UTC schedule matches the existing Vercel cron.
+The runner reads the secret only from the application's environment and fails on non-success responses.
+Do not enable the timer on a migration candidate until the production cutover is complete.

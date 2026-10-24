@@ -1,0 +1,10 @@
+[Unit]
+Description=Gheverhan daily expired-order maintenance
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+Persistent=true
+Unit=gheverhan-expire-orders.service
+
+[Install]
+WantedBy=timers.target

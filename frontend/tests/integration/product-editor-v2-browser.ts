@@ -234,6 +234,7 @@ export async function verifyProductEditorV2({
       await page.setViewportSize({ width: 390, height: 844 });
       await page.locator("#product-name").fill("Produk Uji Lima Puluh");
       await page.locator("#product-price").fill("150000");
+      await page.locator(".seller-sales-links button").first().click();
       const root = page.getByTestId("custom-variation-editor");
       await root
         .getByRole("button", { name: "Tambah variasi pertama", exact: true })
@@ -248,6 +249,8 @@ export async function verifyProductEditorV2({
           .getByLabel(`Opsi Ukuran ${i}`, { exact: true })
           .fill(`Nilai ${i}`);
       }
+      await page.locator(".seller-editor-actions button").click();
+      await page.locator(".seller-sales-links button").nth(1).click();
       await root
         .getByRole("button", { name: "Buat 50 kombinasi", exact: true })
         .click();

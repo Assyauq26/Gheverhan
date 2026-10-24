@@ -1146,6 +1146,7 @@ export function ProductEditor({
                             groups={values.optionGroups ?? []}
                             rows={values.variants}
                             photos={[...values.images, ...values.optionImages]}
+                            galleryPhotos={values.images}
                             optionPhotos={values.optionImages}
                             canUndoPhotos={Boolean(persistedSnapshot.current?.optionImages.some(
                               (i) => !values.optionImages.some((current) => current.id === i.id),

@@ -25,6 +25,7 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
+      APP_ORIGIN: https://gheverhan.store
       STORAGE_PROVIDER: local
       STORAGE_LOCAL_ROOT: /data/media
       DATABASE_URL: postgresql://gheverhan_runtime:${APP_DATABASE_PASSWORD:?Set APP_DATABASE_PASSWORD}@db:5432/gheverhan?schema=public&connection_limit=5

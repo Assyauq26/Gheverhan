@@ -1,5 +1,6 @@
+import { assertSameOrigin } from "@/lib/mutation-origin";
 import { z } from "zod";
-import { ok, fail, handle, HttpError } from "@/lib/response";
+import { ok, fail, handle } from "@/lib/response";
 import { requireUser } from "@/lib/auth/session";
 import { readUploadFormData } from "@/lib/upload-body";
 import { MAX_PROOF_BYTES } from "@/modules/payments/payment-proof-validation";
@@ -18,7 +19,7 @@ const fields = z.object({
 
 export async function POST(req: Request) {
   return handle(async () => {
-    if (req.headers.get("origin") !== new URL(req.url).origin) throw new HttpError("Origin tidak diizinkan", 403);
+    assertSameOrigin(req);
     const user = await requireUser();
     const form = await readUploadFormData(req, MAX_PROOF_BYTES + 128 * 1024);
     const parsed = fields.parse(Object.fromEntries(form));

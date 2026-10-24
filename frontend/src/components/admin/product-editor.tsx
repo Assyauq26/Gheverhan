@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "@/components/ui/navigation";
 import { useRouter } from "next/navigation";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Plus,
   Trash2,
@@ -17,6 +18,9 @@ import {
   Check,
   Save,
   Sparkles,
+  X,
+  ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   canonicalProductForm,
@@ -153,6 +157,7 @@ export function ProductEditor({
   const [bulkSelected, setBulkSelected] = useState(new Set<number>());
   const [bulkSelectedOnly, setBulkSelectedOnly] = useState(false);
   const [custom, setCustom] = useState(initial?.optionsEnabled ?? !initial);
+  const [sellerPanel, setSellerPanel] = useState<"groups" | "stock" | null>(null);
   const busy = useRef(false);
   const persistedSnapshot = useRef<ProductEditorData | undefined>(initial);
   const [values, setValues] = useState<Values>(() => valuesFor(initial));
@@ -422,9 +427,10 @@ export function ProductEditor({
       );
       setValues((current) => {
         const key = purpose === "gallery" ? "images" : "optionImages";
+        const label = `${current.name.trim() || "Produk"} - ${purpose === "gallery" ? "Foto produk" : "Foto variasi"} ${current[key].length + 1}`.slice(0, 200);
         return {
           ...current,
-          [key]: [...current[key].filter((i) => i.id !== image.id), image],
+          [key]: [...current[key].filter((i) => i.id !== image.id), { ...image, alt: label }],
         };
       });
       setNotice(
@@ -697,32 +703,6 @@ export function ProductEditor({
                         <Trash2 size={15} />
                       </button>
                     </div>
-                    <div className="mt-1.5">
-                      <label
-                        htmlFor={`image-alt-${image.id}`}
-                        className="sr-only"
-                      >
-                        Teks alternatif foto {index + 1}
-                      </label>
-                      <Input
-                        id={`image-alt-${image.id}`}
-                        value={image.alt}
-                        maxLength={200}
-                        disabled={!canEdit || !!pending}
-                        onChange={(e) =>
-                          change(
-                            "images",
-                            values.images.map((i) =>
-                              i.id === image.id
-                                ? { ...i, alt: e.target.value }
-                                : i,
-                            ),
-                          )
-                        }
-                        placeholder="Deskripsi foto"
-                        className="h-9 px-2 text-xs"
-                      />
-                    </div>
                     <div className="mt-1 flex gap-1">
                       {[-1, 1].map((delta) => (
                         <button
@@ -790,10 +770,16 @@ export function ProductEditor({
                 {canEdit && values.images.length < 10 && (
                   <label
                     htmlFor="product-image-upload"
-                    className="flex aspect-square min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 px-2 text-center text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100"
+                    className={`seller-main-upload flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 px-2 text-center text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100 ${values.images.length === 0 ? "col-span-3 min-h-[172px] sm:col-span-5" : "aspect-square min-h-28"}`}
                   >
-                    <Plus size={23} />
-                    <span>Tambah foto</span>
+                    <ImagePlus size={values.images.length === 0 ? 34 : 23} />
+                    <span>{values.images.length === 0 ? "Tambah foto produk" : "Tambah foto"}</span>
+                    {values.images.length === 0 && (
+                      <>
+                        <span className="max-w-xs text-center text-[11px] font-normal text-zinc-400">Foto produk akan ditampilkan pada halaman produk untuk menarik lebih banyak pembeli.</span>
+                        <span className="rounded-xl border border-zinc-200 bg-white px-4 py-2 font-semibold">Pilih foto</span>
+                      </>
+                    )}
                   </label>
                 )}
               </div>
@@ -993,18 +979,99 @@ export function ProductEditor({
               </div>
             </section>
 
+            <section id="product-attributes" className="seller-attributes-card min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
+              <h2 className="text-base font-bold sm:text-lg">Atribut <Info size={16} aria-hidden="true" /></h2>
+              <details>
+                <summary>Atribut lainnya <ChevronDown size={20} aria-hidden="true" /></summary>
+                <p>Material dan petunjuk perawatan produk dapat diisi pada bagian Detail produk.</p>
+                <a href="#product-details">Buka detail produk <ChevronRight size={16} aria-hidden="true" /></a>
+              </details>
+            </section>
+
             <section
               id="product-pricing"
               className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_3px_14px_rgba(0,0,0,.025)] sm:p-6"
             >
               <div>
                 <h2 className="text-base font-bold sm:text-lg">
-                  Informasi penjualan
+                  Info penjualan
                 </h2>
                 <p className="mt-1 text-xs text-zinc-500">
                   Tentukan harga utama. Harga khusus dapat diatur per varian.
                 </p>
               </div>
+              <div className="seller-sales-control">
+                <div>
+                  <strong>Tambah varian</strong>
+                  <p>Tambahkan hingga 3 varian produk untuk beragam ukuran, warna, bahan, atau yang lain.</p>
+                </div>
+                <label className="seller-toggle">
+                  <span className="sr-only">Tambah varian</span>
+                  <input
+                    id="seller-variant-toggle"
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Aktifkan variasi produk"
+                    checked={custom}
+                    disabled={!canEdit || !!pending}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        if (values.variants.some((row) => row.id)) {
+                          setError("SKU produk lama perlu konversi terkontrol. Gunakan pengaturan SKU yang sudah ada agar pesanan dan stok tetap aman.");
+                          return;
+                        }
+                        setCustom(true);
+                        setSellerPanel("groups");
+                        setError("");
+                      } else {
+                        if (values.variants.some((row) => row.id) || values.variants.some((row) => row.protected)) {
+                          setError("Variasi produk yang sudah mempunyai SKU tersimpan tidak dapat dinonaktifkan tanpa migrasi SKU terkontrol.");
+                          return;
+                        }
+                        if (values.optionGroups?.length && !window.confirm("Nonaktifkan variasi? Opsi dan kombinasi SKU dalam draft akan dihapus.")) return;
+                        setValues((current) => ({
+                          ...current,
+                          optionGroups: [],
+                          variants: [{
+                            sku: "",
+                            color: "",
+                            size: "",
+                            price: null,
+                            salePrice: null,
+                            ...(canStock ? { onHand: 0 } : {}),
+                          }],
+                        }));
+                        setCustom(false);
+                        setSellerPanel(null);
+                        setError("");
+                      }
+                    }}
+                  />
+                  <span aria-hidden="true" className="seller-toggle-track" />
+                </label>
+              </div>
+              {custom && (
+                <div className="seller-sales-links">
+                  <button type="button" onClick={() => setSellerPanel("groups")}>
+                    <span>Variasi <b aria-hidden="true">*</b></span>
+                    <span>{values.optionGroups?.length ? `${values.optionGroups.length} jenis` : "Tambah"} <ChevronRight size={18} /></span>
+                  </button>
+                  <button type="button" onClick={() => setSellerPanel("stock")}>
+                    <span>Harga/Stok <b aria-hidden="true">*</b></span>
+                    <span>{values.variants.some((row) => row.sku) ? `${values.variants.length} SKU` : "Tambah"} <ChevronRight size={18} /></span>
+                  </button>
+                </div>
+              )}
+              {!custom && !initial && (
+                <Button type="button" variant="ghost" className="seller-enable-legacy" onClick={() => setCustom(true)}>
+                  Gunakan editor variasi kustom
+                </Button>
+              )}
+              {custom && !values.optionGroups?.length && (
+                <Button type="button" variant="ghost" className="seller-enable-legacy" onClick={() => setCustom(false)}>
+                  Gunakan varian sederhana
+                </Button>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="product-price">
@@ -1058,53 +1125,53 @@ export function ProductEditor({
 
             {custom ? (
               <section id="product-variants" className="min-w-0">
-                <CustomVariationEditor
-                  groups={values.optionGroups ?? []}
-                  rows={values.variants}
-                  photos={[...values.images, ...values.optionImages]}
-                  optionPhotos={values.optionImages}
-                  canUndoPhotos={Boolean(
-                    persistedSnapshot.current?.optionImages.some(
-                      (i) =>
-                        !values.optionImages.some(
-                          (current) => current.id === i.id,
-                        ),
-                    ),
-                  )}
-                  onRemovePhoto={(id) => removePhoto(id, "optionImages")}
-                  onUndoPhotos={() =>
-                    change(
-                      "optionImages",
-                      persistedSnapshot.current?.optionImages ??
-                        values.optionImages,
-                    )
-                  }
-                  disabled={!canEdit || !!pending || !mediaRecovered}
-                  canStock={canStock}
-                  productName={values.name}
-                  basePrice={values.basePrice}
-                  onUpload={uploadOption}
-                  onChange={(optionGroups, variants) => {
-                    setError("");
-                    setValues((current) => ({
-                      ...current,
-                      optionGroups,
-                      variants,
-                    }));
-                    setNotice("");
-                  }}
-                />
-                {!values.optionGroups?.length && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="mt-3"
-                    disabled={!canEdit || !!pending}
-                    onClick={() => setCustom(false)}
-                  >
-                    Gunakan varian sederhana
-                  </Button>
-                )}
+                <Dialog.Root open={sellerPanel !== null} onOpenChange={(open) => { if (!open) setSellerPanel(null); }}>
+                  <Dialog.Portal>
+                    <Dialog.Overlay className="seller-editor-overlay" />
+                    <Dialog.Content className="seller-editor-dialog" aria-describedby="seller-editor-desc">
+                      <header className="seller-editor-toolbar">
+                        <Dialog.Close asChild>
+                          <button type="button" className="seller-editor-back" aria-label="Kembali ke produk"><ChevronRight size={24} /></button>
+                        </Dialog.Close>
+                        <Dialog.Title>{sellerPanel === "groups" ? "Varian" : "Harga/Stok"}</Dialog.Title>
+                        <span className="seller-editor-toolbar-action"><SlidersHorizontal size={18} aria-hidden="true" /></span>
+                      </header>
+                      <Dialog.Description id="seller-editor-desc" className="sr-only">
+                        {sellerPanel === "groups" ? "Kelola pilihan warna, ukuran, foto, dan opsi variasi produk." : "Kelola kombinasi SKU, harga, dan stok."}
+                      </Dialog.Description>
+                      <div className="seller-editor-scroll">
+                        {sellerPanel && (
+                          <CustomVariationEditor
+                            mode={sellerPanel}
+                            groups={values.optionGroups ?? []}
+                            rows={values.variants}
+                            photos={[...values.images, ...values.optionImages]}
+                            optionPhotos={values.optionImages}
+                            canUndoPhotos={Boolean(persistedSnapshot.current?.optionImages.some(
+                              (i) => !values.optionImages.some((current) => current.id === i.id),
+                            ))}
+                            onRemovePhoto={(id) => removePhoto(id, "optionImages")}
+                            onUndoPhotos={() => change("optionImages", persistedSnapshot.current?.optionImages ?? values.optionImages)}
+                            disabled={!canEdit || !!pending || !mediaRecovered}
+                            canStock={canStock}
+                            productName={values.name}
+                            basePrice={values.basePrice}
+                            onUpload={uploadOption}
+                            onChange={(optionGroups, variants) => {
+                              setError("");
+                              setValues((current) => ({ ...current, optionGroups, variants }));
+                              setNotice("");
+                            }}
+                          />
+                        )}
+                      </div>
+                      <footer className="seller-editor-actions">
+                        <button type="button" onClick={() => setSellerPanel(null)}>Simpan</button>
+                        <span>Perubahan tersimpan dalam formulir. Simpan produk untuk menerbitkannya.</span>
+                      </footer>
+                    </Dialog.Content>
+                  </Dialog.Portal>
+                </Dialog.Root>
               </section>
             ) : (
               <section

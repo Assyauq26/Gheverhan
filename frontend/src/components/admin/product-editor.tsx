@@ -469,6 +469,13 @@ export function ProductEditor({
   async function uploadOption(file: File, progress: (percent: number) => void) {
     return uploadFile(file, "option", progress);
   }
+  function restorePhotos(purpose: "images" | "optionImages") {
+    const previous = persistedSnapshot.current?.[purpose] ?? [];
+    const next = [...previous, ...values[purpose].filter(photo => !previous.some(old => old.id === photo.id))];
+    const limit = purpose === "images" ? 10 : 50;
+    if (next.length > limit) { setError(`Pemulihan melewati batas ${limit} foto. Hapus foto baru yang tidak dipakai terlebih dahulu.`); return; }
+    change(purpose, next);
+  }
   function removePhoto(id: string, purpose: "images" | "optionImages") {
     // A product photo may be the selected image for a customer-facing option.
     // Never orphan that relation; ask the seller to select a replacement first.
@@ -710,7 +717,7 @@ export function ProductEditor({
             <ProductPhotoEditor photos={values.images} name={values.name}
               disabled={!canEdit || !!pending || !mediaRecovered}
               canUndo={Boolean(persistedSnapshot.current?.images.some(i => !values.images.some(photo => photo.id === i.id)))}
-              onUndo={() => change("images", [...(persistedSnapshot.current?.images ?? []), ...values.images.filter(i => !persistedSnapshot.current?.images.some(p => p.id === i.id))])}
+              onUndo={() => restorePhotos("images")}
               onBusy={setQueueBusy} onChange={photos => setValues(current => ({ ...current, images: photos }))}
               onRemove={id => removePhoto(id, "images")}
               onUpload={(file, progress) => uploadFile(file, "gallery", progress)} />
@@ -1049,7 +1056,7 @@ export function ProductEditor({
                               (i) => !values.optionImages.some((current) => current.id === i.id),
                             ))}
                             onRemovePhoto={(id) => removePhoto(id, "optionImages")}
-                            onUndoPhotos={() => change("optionImages", persistedSnapshot.current?.optionImages ?? values.optionImages)}
+                            onUndoPhotos={() => restorePhotos("optionImages")}
                             disabled={!canEdit || !!pending || !mediaRecovered}
                             canStock={canStock}
                             productName={values.name}

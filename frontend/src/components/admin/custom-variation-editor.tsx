@@ -749,9 +749,10 @@ export function CustomVariationEditor(p: Props) {
           <span>{p.rows.filter((r) => r.sku).length} / {p.rows.length} SKU</span>
         </div>
         <p>
-          Harga kosong mengikuti harga utama Rp
-          {p.basePrice.toLocaleString("id-ID")}. Stok diubah hanya oleh operator
-          berizin.
+          {p.basePrice > 0
+            ? `Harga kosong mengikuti harga tersimpan Rp${p.basePrice.toLocaleString("id-ID")}.`
+            : "Isi harga normal setiap kombinasi melalui Input Massal atau masing-masing SKU."}
+          {" "}Stok diubah hanya oleh operator berizin.
         </p>
         {p.rows.map((row, index) => (
           <details

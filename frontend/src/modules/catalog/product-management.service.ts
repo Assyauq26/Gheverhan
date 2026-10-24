@@ -1,3 +1,5 @@
+import { canonicalProductPricing } from "./product-canonical-pricing";
+import { readSizeChart } from "./product-size-chart";
 import { assertPublishWeight } from "./product-shipping";
 import {
   finalizeStagedMedia,
@@ -6,7 +8,7 @@ import {
   savePayloadHash,
   type MediaContext,
 } from "./staged-product-media";
-import { combinationKey } from "./variation-domain";
+import { combinationCount, combinationKey } from "./variation-domain";
 import {
   legacyOptions,
   legacySelection,
@@ -111,6 +113,9 @@ async function lockProduct(
   return { p, updatedAt };
 }
 function parseProduct(value: unknown) {
+  if (value && typeof value === "object" && "variants" in value && Array.isArray(value.variants) && value.variants.every(v => v && typeof v === "object") && "basePrice" in value) {
+    value = canonicalProductPricing(value as Parameters<typeof canonicalProductPricing>[0]);
+  }
   const parsed = productInputSchema.safeParse(value);
   if (!parsed.success) throw new HttpError(parsed.error.issues[0].message, 422);
   if (parsed.data.optionsEnabled === false)
@@ -146,14 +151,20 @@ function fields(input: ReturnType<typeof parseProduct>) {
     optionGroups: _groups,
     optionImages: _optionImages,
     optionsEnabled: _mode,
+    sizeChart,
     ...data
   } = input;
   return {
     ...data,
+    ...(sizeChart !== undefined ? { sizeChart: sizeChart === null ? Prisma.DbNull : sizeChart as Prisma.InputJsonValue } : {}),
     salePrice: data.salePrice ?? null,
     categoryId: data.categoryId || null,
     brandId: data.brandId || null,
   };
+}
+function assertSizeChartImage(input: ReturnType<typeof parseProduct>, imageIds: string[]) {
+  if (input.sizeChart?.mode === "image" && !imageIds.includes(input.sizeChart.imageId))
+    throw new HttpError("Foto tabel ukuran harus milik produk ini dan disertakan dalam penyimpanan.", 422);
 }
 function requireStockEdit(actor: CatalogActor) {
   assertCatalogPermission(actor, PERMISSIONS.INVENTORY_READ);
@@ -209,6 +220,7 @@ export async function createManagedProduct(
         "Produk baru hanya dapat memakai foto sementara milik sesi ini",
         422,
       );
+    assertSizeChartImage(input, stagedImages.map(i => i.id));
     if (input.optionGroups)
       await writeOptionGroups(
         tx,
@@ -328,6 +340,7 @@ export async function updateManagedProduct(
         .filter((i) => i.isVariation)
         .map((i) => ({ id: i.id, alt: i.alt }));
     const allImages = [...input.images, ...keptOptionImages];
+    assertSizeChartImage({ ...input, sizeChart: input.sizeChart === undefined ? readSizeChart(p.sizeChart) : input.sizeChart }, allImages.map(i => i.id));
     for (const image of input.images)
       if (!p.images.some((i) => i.id === image.id && !i.isVariation))
         throw new HttpError("Gambar galeri bukan milik produk ini", 422);
@@ -563,7 +576,9 @@ export async function changeProductStatus(
         422,
       );
     if (status === "PUBLISHED") {
-      parseProduct(serializeProduct(p, actor));
+      const input = parseProduct(serializeProduct(p, actor));
+      if (p.optionsEnabled && input.optionGroups?.length && input.variants.length !== combinationCount(input.optionGroups))
+        throw new HttpError("Buat seluruh kombinasi SKU sebelum menerbitkan produk.", 422);
       if (p.status !== "PUBLISHED") {
         try {
           assertPublishWeight(p.weightGrams);
@@ -626,6 +641,7 @@ function serializeProduct(p: ManagedProduct, actor: CatalogActor) {
     description: p.description,
     material: p.material,
     careInstruction: p.careInstruction,
+    sizeChart: readSizeChart(p.sizeChart),
     shippingReturn: p.shippingReturn,
     basePrice: p.basePrice,
     salePrice: p.salePrice,

@@ -1,3 +1,4 @@
+import { sizeChartSchema } from "./product-size-chart";
 import { z } from "zod";
 import { shippingMetadataSchema, shippingMetadataShape } from "./product-shipping";
 import {
@@ -62,6 +63,7 @@ export const productInputSchema = z
     description: z.string().trim().max(10_000).default(""),
     material: z.string().trim().max(2_000).default(""),
     careInstruction: z.string().trim().max(2_000).default(""),
+    sizeChart: sizeChartSchema.nullable().optional(),
     shippingReturn: z.string().trim().max(2_000).default(""),
     basePrice: money,
     salePrice: optionalMoney,

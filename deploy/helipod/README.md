@@ -34,3 +34,24 @@ After cutover, install the included expired-order service and timer in /etc/syst
 systemd and enable gheverhan-expire-orders.timer. Its 02:00 UTC schedule matches the existing Vercel cron.
 The runner reads the secret only from the application's environment and fails on non-success responses.
 Do not enable the timer on a migration candidate until the production cutover is complete.
+
+
+## GitHub Actions autodeploy
+
+The `.github/workflows/helipod-autodeploy.yml` workflow builds both the Prisma migration image and the production app image on GitHub-hosted runners. Pull requests only build and syntax-check the deployment scripts. Once enabled, pushes to `main` build immutable images tagged with the commit SHA and stream them over SSH to the VPS. The SSH key is restricted to one root-owned deployment command, with shell, TTY, and forwarding disabled. The workflow pins the VPS SSH host key before connecting.
+
+On the VPS, after this change is merged, run:
+
+```sh
+sudo bash /opt/gheverhan/source/deploy/helipod/bootstrap-autodeploy.sh
+```
+
+The bootstrap advances the clean source checkout to `main`, installs the forced-command deployment handler, creates a dedicated Ed25519 key, and prints two settings once:
+
+- Save `HELI_POD_DEPLOY_KEY_B64` as a repository Actions secret with the same name.
+- Save `HELI_POD_SSH_KNOWN_HOSTS` as a repository Actions variable with the same name.
+- Set the repository Actions variable `HELI_POD_AUTODEPLOY` to `enabled` only after both values are saved.
+
+In GitHub, use **Settings → Secrets and variables → Actions**. The key is generated on the VPS, stored in the repository as an encrypted Actions secret, and never committed. Until the variable is enabled, pushes still build and validate images but do not contact the server.
+
+For every deployment, the VPS applies Prisma migrations from the temporary build-stage image with the database owner account, then replaces only the stateless app container. It checks the local health endpoint and restores the previous app image if the new app fails that check. Database migrations must remain forward-compatible; destructive schema changes still need a separate maintenance plan. The workflow then checks the public health endpoint.

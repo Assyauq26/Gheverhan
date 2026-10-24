@@ -656,6 +656,7 @@ export async function verifyCustomVariations(c: Context) {
           })
           .click();
         await closeEditor();
+        await closeEditor();
         await page.getByTestId("save-product").click();
         await expect(
           page
@@ -694,7 +695,7 @@ export async function verifyCustomVariations(c: Context) {
           .getByRole("switch", { name: "Tambahkan gambar Ukuran", exact: true })
           .click();
         await page
-          .getByRole("dialog")
+          .getByRole("dialog").last()
           .getByRole("button", { name: "Pindahkan", exact: true })
           .click();
         await expect(
@@ -721,6 +722,7 @@ export async function verifyCustomVariations(c: Context) {
           }),
           0,
         );
+        await openGroups();
         const library = root.locator(".variation-media-library");
         await library.locator("summary").click();
         const ordered = await db.productImage.findMany({
@@ -736,9 +738,10 @@ export async function verifyCustomVariations(c: Context) {
           })
           .click();
         await page
-          .getByRole("dialog")
+          .getByRole("dialog").last()
           .getByRole("button", { name: "Hapus foto", exact: true })
           .click();
+        await closeEditor();
         await page.getByTestId("save-product").click();
         await expect(
           page
@@ -750,12 +753,16 @@ export async function verifyCustomVariations(c: Context) {
             where: { id: ordered[historic].id },
           }),
         );
-        await library
+        await openGroups();
+        const recoveredLibrary = root.locator(".variation-media-library");
+        await recoveredLibrary.locator("summary").click();
+        await recoveredLibrary
           .getByRole("button", {
             name: "Pulihkan penghapusan foto yang belum disimpan",
             exact: true,
           })
           .click();
+        await closeEditor();
         await expect(page.getByTestId("save-product")).toBeDisabled();
         assert.deepEqual(
           (await db.productVariant.findMany({ where: { productId } }))
@@ -886,7 +893,8 @@ export async function verifyCustomVariations(c: Context) {
       async () => {
         for (const width of [360, 390, 768, 1024, 1360]) {
           await page.setViewportSize({ width, height: 900 });
-          await root.locator(".variation-heading").scrollIntoViewIfNeeded();
+          await openGroups();
+          await root.locator(".variation-groups").scrollIntoViewIfNeeded();
           assert.equal(
             await page.evaluate(
               () => document.documentElement.scrollWidth > innerWidth,
@@ -895,8 +903,10 @@ export async function verifyCustomVariations(c: Context) {
             `custom editor overflow ${width}`,
           );
           await capture(`groups-${width}`);
+          await openStock();
           await root.locator(".variation-sku").first().scrollIntoViewIfNeeded();
           await capture(`skus-${width}`);
+          await closeEditor();
           await store.setViewportSize({ width, height: 900 });
           await store.reload();
           assert.equal(
@@ -940,6 +950,7 @@ export async function verifyCustomVariations(c: Context) {
           });
         }
         await page.setViewportSize({ width: 390, height: 844 });
+        await openGroups();
         await page.evaluate(
           () => (document.documentElement.style.fontSize = "20px"),
         );
@@ -961,11 +972,8 @@ export async function verifyCustomVariations(c: Context) {
         await field.evaluate((el) => el.scrollIntoView({ block: "center" }));
         await field.focus();
         const fieldBox = await field.boundingBox(),
-          headerBox = await page.locator("header").first().boundingBox(),
-          saveBox = await page
-            .getByTestId("save-product")
-            .locator("..")
-            .boundingBox();
+          headerBox = await page.locator(".seller-editor-toolbar").boundingBox(),
+          saveBox = await page.locator(".seller-editor-actions").boundingBox();
         assert.ok(
           fieldBox &&
             headerBox &&

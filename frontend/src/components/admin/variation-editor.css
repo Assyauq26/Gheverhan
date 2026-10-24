@@ -878,3 +878,17 @@
   .variation-bulk .variation-field label { font-size: .62rem; }
   .variation-bulk .variation-field input { font-size: .68rem; padding-inline: .4rem; }
 }
+
+
+/* An assigned photo can be unlinked without forcing each option row taller. */
+.variation-photo { position: relative; height: 40px; }
+.variation-photo > button:not(.variation-photo-picker) {
+  position: absolute; top: -6px; right: -6px; z-index: 1;
+  width: 23px; height: 23px; min-height: 23px;
+  border: 1px solid #e7e7e9; border-radius: 999px;
+  background: white; color: #b63242;
+  font-size: 0; box-shadow: 0 2px 5px rgb(0 0 0 / .05);
+}
+.variation-photo > button:not(.variation-photo-picker)::before {
+  content: "×"; font-size: 13px; line-height: 1;
+}

@@ -485,16 +485,15 @@ export function ProductEditor({
       setError("Foto ini dipakai oleh opsi variasi. Pilih gambar pengganti pada Varian sebelum menghapus foto utama.");
       return;
     }
-    const photo = values[purpose].find((image) => image.id === id);
+    // Deletion is provisional until the product is saved. Cancelling staged media
+    // here breaks both "Pulihkan foto" and discarding changes in the variation
+    // panel: the restored media ID would already be cancelled server-side.
+    // Unreferenced staged uploads are expired by the existing TTL cleanup;
+    // finalized product media is removed only by the save transaction.
     change(
       purpose,
       values[purpose].filter((image) => image.id !== id),
     );
-    if (photo?.url.startsWith("/api/v1/admin/product-media/")) {
-      void fetch(photo.url, { method: "DELETE" }).catch(() => {
-        /* TTL cleanup retries safely. */
-      });
-    }
   }
   useEffect(() => {
     if (!dirty && !queueBusy && !sellerPanel && !pending?.startsWith("upload-")) return;
@@ -529,12 +528,35 @@ export function ProductEditor({
     };
   }, [dirty, pending, queueBusy, sellerPanel]);
   useEffect(() => {
+    // Navigation.currentEntry.index identifies the direction of a browser
+    // traverse even when it was initiated by Forward or history.go(n).
+    // Restoring with a constant go(1) loses the editor on cancelled Forward.
+    type NavigationIndex = { currentEntry?: { index?: number } };
+    const index = () => {
+      const nav = (window as Window & { navigation?: NavigationIndex }).navigation;
+      return typeof nav?.currentEntry?.index === "number" ? nav.currentEntry.index : null;
+    };
+    let previousIndex = index();
     const pop = (event: PopStateEvent) => {
-      if (restoreBack.current) { event.stopImmediatePropagation(); restoreBack.current = false; return; }
+      const destinationIndex = index();
+      const returnOffset =
+        previousIndex !== null && destinationIndex !== null
+          ? previousIndex - destinationIndex
+          : 1; // Legacy Back fallback where Navigation API is unavailable.
+      previousIndex = destinationIndex;
+      if (restoreBack.current) {
+        event.stopImmediatePropagation();
+        restoreBack.current = false;
+        return;
+      }
       const current = backState.current;
       if (!current.dirty && !current.panel && !current.uploading) return;
       if (current.panel || !window.confirm("Ada perubahan produk yang belum disimpan. Tinggalkan halaman?")) {
-        event.stopImmediatePropagation(); restoreBack.current = true; window.history.go(1);
+        event.stopImmediatePropagation();
+        if (returnOffset !== 0) {
+          restoreBack.current = true;
+          window.history.go(returnOffset);
+        }
         if (current.panel) closePanelRef.current?.();
       }
     };

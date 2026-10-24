@@ -1032,7 +1032,7 @@ export function ProductEditor({
                     <Dialog.Content className={`seller-editor-dialog ${reordering ? "seller-reordering" : ""}`} aria-describedby="seller-editor-desc">
                       <header className="seller-editor-toolbar">
                         <Dialog.Close asChild>
-                          <button type="button" className="seller-editor-back" aria-label="Kembali ke produk"><ChevronRight size={24} /></button>
+                          <button type="button" className="seller-editor-back" aria-label="Kembali ke produk"><ArrowLeft size={22} /></button>
                         </Dialog.Close>
                         <Dialog.Title>{sellerPanel === "groups" ? "Varian" : "Harga/Stok"}</Dialog.Title>
                         {sellerPanel === "groups" ? (

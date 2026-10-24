@@ -964,13 +964,13 @@ export async function verifyCustomVariations(c: Context) {
         await page.evaluate(
           () => (document.documentElement.style.fontSize = "20px"),
         );
-        assert.equal(
-          await page.evaluate(
-            () => document.documentElement.scrollWidth > innerWidth,
-          ),
-          false,
-        );
         await capture("large-text-390");
+        const largeText = await page.evaluate(() => ({
+          width: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+          overflowing: Array.from(document.querySelectorAll<HTMLElement>("body *")).filter(node => node.getBoundingClientRect().right > document.documentElement.clientWidth + 1).slice(0, 15).map(node => ({ tag: node.tagName, className: String(node.className), width: node.getBoundingClientRect().width })),
+        }));
+        assert.ok(largeText.scrollWidth <= largeText.width, JSON.stringify(largeText));
         await page.evaluate(
           () => (document.documentElement.style.fontSize = ""),
         );

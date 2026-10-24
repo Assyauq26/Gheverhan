@@ -467,6 +467,14 @@ export function ProductEditor({
     return uploadFile(file, "option", progress);
   }
   function removePhoto(id: string, purpose: "images" | "optionImages") {
+    // A product photo may be the selected image for a customer-facing option.
+    // Never orphan that relation; ask the seller to select a replacement first.
+    if (purpose === "images" && values.optionGroups?.some((group) =>
+      group.values.some((option) => option.imageId === id)
+    )) {
+      setError("Foto ini dipakai oleh opsi variasi. Pilih gambar pengganti pada Varian sebelum menghapus foto utama.");
+      return;
+    }
     const photo = values[purpose].find((image) => image.id === id);
     change(
       purpose,

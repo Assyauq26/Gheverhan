@@ -157,6 +157,7 @@ export function ProductEditor({
   const [bulkSelectedOnly, setBulkSelectedOnly] = useState(false);
   const [custom, setCustom] = useState(initial?.optionsEnabled ?? !initial);
   const [sellerPanel, setSellerPanel] = useState<"groups" | "stock" | null>(null);
+  const [reordering, setReordering] = useState(false);
   const busy = useRef(false);
   const persistedSnapshot = useRef<ProductEditorData | undefined>(initial);
   const [values, setValues] = useState<Values>(() => valuesFor(initial));
@@ -1127,13 +1128,15 @@ export function ProductEditor({
                 <Dialog.Root open={sellerPanel !== null} onOpenChange={(open) => { if (!open) setSellerPanel(null); }}>
                   <Dialog.Portal>
                     <Dialog.Overlay className="seller-editor-overlay" />
-                    <Dialog.Content className="seller-editor-dialog" aria-describedby="seller-editor-desc">
+                    <Dialog.Content className={`seller-editor-dialog ${reordering ? "seller-reordering" : ""}`} aria-describedby="seller-editor-desc">
                       <header className="seller-editor-toolbar">
                         <Dialog.Close asChild>
                           <button type="button" className="seller-editor-back" aria-label="Kembali ke produk"><ChevronRight size={24} /></button>
                         </Dialog.Close>
                         <Dialog.Title>{sellerPanel === "groups" ? "Varian" : "Harga/Stok"}</Dialog.Title>
-                        <span className="seller-editor-toolbar-action"><SlidersHorizontal size={18} aria-hidden="true" /></span>
+                        {sellerPanel === "groups" ? (
+                          <button type="button" className="seller-editor-toolbar-action" aria-pressed={reordering} onClick={() => setReordering((current) => !current)}>{reordering ? "Selesai" : "Urutkan"}</button>
+                        ) : <span className="seller-editor-toolbar-action"><SlidersHorizontal size={18} aria-hidden="true" /></span>}
                       </header>
                       <Dialog.Description id="seller-editor-desc" className="sr-only">
                         {sellerPanel === "groups" ? "Kelola pilihan warna, ukuran, foto, dan opsi variasi produk." : "Kelola kombinasi SKU, harga, dan stok."}
@@ -1142,6 +1145,7 @@ export function ProductEditor({
                         {sellerPanel && (
                           <CustomVariationEditor
                             mode={sellerPanel}
+                            reordering={reordering}
                             groups={values.optionGroups ?? []}
                             rows={values.variants}
                             photos={[...values.images, ...values.optionImages]}

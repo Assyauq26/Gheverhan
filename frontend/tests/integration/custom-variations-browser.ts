@@ -392,6 +392,11 @@ export async function verifyCustomVariations(c: Context) {
         await page.reload();
         await openGroups();
         await expect(root.getByLabel("Nama variasi 1")).toHaveValue("Warna");
+        await root.getByRole("button", { name: "Ganti foto Merah" }).click();
+        const galleryDialog = page.getByRole("dialog", { name: "Pilih gambar variasi" });
+        await expect(galleryDialog.getByRole("button", { name: "Pilih foto 1" })).toBeVisible();
+        await expect(galleryDialog.getByRole("button", { name: "Unggah baru" })).toBeVisible();
+        await galleryDialog.getByRole("button", { name: "Batal" }).click();
         await capture("saved-390");
         for (const width of [360, 390, 430, 768, 1024, 1360]) {
           await page.setViewportSize({ width, height: 900 });

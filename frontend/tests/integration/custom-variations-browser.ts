@@ -333,7 +333,7 @@ export async function verifyCustomVariations(c: Context) {
         );
         const bulk = root.locator(".variation-bulk");
         const columns = await bulk
-          .locator("> div.mt-4")
+          .locator(":scope > div.mt-4")
           .evaluate((fields) =>
             getComputedStyle(fields).gridTemplateColumns.split(" ").length,
           );

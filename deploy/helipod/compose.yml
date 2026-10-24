@@ -1,0 +1,58 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gheverhan
+      POSTGRES_USER: gheverhan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gheverhan -d gheverhan"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+  app:
+    image: ${GHEVERHAN_IMAGE:?Set GHEVERHAN_IMAGE to the tested image}
+    restart: unless-stopped
+    user: "1000:1000"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      STORAGE_PROVIDER: local
+      STORAGE_LOCAL_ROOT: /data/media
+      DATABASE_URL: postgresql://gheverhan:${POSTGRES_PASSWORD}@db:5432/gheverhan?schema=public
+      DIRECT_URL: postgresql://gheverhan:${POSTGRES_PASSWORD}@db:5432/gheverhan?schema=public
+    depends_on:
+      db: { condition: service_healthy }
+    volumes:
+      - /opt/gheverhan/media:/data/media
+    ports:
+      - "127.0.0.1:3000:3000"
+    mem_limit: 900m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+volumes:
+  postgres:
+  caddy_data:
+  caddy_config:

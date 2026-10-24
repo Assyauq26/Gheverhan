@@ -27,8 +27,8 @@ services:
       NODE_ENV: production
       STORAGE_PROVIDER: local
       STORAGE_LOCAL_ROOT: /data/media
-      DATABASE_URL: postgresql://gheverhan:${POSTGRES_PASSWORD}@db:5432/gheverhan?schema=public
-      DIRECT_URL: postgresql://gheverhan:${POSTGRES_PASSWORD}@db:5432/gheverhan?schema=public
+      DATABASE_URL: postgresql://gheverhan_runtime:${APP_DATABASE_PASSWORD:?Set APP_DATABASE_PASSWORD}@db:5432/gheverhan?schema=public&connection_limit=5
+      DIRECT_URL: postgresql://gheverhan_runtime:${APP_DATABASE_PASSWORD:?Set APP_DATABASE_PASSWORD}@db:5432/gheverhan?schema=public&connection_limit=5
     depends_on:
       db: { condition: service_healthy }
     volumes:

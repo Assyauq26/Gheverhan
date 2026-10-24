@@ -22,9 +22,16 @@ services:
     image: ${GHEVERHAN_IMAGE:?Set GHEVERHAN_IMAGE to the tested image}
     restart: unless-stopped
     user: "1000:1000"
-    env_file: .env
     environment:
       NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      CRON_SECRET: ${CRON_SECRET:?Set CRON_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY}
+      PASSWORD_RESET_FROM: "${PASSWORD_RESET_FROM:-Gheverhan <noreply@gheverhan.store>}"
+      PASSWORD_RESET_BASE_URL: ${PASSWORD_RESET_BASE_URL:-https://gheverhan.store}
+      STORAGE_APP_NAME: ${STORAGE_APP_NAME:-gheverhan}
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-gh_session}
+      MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
       APP_ORIGIN: https://gheverhan.store
       STORAGE_PROVIDER: local
       STORAGE_LOCAL_ROOT: /data/media

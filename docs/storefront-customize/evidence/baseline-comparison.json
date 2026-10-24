@@ -2,85 +2,109 @@
   {
     "page": "home",
     "width": 390,
-    "changedChannels": 0,
+    "changedChannels": 42,
     "totalChannels": 1053000,
-    "ratio": 0
+    "ratio": 3.988603988603989e-05,
+    "maxChannelDelta": 2,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "shop",
     "width": 390,
-    "changedChannels": 84,
+    "changedChannels": 0,
     "totalChannels": 1053000,
-    "ratio": 0.00007977207977207978
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "pdp",
     "width": 390,
     "changedChannels": 0,
     "totalChannels": 1053000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "cart",
     "width": 390,
     "changedChannels": 0,
     "totalChannels": 1053000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "account",
     "width": 390,
     "changedChannels": 0,
     "totalChannels": 1053000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "checkout",
     "width": 390,
     "changedChannels": 0,
     "totalChannels": 1053000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "home",
     "width": 1360,
     "changedChannels": 0,
     "totalChannels": 3672000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "shop",
     "width": 1360,
-    "changedChannels": 168,
+    "changedChannels": 0,
     "totalChannels": 3672000,
-    "ratio": 0.000045751633986928104
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "pdp",
     "width": 1360,
     "changedChannels": 0,
     "totalChannels": 3672000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "cart",
     "width": 1360,
     "changedChannels": 0,
     "totalChannels": 3672000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "account",
     "width": 1360,
     "changedChannels": 0,
     "totalChannels": 3672000,
-    "ratio": 0
+    "ratio": 0,
+    "maxChannelDelta": 0,
+    "channelsWithDeltaAbove2": 0
   },
   {
     "page": "checkout",
     "width": 1360,
-    "changedChannels": 0,
+    "changedChannels": 153,
     "totalChannels": 3672000,
-    "ratio": 0
+    "ratio": 4.1666666666666665e-05,
+    "maxChannelDelta": 1,
+    "channelsWithDeltaAbove2": 0
   }
 ]

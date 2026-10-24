@@ -67,6 +67,7 @@ export function AppearancePreview() {
       <div
         className="storefront-root min-h-screen pb-24"
         data-theme-active={!isLegacy(config)}
+        data-gradient-highlight-card={config.gradients.highlightCard.enabled}
         style={themeStyle(config)}
       >
         <StorefrontHeader user={null} cartCount={2} />
@@ -108,7 +109,7 @@ export function AppearancePreview() {
               />
             ))}
           </div>
-          <section className="pdp-page space-y-4">
+          <section className="pdp-preview-sample space-y-4">
             <h2 className="text-2xl font-bold">Detail produk</h2>
             <p className="text-ink-soft">Pilihan warna dan ukuran</p>
             <div className="flex flex-wrap gap-2">
@@ -124,7 +125,8 @@ export function AppearancePreview() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button>Beli sekarang</Button>
-              <Button variant="accent">Aksen</Button><Button variant="secondary">Sekunder</Button>
+              <Button variant="accent">Aksen</Button>
+              <Button variant="secondary">Sekunder</Button>
               <Button variant="outline">Simpan</Button>
               <Button disabled>Habis</Button>
             </div>

@@ -306,27 +306,129 @@
 .storefront-root[data-theme-active="true"] .text-3xl {
   font-size: calc(1.875rem * var(--store-font-scale));
 }
-.storefront-root[data-theme-active="true"] [data-button-variant="accent"] {background:var(--store-accent);color:var(--store-accentForeground);}
-.storefront-root[data-theme-active="true"] [data-button-variant="accent"]:hover {background:var(--store-accentHover);}
-.storefront-root[data-theme-active="true"] [data-button-variant="accent"]:active {background:var(--store-accentPressed);}
-.storefront-root[data-theme-active="true"] [data-button-variant="outline"]:active {background:var(--store-outlinePressed);}
-.storefront-root[data-theme-active="true"] a:active {color:var(--store-linkPressed);}
-.storefront-root[data-theme-active="true"] main svg {color:var(--store-icon);}
-.storefront-root[data-theme-active="true"] [data-theme-role="price"][data-discount="true"] {color:var(--store-discount);}
-.storefront-root[data-theme-active="true"] > header {background-color:var(--store-gradient-header-fallback,var(--store-header));background-image:var(--store-gradient-header,none);}
-.storefront-root[data-theme-active="true"] > footer {background-color:var(--store-gradient-footer-fallback,var(--store-footer));background-image:var(--store-gradient-footer,none);}
-.storefront-root[data-theme-active="true"] [data-theme-target="promo"] {background-color:var(--store-gradient-promo-fallback,var(--store-promo));background-image:var(--store-gradient-promo,none);}
-.storefront-root[data-theme-active="true"] [data-theme-target="hero"] {background-color:var(--store-gradient-hero-fallback,var(--store-surface));}
-.storefront-root[data-theme-active="true"] [data-theme-target="highlightCard"] {background-color:var(--store-gradient-highlightCard-fallback,var(--store-card));background-image:var(--store-gradient-highlightCard,none);}
-.storefront-root[data-theme-active="true"] :is([data-button-variant="default"],.pdp-buy-pill) {background-color:var(--store-gradient-buttons-fallback,var(--store-primary));background-image:var(--store-gradient-buttons,none);}
-.storefront-root[data-theme-active="true"] :is([data-button-variant="default"],.pdp-buy-pill):is(:hover,:active,:disabled) {background-image:none;}
-.storefront-root[data-theme-active="true"] [role="dialog"] {background:var(--store-modal);color:var(--store-modalText);}
-.storefront-root > header[data-logo-position="center"] > .container:first-of-type {flex-wrap:wrap;justify-content:center;}
-.storefront-root > header[data-logo-position="center"] [data-testid="logo"] {flex-basis:100%;max-width:100%;text-align:center;}
-.storefront-root > header[data-logo-position="center"] [data-testid="logo"] > span {justify-content:center;}
-.storefront-root > header[data-layout="centered"] [data-testid="logo"] {flex-basis:100%;max-width:100%;text-align:center;}
-.storefront-root > header[data-layout="centered"] [data-testid="logo"] > span {justify-content:center;}
-.storefront-root[data-theme-active="true"] a[data-button-variant="default"]:is(:hover,:focus-visible) {background-color:var(--store-primaryHover);color:var(--store-primaryText);}
-.storefront-root[data-theme-active="true"] a[data-button-variant="default"]:active {background-color:var(--store-primaryPressed);color:var(--store-primaryText);}
-.storefront-root[data-theme-active="true"] :is(button,a)[data-button-variant]:disabled,
-.storefront-root[data-theme-active="true"] :is(.pdp-buy-pill,.pdp-cart-pill):disabled {background:var(--store-disabled);color:var(--store-disabledText);opacity:1;}
+.storefront-root[data-theme-active="true"] [data-button-variant="accent"] {
+  background: var(--store-accent);
+  color: var(--store-accentForeground);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="accent"]:hover {
+  background: var(--store-accentHover);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="accent"]:active {
+  background: var(--store-accentPressed);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="outline"]:active {
+  background: var(--store-outlinePressed);
+}
+.storefront-root[data-theme-active="true"] a:active {
+  color: var(--store-linkPressed);
+}
+.storefront-root[data-theme-active="true"] main svg {
+  color: var(--store-icon);
+}
+.storefront-root[data-theme-active="true"]
+  [data-theme-role="price"][data-discount="true"] {
+  color: var(--store-discount);
+}
+.storefront-root[data-theme-active="true"] > header {
+  background-color: var(--store-gradient-header-fallback, var(--store-header));
+  background-image: var(--store-gradient-header, none);
+}
+.storefront-root[data-theme-active="true"] > footer {
+  background-color: var(--store-gradient-footer-fallback, var(--store-footer));
+  background-image: var(--store-gradient-footer, none);
+}
+.storefront-root[data-theme-active="true"] [data-theme-target="promo"] {
+  background-color: var(--store-gradient-promo-fallback, var(--store-promo));
+  background-image: var(--store-gradient-promo, none);
+}
+.storefront-root[data-theme-active="true"] [data-theme-target="hero"] {
+  background-color: var(--store-gradient-hero-fallback, var(--store-surface));
+}
+.storefront-root[data-theme-active="true"] [data-theme-target="highlightCard"] {
+  background-color: var(
+    --store-gradient-highlightCard-fallback,
+    var(--store-card)
+  );
+  background-image: var(--store-gradient-highlightCard, none);
+}
+.storefront-root[data-theme-active="true"]
+  :is([data-button-variant="default"], .pdp-buy-pill) {
+  background-color: var(
+    --store-gradient-buttons-fallback,
+    var(--store-primary)
+  );
+  background-image: var(--store-gradient-buttons, none);
+}
+.storefront-root[data-theme-active="true"]
+  :is([data-button-variant="default"], .pdp-buy-pill):is(
+    :hover,
+    :active,
+    :disabled
+  ) {
+  background-image: none;
+}
+.storefront-root[data-theme-active="true"] [role="dialog"] {
+  background: var(--store-modal);
+  color: var(--store-modalText);
+}
+.storefront-root
+  > header[data-logo-position="center"]
+  > .container:first-of-type {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.storefront-root > header[data-logo-position="center"] [data-testid="logo"] {
+  flex-basis: 100%;
+  max-width: 100%;
+  text-align: center;
+}
+.storefront-root
+  > header[data-logo-position="center"]
+  [data-testid="logo"]
+  > span {
+  justify-content: center;
+}
+.storefront-root > header[data-layout="centered"] [data-testid="logo"] {
+  flex-basis: 100%;
+  max-width: 100%;
+  text-align: center;
+}
+.storefront-root > header[data-layout="centered"] [data-testid="logo"] > span {
+  justify-content: center;
+}
+.storefront-root[data-theme-active="true"]
+  a[data-button-variant="default"]:is(:hover, :focus-visible) {
+  background-color: var(--store-primaryHover);
+  color: var(--store-primaryText);
+}
+.storefront-root[data-theme-active="true"]
+  a[data-button-variant="default"]:active {
+  background-color: var(--store-primaryPressed);
+  color: var(--store-primaryText);
+}
+.storefront-root[data-theme-active="true"]
+  :is(button, a)[data-button-variant]:disabled,
+.storefront-root[data-theme-active="true"]
+  :is(.pdp-buy-pill, .pdp-cart-pill):disabled {
+  background: var(--store-disabled);
+  color: var(--store-disabledText);
+  opacity: 1;
+}
+.storefront-root[data-theme-active="true"][data-gradient-highlight-card="true"]
+  [data-theme-target="highlightCard"]
+  :is(h3, p, a, [class*="text-ink"], [data-theme-role="price"]) {
+  color: var(--store-gradient-highlightCard-text);
+}
+.storefront-root[data-theme-active="true"][data-gradient-highlight-card="true"]
+  [data-theme-target="highlightCard"]
+  a
+  svg {
+  color: var(--store-gradient-highlightCard-text);
+}
+.storefront-root[data-theme-active="true"]
+  input:is([type="checkbox"], [type="radio"]) {
+  accent-color: var(--store-selected);
+}

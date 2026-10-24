@@ -78,13 +78,13 @@ async function main() {
       }
       const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
       const bytes = Buffer.concat(chunks);
-      if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs"].includes(url.pathname) && req.method === "DELETE") {
+      if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs", "/storage/v1/object/store-branding"].includes(url.pathname) && req.method === "DELETE") {
         const prefixes = JSON.parse(bytes.toString()).prefixes as string[];
         for (const key of prefixes) objects.delete(key);
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify([])); return;
       }
       const parts = url.pathname.split("/");
-      if (parts[1] !== "storage" || parts[2] !== "v1" || parts[3] !== "object" || !["product-images", "payment-proofs"].includes(parts[4] || "")) {
+      if (parts[1] !== "storage" || parts[2] !== "v1" || parts[3] !== "object" || !["product-images", "payment-proofs", "store-branding"].includes(parts[4] || "")) {
         res.writeHead(404).end(); return;
       }
       const objectPath = decodeURIComponent(parts.slice(5).join("/"));

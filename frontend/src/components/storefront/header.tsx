@@ -55,7 +55,7 @@ export function StorefrontHeader({
         </nav>
 
         <div hidden={!config.header.search} className="hidden flex-1 md:block">
-          {config.header.search && !preview && <SearchBar />}
+          {config.header.search && <SearchBar readOnlyPreview={preview} />}
         </div>
 
         <div className="ml-auto flex items-center gap-1">
@@ -83,7 +83,7 @@ export function StorefrontHeader({
       </div>
 
       <div hidden={!config.header.search} className="container pb-3 md:hidden">
-        {config.header.search && !preview && <SearchBar />}
+        {config.header.search && <SearchBar readOnlyPreview={preview} />}
       </div>
     </header>
   );

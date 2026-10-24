@@ -15,6 +15,7 @@ import { useDirtyGuard } from "./use-dirty-guard";
 import { Button } from "@/components/ui/button";
 type Snapshot = {
   config: StoreAppearanceV1;
+  publishedConfig?: StoreAppearanceV1;
   draftVersion: number;
   publishedVersion: number;
 };
@@ -121,6 +122,11 @@ export function AppearanceEditor({
     if (tab === TABS[8]) void history();
   }, [tab]);
   async function reload() {
+    if (
+      dirty &&
+      !window.confirm("Muat ulang akan membuang perubahan lokal. Lanjutkan?")
+    )
+      return;
     setBusy(true);
     try {
       const r = await loadAppearance();
@@ -134,6 +140,25 @@ export function AppearanceEditor({
       setBusy(false);
     }
   }
+  const changes = (Object.keys(draft) as (keyof StoreAppearanceV1)[])
+    .filter(
+      (k) =>
+        k !== "schemaVersion" &&
+        JSON.stringify(draft[k]) !== JSON.stringify(saved.publishedConfig?.[k]),
+    )
+    .map(
+      (k) =>
+        ({
+          identity: "Identitas Toko",
+          colors: "Warna",
+          gradients: "Gradasi",
+          header: "Header",
+          mobile: "Navigasi",
+          footer: "Footer",
+          styling: "Tombol/Kartu",
+          schemaVersion: "",
+        })[k],
+    );
   async function act(
     kind: "save" | "publish" | "discard" | "reset" | "rollback",
     revision?: number,
@@ -144,7 +169,7 @@ export function AppearanceEditor({
       kind !== "save" &&
       !window.confirm(
         kind === "publish"
-          ? `Terbitkan draft v${saved.draftVersion}? Identitas, warna, header, navigasi, footer, dan styling akan terlihat customer. Published saat ini v${saved.publishedVersion}.`
+          ? `Terbitkan draft v${saved.draftVersion}? Perubahan: ${changes.join(", ") || "tidak ada perubahan nilai"}. Tampilan ini akan terlihat customer. Published saat ini v${saved.publishedVersion}.`
           : kind === "rollback"
             ? `Terbitkan kembali revisi ${revision}? Draft saat ini tetap disimpan.`
             : kind === "discard"

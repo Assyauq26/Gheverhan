@@ -1,3 +1,5 @@
+import { PRESETS } from "../../src/modules/appearance/presets";
+import { rgb } from "../../src/modules/appearance/contrast";
 import sharp from "sharp";
 import { parseAppearance } from "../../src/modules/appearance/schema";
 import assert from "node:assert/strict";
@@ -80,23 +82,144 @@ export async function verifyStoreAppearance({
       await expect(visitor.getByTestId("logo")).toHaveText("Gheverhan");
       const frame = page.frameLocator('iframe[title="Preview draft toko"]');
       await expect(frame.getByTestId("logo")).toHaveText("Theme Studio Test");
+      await expect(frame.getByTestId("logo")).toBeVisible();
+      await expect(frame.getByTestId("logo")).toBeVisible();
       const before = await db.order.count();
       await frame
         .getByRole("button", { name: "Beli sekarang", exact: true })
         .click();
       assert.equal(await db.order.count(), before);
     });
-    await check("customize: private logo upload, published reference and mode", async () => {
-      const png=await sharp({create:{width:64,height:32,channels:4,background:{r:240,g:180,b:90,alpha:1}}}).png().toBuffer();
-      await page.getByLabel("Upload logo PNG/JPEG/WebP (maks. 2 MiB)").setInputFiles({name:"brand.png",mimeType:"image/png",buffer:png});
-      await expect(page.getByRole("status")).toContainText("Logo diunggah privat");
-      await page.getByLabel("Mode logo",{exact:true}).selectOption("both");
-      await page.getByRole("button",{name:"Simpan Draft",exact:true}).click();await expect(page.getByRole("status")).toContainText("Draft tersimpan");
-      const config=parseAppearance((await db.storeAppearance.findUniqueOrThrow({where:{key:"primary"}})).draft);
-      assert.ok(config.identity.logoAssetId);
-      assert.equal((await anonymous.request.get(base+"/api/v1/store-branding/"+config.identity.logoAssetId)).status(),404);
-      assert.equal((await readOnly.request.get(base+"/api/v1/admin/store-branding/"+config.identity.logoAssetId)).status(),403);
-    });
+    await check(
+      "customize: all ten presets render from the same draft schema",
+      async () => {
+        await page
+          .getByRole("button", { name: "Preset/Template Warna", exact: true })
+          .click();
+        for (const preset of PRESETS) {
+          await page
+            .getByRole("button", { name: preset.name, exact: true })
+            .click();
+          await expect
+            .poll(() =>
+              page
+                .frameLocator('iframe[title="Preview draft toko"]')
+                .locator(".storefront-root")
+                .evaluate((e) => getComputedStyle(e).backgroundColor),
+            )
+            .toBe(`rgb(${rgb(preset.config.colors.pageBg).join(", ")})`);
+        }
+        await page
+          .getByRole("button", { name: "Midnight Ink", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Identitas Toko", exact: true })
+          .click();
+      },
+    );
+    await check(
+      "customize: private logo upload, published reference and mode",
+      async () => {
+        const png = await sharp({
+          create: {
+            width: 64,
+            height: 32,
+            channels: 4,
+            background: { r: 240, g: 180, b: 90, alpha: 1 },
+          },
+        })
+          .png()
+          .toBuffer();
+        await page
+          .getByLabel("Upload logo PNG/JPEG/WebP (maks. 2 MiB)")
+          .setInputFiles({
+            name: "brand.png",
+            mimeType: "image/png",
+            buffer: png,
+          });
+        await expect(page.getByRole("status")).toContainText(
+          "Logo diunggah privat",
+        );
+        await page
+          .getByLabel("Mode logo", { exact: true })
+          .selectOption("both");
+        await page
+          .getByRole("button", { name: "Simpan Draft", exact: true })
+          .click();
+        await expect(page.getByRole("status")).toContainText("Draft tersimpan");
+        const config = parseAppearance(
+          (
+            await db.storeAppearance.findUniqueOrThrow({
+              where: { key: "primary" },
+            })
+          ).draft,
+        );
+        assert.ok(config.identity.logoAssetId);
+        const html = await (await anonymous.request.get(base + "/")).text();
+        assert.ok(!html.includes("Theme Studio Test"));
+        assert.ok(!html.includes(config.identity.logoAssetId));
+        assert.equal(
+          (
+            await anonymous.request.get(
+              base + "/api/v1/store-branding/" + config.identity.logoAssetId,
+            )
+          ).status(),
+          404,
+        );
+        assert.equal(
+          (
+            await readOnly.request.get(
+              base +
+                "/api/v1/admin/store-branding/" +
+                config.identity.logoAssetId,
+            )
+          ).status(),
+          403,
+        );
+      },
+    );
+    await check(
+      "customize: branding modes and gradient controls stay in preview",
+      async () => {
+        const logo = page
+          .frameLocator('iframe[title="Preview draft toko"]')
+          .getByTestId("logo");
+        await page
+          .getByLabel("Mode logo", { exact: true })
+          .selectOption("text");
+        await expect(logo.locator("img")).toHaveCount(0);
+        await page
+          .getByLabel("Mode logo", { exact: true })
+          .selectOption("image");
+        await expect(logo.locator("img")).toBeVisible();
+        await page
+          .getByLabel("Mode logo", { exact: true })
+          .selectOption("both");
+        await expect(logo).toHaveText("Theme Studio Test");
+        await page
+          .getByRole("button", { name: "Gradasi", exact: true })
+          .click();
+        await page
+          .getByRole("group", { name: "buttons", exact: true })
+          .getByLabel("Aktifkan", { exact: true })
+          .check();
+        await expect
+          .poll(() =>
+            page
+              .frameLocator('iframe[title="Preview draft toko"]')
+              .getByRole("button", { name: "Beli sekarang", exact: true })
+              .evaluate((e) => getComputedStyle(e).backgroundImage),
+          )
+          .toContain("linear-gradient");
+        await page
+          .getByRole("button", { name: "Simpan Draft", exact: true })
+          .click();
+        await expect(page.getByRole("status")).toContainText("Draft tersimpan");
+        await page
+          .getByRole("button", { name: "Identitas Toko", exact: true })
+          .click();
+      },
+    );
     await check(
       "customize: publish invalidates SSR and runtime colors",
       async () => {
@@ -119,8 +242,27 @@ export async function verifyStoreAppearance({
             .evaluate((e) => getComputedStyle(e).backgroundColor),
           "rgb(16, 24, 39)",
         );
-        const logo=visitor.getByTestId("logo").locator("img");await expect(logo).toBeVisible();
-        const src=await logo.getAttribute("src");assert.ok(src);assert.equal((await anonymous.request.get(base+src)).status(),200);
+        const logo = visitor.getByTestId("logo").locator("img");
+        await expect(logo).toBeVisible();
+        const src = await logo.getAttribute("src");
+        assert.ok(src);
+        assert.equal((await anonymous.request.get(base + src)).status(), 200);
+        await visitor.route(base + src, (r) => r.abort());
+        await visitor.reload();
+        await expect(visitor.getByTestId("logo").locator("img")).toHaveCount(0);
+        await expect(visitor.getByTestId("logo")).toHaveText(
+          "Theme Studio Test",
+        );
+        await visitor.unroute(base + src);
+        await visitor.reload();
+        assert.equal(
+          await page
+            .locator(".admin-shell")
+            .evaluate((e) =>
+              getComputedStyle(e).getPropertyValue("--store-pageBg"),
+            ),
+          "",
+        );
       },
     );
     await check(
@@ -144,6 +286,10 @@ export async function verifyStoreAppearance({
             `Editor overflow ${width}`,
           );
           if (width === 390 || width === 1360) {
+            await page
+              .frameLocator('iframe[title="Preview draft toko"]')
+              .locator("body")
+              .evaluate((e) => e.ownerDocument.defaultView?.scrollTo(0, 0));
             await page.screenshot({
               path: path.join(artifactDir, `customize-editor-${width}.png`),
               fullPage: true,

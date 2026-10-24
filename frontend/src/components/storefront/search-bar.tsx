@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search, LoaderCircle } from "lucide-react";
 import { useNavigation } from "@/components/ui/navigation";
 
-export function SearchBar({ className = "" }: { className?: string }) {
+export function SearchBar({ className = "", readOnlyPreview = false }: { className?: string; readOnlyPreview?: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const currentQuery = params.get("q") ?? "";
@@ -18,7 +18,7 @@ export function SearchBar({ className = "" }: { className?: string }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitted.current) return;
+    if (readOnlyPreview || submitted.current) return;
     const href = `/search?q=${encodeURIComponent(q.trim())}`;
     submitted.current = true;
     if (navigation) navigation.navigate(href); else router.push(href);
@@ -31,6 +31,7 @@ export function SearchBar({ className = "" }: { className?: string }) {
         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
       />
       <input
+        readOnly={readOnlyPreview}
         value={q}
         aria-label="Cari katalog"
         onChange={(e) => setQ(e.target.value)}
@@ -41,7 +42,7 @@ export function SearchBar({ className = "" }: { className?: string }) {
       <button
         type="submit"
         aria-label={pending ? "Memuat pencarian" : "Cari"}
-        disabled={pending}
+        disabled={pending || readOnlyPreview}
         className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-ink-soft hover:bg-line/60 disabled:opacity-50"
       >
         {pending ? <LoaderCircle size={16} className="motion-safe:animate-spin" /> : <Search size={16} />}

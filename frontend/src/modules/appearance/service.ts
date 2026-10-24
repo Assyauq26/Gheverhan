@@ -43,6 +43,7 @@ export async function readDraft() {
   });
   return {
     config: row ? parseAppearance(row.draft) : legacyDefault(),
+    publishedConfig: row ? parseAppearance(row.published) : legacyDefault(),
     draftVersion: row?.draftVersion ?? 0,
     publishedVersion: row?.publishedVersion ?? 0,
   };
@@ -204,6 +205,7 @@ export async function changeAppearance(
         );
         return {
           config: parseAppearance(updated.draft),
+          publishedConfig: parseAppearance(updated.published),
           draftVersion: updated.draftVersion,
           publishedVersion: updated.publishedVersion,
         };

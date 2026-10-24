@@ -66,7 +66,11 @@ export async function uploadLogo(
   bytes: Uint8Array,
   mime: string,
 ) {
-  if (!/^[0-9a-f-]{36}$/i.test(requestId))
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      requestId,
+    )
+  )
     throw new HttpError("Request ID tidak valid", 422);
   await rateLimit(actorId, "logo", 20, 3600);
   const checksum = createHash("sha256").update(bytes).digest("hex");
@@ -91,6 +95,17 @@ export async function uploadLogo(
   await prisma.$transaction(async (tx) => {
     // Serialize per actor: max active staging cannot race across tabs.
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`store-logo:${actorId}`}))::text`;
+    if (
+      await tx.storeBrandAsset.findUnique({
+        where: {
+          actorId_sessionHash_requestId: { actorId, sessionHash, requestId },
+        },
+      })
+    )
+      throw new HttpError(
+        "Upload ID masih diproses. Coba lagi dengan ID yang sama.",
+        409,
+      );
     if (
       (await tx.storeBrandAsset.count({
         where: {
@@ -132,8 +147,15 @@ export async function uploadLogo(
     });
     return { id };
   } catch (error) {
-    await removeObject(path).catch(() => {});
-    await prisma.storeBrandAsset.delete({ where: { id } }).catch(() => {});
+    let removed = false;
+    try {
+      await removeObject(path);
+      removed = true;
+    } catch {
+      /* Keep reservation for TTL retry. */
+    }
+    if (removed)
+      await prisma.storeBrandAsset.delete({ where: { id } }).catch(() => {});
     throw error;
   }
 }
@@ -154,7 +176,9 @@ export async function readLogo(
   id: string,
   actor?: { id: string; sessionHash: string },
 ) {
-  if (!/^[0-9a-f-]{36}$/i.test(id))
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  )
     throw new HttpError("Logo tidak ditemukan", 404);
   const asset = await prisma.storeBrandAsset.findUnique({ where: { id } });
   if (!asset?.ready || asset.retiredAt)

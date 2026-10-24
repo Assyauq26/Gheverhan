@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 
 const links = [
-  { href: "/admin/customize", label: "Customize / Dekorasi Toko", icon: Store, permission: PERMISSIONS.STORE_CUSTOMIZE_READ },
   { href: "/admin", label: "Dashboard", icon: LayoutGrid, exact: true, permission: null },
+  { href: "/admin/customize", label: "Customize / Dekorasi Toko", display: "Dekorasi Toko", icon: Store, permission: PERMISSIONS.STORE_CUSTOMIZE_READ },
   { href: "/admin/products", label: "Produk", icon: Package, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag, permission: PERMISSIONS.ORDER_READ },
   { href: "/admin/customers", label: "Pelanggan", icon: Users, permission: PERMISSIONS.CUSTOMER_READ },

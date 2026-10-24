@@ -8,7 +8,7 @@ export default async function CheckoutLayout({ children }: { children: React.Rea
   const appearance = await getPublishedAppearance();
   return (
     <AppearanceProvider config={appearance.config}>
-    <div className="storefront-root min-h-screen bg-white" data-theme-active={!isLegacy(appearance.config)} style={themeStyle(appearance.config)}>
+    <div className={`${isLegacy(appearance.config) ? "storefront-checkout-root" : "storefront-root"} min-h-screen bg-white`} data-theme-active={!isLegacy(appearance.config)} style={themeStyle(appearance.config)}>
       <PublishedVersionSync version={appearance.version} />
       <header className="sticky top-0 z-30 border-b border-line bg-white">
         <div className="container flex items-center justify-between py-4">

@@ -11,7 +11,7 @@ Baseline source: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`. Baseline local
 | Node22 typecheck | PASS |
 | Next lint | PASS; framework deprecation notice only on latest run |
 | Production build | PASS on intermediate implementation; final revision rerun pending |
-| Unit suite | 487 PASS on intermediate implementation; final additions rerun pending |
+| Unit suite | 488 PASS on intermediate implementation; final additions rerun pending |
 | Offline hardened container | 473 unit +25 containment +9 mitigation PASS on intermediate implementation; final revision rerun pending |
 | Customize PostgreSQL lifecycle/media | 12/12 PASS |
 | Existing PostgreSQL suites | Initial run185 PASS /8 FAIL; failures were migration-ledger count/latest-migration assumptions after additive migration |
@@ -22,7 +22,7 @@ Baseline source: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`. Baseline local
 
 ## Evidence conditions
 
-`evidence/` contains synthetic before/after screenshots. Initial anonymous captures showed redirects for account/checkout and catalog cache differences caused by building before seeding. They are diagnostic only, not proof of parity. Authenticated, identical-data captures and final comparison results will replace them before completion.
+`evidence/` contains synthetic before/after screenshots. The committed captures now use authenticated dummy customer fixtures, identical data, fixed synthetic product images, reduced motion and completed image/font loading. Ten of12 captures match byte-for-byte at decoded pixel level. Home390 differs in42 channels (max delta2/255); checkout1360 differs in153 channels (max delta1/255). No channel differs by more than2/255. Exact metrics are retained in baseline-comparison.json; this is not a claim of12 pixel-exact matches. Earlier anonymous/cache-misaligned diagnostic captures were replaced. Reproduction helper: tests/integration/store-appearance-baseline.ts.
 
 Final screenshots focus390/1360. Additional overflow widths:320,360,375,390,430,768,1024,1280,1360,1440,1920. Preview widths390/768/1360.
 

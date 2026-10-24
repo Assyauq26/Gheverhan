@@ -68,8 +68,7 @@ export function StoreLogo() {
 export function PublishedVersionSync({ version }: { version: number }) {
   const path = usePathname(),
     router = useRouter(),
-    last = useRef(0),
-    refreshing = useRef<number | null>(null);
+    last = useRef(0);
   useEffect(() => {
     let alive = true;
     const check = async () => {
@@ -81,13 +80,7 @@ export function PublishedVersionSync({ version }: { version: number }) {
         });
         if (!r.ok) return;
         const v = await r.json();
-        if (
-          alive &&
-          Number.isSafeInteger(v.version) &&
-          v.version !== version &&
-          refreshing.current !== v.version
-        ) {
-          refreshing.current = v.version;
+        if (alive && Number.isSafeInteger(v.version) && v.version !== version) {
           router.refresh();
         }
       } catch {}

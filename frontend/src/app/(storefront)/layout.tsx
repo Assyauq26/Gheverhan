@@ -26,7 +26,7 @@ export default async function StorefrontLayout({
 
   return (
     <AppearanceProvider config={theme}>
-    <div style={themeStyle(theme)} data-theme-active={!isLegacy(theme)} className="storefront-root min-h-screen bg-white pb-24 md:pb-0">
+    <div style={themeStyle(theme)} data-theme-active={!isLegacy(theme)} data-gradient-highlight-card={theme.gradients.highlightCard.enabled} className="storefront-root min-h-screen bg-white pb-24 md:pb-0">
       <PublishedVersionSync version={appearance.version} />
       {user && <RegistrationOtpCleanup />}
       <StorefrontHeader user={user} cartCount={count} />

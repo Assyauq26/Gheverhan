@@ -41,6 +41,7 @@ type Props = {
   groups: OptionGroup[];
   rows: Row[];
   photos: Photo[];
+  galleryPhotos?: Photo[];
   optionPhotos: Photo[];
   canUndoPhotos: boolean;
   onRemovePhoto: (id: string) => void;
@@ -976,7 +977,7 @@ export function CustomVariationEditor(p: Props) {
             </header>
             <strong className="seller-photo-group-title">Foto produk utama</strong>
             <div className="seller-photo-grid">
-              {p.photos.map((photo, index) => (
+              {(p.galleryPhotos ?? p.photos).map((photo, index) => (
                 <button
                   type="button"
                   key={photo.id}
@@ -1001,6 +1002,19 @@ export function CustomVariationEditor(p: Props) {
                 <Plus size={27} aria-hidden="true" /><span>Unggah baru</span>
               </button>
             </div>
+            {p.optionPhotos.length > 0 && (
+              <>
+                <strong className="seller-photo-group-title">Foto variasi tersimpan</strong>
+                <div className="seller-photo-grid">
+                  {p.optionPhotos.map((photo, index) => (
+                    <button type="button" key={photo.id} className={`seller-photo-tile ${picker?.photoId === photo.id ? "selected" : ""}`} onClick={() => setPicker((current) => current ? { ...current, photoId: photo.id } : current)} aria-label={`Pilih foto variasi ${index + 1}`} aria-pressed={picker?.photoId === photo.id}>
+                      <Image unoptimized src={photo.url} alt={photo.alt || `Foto variasi ${index + 1}`} width={160} height={160} />
+                      {picker?.photoId === photo.id && <Check size={18} className="seller-photo-check" aria-hidden="true" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <p className="seller-photo-helper"><ImagePlus size={15} aria-hidden="true" /> Gambar yang dipilih akan digunakan untuk opsi variasi ini.</p>
             <footer className="seller-image-actions">
               <button type="button" onClick={() => setPicker(null)}>Batal</button>

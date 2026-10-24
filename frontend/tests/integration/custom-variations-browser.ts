@@ -298,7 +298,14 @@ export async function verifyCustomVariations(c: Context) {
         ).not.toBeChecked();
         // Gallery selector is available only on image-enabled groups, and
         // option values remain within their mobile cards.
-        await expect(root.getByRole("button", { name: "Pilih gambar variasi untuk Merah" })).toBeEnabled();
+        // Seller screen uses the visible thumbnail, not the legacy desktop-only selector.
+        const thumbnail = root.getByRole("button", { name: /^(Ganti|Unggah) foto Merah$/ });
+        await expect(thumbnail).toBeEnabled();
+        await thumbnail.click();
+        const picker = page.getByRole("dialog", { name: "Pilih gambar variasi" });
+        await expect(picker).toBeVisible();
+        await expect(picker.getByRole("button", { name: "Unggah baru" })).toBeVisible();
+        await picker.getByRole("button", { name: "Batal" }).click();
         await expect(root.getByRole("button", { name: "Pilih gambar variasi untuk M" })).toHaveCount(0);
         const rowWidths = await root.locator(".variation-value-row").evaluateAll((rows) =>
           rows.map((row) => ({ scroll: row.scrollWidth, client: row.clientWidth })),

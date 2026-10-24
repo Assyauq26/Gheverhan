@@ -14,6 +14,7 @@ import {
   Layers3,
   ChevronDown,
   ChevronRight,
+  X,
   Ellipsis,
   ImageIcon,
   Check,

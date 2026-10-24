@@ -1,0 +1,8 @@
+www.gheverhan.store {
+  redir https://gheverhan.store{uri} permanent
+}
+
+gheverhan.store {
+  encode zstd gzip
+  reverse_proxy app:3000
+}

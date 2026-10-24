@@ -1,0 +1,10 @@
+[Unit]
+Description=Gheverhan expired-order maintenance
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gheverhan/deploy
+ExecStart=/bin/sh -c '/usr/bin/docker exec -i deploy_app_1 node < /opt/gheverhan/source/deploy/helipod/run-cron.cjs'
+TimeoutStartSec=90

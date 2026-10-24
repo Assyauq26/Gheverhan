@@ -1,3 +1,4 @@
+import { assertSameOrigin } from "@/lib/mutation-origin";
 import { requirePermission } from "@/lib/auth/session";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { handle, ok, HttpError } from "@/lib/response";
@@ -9,8 +10,7 @@ import { stageProductMedia } from "@/modules/catalog/staged-product-media";
 export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   return handle(async () => {
-    if (req.headers.get("origin") !== new URL(req.url).origin)
-      throw new HttpError("Origin tidak diizinkan", 403);
+    assertSameOrigin(req);
     const actor = await requirePermission(PERMISSIONS.PRODUCT_READ);
     const form = await readUploadFormData(req, MAX_IMAGE_BYTES + 128 * 1024);
     const file = form.get("image");

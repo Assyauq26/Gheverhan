@@ -1,6 +1,7 @@
+import { assertSameOrigin } from "@/lib/mutation-origin";
 import { requirePermission } from "@/lib/auth/session";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { handle, ok, HttpError } from "@/lib/response";
+import { handle, ok } from "@/lib/response";
 import { getObject } from "@/lib/storage";
 import { productEditorSessionHash } from "@/modules/catalog/product-editor-session";
 import {
@@ -29,8 +30,7 @@ export async function GET(_req: Request, { params }: Context) {
 }
 export async function DELETE(req: Request, { params }: Context) {
   return handle(async () => {
-    if (req.headers.get("origin") !== new URL(req.url).origin)
-      throw new HttpError("Origin tidak diizinkan", 403);
+    assertSameOrigin(req);
     const actor = await requirePermission(PERMISSIONS.PRODUCT_READ);
     await cancelStagedMedia(
       actor,

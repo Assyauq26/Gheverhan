@@ -2,7 +2,7 @@
 
 PR: https://github.com/Assyauq26/Gheverhan/pull/102
 
-Application baseline: main b719e9db83e7c7065a38421f28727f80b880c355. Full local browser run on application commit d5a91c19f8a24f8c858cf83e149743f1bee05481; the evidence commit adds documentation, screenshots and a scoped caption/placeholder contrast adjustment. GitHub checks on the latest PR commit are the final release gate; this document does not authorize release.
+Application baseline: main b719e9db83e7c7065a38421f28727f80b880c355. Full local browser run on application commit d5a91c19f8a24f8c858cf83e149743f1bee05481; later commits add documentation, screenshots, a scoped caption/placeholder contrast adjustment, clearer first-SKU price guidance and bounded photo undo that retains new uploads. The latest CI reruns the complete suite, including the new undo regression. GitHub checks on the latest PR commit are the final release gate; this document does not authorize release.
 
 ## Implementation
 

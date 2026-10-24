@@ -107,6 +107,17 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await customer.reload(); await expect(customer.getByTestId("product-size-chart")).toHaveCount(0);
       await page.getByTestId("draft-product").click(); await expect(page.getByTestId("product-status")).toHaveText("Draft");
       assert.equal((await anonymous.request.get(base + image.url)).status(), 404); await customer.close();
+      const oldGallery = await page.locator(".seller-gallery-photo").evaluateAll(nodes => nodes.map(node => (node as HTMLElement).dataset.sortId!));
+      await page.locator("#product-image-upload").setInputFiles({ name: "undo-new.png", mimeType: "image/png", buffer: png });
+      await expect(page.locator(".seller-gallery-photo")).toHaveCount(4);
+      const newPhoto = await page.locator(".seller-gallery-photo").last().getAttribute("data-sort-id");
+      await page.getByRole("button", { name: "Hapus gambar 1", exact: true }).click();
+      await expect(page.locator(".seller-gallery-photo")).toHaveCount(3);
+      await page.getByRole("button", { name: "Pulihkan foto yang dihapus", exact: true }).click();
+      await expect(page.locator(".seller-gallery-photo")).toHaveCount(4);
+      assert.deepEqual(await page.locator(".seller-gallery-photo").evaluateAll(nodes => nodes.map(node => (node as HTMLElement).dataset.sortId!)), [...oldGallery, newPhoto]);
+      await page.getByTestId("save-product").click();
+      await expect(page.getByRole("region", { name: "Status perubahan produk" }).getByRole("status")).toContainText("Produk berhasil disimpan");
       await page.goto(base + "/admin/products"); await page.goto(base + "/admin/products/" + id);
       await page.locator("#product-name").fill("Unsaved browser back");
       const cancelBack = page.waitForEvent("dialog"); await page.evaluate(() => history.back()); await (await cancelBack).dismiss();

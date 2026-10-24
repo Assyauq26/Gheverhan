@@ -49,7 +49,7 @@ test('legacy schema and ambiguous migration ledger are rejected without fail-ope
         created = true;
         await cp('prisma/schema.prisma', path.join(directory, 'schema.prisma'));
         const migrations = (await readdir('prisma/migrations')).filter(n => /^\d{14}_/.test(n)).sort();
-        assert.equal(migrations.length, 12);
+        assert.equal(migrations.length, 13);
         for (const migration of migrations.slice(0, 5))
             await cp(path.join('prisma/migrations', migration), path.join(directory, 'migrations', migration), { recursive: true });
         await cp('prisma/migrations/migration_lock.toml', path.join(directory, 'migrations/migration_lock.toml'));

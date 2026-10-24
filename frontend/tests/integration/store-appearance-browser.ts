@@ -1,0 +1,236 @@
+import sharp from "sharp";
+import { parseAppearance } from "../../src/modules/appearance/schema";
+import assert from "node:assert/strict";
+import path from "node:path";
+import { expect, type Browser, type BrowserContext } from "@playwright/test";
+import type { PrismaClient } from "@prisma/client";
+export async function verifyStoreAppearance({
+  browser,
+  admin,
+  anonymous,
+  readOnly,
+  db,
+  base,
+  artifactDir,
+  check,
+}: {
+  browser: Browser;
+  admin: BrowserContext;
+  anonymous: BrowserContext;
+  readOnly: BrowserContext;
+  db: PrismaClient;
+  base: string;
+  artifactDir: string;
+  check: (name: string, fn: () => Promise<void>) => Promise<void>;
+}) {
+  const page = await admin.newPage(),
+    visitor = await anonymous.newPage();
+  page.on("dialog", (d) => d.accept());
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  try {
+    await check("customize: server RBAC and private preview", async () => {
+      const denied = await readOnly.request.get(base + "/admin/customize");
+      assert.equal(denied.status(), 404);
+      const preview = await anonymous.request.get(
+        base + "/store-customize-preview",
+      );
+      assert.match(preview.url(), /\/login/);
+      const upload = await readOnly.request.post(
+        base + "/api/v1/admin/store-branding",
+        {
+          headers: { Origin: base },
+          multipart: {
+            image: {
+              name: "x.svg",
+              mimeType: "image/svg+xml",
+              buffer: Buffer.from("<svg/>"),
+            },
+            requestId: crypto.randomUUID(),
+          },
+        },
+      );
+      assert.equal(upload.status(), 403);
+    });
+    await check("customize: draft and isolated live preview", async () => {
+      await page.goto(base + "/admin/customize");
+      await expect(
+        page.getByRole("heading", {
+          name: "Customize / Dekorasi Toko",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Preset/Template Warna", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Midnight Ink", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Identitas Toko", exact: true })
+        .click();
+      await page
+        .getByLabel("Nama toko", { exact: true })
+        .fill("Theme Studio Test");
+      await page
+        .getByRole("button", { name: "Simpan Draft", exact: true })
+        .click();
+      await expect(page.getByRole("status")).toContainText("Draft tersimpan");
+      await visitor.goto(base + "/");
+      await expect(visitor.getByTestId("logo")).toHaveText("Gheverhan");
+      const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+      await expect(frame.getByTestId("logo")).toHaveText("Theme Studio Test");
+      const before = await db.order.count();
+      await frame
+        .getByRole("button", { name: "Beli sekarang", exact: true })
+        .click();
+      assert.equal(await db.order.count(), before);
+    });
+    await check("customize: private logo upload, published reference and mode", async () => {
+      const png=await sharp({create:{width:64,height:32,channels:4,background:{r:240,g:180,b:90,alpha:1}}}).png().toBuffer();
+      await page.getByLabel("Upload logo PNG/JPEG/WebP (maks. 2 MiB)").setInputFiles({name:"brand.png",mimeType:"image/png",buffer:png});
+      await expect(page.getByRole("status")).toContainText("Logo diunggah privat");
+      await page.getByLabel("Mode logo",{exact:true}).selectOption("both");
+      await page.getByRole("button",{name:"Simpan Draft",exact:true}).click();await expect(page.getByRole("status")).toContainText("Draft tersimpan");
+      const config=parseAppearance((await db.storeAppearance.findUniqueOrThrow({where:{key:"primary"}})).draft);
+      assert.ok(config.identity.logoAssetId);
+      assert.equal((await anonymous.request.get(base+"/api/v1/store-branding/"+config.identity.logoAssetId)).status(),404);
+      assert.equal((await readOnly.request.get(base+"/api/v1/admin/store-branding/"+config.identity.logoAssetId)).status(),403);
+    });
+    await check(
+      "customize: publish invalidates SSR and runtime colors",
+      async () => {
+        await page
+          .getByRole("button", { name: "Terbitkan", exact: true })
+          .click();
+        await expect(page.getByRole("status")).toContainText(
+          "published diperbarui",
+        );
+        const html = await (await anonymous.request.get(base + "/")).text();
+        assert.ok(html.includes("--store-pageBg:#101827"));
+        assert.ok(!html.includes("/api/v1/admin/store-branding/"));
+        await visitor.reload();
+        await expect(visitor.getByTestId("logo")).toHaveText(
+          "Theme Studio Test",
+        );
+        assert.equal(
+          await visitor
+            .locator(".storefront-root")
+            .evaluate((e) => getComputedStyle(e).backgroundColor),
+          "rgb(16, 24, 39)",
+        );
+        const logo=visitor.getByTestId("logo").locator("img");await expect(logo).toBeVisible();
+        const src=await logo.getAttribute("src");assert.ok(src);assert.equal((await anonymous.request.get(base+src)).status(),200);
+      },
+    );
+    await check(
+      "customize: all required widths and desktop/mobile evidence",
+      async () => {
+        for (const width of [
+          320, 360, 375, 390, 430, 768, 1024, 1280, 1360, 1440, 1920,
+        ]) {
+          await visitor.setViewportSize({ width, height: 900 });
+          assert.ok(
+            await visitor.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+            `Storefront overflow ${width}`,
+          );
+          await page.setViewportSize({ width, height: 900 });
+          assert.ok(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+            `Editor overflow ${width}`,
+          );
+          if (width === 390 || width === 1360) {
+            await page.screenshot({
+              path: path.join(artifactDir, `customize-editor-${width}.png`),
+              fullPage: true,
+            });
+            await visitor.screenshot({
+              path: path.join(artifactDir, `customize-storefront-${width}.png`),
+              fullPage: true,
+            });
+          }
+        }
+        await page.setViewportSize({ width: 1360, height: 900 });
+      },
+    );
+    await check(
+      "customize: two tab version conflict cannot overwrite",
+      async () => {
+        const other = await admin.newPage();
+        try {
+          await other.goto(base + "/admin/customize");
+          await other
+            .getByLabel("Nama toko", { exact: true })
+            .fill("Other tab");
+          await page.getByLabel("Nama toko", { exact: true }).fill("First tab");
+          await page
+            .getByRole("button", { name: "Simpan Draft", exact: true })
+            .click();
+          await expect(page.getByRole("status")).toContainText(
+            "Draft tersimpan",
+          );
+          await other
+            .getByRole("button", { name: "Simpan Draft", exact: true })
+            .click();
+          await expect(
+            other
+              .getByRole("alert")
+              .filter({ hasText: "Draft atau published berubah" }),
+          ).toContainText("tab/admin lain");
+          assert.equal(
+            parseAppearance(
+              (
+                await db.storeAppearance.findUniqueOrThrow({
+                  where: { key: "primary" },
+                })
+              ).draft,
+            ).identity.name,
+            "First tab",
+          );
+        } finally {
+          await other.close();
+        }
+      },
+    );
+    await check(
+      "customize: rollback is append-only and leaves draft private",
+      async () => {
+        await page
+          .getByRole("button", { name: "Riwayat", exact: true })
+          .click();
+        const baseline = page
+          .locator("div.rounded-xl.border.p-3")
+          .filter({ hasText: "Revisi 0" });
+        await baseline
+          .getByRole("button", { name: "Rollback", exact: true })
+          .click();
+        await expect(page.getByRole("status")).toContainText(
+          "published diperbarui",
+        );
+        await visitor.reload();
+        await expect(visitor.getByTestId("logo")).toHaveText("Gheverhan");
+        assert.equal(
+          await visitor
+            .locator(".storefront-root")
+            .getAttribute("data-theme-active"),
+          "false",
+        );
+        assert.equal(await db.storeAppearanceRevision.count(), 3);
+      },
+    );
+    await check("customize: no editor runtime exceptions", async () => {
+      assert.deepEqual(errors, []);
+    });
+  } finally {
+    await page.close();
+    await visitor.close();
+    await db.storeAppearanceRevision.deleteMany();
+    await db.storeAppearance.deleteMany();
+    await db.storeBrandAsset.deleteMany();
+    await db.storeCustomizeRateLimit.deleteMany();
+  }
+}

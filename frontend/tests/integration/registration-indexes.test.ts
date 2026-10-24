@@ -75,7 +75,7 @@ async function disposable(
     const names = (await readdir("prisma/migrations"))
       .filter((name) => /^\d{14}_/.test(name))
       .sort();
-    assert.equal(names.length, 12);
+    assert.equal(names.length, 13);
     assert.equal(names[7], migrationName);
     for (const entry of names.slice(0, count))
       await cp(

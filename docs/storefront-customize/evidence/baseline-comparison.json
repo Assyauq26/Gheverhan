@@ -1,0 +1,86 @@
+[
+  {
+    "page": "home",
+    "width": 390,
+    "changedChannels": 0,
+    "totalChannels": 1053000,
+    "ratio": 0
+  },
+  {
+    "page": "shop",
+    "width": 390,
+    "changedChannels": 84,
+    "totalChannels": 1053000,
+    "ratio": 0.00007977207977207978
+  },
+  {
+    "page": "pdp",
+    "width": 390,
+    "changedChannels": 0,
+    "totalChannels": 1053000,
+    "ratio": 0
+  },
+  {
+    "page": "cart",
+    "width": 390,
+    "changedChannels": 0,
+    "totalChannels": 1053000,
+    "ratio": 0
+  },
+  {
+    "page": "account",
+    "width": 390,
+    "changedChannels": 0,
+    "totalChannels": 1053000,
+    "ratio": 0
+  },
+  {
+    "page": "checkout",
+    "width": 390,
+    "changedChannels": 0,
+    "totalChannels": 1053000,
+    "ratio": 0
+  },
+  {
+    "page": "home",
+    "width": 1360,
+    "changedChannels": 0,
+    "totalChannels": 3672000,
+    "ratio": 0
+  },
+  {
+    "page": "shop",
+    "width": 1360,
+    "changedChannels": 168,
+    "totalChannels": 3672000,
+    "ratio": 0.000045751633986928104
+  },
+  {
+    "page": "pdp",
+    "width": 1360,
+    "changedChannels": 0,
+    "totalChannels": 3672000,
+    "ratio": 0
+  },
+  {
+    "page": "cart",
+    "width": 1360,
+    "changedChannels": 0,
+    "totalChannels": 3672000,
+    "ratio": 0
+  },
+  {
+    "page": "account",
+    "width": 1360,
+    "changedChannels": 0,
+    "totalChannels": 3672000,
+    "ratio": 0
+  },
+  {
+    "page": "checkout",
+    "width": 1360,
+    "changedChannels": 0,
+    "totalChannels": 3672000,
+    "ratio": 0
+  }
+]

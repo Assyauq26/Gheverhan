@@ -1,3 +1,4 @@
+import { verifyStoreAppearance } from "./store-appearance-browser";
 import { createServer } from "node:http";
 import { spawn, execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
@@ -134,6 +135,7 @@ async function main() {
       await verifyProductEditorV2({page,db,base,artifactDir,prefix,check,png});
       completed = true; return;
     }
+    await verifyStoreAppearance({browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,check});
     await check("protected pages and permission-filtered dashboard", async () => {
       const unauth = await anonymous.request.get(`${base}/admin/products/new`); assert.match(unauth.url(), /\/login/);
       const denied = await readOnly.request.get(`${base}/admin/products/new`); assert.equal(denied.status(), 404);

@@ -22,7 +22,7 @@ test("size chart additive migration upgrades legacy product, preserves SKU and r
   try {
     await admin.$executeRawUnsafe(`CREATE DATABASE "${name}"`); created = true;
     await cp("prisma/schema.prisma", path.join(directory, "schema.prisma"));
-    const names = (await readdir("prisma/migrations")).filter(n => /^\d{14}_/.test(n)).sort();
+    const names = (await readdir("prisma/migrations")).filter(n => /^\d{14}_/.test(n) && n <= migration).sort();
     assert.equal(names.at(-1), migration);
     for (const n of names.slice(0, -1)) await cp(path.join("prisma/migrations", n), path.join(directory, "migrations", n), { recursive: true });
     await cp("prisma/migrations/migration_lock.toml", path.join(directory, "migrations/migration_lock.toml"));

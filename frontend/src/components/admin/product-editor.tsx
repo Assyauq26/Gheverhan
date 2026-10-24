@@ -1056,7 +1056,12 @@ export function ProductEditor({
                     <span>Variasi <b aria-hidden="true">*</b></span>
                     <span>{values.optionGroups?.length ? `${values.optionGroups.length} jenis` : "Tambah"} <ChevronRight size={18} /></span>
                   </button>
-                  <button type="button" onClick={() => setSellerPanel("stock")}>
+                  <button type="button" onClick={() => {
+                    if (!values.optionGroups?.length) {
+                      setNotice("Tambahkan jenis variasi terlebih dahulu sebelum mengatur Harga/Stok.");
+                      setSellerPanel("groups");
+                    } else setSellerPanel("stock");
+                  }}>
                     <span>Harga/Stok <b aria-hidden="true">*</b></span>
                     <span>{values.variants.some((row) => row.sku) ? `${values.variants.length} SKU` : "Tambah"} <ChevronRight size={18} /></span>
                   </button>

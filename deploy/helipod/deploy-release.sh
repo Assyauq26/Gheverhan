@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-if [[ -n "\${SSH_ORIGINAL_COMMAND:-}" ]]; then
+if [[ -n "${SSH_ORIGINAL_COMMAND:-}" ]]; then
   echo "Remote commands are disabled for this deploy key." >&2
   exit 64
 fi
@@ -38,14 +38,14 @@ printf '%s\n' "$LOAD_OUTPUT" >&2
 
 mapfile -t APP_IMAGES < <(printf '%s\n' "$LOAD_OUTPUT" | sed -nE 's/^Loaded image: (gheverhan:[0-9a-f]{40})$/\1/p')
 mapfile -t MIGRATION_IMAGES < <(printf '%s\n' "$LOAD_OUTPUT" | sed -nE 's/^Loaded image: (gheverhan-migrate:[0-9a-f]{40})$/\1/p')
-[[ "\${#APP_IMAGES[@]}" -eq 1 && "\${#MIGRATION_IMAGES[@]}" -eq 1 ]] || {
+[[ "${#APP_IMAGES[@]}" -eq 1 && "${#MIGRATION_IMAGES[@]}" -eq 1 ]] || {
   echo "The image stream must contain one matching application and migration image." >&2
   exit 65
 }
-APP_IMAGE="\${APP_IMAGES[0]}"
-MIGRATION_IMAGE="\${MIGRATION_IMAGES[0]}"
-APP_SHA="\${APP_IMAGE#gheverhan:}"
-MIGRATION_SHA="\${MIGRATION_IMAGE#gheverhan-migrate:}"
+APP_IMAGE="${APP_IMAGES[0]}"
+MIGRATION_IMAGE="${MIGRATION_IMAGES[0]}"
+APP_SHA="${APP_IMAGE#gheverhan:}"
+MIGRATION_SHA="${MIGRATION_IMAGE#gheverhan-migrate:}"
 [[ "$APP_SHA" == "$MIGRATION_SHA" ]] || {
   echo "Application and migration images came from different commits." >&2
   exit 65
@@ -87,7 +87,7 @@ if len(values) != 1 or not re.fullmatch(r"[0-9A-Fa-f]{32,}", values[0]):
 print(values[0])
 PY
 )"
-MIGRATION_DATABASE_URL="postgresql://gheverhan:\${POSTGRES_PASSWORD}@db:5432/gheverhan?schema=public&connection_limit=5"
+MIGRATION_DATABASE_URL="postgresql://gheverhan:${POSTGRES_PASSWORD}@db:5432/gheverhan?schema=public&connection_limit=5"
 unset POSTGRES_PASSWORD
 
 # Run migrations from the build stage, which still contains the Prisma CLI.
@@ -100,6 +100,9 @@ GHEVERHAN_IMAGE="$MIGRATION_IMAGE" docker-compose \
   --entrypoint node app \
   /app/node_modules/prisma/build/index.js migrate deploy
 unset MIGRATION_DATABASE_URL
+
+# Refresh table and sequence grants for objects introduced by this migration.
+python3 /usr/local/sbin/gheverhan-prepare-runtime.py
 
 wait_for_health() {
   local attempt

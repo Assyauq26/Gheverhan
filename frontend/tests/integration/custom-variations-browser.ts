@@ -250,6 +250,21 @@ export async function verifyCustomVariations(c: Context) {
           401,
         );
         assert.equal(await db.product.count({ where: { slug } }), 0);
+        // Codex review regression: deleting a previously staged option image
+        // inside the panel must not cancel the remote object if the seller
+        // discards the panel edits and restores its opening snapshot.
+        await closeEditor();
+        await openGroups();
+        await root.getByRole("button", { name: "Lepaskan foto Merah", exact: true }).click();
+        const stagedLibrary = root.locator(".variation-media-library");
+        await stagedLibrary.locator("summary").click();
+        await stagedLibrary.getByRole("button", { name: "Hapus permanen foto tersimpan 1", exact: true }).click();
+        await page.getByRole("dialog").last().getByRole("button", { name: "Hapus foto", exact: true }).click();
+        page.once("dialog", dialog => void dialog.accept());
+        await page.getByRole("button", { name: "Kembali ke produk", exact: true }).click();
+        await openGroups();
+        await expect(root.getByRole("button", { name: "Ganti foto Merah", exact: true })).toBeVisible();
+        assert.equal((await page.request.get(base + privateUrl)).status(), 200, "Discard must restore a usable staged object");
         await root.getByRole("button", { name: /^Tambah variasi / }).click();
         await root.getByLabel("Nama variasi 2", { exact: true }).fill("Ukuran");
         await root.getByLabel("Opsi Ukuran 1", { exact: true }).fill("M");

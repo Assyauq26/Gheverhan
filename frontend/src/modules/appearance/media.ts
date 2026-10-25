@@ -267,16 +267,40 @@ export async function retireLogo(
 }
 /** Run only from the explicitly guarded operator cleanup entrypoint. */
 export async function cleanupBranding() {
-  const rows = await prisma.storeBrandAsset.findMany({
-    where: { expiresAt: { lt: new Date() } },
-    take: 100,
-    orderBy: { expiresAt: "asc" },
-  });
+  // Exclude logos still referenced by the shared draft, published theme or
+  // immutable revision history BEFORE limiting the cleanup batch. Otherwise
+  // 100 old, retained logos permanently starve all newer expired uploads.
+  // Keep the in-transaction reference check below: this query is only a
+  // candidate scan and a concurrent publish may attach one in the meantime.
+  const rows = await prisma.$queryRaw<{ id: string; path: string }[]>\`
+    SELECT asset."id", asset."path"
+    FROM "StoreBrandAsset" AS asset
+    WHERE asset."expiresAt" < NOW()
+      AND NOT EXISTS (
+        SELECT 1 FROM "StoreAppearance" AS appearance
+        WHERE appearance."key" = 'primary'
+          AND (
+            appearance."draft"->'identity'->>'logoAssetId' = asset."id"::text
+            OR appearance."published"->'identity'->>'logoAssetId' = asset."id"::text
+          )
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM "StoreAppearanceRevision" AS revision
+        WHERE revision."config"->'identity'->>'logoAssetId' = asset."id"::text
+      )
+    ORDER BY asset."expiresAt" ASC, asset."id" ASC
+    LIMIT 100
+  \`;
   let removed = 0;
   for (const asset of rows) {
     await prisma.$transaction(
       async (tx) => {
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('store-appearance-v1'))::text`;
+        // A candidate can change or disappear after the initial selection.
+        const currentAsset = await tx.storeBrandAsset.findUnique({
+          where: { id: asset.id },
+        });
+        if (!currentAsset || currentAsset.expiresAt >= new Date()) return;
         const row = await tx.storeAppearance.findUnique({
           where: { key: "primary" },
         });

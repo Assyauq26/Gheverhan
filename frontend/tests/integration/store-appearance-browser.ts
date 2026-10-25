@@ -71,13 +71,13 @@ async function assertSearchFocus(scope: Page | FrameLocator) {
     border: getComputedStyle(e).borderTopWidth,
     borderColor: getComputedStyle(e).borderTopColor,
     surface: getComputedStyle(e).backgroundColor,
-    outline: getComputedStyle(e).outlineWidth,
+    outline: getComputedStyle(e).outlineStyle,
     shadow: getComputedStyle(e).boxShadow,
   }));
   assert.equal(focus.surface, surfaceBefore, "Focus should only darken the border, never flash the field background");
   assert.equal(focus.border, "1px", "Search keeps its original single border");
   assert.notEqual(focus.borderColor, "transparent", "Focused border remains visible");
-  assert.equal(focus.outline, "0px", "Search must not add a second outline");
+  assert.equal(focus.outline, "none", "Search must not draw a second outline");
   assert.equal(focus.shadow, "none", "Search must not add a focus ring");
 }
 

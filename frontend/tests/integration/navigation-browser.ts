@@ -157,8 +157,25 @@ async function main() {
         const link = page.getByTestId('adminnav-produk').filter({ visible: true });
         const start = performance.now(); await link.click();
         await expect(page.getByTestId('navigation-pending')).toBeVisible();
+        assert.equal(
+          await page.getByTestId('navigation-pending').first().evaluate((e) => e.parentElement === document.body),
+          true,
+          'Pending status must be portaled to body, never positioned inside a transformed button/link',
+        );
         timings.push({ viewport: width, pendingFeedbackMs: performance.now()-start, imposedResponseDelayMs: 600 });
         await expect(page.getByRole('heading', { name: 'Produk', exact: true })).toBeVisible();
+        const productSearch = page.locator('main input[name="q"]').first();
+        await productSearch.focus();
+        const focusedField = await productSearch.evaluate((e) => ({
+          border: getComputedStyle(e).borderTopWidth,
+          color: getComputedStyle(e).borderTopColor,
+          outline: getComputedStyle(e).outlineWidth,
+          shadow: getComputedStyle(e).boxShadow,
+        }));
+        assert.equal(focusedField.border, '1px', 'Focused admin input keeps a single native border');
+        assert.equal(focusedField.outline, '0px', 'No duplicate outline on focused admin input');
+        assert.equal(focusedField.shadow, 'none', 'No added Tailwind ring on focused admin input');
+        assert.notEqual(focusedField.color, 'transparent', 'Focused border remains visible');
         await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);
         const bottomNav = page.locator('nav[aria-label="Navigasi bawah admin"]');
         const sidebar = page.locator('aside[aria-label="Sidebar admin"]');

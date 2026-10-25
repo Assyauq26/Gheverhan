@@ -256,7 +256,7 @@ test("appearance lifecycle, transaction races, rollback and media privacy", asyn
       await db.storeAppearanceRevision.createMany({
         data: retained.map(({ index, config }) => ({
           version: 1000 + index,
-          config,
+          config: svc.asJson(config),
           actorId: actor,
           action: "publish",
         })),

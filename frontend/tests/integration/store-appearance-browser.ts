@@ -42,7 +42,18 @@ async function assertBorderless(scope: Page | FrameLocator, label: string) {
   assert.equal(visual.position, "fixed", label);
   assert.notEqual(visual.surface, "rgba(0, 0, 0, 0)", label);
   const nav = scope.getByTestId("bottom-nav");
-  if (await nav.getAttribute("data-style") === "pill") assert.equal(visual.radius, "9999px", label);
+  if (await nav.getAttribute("data-style") === "pill") {
+    assert.equal(visual.radius, "9999px", label);
+    if (!label.includes("shadow none")) {
+      assert.notEqual(visual.shadow, "none", "Floating pill needs elevation against a matching background");
+    }
+    const motion = await nav.locator("a").first().evaluate((e) => ({
+      property: getComputedStyle(e).transitionProperty,
+      duration: getComputedStyle(e).transitionDuration,
+    }));
+    assert.ok(motion.property.includes("width") || motion.property.includes("all"), "Active tab width should animate");
+    assert.ok(parseFloat(motion.duration) >= 0.25, "Native-like transition should last at least 250ms");
+  }
   await expect(nav.locator("a")).toHaveCount(4);
   const hrefs = [];
   for (const link of await nav.locator("a").all()) hrefs.push(await link.getAttribute("href"));
@@ -57,11 +68,14 @@ async function assertSearchFocus(scope: Page | FrameLocator) {
   await input.focus();
   const focus = await input.evaluate((e) => ({
     border: getComputedStyle(e).borderTopWidth,
+    borderColor: getComputedStyle(e).borderTopColor,
     outline: getComputedStyle(e).outlineWidth,
     shadow: getComputedStyle(e).boxShadow,
   }));
-  assert.equal(focus.border, "1px", "Search retains its functional border");
-  assert.ok(focus.outline !== "0px" || focus.shadow !== "none", "Search retains visible focus feedback");
+  assert.equal(focus.border, "1px", "Search keeps its original single border");
+  assert.notEqual(focus.borderColor, "transparent", "Focused border remains visible");
+  assert.equal(focus.outline, "0px", "Search must not add a second outline");
+  assert.equal(focus.shadow, "none", "Search must not add a focus ring");
 }
 
 async function captureShell(page: Page, scope: Page | FrameLocator, dir: string, label: string) {
@@ -787,7 +801,7 @@ export async function verifyStoreAppearance({
         if (shadow === "none") {
           await expect.poll(() => frame.getByTestId("bottom-nav").evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
         } else {
-          await expect.poll(() => frame.getByTestId("bottom-nav").evaluate((e) => getComputedStyle(e).boxShadow)).toContain(shadow === "soft" ? "16px" : "24px");
+          await expect.poll(() => frame.getByTestId("bottom-nav").evaluate((e) => getComputedStyle(e).boxShadow)).toContain(shadow === "soft" ? "34px" : "40px");
         }
         await assertBorderless(frame, `shadow ${shadow}`);
       }

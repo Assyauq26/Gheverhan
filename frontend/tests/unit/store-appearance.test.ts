@@ -62,6 +62,16 @@ describe("store appearance contract", () => {
         const style = themeStyle(config);
         expect(JSON.stringify(config)).toBe(before);
         expect(style).toHaveProperty("--store-border", config.colors.border);
+        expect(style).toHaveProperty("--store-nav-shadow", {
+          none: "none",
+          soft: "0 10px 34px rgb(0 0 0 / .17), 0 2px 9px rgb(0 0 0 / .07)",
+          raised: "0 14px 40px rgb(0 0 0 / .23), 0 3px 12px rgb(0 0 0 / .10)",
+        }[shadow]);
+        expect(style).toHaveProperty("--store-nav-bar-shadow", {
+          none: "none",
+          soft: "0 -5px 24px rgb(0 0 0 / .08)",
+          raised: "0 -8px 30px rgb(0 0 0 / .14)",
+        }[shadow]);
         expect(style).toHaveProperty("--store-shell-shadow", {
           none: "none",
           soft: `0 4px 16px rgb(${config.colors.navText.match(/[a-f\d]{2}/gi)!.map((channel) => parseInt(channel, 16)).join(" ")} / .08)`,

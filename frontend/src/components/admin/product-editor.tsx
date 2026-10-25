@@ -49,7 +49,7 @@ import type { ProductEditorData } from "@/modules/catalog/product-management.ser
 import type { ProductStatus } from "@prisma/client";
 
 const selectClass =
-  "h-11 w-full rounded-xl border border-line bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-black disabled:opacity-50";
+  "h-11 w-full rounded-xl border border-line bg-white px-3 text-sm focus:border-zinc-600 focus:outline-none focus:ring-0 disabled:opacity-50";
 type Values = Omit<ProductInput, "images" | "variants" | "optionImages"> & {
   optionImages: ProductEditorData["optionImages"];
   images: ProductEditorData["images"];

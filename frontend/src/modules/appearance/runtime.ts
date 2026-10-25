@@ -62,6 +62,18 @@ export function themeStyle(input: StoreAppearanceV1): CSSProperties {
     soft: "0 6px 20px rgb(0 0 0 / .08)",
     raised: "0 12px 32px rgb(0 0 0 / .24)",
   }[v.styling.shadow];
+  // The mobile pill needs depth against a similarly colored page, without
+  // restoring the heavy structural border. Respect the seller's shadow mode.
+  out["--store-nav-shadow"] = {
+    none: "none",
+    soft: "0 10px 34px rgb(0 0 0 / .17), 0 2px 9px rgb(0 0 0 / .07)",
+    raised: "0 14px 40px rgb(0 0 0 / .23), 0 3px 12px rgb(0 0 0 / .10)",
+  }[v.styling.shadow];
+  out["--store-nav-bar-shadow"] = {
+    none: "none",
+    soft: "0 -5px 24px rgb(0 0 0 / .08)",
+    raised: "0 -8px 30px rgb(0 0 0 / .14)",
+  }[v.styling.shadow];
   // Floating chrome has gentler elevation than cards. Derive its tint from
   // the current palette without introducing a persisted appearance setting.
   out["--store-shell-shadow"] = {

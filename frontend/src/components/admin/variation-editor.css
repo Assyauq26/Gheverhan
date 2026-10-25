@@ -10,7 +10,13 @@
   font-size: .875rem;
   line-height: 1.5;
 }
-:where(.product-editor-v2, .seller-editor-dialog, .seller-image-dialog, .variation-confirm) :where(button, input, select, textarea, summary):focus-visible { outline: 2px solid #18181b; outline-offset: 3px; }
+/* Text fields already receive one darkened focus border from globals.css.
+ * Reserve external keyboard outlines for actions and custom controls. */
+:where(.product-editor-v2, .seller-editor-dialog, .seller-image-dialog, .variation-confirm)
+  :where(button, summary, input[type="checkbox"], input[type="radio"], input[type="file"], input[type="range"], input[type="color"]):focus-visible {
+  outline: 2px solid #18181b;
+  outline-offset: 3px;
+}
 :where(.product-editor-v2, .seller-editor-dialog, .seller-image-dialog) ::selection { background: #dedee1; color: #18181b; }
 .product-editor-v2 :is(input, textarea)::placeholder, .seller-editor-dialog :is(input, textarea)::placeholder { color: #71717a; }
 .product-editor-v2 .text-zinc-400 { color: #71717a; }

@@ -653,6 +653,5 @@
   border-color: var(--store-search-border);
 }
 .storefront-root[data-theme-active="true"] [data-testid="search-bar"] input[data-testid="search-input"]:focus-visible {
-  background-color: var(--store-field);
   border-color: var(--store-focus);
 }

@@ -194,6 +194,28 @@ async function main() {
               .boundingBox();
             assert.equal(inputBox?.height, 44);
             assert.equal(submitBox?.height, 44);
+            await input.focus();
+            // The Lumen input animates border-color for 160ms. Sampling in
+            // the same tick as focus() captures the unfocused/interpolated
+            // color and falsely fails even though focus eventually passes.
+            await expect(input).toBeFocused();
+            await expect
+              .poll(
+                () => input.evaluate((e) => getComputedStyle(e).borderTopColor),
+                { message: "Auth focus border must settle to a visible single line" },
+              )
+              .toBe("rgb(82, 82, 91)");
+            const focused = await input.evaluate((e) => ({
+              border: getComputedStyle(e).borderTopWidth,
+              borderColor: getComputedStyle(e).borderTopColor,
+              outline: getComputedStyle(e).outlineStyle,
+              shadow: getComputedStyle(e).boxShadow,
+            }));
+            assert.equal(focused.border, "1px", "Auth field must keep a single focus border");
+            assert.equal(focused.borderColor, "rgb(82, 82, 91)", "Auth field focus is distinguishable without extra outline");
+            assert.equal(focused.outline, "none", "Auth field must not draw an extra outline");
+            assert.equal(focused.shadow, "none", "Auth field must not add a focus halo");
+            await input.evaluate((e) => (e as HTMLInputElement).blur());
             geometry.push({
               route: name,
               viewport: { width, height },
@@ -214,12 +236,19 @@ async function main() {
             );
             await expect(page.getByTestId("google-login")).toBeDisabled();
             await expect(page.getByTestId("whatsapp-login")).toBeDisabled();
-            await page.keyboard.press("Tab");
+            // Text fields intentionally rely on their single border;
+            // Tab from a blurred field may simply focus another text input.
+            // Verify a real keyboard-focused LINK retains its visible ring.
+            await input.focus();
+            await page.keyboard.press("Shift+Tab");
+            const keyboardLink = page.locator(".auth-ui a:focus-visible");
+            await expect(keyboardLink).toHaveCount(1);
             assert.notEqual(
-              await page.evaluate(
-                () => getComputedStyle(document.activeElement!).outlineStyle,
+              await keyboardLink.evaluate(
+                (e) => getComputedStyle(e).outlineStyle,
               ),
               "none",
+              "Keyboard navigation to a link must retain its visible outline",
             );
           }
         }

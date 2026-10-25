@@ -46,7 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             {user.permissions.includes(PERMISSIONS.PRODUCT_READ) && (
             <form action="/admin/products" method="get" role="search" aria-label="Pencarian produk dari header" className="relative w-full max-w-[420px]">
               <Search size={19} aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input type="search" name="q" placeholder="Cari produk..." className="h-10 w-full rounded-full border border-transparent bg-zinc-100 pl-11 pr-4 text-sm outline-none transition focus:border-zinc-300 focus:bg-white" />
+              <input type="search" name="q" placeholder="Cari produk..." className="h-10 w-full rounded-full border border-transparent bg-zinc-100 pl-11 pr-4 text-sm outline-none transition focus:border-zinc-600" />
             </form>
             )}
             <div className="ml-auto flex items-center gap-5">

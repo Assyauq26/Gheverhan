@@ -48,7 +48,7 @@ const OPTION_LABELS: Record<string, string> = {
   star: "Bintang",
 };
 const inputClass =
-  "mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
+  "mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-600 focus:outline-none focus:ring-0";
 export function Field({
   label,
   children,

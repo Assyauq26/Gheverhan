@@ -73,7 +73,7 @@ export function AdminMobileBottomNav({ permissions }: { permissions: string[] })
   const pinned = links.filter(item => ["/admin", "/admin/products", "/admin/orders", "/admin/inventory"].includes(item.href) && allowed(permissions, item));
   const extra = links.filter(item => !pinned.some(p => p.href === item.href) && allowed(permissions, item));
   return (
-    <nav aria-label="Navigasi bawah admin" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_32px_rgba(0,0,0,0.04)] backdrop-blur-lg md:hidden">
+    <nav aria-label="Navigasi bawah admin" className="fixed inset-x-0 bottom-0 z-40 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgb(0_0_0_/_0.11)] backdrop-blur-lg md:hidden">
       <div className="mx-auto flex w-full max-w-xl items-end justify-between gap-1">
         {pinned.map(item => {
           const active = activeLink(pathname, item.href, "exact" in item ? item.exact : false);
@@ -81,13 +81,13 @@ export function AdminMobileBottomNav({ permissions }: { permissions: string[] })
           return <Link key={item.href} href={item.href} prefetch={false}
             data-testid={`adminnav-${item.label.toLowerCase()}`}
             aria-current={active ? "page" : undefined}
-            className={cn("flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium transition-colors", active ? "bg-black text-white" : "text-zinc-500 hover:bg-zinc-100")}>
+            className={cn("flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium transition-[background-color,color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none", active ? "bg-black text-white shadow-sm" : "text-zinc-500 hover:bg-zinc-100")}>
             <Icon size={23} strokeWidth={active ? 2.2 : 1.9} aria-hidden="true" />
             <span>{item.label}</span>
           </Link>;
         })}
         <details className="group relative min-w-0 flex-1">
-          <summary className="flex min-h-[58px] cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-medium text-zinc-500 hover:bg-zinc-100 [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-[58px] cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-medium text-zinc-500 transition-colors duration-300 hover:bg-zinc-100 motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
             <Menu size={23} strokeWidth={1.9} aria-hidden="true" />
             <span>Lainnya</span>
           </summary>

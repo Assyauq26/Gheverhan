@@ -304,6 +304,11 @@ export async function verifyStoreAppearance({
       "customize: header visibility and bottom-bar layout affect the shared preview",
       async () => {
         const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        // The preceding save/logo-preview scenario may still have a GET in
+        // flight when its status message appears. Finish prior page/iframe
+        // requests BEFORE measuring reads caused by palette/layout changes.
+        // Requests started after this point must still be zero.
+        await page.waitForLoadState("networkidle", { timeout: 15000 });
         let logoReads = 0;
         const track = (request: { url(): string; method(): string }) => {
           if (

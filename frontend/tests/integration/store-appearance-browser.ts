@@ -33,6 +33,27 @@ export async function verifyStoreAppearance({
   page.on("pageerror", (e) => errors.push(e.message));
   try {
     await check("customize: server RBAC and private preview", async () => {
+      assert.equal(
+        (
+          await anonymous.request.get(base + "/api/v1/admin/store-appearance")
+        ).status(),
+        401,
+      );
+      assert.equal(
+        (
+          await readOnly.request.get(base + "/api/v1/admin/store-appearance")
+        ).status(),
+        403,
+      );
+      assert.equal(
+        (
+          await readOnly.request.post(base + "/api/v1/admin/store-appearance", {
+            headers: { Origin: base },
+            data: { kind: "reset", draftVersion: 0, publishedVersion: 0 },
+          })
+        ).status(),
+        403,
+      );
       const denied = await readOnly.request.get(base + "/admin/customize");
       assert.equal(denied.status(), 404);
       const preview = await anonymous.request.get(
@@ -454,6 +475,26 @@ export async function verifyStoreAppearance({
               ).draft,
             ).identity.name,
             "First tab",
+          );
+          const state = await db.storeAppearance.findUniqueOrThrow({
+            where: { key: "primary" },
+          });
+          const stale = await admin.request.post(
+            base + "/api/v1/admin/store-appearance",
+            {
+              headers: { Origin: base },
+              data: {
+                kind: "save",
+                draftVersion: state.draftVersion - 1,
+                publishedVersion: state.publishedVersion,
+                config: state.draft,
+              },
+            },
+          );
+          assert.equal(
+            stale.status(),
+            409,
+            "HTTP clients receive the same optimistic conflict",
           );
         } finally {
           await other.close();

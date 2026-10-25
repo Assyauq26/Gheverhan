@@ -31,6 +31,7 @@ const secret = randomBytes(32).toString("hex");
 process.env.JWT_SECRET = secret;
 const storageToken = randomUUID();
 const objects = new Map<string, { bytes: Buffer; mime: string }>();
+const brandingObjects = new Map<string, { bytes: Buffer; mime: string }>();
 const emailCodes = new Map<string, string>();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
 const db = new PrismaClient({ datasources: { db: { url: target } } });
@@ -88,7 +89,7 @@ async function main() {
       const bytes = Buffer.concat(chunks);
       if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs", "/storage/v1/object/store-branding"].includes(url.pathname) && req.method === "DELETE") {
         const prefixes = JSON.parse(bytes.toString()).prefixes as string[];
-        for (const key of prefixes) objects.delete(key);
+        for (const key of prefixes) (url.pathname.endsWith("/store-branding") ? brandingObjects : objects).delete(key);
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify([])); return;
       }
       const parts = url.pathname.split("/");
@@ -96,12 +97,13 @@ async function main() {
         res.writeHead(404).end(); return;
       }
       const objectPath = decodeURIComponent(parts.slice(5).join("/"));
+      const bucketObjects = parts[4] === "store-branding" ? brandingObjects : objects;
       if (req.method === "POST") {
-        if (objects.has(objectPath)) { res.writeHead(409).end(); return; }
-        objects.set(objectPath, { bytes, mime: String(req.headers["content-type"]) });
+        if (bucketObjects.has(objectPath)) { res.writeHead(409).end(); return; }
+        bucketObjects.set(objectPath, { bytes, mime: String(req.headers["content-type"]) });
         res.writeHead(201, { "Content-Type": "application/json" }).end(JSON.stringify({ Key: objectPath })); return;
       }
-      const object = objects.get(objectPath);
+      const object = bucketObjects.get(objectPath);
       if (!object) { res.writeHead(404).end(); return; }
       res.setHeader("Content-Type", object.mime); res.end(object.bytes);
     } catch { res.writeHead(400).end(); }

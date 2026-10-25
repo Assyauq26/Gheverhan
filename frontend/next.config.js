@@ -5,7 +5,7 @@ require('node:child_process').execFileSync(process.execPath, [require('node:path
 const nextConfig = {
   reactStrictMode: true,
   async headers() {
-    return [{ source: "/admin/customize", headers: [{ key: "Cache-Control", value: "private, no-store" }] }, { source: "/api/v1/admin/store-branding/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Vary", value: "Cookie" }] }, { source: "/store-customize-preview", headers: [
+    return [{ source: "/api/v1/admin/store-appearance", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Vary", value: "Cookie" }] }, { source: "/admin/customize", headers: [{ key: "Cache-Control", value: "private, no-store" }] }, { source: "/api/v1/admin/store-branding/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Vary", value: "Cookie" }] }, { source: "/store-customize-preview", headers: [
       { key: "Cache-Control", value: "private, no-store" },
       { key: "Content-Security-Policy", value: "connect-src 'none'; form-action 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" },
       { key: "X-Robots-Tag", value: "noindex, nofollow" },

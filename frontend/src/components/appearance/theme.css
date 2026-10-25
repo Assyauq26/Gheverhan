@@ -53,7 +53,8 @@
   color: var(--store-link);
 }
 .storefront-root[data-theme-active="true"]
-  a.text-white:is(
+  main
+  a.text-white:not([data-button-variant]):is(
     :hover,
     :focus-visible,
     [aria-current="page"],
@@ -580,4 +581,12 @@
 .storefront-root[data-theme-active="true"]
   :is(.text-amber-700, .text-amber-800, .text-yellow-700) {
   color: var(--store-warning);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="destructive"]:is(:hover, :active, :focus-visible) {
+  color: var(--store-error-foreground);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="success"]:is(:hover, :active, :focus-visible) {
+  color: var(--store-success-foreground);
 }

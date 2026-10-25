@@ -40,8 +40,8 @@ describe("store appearance contract", () => {
     expect(contrast(style["--store-search-border"], config.colors.surface)).toBeLessThan(2);
     expect(style["--store-radius"]).toBe("16px");
     expect(style["--store-media-radius"]).toBe("12px");
-    expect(style["--store-shadow"]).toContain("0.05");
-    expect(style["--store-shadow-hover"]).toContain("0.08");
+    expect(style["--store-shadow"]).toContain("/ .05");
+    expect(style["--store-shadow-hover"]).toContain("/ .08");
     const soft = structuredClone(config);
     soft.styling.radius = "soft";
     expect(themeStyle(soft)).toHaveProperty("--store-radius", "12px");

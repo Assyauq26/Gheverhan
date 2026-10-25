@@ -37,7 +37,7 @@ export function SearchBar({ className = "", readOnlyPreview = false }: { classNa
         onChange={(e) => setQ(e.target.value)}
         placeholder="Cari produk, brand, atau kategori..."
         data-testid="search-input"
-        className="h-11 w-full rounded-full border border-line bg-surface pl-11 pr-12 text-sm text-ink placeholder:text-ink-muted focus:border-zinc-600 focus:bg-white focus:outline-none focus:ring-0"
+        className="h-11 w-full rounded-full border border-line bg-surface pl-11 pr-12 text-sm text-ink placeholder:text-ink-muted focus:border-zinc-600 focus:outline-none focus:ring-0"
       />
       <button
         type="submit"

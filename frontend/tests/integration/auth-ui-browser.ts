@@ -198,12 +198,12 @@ async function main() {
             const focused = await input.evaluate((e) => ({
               border: getComputedStyle(e).borderTopWidth,
               borderColor: getComputedStyle(e).borderTopColor,
-              outline: getComputedStyle(e).outlineWidth,
+              outline: getComputedStyle(e).outlineStyle,
               shadow: getComputedStyle(e).boxShadow,
             }));
             assert.equal(focused.border, "1px", "Auth field must keep a single focus border");
             assert.equal(focused.borderColor, "rgb(82, 82, 91)", "Auth field focus is distinguishable without extra outline");
-            assert.equal(focused.outline, "0px", "Auth field must not add an extra outline");
+            assert.equal(focused.outline, "none", "Auth field must not draw an extra outline");
             assert.equal(focused.shadow, "none", "Auth field must not add a focus halo");
             await input.evaluate((e) => (e as HTMLInputElement).blur());
             geometry.push({

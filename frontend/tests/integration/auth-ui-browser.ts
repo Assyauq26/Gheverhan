@@ -236,12 +236,19 @@ async function main() {
             );
             await expect(page.getByTestId("google-login")).toBeDisabled();
             await expect(page.getByTestId("whatsapp-login")).toBeDisabled();
-            await page.keyboard.press("Tab");
+            // Text fields intentionally rely on their single border;
+            // Tab from a blurred field may simply focus another text input.
+            // Verify a real keyboard-focused LINK retains its visible ring.
+            await input.focus();
+            await page.keyboard.press("Shift+Tab");
+            const keyboardLink = page.locator(".auth-ui a:focus-visible");
+            await expect(keyboardLink).toHaveCount(1);
             assert.notEqual(
-              await page.evaluate(
-                () => getComputedStyle(document.activeElement!).outlineStyle,
+              await keyboardLink.evaluate(
+                (e) => getComputedStyle(e).outlineStyle,
               ),
               "none",
+              "Keyboard navigation to a link must retain its visible outline",
             );
           }
         }

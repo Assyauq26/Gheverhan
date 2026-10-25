@@ -32,7 +32,7 @@ describe("store appearance contract", () => {
   });
   it("published Monochrome keeps discreet card and search decoration", () => {
     const config = PRESETS[0].config;
-    const style = themeStyle(config) as Record<string, string>;
+    const style = themeStyle(config) as unknown as Record<string, string>;
     // Accessible form controls still use the high-contrast border token.
     expect(contrast(config.colors.border, config.colors.field)).toBeGreaterThanOrEqual(3);
     // Decorative outlines must not inherit that strong border as a solid line.

@@ -1,0 +1,25 @@
+{
+  "baselineMain": "6c1e05020a92809e0b515e22dc0855207eac0a95",
+  "testedFrontendTree": "f11f10e8302628daf343c4f61314cea17138cfba",
+  "sourceDiffSha256": "060d4cf4d58f61dac5e518b13f03a363a6c53cadfad4400ac3da36672d87fbd9",
+  "note": "Local screenshots/browser runs precede the feature commit. Their commitSha is the baseline; testedFrontendTree identifies the staged source. Final CI validates the pushed head again.",
+  "baselineUnitTests": 494,
+  "finalUnitTests": 497,
+  "unitFiles": 60,
+  "containment": 25,
+  "mitigation": 9,
+  "workflowPolicy": 11,
+  "baselineBrowserChecks": 48,
+  "finalBrowserChecks": 48,
+  "preFixRegression": {
+    "actualHeaderBottom": "1px",
+    "expectedHeaderBottom": "0px",
+    "result": "expected failure on baseline build"
+  },
+  "screenshotsPerSet": 16,
+  "postgresTests": 207,
+  "postgresSuites": 20,
+  "operationsBrowserChecks": 21,
+  "authBrowserChecks": 15,
+  "hydration": "PASS, errors=[]"
+}

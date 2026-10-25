@@ -1,0 +1,16 @@
+AssertionError [ERR_ASSERTION]: legacy 390: header bottom
+
+'1px' !== '0px'
+
+    at assertBorderless (/workspace/Gheverhan/frontend/tests/integration/store-appearance-browser.ts:37:10)
+    at async <anonymous> (/workspace/Gheverhan/frontend/tests/integration/store-appearance-browser.ts:104:9)
+    at async check (/workspace/Gheverhan/frontend/tests/integration/product-browser.ts:43:69)
+    at async verifyStoreAppearance (/workspace/Gheverhan/frontend/tests/integration/store-appearance-browser.ts:99:5)
+    at async main (/workspace/Gheverhan/frontend/tests/integration/product-browser.ts:148:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '1px',
+  expected: '0px',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

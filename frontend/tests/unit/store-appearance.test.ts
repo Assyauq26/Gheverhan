@@ -52,6 +52,25 @@ describe("store appearance contract", () => {
     expect(themeStyle(none)).toHaveProperty("--store-radius", "0px");
     expect(themeStyle(none)).toHaveProperty("--store-shadow", "none");
   });
+  it.each(["none", "soft", "raised"] as const)(
+    "floating shell elevation follows %s without changing saved data or card tokens",
+    (shadow) => {
+      for (const preset of PRESETS) {
+        const config = structuredClone(preset.config);
+        config.styling.shadow = shadow;
+        const before = JSON.stringify(config);
+        const style = themeStyle(config);
+        expect(JSON.stringify(config)).toBe(before);
+        expect(style).toHaveProperty("--store-border", config.colors.border);
+        expect(style).toHaveProperty("--store-shell-shadow", {
+          none: "none",
+          soft: `0 4px 16px rgb(${config.colors.navText.match(/[a-f\d]{2}/gi)!.map((channel) => parseInt(channel, 16)).join(" ")} / .08)`,
+          raised: `0 8px 24px rgb(${config.colors.navText.match(/[a-f\d]{2}/gi)!.map((channel) => parseInt(channel, 16)).join(" ")} / .14)`,
+        }[shadow]);
+        if (shadow === "soft") expect(style).toHaveProperty("--store-shadow", "0 2px 12px rgb(0 0 0 / .05)");
+      }
+    },
+  );
   it.each([
     "javascript:alert(1)",
     "data:text/html,x",

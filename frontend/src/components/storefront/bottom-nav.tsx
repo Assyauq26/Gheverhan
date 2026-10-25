@@ -39,7 +39,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center justify-center gap-1 rounded-full border border-line bg-white/95 p-1.5 shadow-lg backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center justify-center gap-1 rounded-full bg-white/95 p-1.5 backdrop-blur md:hidden"
       data-style={config.mobile.style}
       data-testid="bottom-nav"
     >

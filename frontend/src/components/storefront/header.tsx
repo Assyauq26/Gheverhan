@@ -39,7 +39,7 @@ export function StorefrontHeader({
   }, []);
 
   return (
-    <header data-logo-position={config.identity.position} data-layout={config.header.layout} className={`${config.header.sticky ? "sticky top-0" : "relative"} z-30 border-b border-line bg-white/95 backdrop-blur`}>
+    <header data-logo-position={config.identity.position} data-layout={config.header.layout} className={`${config.header.sticky ? "sticky top-0" : "relative"} z-30 bg-white/95 backdrop-blur`}>
       {config.header.announcement && <p className="px-4 py-2 text-center text-sm">{config.header.announcement}</p>}
       <div className="container flex items-center gap-4 py-3">
         <Link prefetch={preview ? false : undefined} href="/" className="font-display text-2xl font-extrabold tracking-tight" data-testid="logo" title={config.identity.name} aria-label={config.identity.name}>

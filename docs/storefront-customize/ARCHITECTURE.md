@@ -67,3 +67,5 @@ The theme cannot guarantee contrast inside product photography; hero imagery has
 Preview logo bytes are fetched once per immutable asset ID into page memory and sent once per iframe handshake. Color/layout edits send only the validated configuration. Blob URLs are retained for the matching ID, revoked on replacement/unmount, and never persisted to browser storage. Browser regression verifies zero private-logo reads while editing palettes/layouts.
 
 Semantic feedback, links and prices are checked against all body surfaces where they render. Shell links use their own foreground when header/footer and body palettes differ; this includes hover/focus. Generated semantic-button foregrounds choose pure black or white, with an exhaustive256-gray boundary test proving AA; hover/pressed move away from that foreground.
+
+Gradient validation samples every interval as well as global positions/stops; a regression fixture covers a compressed black-to-white transition whose endpoints alone both pass against gray text.

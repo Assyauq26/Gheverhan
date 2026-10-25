@@ -2,7 +2,7 @@
 
 All writes and browser users in this report use synthetic fixtures and a disposable loopback PostgreSQL17 container. No Production bindings, user data, migration, VPS deployment or live theme update was used.
 
-Baseline: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`; baseline unit suite447/447 PASS. Tested implementation code: `1864a34ebf606b1d29508e218ae1b8d632378eec`. Documentation/evidence commits do not change that application tree. Exact source/tree and totals are in [verification-summary.json](evidence/verification-summary.json).
+Baseline: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`; baseline unit suite447/447 PASS. Full browser-tested implementation: `1864a34ebf606b1d29508e218ae1b8d632378eec`. The final source adds stricter per-segment gradient validation, covered by the493-unit suite and the final CI rerun. Current-head CI validates all gates again; the committed local browser report preserves its original code/build identity. Exact source/tree and totals are in [verification-summary.json](evidence/verification-summary.json).
 
 ## Executed checks
 
@@ -11,7 +11,7 @@ Baseline: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`; baseline unit suite44
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS, no ESLint warnings/errors; Next's CLI deprecation notice remains |
 | `npm run build` | PASS, optimized Next15 production build and Prisma generation |
-| `npm test` | **492 PASS /60 files**, zero failures |
+| `npm test` | **493 PASS /60 files**, zero failures |
 | Hardened offline `Dockerfile.test` runner |488 unit +25 containment +9 mitigation PASS on intermediate source; final-source offline result is reported by the unchanged GitHub unit job |
 | Existing isolated PostgreSQL suites | **193 PASS**, zero fail/skip |
 | `store-appearance-migration.test.ts` + `store-appearance.test.ts` | **13 PASS**, zero fail/skip |
@@ -27,7 +27,7 @@ Sanitized command tails: [command-results.txt](evidence/command-results.txt). Br
 
 ## What the new tests prove
 
-- All10 presets are structurally complete, render in the shared iframe and pass the declared WCAG pairs. Automatic foreground generation also passes every grayscale boundary from0 through255.
+- All10 presets are structurally complete, render in the shared iframe and pass the declared WCAG pairs. Narrow gradient transitions are also sampled within every interval, so a1% transition cannot hide between global samples. Automatic foreground generation also passes every grayscale boundary from0 through255.
 - Strict schema, unknown version/keys, URL/encoded traversal, CSS injection, required mobile destinations and separate branding path/PDF rejection.
 - Authoritative permission checks for private reads, actions, preview and media; a customer identity is denied even with a misplaced permission. Direct admin HTTP clients receive401/403 and409 as appropriate.
 - Public no-row reads perform no bootstrap write. Saved draft does not appear in visitor HTML, image references or branding before Publish.

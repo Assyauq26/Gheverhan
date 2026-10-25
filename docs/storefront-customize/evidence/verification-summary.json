@@ -1,10 +1,9 @@
 {
   "baselineMain": "b452fd10d52e9d439a58b9d0466ba4991ac8dcf0",
-  "testedCodeCommit": "1864a34ebf606b1d29508e218ae1b8d632378eec",
-  "frontendTree": "b563705e286d5812067b7a7a9f944a343b7674ae",
+  "frontendTree": "9369d063ce3da1432bc561239c4b32ceb72aa60a",
   "synthetic": true,
   "unit": {
-    "pass": 492,
+    "pass": 493,
     "fail": 0,
     "files": 60
   },
@@ -58,5 +57,7 @@
     "casesPerCycle": 44,
     "resultSource": "https://github.com/Assyauq26/Gheverhan/pull/103/checks",
     "note": "Final CI result and artifact links are reported on the Draft PR, not inferred from an in-progress job."
-  }
+  },
+  "browserTestedCodeCommit": "1864a34ebf606b1d29508e218ae1b8d632378eec",
+  "sourceNote": "Final source includes per-segment gradient hardening beyond the local browser commit; final current-head CI reruns all gates."
 }

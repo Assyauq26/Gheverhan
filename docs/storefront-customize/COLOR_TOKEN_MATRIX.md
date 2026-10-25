@@ -22,7 +22,7 @@ The typed registry has **53 tokens**. Each preset supplies every key; strict val
 | header / footer | Customer shell | Explicit gradient foreground and fallback |
 | highlightCard | Product cards | Explicit gradient foreground and fallback |
 
-Linear only,2–4 ascending stops,0/100 endpoints, integer angle0–360. Contrast checks every stop plus11 evenly spaced samples and solid fallback. No user `url()`, CSS text or style attribute is accepted.
+Linear only,2–4 ascending stops,0/100 endpoints, integer angle0–360. Contrast checks every stop plus11 global samples and11 samples within each interval and solid fallback. No user `url()`, CSS text or style attribute is accepted.
 
 ## Contrast and compatibility
 

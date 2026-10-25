@@ -117,6 +117,17 @@ export function contrastErrors(v: StoreAppearanceV1): string[] {
     const positions = [
       ...Array.from({ length: 11 }, (_, i) => i * 10),
       ...g.stops.map((s) => s.position),
+      // Sample each interval too: a 1% transition can fall between global samples.
+      ...g.stops
+        .slice(1)
+        .flatMap((stop, index) =>
+          Array.from(
+            { length: 11 },
+            (_, sample) =>
+              g.stops[index].position +
+              ((stop.position - g.stops[index].position) * sample) / 10,
+          ),
+        ),
     ];
     const samples = positions.map((p) => {
       const right = g.stops.findIndex((s) => s.position >= p);

@@ -4,10 +4,9 @@ unit
 
 
  Test Files  60 passed (60)
-      Tests  492 passed (492)
-   Start at  00:36:45
-   Duration  14.82s (transform 2.43s, setup 0ms, import 8.84s, tests 5.85s, environment 4.42s)
-
+      Tests  493 passed (493)
+   Start at  04:17:17
+   Duration  19.70s (transform 3.45s, setup 0ms, import 11.98s, tests 7.65s, environment 5.67s)
 
 legacy PostgreSQL
   ...
@@ -61,4 +60,3 @@ PASS anonymous legal routes have canonical/SEO/draft metadata and footer entry p
 
 preflight
 {"status":"PASS","tables":4,"permissions":3,"provider":"local","publishedVersion":0,"readOnly":true,"scope":"schema/config only; upload/provider contract tested separately"}
-

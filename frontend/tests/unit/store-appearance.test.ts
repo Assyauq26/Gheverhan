@@ -7,7 +7,11 @@ import {
   TOKEN_KEYS,
 } from "@/modules/appearance/schema";
 import { PRESETS } from "@/modules/appearance/presets";
-import { contrast, contrastErrors, foreground } from "@/modules/appearance/contrast";
+import {
+  contrast,
+  contrastErrors,
+  foreground,
+} from "@/modules/appearance/contrast";
 import { themeStyle, isLegacy } from "@/modules/appearance/runtime";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import { resolveStorageObject } from "@/lib/storage-path";
@@ -152,4 +156,24 @@ it("automatic foreground meets AA throughout the grayscale boundary", () => {
     const bg = "#" + n.toString(16).padStart(2, "0").repeat(3);
     expect(contrast(foreground(bg), bg)).toBeGreaterThanOrEqual(4.5);
   }
+});
+
+it("rejects low contrast inside a narrow gradient interval", () => {
+  const v = makeDefault();
+  v.gradients.buttons = {
+    enabled: true,
+    angle: 90,
+    fallback: "#000000",
+    foreground: "#767676",
+    stops: [
+      { color: "#000000", position: 0 },
+      { color: "#000000", position: 49 },
+      { color: "#FFFFFF", position: 50 },
+      { color: "#FFFFFF", position: 100 },
+    ],
+  };
+  expect(appearanceSchema.safeParse(v).success).toBe(true);
+  expect(contrastErrors(v).some((error) => error.includes("buttons"))).toBe(
+    true,
+  );
 });

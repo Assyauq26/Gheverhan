@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "unpatched": false,
+  "browser": "154.0.8037.57",
+  "errors": [],
+  "html": "<main class=\"hydration-fixture\">fixture value</main>"
+}

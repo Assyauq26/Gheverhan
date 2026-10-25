@@ -1,37 +1,66 @@
-# Verification ledger (in progress)
+# Verification
 
-All runtime fixtures are synthetic and all database writes target the disposable loopback PostgreSQL17 container. No Production environment, customer data, migration or theme was used.
+All writes and browser users in this report use synthetic fixtures and a disposable loopback PostgreSQL17 container. No Production bindings, user data, migration, VPS deployment or live theme update was used.
 
-Baseline source: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`. Baseline local unit run: **447/447 PASS** on Node22.23.4. Current implementation adds strict schema, permission/action, published fallback, media and lifecycle tests.
+Baseline: main `b452fd10d52e9d439a58b9d0466ba4991ac8dcf0`; baseline unit suite447/447 PASS. Tested implementation code: `1864a34ebf606b1d29508e218ae1b8d632378eec`. Documentation/evidence commits do not change that application tree. Exact source/tree and totals are in [verification-summary.json](evidence/verification-summary.json).
 
-## Results captured so far
+## Executed checks
 
-| Check | Actual result |
+| Command / gate | Actual result |
 | --- | --- |
-| Node22 typecheck | PASS |
-| Next lint | PASS; framework deprecation notice only on latest run |
-| Production build | PASS on intermediate implementation; final revision rerun pending |
-| Unit suite | 488 PASS on intermediate implementation; final additions rerun pending |
-| Offline hardened container | 473 unit +25 containment +9 mitigation PASS on intermediate implementation; final revision rerun pending |
-| Customize PostgreSQL lifecycle/media | 12/12 PASS |
-| Existing PostgreSQL suites | Initial run185 PASS /8 FAIL; failures were migration-ledger count/latest-migration assumptions after additive migration |
-| Targeted migration/preflight rerun | 22/22 PASS after updating count13 and preserving size-chart historical boundary |
-| Real disposable Supabase Storage | Byte/authorization/upload/delete assertions PASS for product and branding namespace; report counter adjusted from2 to4 objects; final rerun pending |
-| Chromium Customize |7 checkpoints PASS: RBAC, private draft/preview, publish+SSR color,11 viewport widths, two-tab conflict, append-only rollback, no editor runtime exceptions |
-| Existing Chromium products | Reached flash-sale check; local seeded catalog introduced multiple active flash-sale fixtures. Rerun on clean disposable database pending; no assertion removed |
+| `npm run typecheck` | PASS |
+| `npm run lint` | PASS, no ESLint warnings/errors; Next's CLI deprecation notice remains |
+| `npm run build` | PASS, optimized Next15 production build and Prisma generation |
+| `npm test` | **492 PASS /60 files**, zero failures |
+| Hardened offline `Dockerfile.test` runner |488 unit +25 containment +9 mitigation PASS on intermediate source; final-source offline result is reported by the unchanged GitHub unit job |
+| Existing isolated PostgreSQL suites | **193 PASS**, zero fail/skip |
+| `store-appearance-migration.test.ts` + `store-appearance.test.ts` | **13 PASS**, zero fail/skip |
+| `scripts/appearance/preflight.ts` | PASS:4 RLS tables,3 permissions, configured local provider; schema/config check only |
+| Real disposable Supabase Storage API drill | PASS: product and branding namespace byte integrity, private/public anonymous denial, invalid bearer denial, duplicate upload denial, verified delete |
+| `product-browser.ts` | **46 PASS**, including12 Customize checkpoints and unchanged commerce/media/variation assertions |
+| `operations-browser.ts` | **21 PASS**, including390/1360 shipping/payment proof, rejection/resubmission/approval and totals/stock checks |
+| `auth-ui-browser.ts` | **15 PASS**, including9 viewport geometry checks, OTP/reset/revocation and neutral legal/auth surfaces |
+| `react-hydration-replay.ts` | PASS, zero recoverable errors on the actual patched App Router runtime |
+| Navigation stability gate | Existing **10 cycles ×44 cases** remains unchanged. The final result/matrix is generated and uploaded by CI; consult [current PR checks](https://github.com/Assyauq26/Gheverhan/pull/103/checks) and the PR validation description for the completed run rather than treating a running job as PASS. |
 
-## Evidence conditions
+Sanitized command tails: [command-results.txt](evidence/command-results.txt). Browser checkpoints and exact source/build/browser versions: [browser-results.json](evidence/browser-results.json). Auth and hydration details are adjacent JSON reports.
 
-`evidence/` contains synthetic before/after screenshots. The committed captures now use authenticated dummy customer fixtures, identical data, fixed synthetic product images, reduced motion and completed image/font loading. Ten of12 captures match byte-for-byte at decoded pixel level. Home390 differs in42 channels (max delta2/255); checkout1360 differs in153 channels (max delta1/255). No channel differs by more than2/255. Exact metrics are retained in baseline-comparison.json; this is not a claim of12 pixel-exact matches. Earlier anonymous/cache-misaligned diagnostic captures were replaced. Reproduction helper: tests/integration/store-appearance-baseline.ts.
+## What the new tests prove
 
-Final screenshots focus390/1360. Additional overflow widths:320,360,375,390,430,768,1024,1280,1360,1440,1920. Preview widths390/768/1360.
+- All10 presets are structurally complete, render in the shared iframe and pass the declared WCAG pairs. Automatic foreground generation also passes every grayscale boundary from0 through255.
+- Strict schema, unknown version/keys, URL/encoded traversal, CSS injection, required mobile destinations and separate branding path/PDF rejection.
+- Authoritative permission checks for private reads, actions, preview and media; a customer identity is denied even with a misplaced permission. Direct admin HTTP clients receive401/403 and409 as appropriate.
+- Public no-row reads perform no bootstrap write. Saved draft does not appear in visitor HTML, image references or branding before Publish.
+- Atomic save/publish races have exactly one winner; stale versions fail without overwrite. Invalid contrast can save draft but cannot publish. Rollback appends a revision and preserves draft/history assets.
+- PNG/JPEG/WebP signatures, size, dimensions/frames, explicit PNG animation envelope rejection, canonical WebP and metadata removal; staging ownership/session, idempotency, current-published-only public reads, retirement/reference protection, expiry retention and atomic rate buckets.
+- Additive migration preserves legacy Product/SKU values; a blocked Permission lock fails within the bound, rolls back all new DDL and succeeds through official Prisma resolve/retry with exact checksums. Existing migration assertions retain their historical boundaries and now account for13 migrations.
+- Logo text/image/both, real canonical logo read, error fallback, live gradient normal/hover state, contrasting header-gradient hover, header visibility, bottom-bar labels, no admin token inheritance, two tabs, real touch preview and all three iframe widths.
+- Palette/layout edits perform zero additional private-logo requests after initial loading. Preview uses synthetic presentation with no transactional handlers and a sandbox/CSP boundary.
 
-## Reproduction
+## Visual evidence and limits
 
-Use Node22 and an explicitly disposable loopback database named `gheverhan_sprint1_test`, with the existing CI fixture environment. Run `npm ci --ignore-scripts`, Prisma engine setup/generate/deploy, typecheck, lint, build and the exact existing isolated workflow. Customize integration is `node --disable-proto=throw --import tsx --test tests/integration/store-appearance.test.ts`. New browser checks run inside the existing product-browser runner before its unchanged commerce assertions.
+Authenticated baseline captures compare identical data, fixed synthetic product images, completed font/image loading and reduced motion. Home/shop/PDP/cart/account/checkout were captured at390 and1360. Ten of12 decoded screenshots match exactly; home390 differs in42 channels with max delta2/255, and checkout1360 in153 channels with max delta1/255. No channel differs by more than2/255. See [baseline-comparison.json](evidence/baseline-comparison.json). This is **not** a claim of12 pixel-exact matches or a comparison of Production photography.
 
-`npm run test:ci` requires the repository's hardened offline container profile for its extra OS-boundary assertions; the managed host is not that profile. CA proxy trust was supplied through the existing BuildKit secret mount, without disabling TLS verification.
+Studio/storefront screenshots: [desktop editor](evidence/customize-editor-1360.png), [mobile editor](evidence/customize-editor-390.png), [desktop preview](evidence/customize-preview-1360.png), [mobile touch preview](evidence/customize-preview-390.png), [desktop published](evidence/customize-storefront-1360.png), [mobile published](evidence/customize-storefront-390.png).
 
-## Remaining gates
+Document overflow checks cover320,360,375,390,430,768,1024,1280,1360,1440,1920. The iframe is measured at390/768/1360. Existing variation/auth regressions also exercise keyboard, enlarged text and reduced motion. New editor captures have no unhandled browser exceptions. Deliberately aborted logo requests test fallback; that is not a claim that all network-console events are absent.
 
-Final-source rebuild and complete reruns,10 navigation cycles, operations/auth/hydration browser suites, final CI/review status and physical-device/manual assistive-technology QA. This ledger deliberately does not claim100% completion or Production readiness.
+The preview is a shared-component gallery with synthetic content, not a live checkout session. Actual VPS provider/storage readiness and physical iOS/Android/screen-reader QA remain release checks. Auth/legal stay neutral by agreement. No independent human review or Production readiness is implied by automated PASS results.
+
+## Reproduce safely
+
+Use Node22, a disposable loopback database named `gheverhan_sprint1_test`, and the fixture variables from the existing isolated CI workflow. Install locked dependencies, prepare Prisma, apply migrations and build before running browser scripts. Direct Node integration services use the CI-only server-only marker setup already present in that workflow.
+
+Run the unchanged workflow gates plus:
+
+```sh
+node --disable-proto=throw --import tsx --test tests/integration/store-appearance-migration.test.ts
+node --disable-proto=throw --import tsx --test tests/integration/store-appearance.test.ts
+STORAGE_PROVIDER=local STORAGE_LOCAL_ROOT=/tmp node --import tsx scripts/appearance/preflight.ts
+```
+
+For baseline images, seed a separate disposable fixture, run detached main and feature servers against the same fixture with no concurrent commerce tests, then run `tests/integration/store-appearance-baseline.ts`. Do not seed or reset a Production environment.
+
+The hardened unit runner requires its offline/read-only/unprivileged container profile. The managed host is not that profile. Its first build needed the configured proxy CA; a later local build exhausted disk and stopped only the disposable PostgreSQL container. Generated Docker caches were removed, that container restarted, and affected checks rerun. No containment assertion or TLS verification was disabled.
+
+Browser fixtures retain the singleton/history for the app server's lifetime, then tear down rows and generated cache only after stopping it. Branding objects have their own bucket map in the storage double, so existing product-object count assertions remain unchanged. Warmed-cache assertions still run inside the same live server.

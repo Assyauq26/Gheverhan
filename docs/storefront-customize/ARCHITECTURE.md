@@ -59,3 +59,11 @@ Preview is a representative component gallery, not a live customer checkout sess
 No record, unavailable database, unknown schema, corrupt JSON: public safe fallback. Admin persistence failures are shown and do not fake success. Concurrent tabs must reload rather than overwrite. Publish with a missing/foreign/expired logo is rejected. Old logo requests stop working after reference change, while retained history can still restore the bytes. A DB/storage failure leaves cleanup records retryable.
 
 The theme cannot guarantee contrast inside product photography; hero imagery has no editable text overlay. Core commerce destinations and legal destinations remain fixed. New gradients, preset tokens and all declared foreground/state pairs are server checked before publication.
+
+## Implemented admin HTTP interface
+
+`GET /api/v1/admin/store-appearance` requires Customize read plus backoffice identity and returns the saved draft, published snapshot and both versions with private/no-store headers. `POST` accepts `{kind, draftVersion, publishedVersion, config?, revision?}` for save/discard/reset/publish/rollback. It bounds streamed JSON to40,000 bytes, requires same Origin, and delegates to the exact authorization/transaction/cache executor used by server actions. Transport errors include401/403,409 conflict,413 payload limit and422 validation; server-action clients retain the existing `runAction` envelope with `httpStatus:409` on conflicts.
+
+Preview logo bytes are fetched once per immutable asset ID into page memory and sent once per iframe handshake. Color/layout edits send only the validated configuration. Blob URLs are retained for the matching ID, revoked on replacement/unmount, and never persisted to browser storage. Browser regression verifies zero private-logo reads while editing palettes/layouts.
+
+Semantic feedback, links and prices are checked against all body surfaces where they render. Shell links use their own foreground when header/footer and body palettes differ; this includes hover/focus. Generated semantic-button foregrounds choose pure black or white, with an exhaustive256-gray boundary test proving AA; hover/pressed move away from that foreground.

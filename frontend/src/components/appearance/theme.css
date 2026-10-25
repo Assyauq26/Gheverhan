@@ -622,3 +622,29 @@
   background: var(--store-secondaryHover);
   color: var(--store-secondaryForeground);
 }
+
+/*
+ * Original Gheverhan storefront: interactive controls still use the
+ * AA-checked border token, while product cards and search use subtle
+ * decorative outlines. Scope this to published themes AND the studio preview,
+ * so existing published Monochrome snapshots get the same fix without writes.
+ */
+.storefront-root[data-theme-active="true"] article[data-theme-target="highlightCard"] {
+  border-color: var(--store-decorative-border);
+  border-radius: var(--store-radius);
+  box-shadow: var(--store-shadow);
+}
+.storefront-root[data-theme-active="true"] article[data-theme-target="highlightCard"]:hover {
+  box-shadow: var(--store-shadow-hover);
+}
+.storefront-root[data-theme-active="true"] article[data-theme-target="highlightCard"] .rounded-xl {
+  border-radius: var(--store-media-radius);
+}
+.storefront-root[data-theme-active="true"] [data-testid="search-bar"] input[data-testid="search-input"] {
+  background-color: var(--store-surface);
+  border-color: var(--store-search-border);
+}
+.storefront-root[data-theme-active="true"] [data-testid="search-bar"] input[data-testid="search-input"]:focus-visible {
+  background-color: var(--store-field);
+  border-color: var(--store-focus);
+}

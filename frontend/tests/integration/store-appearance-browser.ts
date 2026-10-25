@@ -141,7 +141,7 @@ export async function verifyStoreAppearance({
               const cardStyle = getComputedStyle(card);
               const searchStyle = getComputedStyle(search);
               const channels = (value: string) =>
-                (value.match(/\\d+/g) || []).slice(0, 3).map(Number);
+                (value.match(/\d+/g) || []).slice(0, 3).map(Number);
               const largestDifference = (left: string, right: string) =>
                 Math.max(
                   ...channels(left).map(

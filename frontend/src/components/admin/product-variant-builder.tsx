@@ -221,7 +221,7 @@ export function ProductVariantBuilder({
                     placeholder={section.example}
                     onChange={(e) => section.setDraft(e.target.value)}
                     onKeyDown={(e) => handleEnter(e, section.type)}
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-200"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-600 focus:ring-0"
                   />
                   <Button
                     type="button"

@@ -195,6 +195,16 @@ async function main() {
             assert.equal(inputBox?.height, 44);
             assert.equal(submitBox?.height, 44);
             await input.focus();
+            // The Lumen input animates border-color for 160ms. Sampling in
+            // the same tick as focus() captures the unfocused/interpolated
+            // color and falsely fails even though focus eventually passes.
+            await expect(input).toBeFocused();
+            await expect
+              .poll(
+                () => input.evaluate((e) => getComputedStyle(e).borderTopColor),
+                { message: "Auth focus border must settle to a visible single line" },
+              )
+              .toBe("rgb(82, 82, 91)");
             const focused = await input.evaluate((e) => ({
               border: getComputedStyle(e).borderTopWidth,
               borderColor: getComputedStyle(e).borderTopColor,

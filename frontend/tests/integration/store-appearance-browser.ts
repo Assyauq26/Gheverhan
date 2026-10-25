@@ -244,7 +244,9 @@ export async function verifyStoreAppearance({
           .toBe("none");
         await expect
           .poll(() => buy.evaluate((e) => getComputedStyle(e).color))
-          .toBe("rgb(17, 17, 17)");
+          .toBe(
+            `rgb(${rgb(PRESETS.find((p) => p.name === "Midnight Ink")!.config.colors.primaryText).join(", ")})`,
+          );
         await frame
           .getByText("PREVIEW • Interaksi belanja dinonaktifkan", {
             exact: true,
@@ -263,6 +265,37 @@ export async function verifyStoreAppearance({
       "customize: header visibility and bottom-bar layout affect the shared preview",
       async () => {
         const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        await page
+          .getByRole("button", { name: "Preset/Template Warna", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Gheverhan Monochrome", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Gradasi", exact: true })
+          .click();
+        await page
+          .getByRole("group", { name: "header", exact: true })
+          .getByLabel("Aktifkan", { exact: true })
+          .check();
+        await frame.getByTestId("header-wishlist").hover();
+        await expect
+          .poll(() =>
+            frame
+              .getByTestId("header-wishlist")
+              .evaluate((e) => getComputedStyle(e).color),
+          )
+          .toBe("rgb(255, 255, 255)");
+        await page
+          .getByRole("group", { name: "header", exact: true })
+          .getByLabel("Aktifkan", { exact: true })
+          .uncheck();
+        await page
+          .getByRole("button", { name: "Preset/Template Warna", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Midnight Ink", exact: true })
+          .click();
         await page.getByRole("button", { name: "Header", exact: true }).click();
         await page.getByLabel("Wishlist", { exact: true }).uncheck();
         await expect(frame.getByTestId("header-wishlist")).toBeHidden();
@@ -361,6 +394,33 @@ export async function verifyStoreAppearance({
     await check(
       "customize: all required widths and desktop/mobile evidence",
       async () => {
+        const preview = page.frameLocator('iframe[title="Preview draft toko"]');
+        for (const width of [390, 768, 1360]) {
+          await page
+            .getByRole("button", { name: `${width}px`, exact: true })
+            .click();
+          await expect
+            .poll(() =>
+              preview
+                .locator("body")
+                .evaluate((e) => e.ownerDocument.defaultView!.innerWidth),
+            )
+            .toBe(width);
+          assert.ok(
+            await preview
+              .locator("body")
+              .evaluate(
+                (e) =>
+                  e.ownerDocument.documentElement.scrollWidth <=
+                  e.ownerDocument.defaultView!.innerWidth,
+              ),
+          );
+        }
+        await page.screenshot({
+          path: path.join(artifactDir, "customize-preview-1360.png"),
+          fullPage: true,
+        });
+        await page.getByRole("button", { name: "390px", exact: true }).click();
         for (const width of [
           320, 360, 375, 390, 430, 768, 1024, 1280, 1360, 1440, 1920,
         ]) {
@@ -420,6 +480,16 @@ export async function verifyStoreAppearance({
             'iframe[title="Preview draft toko"]',
           );
           await expect(frame.getByTestId("logo")).toBeVisible();
+          await expect(frame.getByTestId("logo")).toHaveText(
+            "Theme Studio Test",
+          );
+          await expect
+            .poll(() =>
+              frame
+                .getByTestId("logo")
+                .evaluate((e) => getComputedStyle(e).color),
+            )
+            .toBe("rgb(255, 255, 255)");
           await expect(frame.getByTestId("bottom-nav")).toBeVisible();
           await expect(
             frame.getByTestId("bottom-nav").locator("a"),

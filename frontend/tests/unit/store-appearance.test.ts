@@ -7,7 +7,7 @@ import {
   TOKEN_KEYS,
 } from "@/modules/appearance/schema";
 import { PRESETS } from "@/modules/appearance/presets";
-import { contrast, contrastErrors } from "@/modules/appearance/contrast";
+import { contrast, contrastErrors, foreground } from "@/modules/appearance/contrast";
 import { themeStyle, isLegacy } from "@/modules/appearance/runtime";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import { resolveStorageObject } from "@/lib/storage-path";
@@ -144,5 +144,12 @@ it("generated semantic button foregrounds remain AA through hover and pressed", 
       ])
         expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
     }
+  }
+});
+
+it("automatic foreground meets AA throughout the grayscale boundary", () => {
+  for (let n = 0; n < 256; n++) {
+    const bg = "#" + n.toString(16).padStart(2, "0").repeat(3);
+    expect(contrast(foreground(bg), bg)).toBeGreaterThanOrEqual(4.5);
   }
 });

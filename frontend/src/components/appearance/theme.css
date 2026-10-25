@@ -590,3 +590,35 @@
   [data-button-variant="success"]:is(:hover, :active, :focus-visible) {
   color: var(--store-success-foreground);
 }
+/* Shell links use their own foreground even when the page and shell have opposite palettes. */
+.storefront-root[data-theme-active="true"]
+  > header
+  a:not([data-button-variant]):is(:hover, :active, :focus-visible) {
+  color: var(--store-gradient-header-text, var(--store-headerText));
+  background-color: transparent;
+}
+.storefront-root[data-theme-active="true"]
+  > footer
+  a:not([data-button-variant]):is(:hover, :active, :focus-visible) {
+  color: var(--store-gradient-footer-text, var(--store-footerText));
+  background-color: transparent;
+  text-decoration: underline;
+}
+.storefront-root[data-theme-active="true"]
+  :is(dialog, [role="dialog"])
+  a:not([data-button-variant]) {
+  color: var(--store-modalText);
+}
+.storefront-root[data-theme-active="true"]
+  :is(dialog, [role="dialog"])
+  a:not([data-button-variant]):is(:hover, :active, :focus-visible) {
+  color: var(--store-modalText);
+  background-color: transparent;
+  text-decoration: underline;
+}
+.storefront-root[data-theme-active="true"]
+  [role="search"]
+  button:not(:disabled):hover {
+  background: var(--store-secondaryHover);
+  color: var(--store-secondaryForeground);
+}

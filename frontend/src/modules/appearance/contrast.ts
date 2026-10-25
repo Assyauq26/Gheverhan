@@ -23,9 +23,9 @@ export function contrast(a: string, b: string) {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 export function foreground(bg: string) {
-  return contrast(bg, "#FFFFFF") >= contrast(bg, "#111111")
+  return contrast(bg, "#FFFFFF") >= contrast(bg, "#000000")
     ? "#FFFFFF"
-    : "#111111";
+    : "#000000";
 }
 export function mix(a: string, b: string, t: number) {
   return (
@@ -61,6 +61,7 @@ export const CONTRAST_PAIRS: [Token, Token, number][] = [
   ["badgeText", "badge", 4.5],
   ["promoText", "promo", 4.5],
   ["fieldText", "field", 4.5],
+  ["secondaryText", "field", 4.5],
   ["disabledText", "field", 4.5],
   ["icon", "field", 3],
   ["selected", "card", 3],
@@ -82,13 +83,18 @@ export const CONTRAST_PAIRS: [Token, Token, number][] = [
       "error",
       "success",
     ] as Token[]
-  ).map((fg) => [fg, "pageBg", 4.5] as [Token, Token, number]),
+  ).flatMap((fg) =>
+    (["pageBg", "surface", "card", "modal"] as Token[]).map(
+      (bg) => [fg, bg, 4.5] as [Token, Token, number],
+    ),
+  ),
   ["icon", "pageBg", 3],
   ["icon", "surface", 3],
   ["icon", "card", 3],
   ["focus", "pageBg", 3],
   ["focus", "surface", 3],
   ["focus", "field", 3],
+  ["focus", "promo", 3],
   ["focus", "card", 3],
   ["focus", "modal", 3],
   ["focus", "header", 3],

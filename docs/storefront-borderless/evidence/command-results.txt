@@ -1,0 +1,195 @@
+Baseline unit
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/Gheverhan/frontend
+
+
+ Test Files  60 passed (60)
+      Tests  494 passed (494)
+   Start at  07:37:48
+   Duration  11.29s (transform 1.86s, setup 0ms, import 6.37s, tests 4.65s, environment 3.64s)
+
+
+Final typecheck
+
+> gheverhan@1.0.0 typecheck
+> tsc --noEmit
+
+
+Final lint
+> node scripts/security/prepare-braces.mjs
+
+Braces depth mitigation: { packages: 1, changedFiles: 0 }
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+Braces depth mitigation: { packages: 1, changedFiles: 0 }
+✔ No ESLint warnings or errors
+
+Final build
+ ✓ Compiled successfully in 7.4s
+   Collecting page data ...
+   Generating static pages (0/14) ...
+   Generating static pages (3/14)
+   Generating static pages (6/14)
+   Generating static pages (10/14)
+ ✓ Generating static pages (14/14)
+   Finalizing page optimization ...
+   Collecting build traces ...
+ƒ  (Dynamic)  server-rendered on demand
+
+Final unit
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/Gheverhan/frontend
+
+
+ Test Files  60 passed (60)
+      Tests  497 passed (497)
+   Start at  07:41:17
+   Duration  18.68s (transform 3.16s, setup 0ms, import 10.73s, tests 7.81s, environment 5.66s)
+
+
+Offline containment + mitigation + unit
+ ✓ tests/unit/payment-state-machine.test.ts (3 tests) 9ms
+ ✓ tests/unit/money.test.ts (3 tests) 22ms
+ ✓ tests/unit/containment-worker.test.ts (1 test) 4ms
+ ✓ tests/unit/store-appearance-controls.test.ts (2 tests) 82ms
+
+ Test Files  60 passed (60)
+      Tests  497 passed (497)
+   Start at  07:44:17
+   Duration  21.35s (transform 4.12s, setup 0ms, import 12.70s, tests 9.94s, environment 5.91s)
+
+
+Workflow policy
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.458713
+
+PostgreSQL totals
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+# tests 12
+# pass 12
+# fail 0
+# skipped 0
+# tests 15
+# pass 15
+# fail 0
+# skipped 0
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+# tests 5
+# pass 5
+# fail 0
+# skipped 0
+# tests 11
+# pass 11
+# fail 0
+# skipped 0
+# tests 6
+# pass 6
+# fail 0
+# skipped 0
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
+# tests 23
+# pass 23
+# fail 0
+# skipped 0
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
+# tests 9
+# pass 9
+# fail 0
+# skipped 0
+# tests 27
+# pass 27
+# fail 0
+# skipped 0
+# tests 30
+# pass 30
+# fail 0
+# skipped 0
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
+# tests 15
+# pass 15
+# fail 0
+# skipped 0
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+# tests 13
+# pass 13
+# fail 0
+# skipped 0
+# tests 15
+# pass 15
+# fail 0
+# skipped 0
+# tests 10
+# pass 10
+# fail 0
+# skipped 0
+
+Final product browser
+PASS custom rename/reorder and dirty guards preserve SKU identity and order snapshots
+PASS image-mode transfer retains objects and historical photo deletion fails closed
+PASS custom sparse combinations never fall back to another sellable SKU
+PASS custom variations render all five viewports, keyboard focus and enlarged text without overflow
+PASS custom group sort persists IDs and disclosure/discard guards remain explicit
+PASS editor V2: clean empty create, staged upload before name, reorder/remove and refresh recovery
+PASS editor V2: shipping validation, bulk absolute stock and durable persistence
+PASS editor V2: canonical revert is clean, save is sticky, guard and six viewports
+PASS editor V2: fifty SKU cards, one expanded, stable focus and no requests while typing
+PASS 48 browser/data-flow checks; no production data or external storage used
+
+Operations browser
+PASS manual proof rejection records required reason
+PASS expired unpaid order closes instructions even before expiry cron transition
+PASS private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval
+PASS order and inventory pagination retain search and filter
+PASS empty states and movement filter
+PASS 390px R20 payment: checkout UI→proof→reject→proof→overdue review preserved→approval; buyer/admin/dashboard agree
+PASS 1360px R20 payment: checkout UI→proof→reject→proof→overdue review preserved→approval; buyer/admin/dashboard agree
+PASS R20 buyer/admin payment labels, proof resubmission and overdue review
+PASS desktop/mobile operational pages have no overflow or browser exceptions
+PASS 21 operational browser/API/data-flow checks
+
+Auth browser
+PASS password visibility, OTP required before user creation, and pending prevention
+PASS OTP survives reload and failed resend returns to fresh registration
+PASS duplicate contact is rejected before pending mutation or provider delivery
+PASS REST existing email/phone/both cannot call mail or create pending state
+PASS expired UI and interrupted resend reconcile server timing; deleted challenge restarts safely
+PASS five rejected codes lock verification until a server-approved resend
+PASS logout, invalid login and safe login redirect
+PASS forgot password validates input and keeps a neutral response for an unknown account
+PASS reset password rejects invalid token, consumes local token once and revokes old session
+PASS anonymous legal routes have canonical/SEO/draft metadata and footer entry points

@@ -32,7 +32,7 @@ export default async function StorefrontLayout({
       <StorefrontHeader user={user} cartCount={count} />
       <main className="container py-2 md:py-6">{children}</main>
 
-      <footer className="mt-10 border-t border-line bg-white">
+      <footer className="mt-10 bg-white">
         <div className="container grid grid-cols-2 gap-6 py-8 md:grid-cols-4">
           {(theme.footer.trustFeatures ? [
             { icon: Truck, t: "Pengiriman Cepat", s: "ke seluruh Indonesia" },
@@ -49,7 +49,7 @@ export default async function StorefrontLayout({
             </div>
           ))}
         </div>
-        <div className="border-t border-line">
+        <div className="pt-2 md:pt-4">
           <div className="container flex flex-col items-center justify-between gap-2 py-6 text-xs text-ink-muted md:flex-row">
             <span className="font-display text-lg font-extrabold text-ink">{theme.footer.showLogo && <StoreLogo />}</span>
             {isLegacy(theme) ? <span>© {new Date().getFullYear()} Gheverhan. Better Outfits, Brighter Days.</span> : <span>© {new Date().getFullYear()} {theme.identity.name}. {theme.footer.tagline}</span>}

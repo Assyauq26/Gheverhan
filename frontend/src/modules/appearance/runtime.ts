@@ -62,6 +62,13 @@ export function themeStyle(input: StoreAppearanceV1): CSSProperties {
     soft: "0 6px 20px rgb(0 0 0 / .08)",
     raised: "0 12px 32px rgb(0 0 0 / .24)",
   }[v.styling.shadow];
+  // Floating chrome has gentler elevation than cards. Derive its tint from
+  // the current palette without introducing a persisted appearance setting.
+  out["--store-shell-shadow"] = {
+    none: "none",
+    soft: `0 4px 16px rgb(${rgb(v.colors.navText).join(" ")} / .08)`,
+    raised: `0 8px 24px rgb(${rgb(v.colors.navText).join(" ")} / .14)`,
+  }[v.styling.shadow];
   out["--font-sans"] =
     v.styling.font === "serif"
       ? "Georgia, serif"

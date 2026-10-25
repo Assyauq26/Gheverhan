@@ -145,7 +145,7 @@ export function AppearancePreview() {
             </label>
           </section>
         </main>
-        <footer className="mt-8 border-t p-8">
+        <footer className="mt-8 p-8">
           {config.footer.showLogo && (
             <strong className="block text-xl">
               <StoreLogo />

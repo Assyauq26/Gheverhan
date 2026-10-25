@@ -1,0 +1,203 @@
+{
+  "status": "PASS",
+  "checks": 48,
+  "checkpoints": [
+    {
+      "label": "customize: legacy storefront chrome evidence",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: server RBAC and private preview",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: draft and isolated live preview",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: all ten presets render from the same draft schema",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: private logo upload, published reference and mode",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: branding modes and gradient controls stay in preview",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: header visibility and bottom-bar layout affect the shared preview",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: publish invalidates SSR and runtime colors",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: all required widths and desktop/mobile evidence",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: mobile touch switches preview and preserves four destinations",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: two tab version conflict cannot overwrite",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: rollback is append-only and leaves draft private",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: no editor runtime exceptions",
+      "status": "PASS"
+    },
+    {
+      "label": "customize: published Monochrome shell evidence",
+      "status": "PASS"
+    },
+    {
+      "label": "protected pages and permission-filtered dashboard",
+      "status": "PASS"
+    },
+    {
+      "label": "create category through its authorized UI",
+      "status": "PASS"
+    },
+    {
+      "label": "edit-only category feedback persists and restores keyboard focus",
+      "status": "PASS"
+    },
+    {
+      "label": "create draft with price, category, SKU and inventory",
+      "status": "PASS"
+    },
+    {
+      "label": "server validation preserves input and focuses visible mobile feedback",
+      "status": "PASS"
+    },
+    {
+      "label": "draft is absent from public detail and a warmed catalog cache",
+      "status": "PASS"
+    },
+    {
+      "label": "edit and add/remove a fresh unreferenced variant",
+      "status": "PASS"
+    },
+    {
+      "label": "seller variant builder renders responsively and persists unique color/size combinations",
+      "status": "PASS"
+    },
+    {
+      "label": "upload and serve draft image through the existing storage contract",
+      "status": "PASS"
+    },
+    {
+      "label": "publish invalidates cache and renders the buyer storefront",
+      "status": "PASS"
+    },
+    {
+      "label": "admin Marketing UI creates voucher and activates/deactivates flash sale with effective price",
+      "status": "PASS"
+    },
+    {
+      "label": "buyer cart works for the published variant",
+      "status": "PASS"
+    },
+    {
+      "label": "Buy Now guest login continuation and exact legacy/custom checkout preserve the old cart",
+      "status": "PASS"
+    },
+    {
+      "label": "R20 authenticated cart synchronization and rollback at four viewports",
+      "status": "PASS"
+    },
+    {
+      "label": "live checkout coupon is priced by server, shows errors, and updates shipping without creating orders",
+      "status": "PASS"
+    },
+    {
+      "label": "customer confirms quoted prices and receives a price conflict without an order",
+      "status": "PASS"
+    },
+    {
+      "label": "archive hides cached catalog/detail and blocks new purchases",
+      "status": "PASS"
+    },
+    {
+      "label": "archival preserves buyer order and authorized historical media",
+      "status": "PASS"
+    },
+    {
+      "label": "desktop/mobile pages have no horizontal overflow or browser exceptions",
+      "status": "PASS"
+    },
+    {
+      "label": "native editor: bounded multi-upload, individual retry, mouse/touch/keyboard cover ordering",
+      "status": "PASS"
+    },
+    {
+      "label": "native editor: table builder, draft persistence, explicit publish and published edit",
+      "status": "PASS"
+    },
+    {
+      "label": "native editor: chart image ownership, public published image and hidden empty chart",
+      "status": "PASS"
+    },
+    {
+      "label": "custom mobile editor: arbitrary groups, staged images before save, six stable SKU combinations",
+      "status": "PASS"
+    },
+    {
+      "label": "custom image upload retains RBAC, Origin and signature/size checks",
+      "status": "PASS"
+    },
+    {
+      "label": "custom storefront changes option gallery and adds the exact all-dimensions SKU",
+      "status": "PASS"
+    },
+    {
+      "label": "custom rename/reorder and dirty guards preserve SKU identity and order snapshots",
+      "status": "PASS"
+    },
+    {
+      "label": "image-mode transfer retains objects and historical photo deletion fails closed",
+      "status": "PASS"
+    },
+    {
+      "label": "custom sparse combinations never fall back to another sellable SKU",
+      "status": "PASS"
+    },
+    {
+      "label": "custom variations render all five viewports, keyboard focus and enlarged text without overflow",
+      "status": "PASS"
+    },
+    {
+      "label": "custom group sort persists IDs and disclosure/discard guards remain explicit",
+      "status": "PASS"
+    },
+    {
+      "label": "editor V2: clean empty create, staged upload before name, reorder/remove and refresh recovery",
+      "status": "PASS"
+    },
+    {
+      "label": "editor V2: shipping validation, bulk absolute stock and durable persistence",
+      "status": "PASS"
+    },
+    {
+      "label": "editor V2: canonical revert is clean, save is sticky, guard and six viewports",
+      "status": "PASS"
+    },
+    {
+      "label": "editor V2: fifty SKU cards, one expanded, stable focus and no requests while typing",
+      "status": "PASS"
+    }
+  ],
+  "commitSha": "6c1e05020a92809e0b515e22dc0855207eac0a95",
+  "nodeVersion": "v22.23.4",
+  "browserVersion": "154.0.8037.57",
+  "buildId": "cUqkwgaTleCdKo0VTM-Dq",
+  "synthetic": true
+}

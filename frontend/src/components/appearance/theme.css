@@ -179,6 +179,14 @@
 .storefront-root[data-theme-active="true"] :is(.shadow-sm, .shadow-lg) {
   box-shadow: var(--store-shadow);
 }
+/* No structural border utilities on shells: --store-border remains a control
+ * token. Pill elevation is independent of card shadows, including legacy. */
+.storefront-root [data-testid="bottom-nav"][data-style="pill"] {
+  box-shadow: var(--store-shell-shadow, 0 4px 16px rgb(0 0 0 / .08));
+}
+.storefront-root [data-testid="bottom-nav"][data-style="bar"] {
+  box-shadow: var(--store-shell-shadow, 0 -2px 12px rgb(0 0 0 / .05));
+}
 .storefront-root[data-theme-active="true"] .pdp-page {
   --pdp-black: var(--store-text);
   --pdp-muted: var(--store-secondaryText);

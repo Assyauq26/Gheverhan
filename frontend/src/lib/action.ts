@@ -3,6 +3,7 @@ import { HttpError } from "@/lib/response";
 
 export type ActionResult<T = unknown> = {
   ok: boolean;
+  httpStatus?: number;
   error?: string;
   unauthorized?: boolean;
   data?: T;
@@ -15,7 +16,7 @@ export async function runAction<T>(fn: () => Promise<T>): Promise<ActionResult<T
     return { ok: true, data };
   } catch (err) {
     if (err instanceof HttpError) {
-      return { ok: false, error: err.message, unauthorized: err.status === 401 };
+      return { ok: false, error: err.message, ...(err.status === 409 ? { httpStatus: err.status } : {}), unauthorized: err.status === 401 };
     }
     logServerFailure("action-error", err);
     return { ok: false, error: "Terjadi kesalahan. Coba lagi." };

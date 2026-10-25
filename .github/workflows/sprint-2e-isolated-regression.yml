@@ -136,6 +136,12 @@ jobs:
           node --disable-proto=throw --import tsx --test tests/integration/product-editor-v2-migration.test.ts
           node --disable-proto=throw --import tsx --test tests/integration/product-editor-v2.test.ts
 
+      - name: Customize schema, lifecycle, media and concurrency on disposable PostgreSQL
+        run: |
+          node --disable-proto=throw --import tsx --test tests/integration/store-appearance-migration.test.ts
+          node --disable-proto=throw --import tsx --test tests/integration/store-appearance.test.ts
+          STORAGE_PROVIDER=local STORAGE_LOCAL_ROOT=/tmp node --import tsx scripts/appearance/preflight.ts
+
       - name: Chromium product media, upload and RBAC test with loopback storage double
         id: product_browser
         run: npm run test:e2e:products
@@ -182,6 +188,8 @@ jobs:
             /tmp/gheverhan-product-browser-*/validation-results.json
             /tmp/gheverhan-product-browser-*/product-*.png
             /tmp/gheverhan-product-browser-*/native-*.png
+            /tmp/gheverhan-product-browser-*/customize-*.png
+            /tmp/gheverhan-product-browser-*/customize-*.json
             /tmp/gheverhan-product-browser-*/editor-v2-*.png
             /tmp/gheverhan-product-browser-*/cart-concurrency-*.json
             /tmp/gheverhan-operations-browser-*/validation-results.json

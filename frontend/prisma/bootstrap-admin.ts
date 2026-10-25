@@ -8,6 +8,7 @@ assertSafeDatabaseOperation();
 const prisma = new PrismaClient();
 
 const PERMISSIONS = [
+  "store.customize.read", "store.customize.update", "store.customize.publish",
   "product.read", "product.create", "product.update", "product.delete",
   "inventory.read", "inventory.adjust",
   "order.read", "order.update", "order.cancel",

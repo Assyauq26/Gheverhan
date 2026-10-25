@@ -1,0 +1,62 @@
+unit
+
+ RUN  v4.1.12 /workspace/Gheverhan/frontend
+
+
+ Test Files  60 passed (60)
+      Tests  493 passed (493)
+   Start at  04:17:17
+   Duration  19.70s (transform 3.45s, setup 0ms, import 11.98s, tests 7.65s, environment 5.67s)
+
+legacy PostgreSQL
+  ...
+1..78
+# tests 193
+# suites 0
+# pass 193
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 103704.248953
+
+appearance PostgreSQL and migration
+  ...
+1..2
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10843.069923
+
+product/customize browser
+PASS custom sparse combinations never fall back to another sellable SKU
+PASS custom variations render all five viewports, keyboard focus and enlarged text without overflow
+PASS custom group sort persists IDs and disclosure/discard guards remain explicit
+PASS editor V2: clean empty create, staged upload before name, reorder/remove and refresh recovery
+PASS editor V2: shipping validation, bulk absolute stock and durable persistence
+PASS editor V2: canonical revert is clean, save is sticky, guard and six viewports
+PASS editor V2: fifty SKU cards, one expanded, stable focus and no requests while typing
+PASS 46 browser/data-flow checks; no production data or external storage used
+
+operations browser
+PASS order and inventory pagination retain search and filter
+PASS empty states and movement filter
+PASS 390px R20 payment: checkout UI→proof→reject→proof→overdue review preserved→approval; buyer/admin/dashboard agree
+PASS 1360px R20 payment: checkout UI→proof→reject→proof→overdue review preserved→approval; buyer/admin/dashboard agree
+PASS R20 buyer/admin payment labels, proof resubmission and overdue review
+PASS desktop/mobile operational pages have no overflow or browser exceptions
+PASS 21 operational browser/API/data-flow checks
+
+auth browser
+PASS five rejected codes lock verification until a server-approved resend
+PASS logout, invalid login and safe login redirect
+PASS forgot password validates input and keeps a neutral response for an unknown account
+PASS reset password rejects invalid token, consumes local token once and revokes old session
+PASS anonymous legal routes have canonical/SEO/draft metadata and footer entry points
+
+preflight
+{"status":"PASS","tables":4,"permissions":3,"provider":"local","publishedVersion":0,"readOnly":true,"scope":"schema/config only; upload/provider contract tested separately"}

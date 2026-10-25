@@ -69,6 +69,28 @@ OLD_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$OLD_CONTAINER")"
   exit 69
 }
 
+# Confirm the existing persistent branding/product-media bind mount is real
+# and writable by UID 1000, the non-root app identity. A second fresh
+# container verifies that the bytes survive a container boundary.
+MEDIA_DIR=/opt/gheverhan/media
+[[ -d "$MEDIA_DIR" && ! -L "$MEDIA_DIR" ]] || {
+  echo "Persistent media directory is missing or is a symlink." >&2
+  exit 73
+}
+MEDIA_PROBE="/data/media/.gheverhan-customize-preflight-$APP_SHA"
+docker run --rm --network none --user 1000:1000 \
+  --mount "type=bind,source=$MEDIA_DIR,target=/data/media" \
+  --env "MEDIA_PROBE=$MEDIA_PROBE" \
+  --entrypoint node "$APP_IMAGE" \
+  -e 'const fs=require("node:fs"); fs.writeFileSync(process.env.MEDIA_PROBE,"gheverhan-media",{flag:"wx",mode:0o600});'
+docker run --rm --network none --user 1000:1000 \
+  --mount "type=bind,source=$MEDIA_DIR,target=/data/media" \
+  --env "MEDIA_PROBE=$MEDIA_PROBE" \
+  --entrypoint node "$APP_IMAGE" \
+  -e 'const fs=require("node:fs"); const p=process.env.MEDIA_PROBE; if(fs.readFileSync(p,"utf8")!=="gheverhan-media")process.exit(1); fs.unlinkSync(p);'
+echo "Persistent media volume passed non-root cross-container write/read test"
+
+
 POSTGRES_PASSWORD="$(python3 - "$ENV_FILE" <<'PY'
 import pathlib
 import re
@@ -103,6 +125,15 @@ unset MIGRATION_DATABASE_URL
 
 # Refresh table and sequence grants for objects introduced by this migration.
 python3 /usr/local/sbin/gheverhan-prepare-runtime.py
+
+# Read-only Customize schema, RLS, permissions and storage configuration gate
+# against the actual Production runtime role, after the additive migration.
+GHEVERHAN_IMAGE="$MIGRATION_IMAGE" docker-compose \
+  -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE" \
+  run --rm --no-deps --entrypoint node app \
+  --conditions=react-server --import tsx /app/scripts/appearance/preflight.ts
+echo "Production Customize preflight passed"
+
 
 wait_for_health() {
   local attempt

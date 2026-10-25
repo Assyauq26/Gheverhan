@@ -25,22 +25,25 @@ export function ProductCard({
   wishlisted = false,
   compact = false,
   featured = false,
+  preview = false,
 }: {
   product: ProductCardData;
   wishlisted?: boolean;
   compact?: boolean;
   /** Product Pilihan uses a simplified card with no wishlist/add-to-cart actions. */
   featured?: boolean;
+  preview?: boolean;
 }) {
   const price = effectivePrice(product.basePrice, product.salePrice);
   const pct = discountPercent(product.basePrice, product.salePrice);
 
   return (
     <article
+      data-theme-target="highlightCard"
       className="group relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
-      <Link href={`/product/${product.slug}`} className="block">
+      <Link prefetch={preview ? false : undefined} href={`/product/${product.slug}`} className="block">
         <div className="relative aspect-square overflow-hidden rounded-xl bg-surface">
           {product.image ? (
             <Image
@@ -66,7 +69,7 @@ export function ProductCard({
       </Link>
       {/* A button must never be nested in a link: invalid interactive HTML
           can yield unpredictable click/hydration behavior in Chromium. */}
-      {!featured && (
+      {!featured && !preview && (
         <div className="absolute right-3.5 top-3.5 z-10">
           <WishlistButton productId={product.id} initialActive={wishlisted} />
         </div>
@@ -74,7 +77,7 @@ export function ProductCard({
 
       <div className="px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
-        <Link href={`/product/${product.slug}`}>
+        <Link prefetch={preview ? false : undefined} href={`/product/${product.slug}`}>
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
             {product.name}
           </h3>
@@ -82,7 +85,7 @@ export function ProductCard({
 
         {featured && pct > 0 ? (
           <div className="mt-1 flex min-w-0 items-center gap-1 whitespace-nowrap">
-            <span className="font-display text-sm font-extrabold leading-tight text-ink">
+            <span data-theme-role="price" data-discount={pct > 0} className="font-display text-sm font-extrabold leading-tight text-ink">
               {formatIDR(price)}
             </span>
             <span className="shrink-0 text-[10px] leading-tight text-ink-muted line-through">
@@ -92,7 +95,7 @@ export function ProductCard({
         ) : (
           <div className="mt-1 flex items-center justify-between gap-1.5">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="font-display text-base font-extrabold leading-tight text-ink">
+              <span data-theme-role="price" data-discount={pct > 0} className="font-display text-base font-extrabold leading-tight text-ink">
                 {formatIDR(price)}
               </span>
               {pct > 0 && (
@@ -101,10 +104,10 @@ export function ProductCard({
                 </span>
               )}
             </div>
-            <QuickAddButton
+            {!preview && <QuickAddButton
               variantId={product.variantId}
               className="h-9 w-9 shrink-0"
-            />
+            />}
           </div>
         )}
       </div>

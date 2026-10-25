@@ -1,3 +1,4 @@
+import { StoreLogo } from "@/components/appearance/context";
 import { ProductSizeChart } from "@/components/storefront/product-size-chart";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Package, Truck } from "lucide-react";
@@ -122,7 +123,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
                   className="pdp-header-action grid h-11 w-11 place-items-center bg-white/90 shadow-sm backdrop-blur">
                   <ArrowLeft size={23}/>
                 </Link>
-                <span className="pdp-topbar-center">Gheverhan</span>
+                <span className="pdp-topbar-center"><StoreLogo /></span>
                 <div className="pdp-topbar-actions">
                   <WishlistButton productId={product.id} initialActive={wl.has(product.id)}
                     className="pdp-header-action h-11 w-11 rounded-2xl bg-white/90"/>

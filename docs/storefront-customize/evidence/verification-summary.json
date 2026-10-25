@@ -1,0 +1,63 @@
+{
+  "baselineMain": "b452fd10d52e9d439a58b9d0466ba4991ac8dcf0",
+  "frontendTree": "9369d063ce3da1432bc561239c4b32ceb72aa60a",
+  "synthetic": true,
+  "unit": {
+    "pass": 493,
+    "fail": 0,
+    "files": 60
+  },
+  "legacyPostgres": {
+    "pass": 193,
+    "fail": 0,
+    "skip": 0
+  },
+  "appearancePostgres": {
+    "pass": 13,
+    "fail": 0,
+    "skip": 0
+  },
+  "productAndAppearanceBrowser": {
+    "pass": 46,
+    "fail": 0,
+    "appearanceCheckpoints": 12
+  },
+  "operationsBrowser": {
+    "pass": 21,
+    "fail": 0
+  },
+  "authBrowser": {
+    "pass": 15,
+    "fail": 0
+  },
+  "hydrationReplay": "PASS",
+  "migrationCount": 13,
+  "presets": 10,
+  "colorTokens": 53,
+  "previewWidths": [
+    390,
+    768,
+    1360
+  ],
+  "overflowWidths": [
+    320,
+    360,
+    375,
+    390,
+    430,
+    768,
+    1024,
+    1280,
+    1360,
+    1440,
+    1920
+  ],
+  "navigationGate": {
+    "cycles": 10,
+    "casesPerCycle": 44,
+    "resultSource": "https://github.com/Assyauq26/Gheverhan/pull/103/checks",
+    "note": "Final CI result and artifact links are reported on the Draft PR, not inferred from an in-progress job."
+  },
+  "browserTestedCodeCommit": "1864a34ebf606b1d29508e218ae1b8d632378eec",
+  "sourceNote": "Final source includes per-segment gradient hardening beyond the local browser commit; final current-head CI reruns all gates."
+}

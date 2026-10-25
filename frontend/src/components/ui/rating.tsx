@@ -13,7 +13,7 @@ export function Rating({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-1 text-xs text-ink-soft", className)}>
+    <div data-theme-role="rating" className={cn("flex items-center gap-1 text-xs text-ink-soft", className)}>
       <Star size={size} className="fill-black text-black" />
       <span className="font-semibold text-ink">{value.toFixed(1)}</span>
       {count != null && <span className="text-ink-muted">({count})</span>}

@@ -1,7 +1,8 @@
+import { verifyStoreAppearance } from "./store-appearance-browser";
 import { createServer } from "node:http";
 import { spawn, execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, rm } from "node:fs/promises";
 import { existsSync, createWriteStream, readFileSync } from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -30,6 +31,7 @@ const secret = randomBytes(32).toString("hex");
 process.env.JWT_SECRET = secret;
 const storageToken = randomUUID();
 const objects = new Map<string, { bytes: Buffer; mime: string }>();
+const brandingObjects = new Map<string, { bytes: Buffer; mime: string }>();
 const emailCodes = new Map<string, string>();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
 const db = new PrismaClient({ datasources: { db: { url: target } } });
@@ -60,6 +62,14 @@ async function main() {
   const portProbe = createServer();
   await new Promise<void>((resolve, reject) => { portProbe.once("error", reject); portProbe.listen(3101, "127.0.0.1", resolve); });
   await new Promise<void>(resolve => portProbe.close(() => resolve()));
+  // A repeated isolated run must not inherit published cache entries from a prior fixture.
+  // Keep the singleton/revisions intact while this server is alive, so version probes
+  // and warmed-cache commerce assertions exercise a consistent database snapshot.
+  await db.storeAppearanceRevision.deleteMany();
+  await db.storeAppearance.deleteMany();
+  await db.storeBrandAsset.deleteMany();
+  await db.storeCustomizeRateLimit.deleteMany();
+  await rm(path.join(root, ".next/cache/fetch-cache"), {recursive:true,force:true});
   // Loopback-only Supabase Storage REST contract double. Never connects to production.
   const storage = createServer(async (req, res) => {
     try {
@@ -77,22 +87,23 @@ async function main() {
       }
       const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
       const bytes = Buffer.concat(chunks);
-      if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs"].includes(url.pathname) && req.method === "DELETE") {
+      if (["/storage/v1/object/product-images", "/storage/v1/object/payment-proofs", "/storage/v1/object/store-branding"].includes(url.pathname) && req.method === "DELETE") {
         const prefixes = JSON.parse(bytes.toString()).prefixes as string[];
-        for (const key of prefixes) objects.delete(key);
+        for (const key of prefixes) (url.pathname.endsWith("/store-branding") ? brandingObjects : objects).delete(key);
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify([])); return;
       }
       const parts = url.pathname.split("/");
-      if (parts[1] !== "storage" || parts[2] !== "v1" || parts[3] !== "object" || !["product-images", "payment-proofs"].includes(parts[4] || "")) {
+      if (parts[1] !== "storage" || parts[2] !== "v1" || parts[3] !== "object" || !["product-images", "payment-proofs", "store-branding"].includes(parts[4] || "")) {
         res.writeHead(404).end(); return;
       }
       const objectPath = decodeURIComponent(parts.slice(5).join("/"));
+      const bucketObjects = parts[4] === "store-branding" ? brandingObjects : objects;
       if (req.method === "POST") {
-        if (objects.has(objectPath)) { res.writeHead(409).end(); return; }
-        objects.set(objectPath, { bytes, mime: String(req.headers["content-type"]) });
+        if (bucketObjects.has(objectPath)) { res.writeHead(409).end(); return; }
+        bucketObjects.set(objectPath, { bytes, mime: String(req.headers["content-type"]) });
         res.writeHead(201, { "Content-Type": "application/json" }).end(JSON.stringify({ Key: objectPath })); return;
       }
-      const object = objects.get(objectPath);
+      const object = bucketObjects.get(objectPath);
       if (!object) { res.writeHead(404).end(); return; }
       res.setHeader("Content-Type", object.mime); res.end(object.bytes);
     } catch { res.writeHead(400).end(); }
@@ -134,6 +145,7 @@ async function main() {
       await verifyProductEditorV2({page,db,base,artifactDir,prefix,check,png});
       completed = true; return;
     }
+    await verifyStoreAppearance({browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,check});
     await check("protected pages and permission-filtered dashboard", async () => {
       const unauth = await anonymous.request.get(`${base}/admin/products/new`); assert.match(unauth.url(), /\/login/);
       const denied = await readOnly.request.get(`${base}/admin/products/new`); assert.equal(denied.status(), 404);
@@ -426,6 +438,13 @@ async function main() {
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve()));
+    // Teardown only after the app has stopped: deleting a published row under a
+    // running tagged cache would create an artificial version mismatch.
+    await db.storeAppearanceRevision.deleteMany();
+    await db.storeAppearance.deleteMany();
+    await db.storeBrandAsset.deleteMany();
+    await db.storeCustomizeRateLimit.deleteMany();
+    await rm(path.join(root, ".next/cache/fetch-cache"), {recursive:true,force:true});
     await db.coupon.deleteMany({ where: { code: couponCode } });
     await db.$disconnect();
     }

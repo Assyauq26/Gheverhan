@@ -53,7 +53,7 @@ test("six-to-seven upgrade preserves legacy accounts, rolls back lock failure, a
     const migrations = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(migrations.length, 12);
+    assert.equal(migrations.length, 13);
     // Keep the historical six-to-seven OTP drill independent of the additive index migration.
     assert.equal(
       migrations[7],

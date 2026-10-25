@@ -62,11 +62,13 @@ try {
   process.env.SUPABASE_URL = `http://127.0.0.1:${address.port}`;
   process.env.SUPABASE_SERVICE_ROLE_KEY = service;
   process.env.SUPABASE_PRODUCT_IMAGES_BUCKET = bucket;
+  process.env.SUPABASE_STORE_BRANDING_BUCKET = bucket;
   process.env.STORAGE_APP_NAME = "gheverhan-private-drill";
   const { putObject, getObject, removeObject } = await import("../../src/lib/storage");
+  for (const namespace of ["product-images", "store-branding"]) {
   for (const staged of [false, true]) {
     const id = randomUUID();
-    const path = `gheverhan-private-drill/product-images/${staged ? "staged-" + id : randomUUID()}/${id}.png`;
+    const path = `gheverhan-private-drill/${namespace}/${staged ? "staged-" + id : randomUUID()}/${id}.png`;
     paths.push(path);
     await putObject(path, png, "image/png", AbortSignal.timeout(15000));
     const stored = await getObject(path, AbortSignal.timeout(15000));
@@ -84,7 +86,9 @@ try {
     await removeObject(path, AbortSignal.timeout(15000));
     await assert.rejects(getObject(path, AbortSignal.timeout(15000)));
   }
-  console.log(JSON.stringify({ status: "PASS", provider: "real-disposable-supabase-storage-api", privateBucket: true, legacyAndStagedByteIntegrity: hashes.length === 2, anonymousPublicAndPrivateDenied: true, invalidBearerDenied: true, duplicateUploadDenied: true, deleteVerified: true, limitations: "Provider/helper contract only; application authorization/finalization/cleanup covered separately by PostgreSQL/browser suites. Not Production verification." }));
+  }
+  assert.equal(hashes.length, 4);
+  console.log(JSON.stringify({ status: "PASS", provider: "real-disposable-supabase-storage-api", privateBucket: true, legacyAndStagedByteIntegrity: hashes.length === 4, brandingNamespaceVerified: true, anonymousPublicAndPrivateDenied: true, invalidBearerDenied: true, duplicateUploadDenied: true, deleteVerified: true, limitations: "Provider/helper contract only; application authorization/finalization/cleanup covered separately by PostgreSQL/browser suites. Not Production verification." }));
 } finally {
   // Delete only the unique bucket created by this drill, after its objects.
   if (created) {

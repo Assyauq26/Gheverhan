@@ -26,6 +26,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
     <div
       className="relative overflow-hidden rounded-2xl bg-surface"
       data-testid="hero-carousel"
+      data-theme-target="hero"
     >
       <div className="relative aspect-[16/8] w-full md:aspect-[3/1]">
         <Image

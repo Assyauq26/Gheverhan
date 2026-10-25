@@ -35,6 +35,7 @@ function bucketName(bucket: StorageBucket): string {
   const value = (
     bucket === "product-images"
       ? process.env.SUPABASE_PRODUCT_IMAGES_BUCKET || "product-images"
+      : bucket === "store-branding" ? process.env.SUPABASE_STORE_BRANDING_BUCKET || "store-branding"
       : process.env.SUPABASE_PAYMENT_PROOFS_BUCKET || "payment-proofs"
   ).trim();
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(value))

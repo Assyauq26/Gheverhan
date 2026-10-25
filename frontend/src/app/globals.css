@@ -89,9 +89,9 @@
  */
 :is(.admin-shell, .storefront-root)
   :is(
-    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
-    select,
-    textarea
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([aria-invalid="true"]),
+    select:not([aria-invalid="true"]),
+    textarea:not([aria-invalid="true"])
   ):focus {
   border-color: #52525b;
   outline: none;
@@ -101,9 +101,9 @@
 }
 .storefront-root[data-theme-active="true"]
   :is(
-    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
-    select,
-    textarea
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([aria-invalid="true"]),
+    select:not([aria-invalid="true"]),
+    textarea:not([aria-invalid="true"])
   ):focus {
   border-color: var(--store-focus, #52525b);
   outline: none;
@@ -125,4 +125,20 @@
   .storefront-root [data-testid="bottom-nav"] a > span:last-child {
     transition: none;
   }
+}
+
+
+/* Validation must keep an error-color focus border while still avoiding
+ * duplicate halos on invalid text controls. */
+:is(.admin-shell, .storefront-root)
+  :is(input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]):focus {
+  border-color: #b91c1c;
+  outline: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  box-shadow: none;
+}
+.storefront-root[data-theme-active="true"]
+  :is(input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]):focus {
+  border-color: var(--store-error, #b91c1c);
 }

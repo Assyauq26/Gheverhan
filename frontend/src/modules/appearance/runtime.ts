@@ -34,9 +34,19 @@ export function themeStyle(input: StoreAppearanceV1): CSSProperties {
       out[`--store-gradient-${target}-fallback`] = g.fallback;
     }
   }
-  out["--store-radius"] = { none: "0px", soft: "12px", round: "24px" }[
+  // Component geometry stays close to the original lightweight storefront.
+  // "round" remains customizable, but must not inflate product cards to 24px.
+  out["--store-radius"] = { none: "0px", soft: "12px", round: "16px" }[
     v.styling.radius
   ];
+  out["--store-media-radius"] = { none: "0px", soft: "10px", round: "12px" }[
+    v.styling.radius
+  ];
+  // Strong --store-border is retained for WCAG form/control boundaries.
+  // Decoration (cards/search) uses a lighter blend derived from the chosen
+  // palette instead of making every outline look like an input focus ring.
+  out["--store-decorative-border"] = mix(v.colors.card, v.colors.border, 0.13);
+  out["--store-search-border"] = mix(v.colors.surface, v.colors.border, 0.13);
   out["--store-button-radius"] = {
     square: "0px",
     soft: "10px",
@@ -44,8 +54,13 @@ export function themeStyle(input: StoreAppearanceV1): CSSProperties {
   }[v.styling.button];
   out["--store-shadow"] = {
     none: "none",
-    soft: "0 4px 16px rgb(0 0 0 / .08)",
+    soft: "0 2px 12px rgb(0 0 0 / .05)",
     raised: "0 8px 28px rgb(0 0 0 / .18)",
+  }[v.styling.shadow];
+  out["--store-shadow-hover"] = {
+    none: "none",
+    soft: "0 6px 20px rgb(0 0 0 / .08)",
+    raised: "0 12px 32px rgb(0 0 0 / .24)",
   }[v.styling.shadow];
   out["--font-sans"] =
     v.styling.font === "serif"

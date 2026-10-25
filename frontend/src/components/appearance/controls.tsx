@@ -114,6 +114,7 @@ export function Controls({
   ) => (
     <Field label={label}>
       <select
+        aria-label={label}
         className={inputClass}
         value={value}
         onChange={(e) => change((d) => update(d, e.target.value))}

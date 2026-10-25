@@ -304,6 +304,52 @@ export async function verifyStoreAppearance({
       },
     );
     await check(
+      "customize: mobile touch switches preview and preserves four destinations",
+      async () => {
+        const mobile = await browser.newContext({
+          viewport: { width: 390, height: 844 },
+          isMobile: true,
+          hasTouch: true,
+          reducedMotion: "reduce",
+        });
+        await mobile.addCookies(await admin.cookies());
+        const touch = await mobile.newPage();
+        try {
+          await touch.goto(base + "/admin/customize");
+          await touch.screenshot({
+            path: path.join(artifactDir, "customize-editor-390.png"),
+            fullPage: true,
+          });
+          await touch
+            .getByRole("button", { name: "Lihat Preview", exact: true })
+            .tap();
+          const frame = touch.frameLocator(
+            'iframe[title="Preview draft toko"]',
+          );
+          await expect(frame.getByTestId("logo")).toBeVisible();
+          await expect(frame.getByTestId("bottom-nav")).toBeVisible();
+          await expect(
+            frame.getByTestId("bottom-nav").locator("a"),
+          ).toHaveCount(4);
+          assert.ok(
+            await frame
+              .locator("body")
+              .evaluate(
+                (e) =>
+                  e.ownerDocument.documentElement.scrollWidth <=
+                  e.ownerDocument.defaultView!.innerWidth,
+              ),
+          );
+          await touch.screenshot({
+            path: path.join(artifactDir, "customize-preview-390.png"),
+            fullPage: true,
+          });
+        } finally {
+          await mobile.close();
+        }
+      },
+    );
+    await check(
       "customize: two tab version conflict cannot overwrite",
       async () => {
         const other = await admin.newPage();

@@ -16,6 +16,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
   const icons = {home:Home,shop:LayoutGrid,cart:ShoppingBag,account:User,heart:Heart,star:Star};
   const items = config.mobile.items.map(i => ({...i,href:CORE_HREFS[i.id],icon:icons[i.icon],badgeKey:i.id === "cart"}));
   const pathname = usePathname();
+  const currentPath = preview ? "/" : pathname;
   const [liveCount, setLiveCount] = useState(count);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
     >
       {items.map((item) => {
         const active =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          item.href === "/" ? currentPath === "/" : currentPath.startsWith(item.href);
         const Icon = item.icon;
 
         return (

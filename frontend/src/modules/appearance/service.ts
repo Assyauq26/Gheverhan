@@ -30,6 +30,7 @@ export async function rateLimit(
 export async function readPublishedUncached() {
   const row = await prisma.storeAppearance.findUnique({
     where: { key: "primary" },
+    select: { published: true, publishedVersion: true },
   });
   return {
     config: row ? parseAppearance(row.published) : legacyDefault(),

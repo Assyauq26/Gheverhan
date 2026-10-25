@@ -432,3 +432,8 @@
   input:is([type="checkbox"], [type="radio"]) {
   accent-color: var(--store-selected);
 }
+.storefront-root[data-theme-active="true"] :is(input,textarea)::placeholder {color:var(--store-disabledText);opacity:1;}
+.storefront-root[data-theme-active="true"] a {color:var(--store-link);}
+/* Contextual foregrounds keep shell, navigation and CTA labels independent of body links. */
+.storefront-root[data-theme-active="true"] > header a {color:var(--store-gradient-header-text,var(--store-headerText));}
+.storefront-root[data-theme-active="true"] > footer a {color:var(--store-gradient-footer-text,var(--store-footerText));}

@@ -185,6 +185,7 @@ export async function readLogo(
     throw new HttpError("Logo tidak ditemukan", 404);
   const row = await prisma.storeAppearance.findUnique({
     where: { key: "primary" },
+    select: { published: true },
   });
   const published =
     row && parseAppearance(row.published).identity.logoAssetId === id;

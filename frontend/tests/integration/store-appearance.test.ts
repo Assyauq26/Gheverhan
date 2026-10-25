@@ -230,6 +230,53 @@ test("appearance lifecycle, transaction races, rollback and media privacy", asyn
       assert.ok(await db.storeBrandAsset.findUnique({ where: { id: logo } }));
     },
   );
+  await t.test(
+    "cleanup reaches expired unreferenced uploads after 100 revision-retained logos",
+    async () => {
+      const { makeDefault } = await import("../../src/modules/appearance/schema");
+      const retained = Array.from({ length: 101 }, (_, index) => {
+        const id = randomUUID();
+        const config = makeDefault();
+        config.identity.logoAssetId = id;
+        return { id, index, config };
+      });
+      await db.storeBrandAsset.createMany({
+        data: retained.map(({ id }) => ({
+          id,
+          actorId: actor,
+          sessionHash: session,
+          requestId: randomUUID(),
+          path: `appearance-tests/store-branding/${actor}/${id}.webp`,
+          checksum: "0".repeat(64),
+          size: 100,
+          ready: true,
+          expiresAt: new Date(0),
+        })),
+      });
+      await db.storeAppearanceRevision.createMany({
+        data: retained.map(({ index, config }) => ({
+          version: 1000 + index,
+          config,
+          actorId: actor,
+          action: "publish",
+        })),
+      });
+      const orphan = (
+        await media.uploadLogo(actor, session, randomUUID(), png, "image/png")
+      ).id;
+      await db.storeBrandAsset.update({
+        where: { id: orphan },
+        data: { expiresAt: new Date("2020-01-01T00:00:00Z") },
+      });
+      const result = await media.cleanupBranding();
+      assert.equal(result.removed, 1, "New orphan must not starve behind history");
+      assert.equal(await db.storeBrandAsset.findUnique({ where: { id: orphan } }), null);
+      for (const item of [retained[0], retained[100]]) {
+        assert.ok(await db.storeBrandAsset.findUnique({ where: { id: item.id } }),
+          "A revision-referenced logo must be retained");
+      }
+    },
+  );
   await t.test("new tables deny anonymous roles through RLS", async () => {
     const rows = await db.$queryRaw<
       { relname: string; relrowsecurity: boolean }[]

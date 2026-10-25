@@ -181,6 +181,14 @@ async function main() {
         const sidebar = page.locator('aside[aria-label="Sidebar admin"]');
         if (width === 390) {
           await expect(bottomNav).toBeVisible();
+          const adminNavVisual = await bottomNav.evaluate((e) => ({
+            topBorder: getComputedStyle(e).borderTopWidth,
+            shadow: getComputedStyle(e).boxShadow,
+            duration: getComputedStyle(e.querySelector('a[aria-current="page"]')!).transitionDuration,
+          }));
+          assert.equal(adminNavVisual.topBorder, '0px', 'Seller bottom navigation uses depth, not a divider line');
+          assert.notEqual(adminNavVisual.shadow, 'none', 'Seller bottom navigation must stand out on white');
+          assert.ok(parseFloat(adminNavVisual.duration) >= 0.25, 'Seller tab active state should transition smoothly');
           await expect(sidebar).toBeHidden();
           await page.setViewportSize({ width: 768, height: 900 });
           await expect(page.getByRole('banner').locator('nav')).toHaveCount(0);

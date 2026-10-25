@@ -134,38 +134,41 @@ export async function verifyStoreAppearance({
             .frameLocator('iframe[title="Preview draft toko"]')
             .locator('article[data-theme-target="highlightCard"]')
             .first()
-            .evaluate((card) => {
-              const root = card.closest(".storefront-root")!;
-              const media = card.querySelector(".rounded-xl")!;
-              const search = root.querySelector('[data-testid="search-input"]')!;
-              const cardStyle = getComputedStyle(card);
-              const searchStyle = getComputedStyle(search);
-              const channels = (value: string) =>
-                (value.match(/\d+/g) || []).slice(0, 3).map(Number);
-              const largestDifference = (left: string, right: string) =>
-                Math.max(
-                  ...channels(left).map(
-                    (channel, index) =>
-                      Math.abs(channel - channels(right)[index]),
-                  ),
-                );
-              return {
-                radius: cardStyle.borderRadius,
-                mediaRadius: getComputedStyle(media).borderRadius,
-                cardBorderDifference: largestDifference(
-                  cardStyle.borderColor,
-                  cardStyle.backgroundColor,
-                ),
-                searchBorderDifference: largestDifference(
-                  searchStyle.borderColor,
-                  searchStyle.backgroundColor,
-                ),
-              };
-            });
+            .evaluate((card) => ({
+              radius: getComputedStyle(card).borderRadius,
+              mediaRadius: getComputedStyle(card.querySelector(".rounded-xl")!)
+                .borderRadius,
+              cardBorder: getComputedStyle(card).borderColor,
+              cardBackground: getComputedStyle(card).backgroundColor,
+              searchBorder: getComputedStyle(
+                card.closest(".storefront-root")!
+                  .querySelector('[data-testid="search-input"]')!,
+              ).borderColor,
+              searchBackground: getComputedStyle(
+                card.closest(".storefront-root")!
+                  .querySelector('[data-testid="search-input"]')!,
+              ).backgroundColor,
+            }));
+          // Do color parsing outside evaluate: browser-side nested arrow
+          // helpers are not portable through the tsx/Playwright serializer.
+          const channels = (value: string) =>
+            (value.match(/\d+/g) || []).slice(0, 3).map(Number);
+          const largestDifference = (left: string, right: string) =>
+            Math.max(
+              ...channels(left).map(
+                (channel, index) => Math.abs(channel - channels(right)[index]),
+              ),
+            );
           assert.equal(visual.radius, "16px", preset.name);
           assert.equal(visual.mediaRadius, "12px", preset.name);
-          assert.ok(visual.cardBorderDifference < 48, preset.name);
-          assert.ok(visual.searchBorderDifference < 48, preset.name);
+          assert.ok(
+            largestDifference(visual.cardBorder, visual.cardBackground) < 48,
+            preset.name,
+          );
+          assert.ok(
+            largestDifference(visual.searchBorder, visual.searchBackground) < 48,
+            preset.name,
+          );
         }
         await page
           .getByRole("button", { name: "Midnight Ink", exact: true })

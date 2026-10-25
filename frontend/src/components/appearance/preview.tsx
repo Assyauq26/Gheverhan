@@ -18,6 +18,7 @@ export function AppearancePreview() {
     const nonce = location.hash.slice(1),
       origin = new URL(location.href).origin;
     let blobUrl: string | undefined;
+    let blobId: string | null = null;
     const receive = (event: MessageEvent) => {
       if (
         event.source !== parent ||
@@ -29,9 +30,13 @@ export function AppearancePreview() {
       try {
         const v = parseAppearance(event.data.config);
         setConfig(v);
-        if (blobUrl) URL.revokeObjectURL(blobUrl);
-        blobUrl = undefined;
+        if (v.identity.logoAssetId !== blobId) {
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          blobUrl = undefined;
+          blobId = v.identity.logoAssetId;
+        }
         if (
+          !blobUrl &&
           event.data.logo instanceof ArrayBuffer &&
           event.data.logo.byteLength <= 2097152
         ) {

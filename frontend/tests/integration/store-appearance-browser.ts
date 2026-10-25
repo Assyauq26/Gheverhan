@@ -265,6 +265,15 @@ export async function verifyStoreAppearance({
       "customize: header visibility and bottom-bar layout affect the shared preview",
       async () => {
         const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        let logoReads = 0;
+        const track = (request: { url(): string; method(): string }) => {
+          if (
+            request.method() === "GET" &&
+            request.url().includes("/api/v1/admin/store-branding/")
+          )
+            logoReads++;
+        };
+        page.on("request", track);
         await page
           .getByRole("button", { name: "Preset/Template Warna", exact: true })
           .click();
@@ -335,6 +344,12 @@ export async function verifyStoreAppearance({
         await page
           .getByLabel("Navigasi mobile", { exact: true })
           .selectOption("pill");
+        page.off("request", track);
+        assert.equal(
+          logoReads,
+          0,
+          "Palette and layout edits reuse in-memory logo bytes",
+        );
         await page
           .getByRole("button", { name: "Identitas Toko", exact: true })
           .click();

@@ -39,8 +39,13 @@ export function AppearanceEditor({
   const [width, setWidth] = useState(390),
     [available, setAvailable] = useState(390),
     [nonce, setNonce] = useState(""),
-    [ready, setReady] = useState(false),
+    [ready, setReady] = useState(0),
     [mobilePreview, setMobilePreview] = useState(false);
+  const [logoBytes, setLogoBytes] = useState<{
+    id: string;
+    bytes: ArrayBuffer;
+  } | null>(null);
+  const sentLogo = useRef<string | null>(null);
   const iframe = useRef<HTMLIFrameElement>(null),
     container = useRef<HTMLDivElement>(null),
     errorRef = useRef<HTMLDivElement>(null);
@@ -79,37 +84,53 @@ export function AppearanceEditor({
         e.origin === "null" &&
         e.data?.type === "appearance-ready" &&
         e.data.nonce === nonce
-      )
-        setReady(true);
+      ) {
+        sentLogo.current = null;
+        setReady((value) => value + 1);
+      }
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
   }, [nonce]);
+  const logoId = draft.identity.logoAssetId;
   useEffect(() => {
-    if (!ready || !validation.success) return;
+    setLogoBytes(null);
+    if (!logoId) return;
+    const controller = new AbortController();
     let active = true;
-    const send = async () => {
-      let logo: ArrayBuffer | undefined;
-      const id = draft.identity.logoAssetId;
-      if (id) {
-        try {
-          const r = await fetch(`/api/v1/admin/store-branding/${id}`, {
-            cache: "no-store",
-          });
-          if (r.ok) logo = await r.arrayBuffer();
-        } catch {}
-      }
-      if (active)
-        iframe.current?.contentWindow?.postMessage(
-          { type: "appearance", nonce, config: validation.data, logo },
-          "*",
-        );
-    };
-    void send();
+    void (async () => {
+      try {
+        const response = await fetch(`/api/v1/admin/store-branding/${logoId}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const bytes = await response.arrayBuffer();
+        if (active && bytes.byteLength <= 2097152)
+          setLogoBytes({ id: logoId, bytes });
+      } catch {}
+    })();
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [draft, validation, ready, nonce]); // A fresh validated snapshot is sent after every controlled edit.
+  }, [logoId]);
+  useEffect(() => {
+    if (!ready || !validation.success) return;
+    const message: {
+      type: string;
+      nonce: string;
+      config: StoreAppearanceV1;
+      logo?: ArrayBuffer;
+    } = { type: "appearance", nonce, config: validation.data };
+    if (sentLogo.current !== logoId) {
+      if (logoBytes?.id === logoId) {
+        message.logo = logoBytes.bytes;
+        sentLogo.current = logoId;
+      } else sentLogo.current = null;
+    }
+    iframe.current?.contentWindow?.postMessage(message, "*");
+  }, [validation, ready, nonce, logoId, logoBytes]);
   async function history(before?: number) {
     const r = await appearanceHistory(before);
     if (r.ok && r.data)

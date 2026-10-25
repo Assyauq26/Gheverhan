@@ -79,3 +79,35 @@
     transform: none;
   }
 }
+
+
+/*
+ * Text-entry controls have a single 1px focus boundary, not a second
+ * Tailwind ring/outline. This covers fields that do not use the shared Input
+ * component (filters, admin forms, Customize and customer flows).
+ * Never suppress keyboard focus on buttons, links, toggles or file pickers.
+ */
+:is(.admin-shell, .storefront-root)
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    select,
+    textarea
+  ):focus {
+  border-color: #52525b;
+  outline: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  box-shadow: none;
+}
+.storefront-root[data-theme-active="true"]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    select,
+    textarea
+  ):focus {
+  border-color: var(--store-focus, #52525b);
+  outline: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  box-shadow: none;
+}

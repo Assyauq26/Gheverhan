@@ -39,7 +39,10 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center justify-center gap-1 rounded-full bg-white/95 p-1.5 backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center justify-center gap-1 rounded-full bg-white/95 p-1.5 backdrop-blur transition-[background-color,box-shadow] duration-300 md:hidden motion-reduce:transition-none"
+      style={{ boxShadow: config.mobile.style === "pill"
+        ? "var(--store-nav-shadow, 0 10px 34px rgb(0 0 0 / .17), 0 2px 9px rgb(0 0 0 / .07))"
+        : "var(--store-nav-bar-shadow, 0 -5px 24px rgb(0 0 0 / .08))" }}
       data-style={config.mobile.style}
       data-testid="bottom-nav"
     >
@@ -55,10 +58,10 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
             data-testid={`bottomnav-${item.label.toLowerCase()}`}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex h-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none",
+              "relative flex h-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold transition-[width,background-color,color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
               active
-                ? "min-w-[84px] gap-2 bg-black px-4 text-white shadow-sm"
-                : "w-11 px-0 text-ink-soft hover:bg-surface/70",
+                ? "w-[128px] gap-2 bg-black px-3 text-white shadow-sm"
+                : "w-11 gap-0 px-0 text-ink-soft hover:bg-surface/70",
             )}
           >
             <span className="relative flex shrink-0 items-center justify-center">
@@ -71,7 +74,7 @@ export function BottomNav({ cartCount: count = 0 }: { cartCount?: number }) {
             </span>
             <span
               className={cn(
-                "whitespace-nowrap transition-opacity duration-150 motion-reduce:transition-none",
+                "whitespace-nowrap overflow-hidden transition-[max-width,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
                 active
                   ? "max-w-[72px] translate-x-0 opacity-100"
                   : "pointer-events-none max-w-0 -translate-x-1 opacity-0",

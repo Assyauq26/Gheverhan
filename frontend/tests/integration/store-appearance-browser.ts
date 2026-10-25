@@ -310,9 +310,17 @@ export async function verifyStoreAppearance({
         // Requests started after this point must still be zero.
         await page.waitForLoadState("networkidle", { timeout: 15000 });
         let logoReads = 0;
-        const track = (request: { url(): string; method(): string }) => {
+        const track = (request: {
+          url(): string;
+          method(): string;
+          resourceType(): string;
+        }) => {
+          // The Identity tab also contains a lazy-loaded <Image> thumbnail.
+          // Only the editor's fetch/XHR requests supply preview logo bytes;
+          // do not count normal image loads when scrolling past the thumbnail.
           if (
             request.method() === "GET" &&
+            ["fetch", "xhr"].includes(request.resourceType()) &&
             request.url().includes("/api/v1/admin/store-branding/")
           )
             logoReads++;

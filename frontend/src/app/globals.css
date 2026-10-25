@@ -111,3 +111,18 @@
   --tw-ring-shadow: 0 0 #0000;
   box-shadow: none;
 }
+
+
+/* Global link feedback must not override the pill's width animation.
+ * Target the navigation links specifically; keep normal links at 150ms. */
+.storefront-root [data-testid="bottom-nav"] a {
+  transition-property: width, background-color, color, box-shadow;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .storefront-root [data-testid="bottom-nav"] a,
+  .storefront-root [data-testid="bottom-nav"] a > span:last-child {
+    transition: none;
+  }
+}

@@ -130,6 +130,45 @@ export async function verifyStoreAppearance({
                 .evaluate((e) => getComputedStyle(e).backgroundColor),
             )
             .toBe(`rgb(${rgb(preset.config.colors.pageBg).join(", ")})`);
+          const visual = await page
+            .frameLocator('iframe[title="Preview draft toko"]')
+            .locator('article[data-theme-target="highlightCard"]')
+            .first()
+            .evaluate((card) => ({
+              radius: getComputedStyle(card).borderRadius,
+              mediaRadius: getComputedStyle(card.querySelector(".rounded-xl")!)
+                .borderRadius,
+              cardBorder: getComputedStyle(card).borderColor,
+              cardBackground: getComputedStyle(card).backgroundColor,
+              searchBorder: getComputedStyle(
+                card.closest(".storefront-root")!
+                  .querySelector('[data-testid="search-input"]')!,
+              ).borderColor,
+              searchBackground: getComputedStyle(
+                card.closest(".storefront-root")!
+                  .querySelector('[data-testid="search-input"]')!,
+              ).backgroundColor,
+            }));
+          // Do color parsing outside evaluate: browser-side nested arrow
+          // helpers are not portable through the tsx/Playwright serializer.
+          const channels = (value: string) =>
+            (value.match(/\d+/g) || []).slice(0, 3).map(Number);
+          const largestDifference = (left: string, right: string) =>
+            Math.max(
+              ...channels(left).map(
+                (channel, index) => Math.abs(channel - channels(right)[index]),
+              ),
+            );
+          assert.equal(visual.radius, "16px", preset.name);
+          assert.equal(visual.mediaRadius, "12px", preset.name);
+          assert.ok(
+            largestDifference(visual.cardBorder, visual.cardBackground) < 48,
+            preset.name,
+          );
+          assert.ok(
+            largestDifference(visual.searchBorder, visual.searchBackground) < 48,
+            preset.name,
+          );
         }
         await page
           .getByRole("button", { name: "Midnight Ink", exact: true })
@@ -265,10 +304,23 @@ export async function verifyStoreAppearance({
       "customize: header visibility and bottom-bar layout affect the shared preview",
       async () => {
         const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        // The preceding save/logo-preview scenario may still have a GET in
+        // flight when its status message appears. Finish prior page/iframe
+        // requests BEFORE measuring reads caused by palette/layout changes.
+        // Requests started after this point must still be zero.
+        await page.waitForLoadState("networkidle", { timeout: 15000 });
         let logoReads = 0;
-        const track = (request: { url(): string; method(): string }) => {
+        const track = (request: {
+          url(): string;
+          method(): string;
+          resourceType(): string;
+        }) => {
+          // The Identity tab also contains a lazy-loaded <Image> thumbnail.
+          // Only the editor's fetch/XHR requests supply preview logo bytes;
+          // do not count normal image loads when scrolling past the thumbnail.
           if (
             request.method() === "GET" &&
+            ["fetch", "xhr"].includes(request.resourceType()) &&
             request.url().includes("/api/v1/admin/store-branding/")
           )
             logoReads++;

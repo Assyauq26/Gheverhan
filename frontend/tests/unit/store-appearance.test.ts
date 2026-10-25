@@ -30,6 +30,28 @@ describe("store appearance contract", () => {
     expect(contrastErrors(legacyDefault()).length).toBeGreaterThan(0);
     expect(contrastErrors(makeDefault())).toEqual([]);
   });
+  it("published Monochrome keeps discreet card and search decoration", () => {
+    const config = PRESETS[0].config;
+    const style = themeStyle(config) as unknown as Record<string, string>;
+    // Accessible form controls still use the high-contrast border token.
+    expect(contrast(config.colors.border, config.colors.field)).toBeGreaterThanOrEqual(3);
+    // Decorative outlines must not inherit that strong border as a solid line.
+    expect(contrast(style["--store-decorative-border"], config.colors.card)).toBeLessThan(2);
+    expect(contrast(style["--store-search-border"], config.colors.surface)).toBeLessThan(2);
+    expect(style["--store-radius"]).toBe("16px");
+    expect(style["--store-media-radius"]).toBe("12px");
+    expect(style["--store-shadow"]).toContain("/ .05");
+    expect(style["--store-shadow-hover"]).toContain("/ .08");
+    const soft = structuredClone(config);
+    soft.styling.radius = "soft";
+    expect(themeStyle(soft)).toHaveProperty("--store-radius", "12px");
+    expect(themeStyle(soft)).toHaveProperty("--store-media-radius", "10px");
+    const none = structuredClone(config);
+    none.styling.radius = "none";
+    none.styling.shadow = "none";
+    expect(themeStyle(none)).toHaveProperty("--store-radius", "0px");
+    expect(themeStyle(none)).toHaveProperty("--store-shadow", "none");
+  });
   it.each([
     "javascript:alert(1)",
     "data:text/html,x",

@@ -65,13 +65,16 @@ async function assertBorderless(scope: Page | FrameLocator, label: string) {
 async function assertSearchFocus(scope: Page | FrameLocator) {
   const input = scope.locator('[data-testid="search-input"]:visible');
   // Both responsive search forms exist. Check the one visible at this viewport.
+  const surfaceBefore = await input.evaluate((e) => getComputedStyle(e).backgroundColor);
   await input.focus();
   const focus = await input.evaluate((e) => ({
     border: getComputedStyle(e).borderTopWidth,
     borderColor: getComputedStyle(e).borderTopColor,
+    surface: getComputedStyle(e).backgroundColor,
     outline: getComputedStyle(e).outlineWidth,
     shadow: getComputedStyle(e).boxShadow,
   }));
+  assert.equal(focus.surface, surfaceBefore, "Focus should only darken the border, never flash the field background");
   assert.equal(focus.border, "1px", "Search keeps its original single border");
   assert.notEqual(focus.borderColor, "transparent", "Focused border remains visible");
   assert.equal(focus.outline, "0px", "Search must not add a second outline");

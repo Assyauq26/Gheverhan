@@ -132,7 +132,7 @@
   display: flex;
   align-items: center;
 }
-.auth-ui :is(input, button, a, summary):focus-visible {
+.auth-ui :is(button, a, summary):focus-visible {
   outline: 2px solid hsl(var(--ink));
   outline-offset: 3px;
   box-shadow: none;
@@ -571,4 +571,29 @@
   display: inline-flex;
   min-height: 44px;
   align-items: center;
+}
+
+
+/* Auth text entries use their existing 1px border as the only focus indicator.
+ * Preserve separate keyboard focus feedback for actions and the six-slot OTP. */
+.auth-ui :is(
+  input:not(.auth-otp-input):not(.ui-input-otp):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea
+):focus {
+  border-color: #52525b;
+  outline: none;
+  box-shadow: none;
+}
+.auth-ui .ui-input-group:focus-within {
+  border-color: #52525b;
+  box-shadow: none;
+}
+.auth-ui :is(.ui-input, .ui-input-otp):not([aria-invalid="true"]):hover {
+  border-color: hsl(var(--line));
+}
+.auth-ui :is(.ui-input, .ui-input-otp)[aria-invalid="true"]:focus {
+  border-color: hsl(var(--danger));
+  outline: none;
+  box-shadow: none;
 }

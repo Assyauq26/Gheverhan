@@ -272,7 +272,7 @@ export async function cleanupBranding() {
   // 100 old, retained logos permanently starve all newer expired uploads.
   // Keep the in-transaction reference check below: this query is only a
   // candidate scan and a concurrent publish may attach one in the meantime.
-  const rows = await prisma.$queryRaw<{ id: string; path: string }[]>\`
+  const rows = await prisma.$queryRaw<{ id: string; path: string }[]>`
     SELECT asset."id", asset."path"
     FROM "StoreBrandAsset" AS asset
     WHERE asset."expiresAt" < NOW()
@@ -290,7 +290,7 @@ export async function cleanupBranding() {
       )
     ORDER BY asset."expiresAt" ASC, asset."id" ASC
     LIMIT 100
-  \`;
+  `;
   let removed = 0;
   for (const asset of rows) {
     await prisma.$transaction(

@@ -138,6 +138,17 @@ test("appearance lifecycle, transaction races, rollback and media privacy", asyn
         [Buffer.alloc(2097153), "image/png"],
       ] as const)
         await assert.rejects(media.normalizeLogo(bytes, mime));
+      const animation = Buffer.alloc(20);
+      animation.writeUInt32BE(8, 0);
+      animation.write("acTL", 4);
+      animation.writeUInt32BE(2, 8);
+      await assert.rejects(
+        media.normalizeLogo(
+          Buffer.concat([png.subarray(0, 33), animation, png.subarray(33)]),
+          "image/png",
+        ),
+        /animasi/,
+      );
       const normalized = await media.normalizeLogo(png, "image/png");
       assert.equal((await sharp(normalized).metadata()).format, "webp");
       assert.equal((await sharp(normalized).metadata()).exif, undefined);

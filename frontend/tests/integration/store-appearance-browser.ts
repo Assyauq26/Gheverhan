@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { parseAppearance } from "../../src/modules/appearance/schema";
 import assert from "node:assert/strict";
 import path from "node:path";
+import { writeFile } from "node:fs/promises";
 import { expect, type Browser, type BrowserContext } from "@playwright/test";
 import type { PrismaClient } from "@prisma/client";
 export async function verifyStoreAppearance({
@@ -203,18 +204,83 @@ export async function verifyStoreAppearance({
           .getByRole("group", { name: "buttons", exact: true })
           .getByLabel("Aktifkan", { exact: true })
           .check();
+        const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        await frame
+          .getByText("PREVIEW • Interaksi belanja dinonaktifkan", {
+            exact: true,
+          })
+          .hover();
+        const buy = frame.getByRole("button", {
+          name: "Beli sekarang",
+          exact: true,
+        });
         await expect
-          .poll(() =>
-            page
-              .frameLocator('iframe[title="Preview draft toko"]')
-              .getByRole("button", { name: "Beli sekarang", exact: true })
-              .evaluate((e) => getComputedStyle(e).backgroundImage),
-          )
+          .poll(() => buy.evaluate((e) => getComputedStyle(e).backgroundImage))
           .toContain("linear-gradient");
+        await buy.hover();
+        await expect
+          .poll(() => buy.evaluate((e) => getComputedStyle(e).backgroundImage))
+          .toBe("none");
+        await expect
+          .poll(() => buy.evaluate((e) => getComputedStyle(e).color))
+          .toBe("rgb(17, 17, 17)");
+        await frame
+          .getByText("PREVIEW • Interaksi belanja dinonaktifkan", {
+            exact: true,
+          })
+          .hover();
         await page
           .getByRole("button", { name: "Simpan Draft", exact: true })
           .click();
         await expect(page.getByRole("status")).toContainText("Draft tersimpan");
+        await page
+          .getByRole("button", { name: "Identitas Toko", exact: true })
+          .click();
+      },
+    );
+    await check(
+      "customize: header visibility and bottom-bar layout affect the shared preview",
+      async () => {
+        const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        await page.getByRole("button", { name: "Header", exact: true }).click();
+        await page.getByLabel("Wishlist", { exact: true }).uncheck();
+        await expect(frame.getByTestId("header-wishlist")).toBeHidden();
+        await page.getByLabel("Wishlist", { exact: true }).check();
+        await page.getByLabel("Pencarian", { exact: true }).uncheck();
+        await expect(frame.getByTestId("search-bar")).toHaveCount(0);
+        await page.getByLabel("Pencarian", { exact: true }).check();
+        await page
+          .getByLabel("Layout header", { exact: true })
+          .selectOption("compact");
+        await expect(frame.locator("header")).toHaveAttribute(
+          "data-layout",
+          "compact",
+        );
+        await page
+          .getByLabel("Layout header", { exact: true })
+          .selectOption("classic");
+        await page
+          .getByRole("button", { name: "Navigasi", exact: true })
+          .click();
+        await page
+          .getByLabel("Navigasi mobile", { exact: true })
+          .selectOption("bar");
+        await expect(frame.getByTestId("bottom-nav")).toHaveAttribute(
+          "data-style",
+          "bar",
+        );
+        await expect
+          .poll(() =>
+            frame
+              .getByTestId("bottom-nav")
+              .locator("a > span:last-child")
+              .first()
+              .evaluate((e) => getComputedStyle(e).opacity),
+          )
+          .toBe("1");
+        await page
+          .getByLabel("Navigasi mobile", { exact: true })
+          .selectOption("pill");
         await page
           .getByRole("button", { name: "Identitas Toko", exact: true })
           .click();
@@ -246,14 +312,20 @@ export async function verifyStoreAppearance({
         await expect(logo).toBeVisible();
         const src = await logo.getAttribute("src");
         assert.ok(src);
-        assert.equal((await anonymous.request.get(base + src)).status(), 200);
-        await visitor.route(base + src, (r) => r.abort());
+        const logoUrl = new URL(src, base);
+        assert.equal(logoUrl.origin, new URL(base).origin);
+        assert.ok(
+          logoUrl.pathname.startsWith("/api/v1/store-branding/"),
+          `Public logo uses published asset endpoint: ${src}`,
+        );
+        assert.equal((await anonymous.request.get(logoUrl.href)).status(), 200);
+        await visitor.route(logoUrl.href, (r) => r.abort());
         await visitor.reload();
         await expect(visitor.getByTestId("logo").locator("img")).toHaveCount(0);
         await expect(visitor.getByTestId("logo")).toHaveText(
           "Theme Studio Test",
         );
-        await visitor.unroute(base + src);
+        await visitor.unroute(logoUrl.href);
         await visitor.reload();
         assert.equal(
           await page
@@ -417,12 +489,38 @@ export async function verifyStoreAppearance({
     await check("customize: no editor runtime exceptions", async () => {
       assert.deepEqual(errors, []);
     });
+  } catch (error) {
+    const diagnostics = await page
+      .frameLocator('iframe[title="Preview draft toko"]')
+      .locator("body")
+      .evaluate((body) => ({
+        rootStyle: body
+          .querySelector(".storefront-root")
+          ?.getAttribute("style"),
+        buttons: Array.from(body.querySelectorAll("button")).map((button) => ({
+          text: button.textContent,
+          html: button.outerHTML,
+          hover: button.matches(":hover"),
+          disabled: button.disabled,
+          background: getComputedStyle(button).background,
+          backgroundImage: getComputedStyle(button).backgroundImage,
+          color: getComputedStyle(button).color,
+        })),
+      }))
+      .catch(() => ({ unavailable: true }));
+    await writeFile(
+      path.join(artifactDir, "customize-failure.json"),
+      JSON.stringify(diagnostics, null, 2),
+    );
+    await page
+      .screenshot({
+        path: path.join(artifactDir, "customize-failure.png"),
+        fullPage: true,
+      })
+      .catch(() => {});
+    throw error;
   } finally {
     await page.close();
     await visitor.close();
-    await db.storeAppearanceRevision.deleteMany();
-    await db.storeAppearance.deleteMany();
-    await db.storeBrandAsset.deleteMany();
-    await db.storeCustomizeRateLimit.deleteMany();
   }
 }

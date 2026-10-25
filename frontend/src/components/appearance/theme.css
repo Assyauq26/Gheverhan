@@ -39,7 +39,9 @@
   ) {
   border-color: var(--store-border);
 }
-.storefront-root[data-theme-active="true"] :is(a, button).bg-black {
+.storefront-root[data-theme-active="true"]
+  main
+  :is(a, button).bg-black:not([data-button-variant]) {
   background: var(--store-primary);
   color: var(--store-primaryText);
 }
@@ -432,8 +434,150 @@
   input:is([type="checkbox"], [type="radio"]) {
   accent-color: var(--store-selected);
 }
-.storefront-root[data-theme-active="true"] :is(input,textarea)::placeholder {color:var(--store-disabledText);opacity:1;}
-.storefront-root[data-theme-active="true"] a {color:var(--store-link);}
+.storefront-root[data-theme-active="true"] :is(input, textarea)::placeholder {
+  color: var(--store-disabledText);
+  opacity: 1;
+}
+.storefront-root[data-theme-active="true"] a {
+  color: var(--store-link);
+}
 /* Contextual foregrounds keep shell, navigation and CTA labels independent of body links. */
-.storefront-root[data-theme-active="true"] > header a {color:var(--store-gradient-header-text,var(--store-headerText));}
-.storefront-root[data-theme-active="true"] > footer a {color:var(--store-gradient-footer-text,var(--store-footerText));}
+.storefront-root[data-theme-active="true"] > header a {
+  color: var(--store-gradient-header-text, var(--store-headerText));
+}
+.storefront-root[data-theme-active="true"] > footer a {
+  color: var(--store-gradient-footer-text, var(--store-footerText));
+}
+/* Explicit component roles take precedence over legacy utility colors. */
+.storefront-root > header [hidden] {
+  display: none !important;
+}
+.storefront-root[data-theme-active="true"]
+  main
+  :is(a, button).bg-black:not([data-button-variant]):hover {
+  background: var(--store-primaryHover);
+  color: var(--store-primaryText);
+}
+.storefront-root[data-theme-active="true"]
+  main
+  :is(a, button).bg-black:not([data-button-variant]):active {
+  background: var(--store-primaryPressed);
+  color: var(--store-primaryText);
+}
+.storefront-root[data-theme-active="true"]
+  main
+  button.bg-black:not([data-button-variant]):disabled {
+  background: var(--store-disabled);
+  color: var(--store-disabledText);
+}
+.storefront-root[data-theme-active="true"]
+  :is(button, [data-button-variant])
+  svg {
+  color: inherit;
+}
+.storefront-root[data-theme-active="true"] [data-button-variant="ghost"]:hover {
+  background: var(--store-surface);
+  color: var(--store-text);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="ghost"]:active {
+  background: var(--store-secondaryPressed);
+  color: var(--store-secondaryForeground);
+}
+.storefront-root[data-theme-active="true"] [data-button-variant="destructive"] {
+  background: var(--store-error);
+  color: var(--store-error-foreground);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="destructive"]:hover {
+  background: var(--store-error-hover);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="destructive"]:active {
+  background: var(--store-error-pressed);
+}
+.storefront-root[data-theme-active="true"] [data-button-variant="success"] {
+  background: var(--store-success);
+  color: var(--store-success-foreground);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="success"]:hover {
+  background: var(--store-success-hover);
+}
+.storefront-root[data-theme-active="true"]
+  [data-button-variant="success"]:active {
+  background: var(--store-success-pressed);
+}
+.storefront-root[data-theme-active="true"] [data-theme-target="highlightCard"] {
+  border-radius: var(--store-radius);
+  box-shadow: var(--store-shadow);
+}
+.storefront-root[data-theme-active="true"]
+  [data-theme-target="highlightCard"]
+  .rounded-xl {
+  border-radius: var(--store-radius);
+}
+.storefront-root[data-theme-active="true"][data-gradient-highlight-card="true"]
+  [data-theme-target="highlightCard"]
+  [data-theme-role="rating"]
+  svg {
+  color: var(--store-gradient-highlightCard-text);
+  fill: currentColor;
+}
+.storefront-root[data-theme-active="true"] [data-theme-role="rating"] svg {
+  fill: currentColor;
+}
+.storefront-root[data-theme-active="true"] :is(dialog, [role="dialog"]) {
+  background: var(--store-modal);
+  color: var(--store-modalText);
+}
+.storefront-root[data-theme-active="true"] :is(input, select, textarea):focus {
+  border-color: var(--store-focus);
+}
+.storefront-root[data-theme-active="true"] > header a:focus-visible {
+  outline-color: var(--store-gradient-header-text, var(--store-focus));
+}
+.storefront-root[data-theme-active="true"] > footer a:focus-visible {
+  outline-color: var(--store-gradient-footer-text, var(--store-focus));
+}
+.storefront-root[data-theme-active="true"][data-gradient-highlight-card="true"]
+  [data-theme-target="highlightCard"]
+  a:focus-visible {
+  outline-color: var(--store-gradient-highlightCard-text);
+}
+.storefront-root [data-testid="bottom-nav"][data-style="bar"] a {
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 56px;
+  height: auto;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.75rem;
+}
+.storefront-root
+  [data-testid="bottom-nav"][data-style="bar"]
+  a
+  > span:last-child {
+  max-width: 100%;
+  opacity: 1;
+  transform: none;
+  font-size: 0.625rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: auto;
+}
+.storefront-root[data-theme-active="true"] :is(.text-red-700, .text-red-800) {
+  color: var(--store-error);
+}
+.storefront-root[data-theme-active="true"]
+  :is(.text-green-700, .text-green-800) {
+  color: var(--store-success);
+}
+.storefront-root[data-theme-active="true"] :is(.text-blue-700, .text-blue-800) {
+  color: var(--store-info);
+}
+.storefront-root[data-theme-active="true"]
+  :is(.text-amber-700, .text-amber-800, .text-yellow-700) {
+  color: var(--store-warning);
+}

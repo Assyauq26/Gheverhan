@@ -6,7 +6,7 @@ import {
   TOKEN_KEYS,
   type StoreAppearanceV1,
 } from "./schema";
-import { rgb } from "./contrast";
+import { rgb, foreground, mix } from "./contrast";
 export function isLegacy(config: StoreAppearanceV1) {
   return JSON.stringify(config) === JSON.stringify(legacyDefault());
 }
@@ -17,6 +17,13 @@ export function themeStyle(input: StoreAppearanceV1): CSSProperties {
   for (const key of TOKEN_KEYS) {
     out[`--store-${key}`] = v.colors[key];
     out[`--store-${key}-rgb`] = rgb(v.colors[key]).join(" ");
+  }
+  for (const key of ["error", "success"] as const) {
+    const fg = foreground(v.colors[key]),
+      toward = fg === "#FFFFFF" ? "#000000" : "#FFFFFF";
+    out[`--store-${key}-foreground`] = fg;
+    out[`--store-${key}-hover`] = mix(v.colors[key], toward, 0.12);
+    out[`--store-${key}-pressed`] = mix(v.colors[key], toward, 0.2);
   }
   for (const target of GRADIENT_TARGETS) {
     const g = v.gradients[target];

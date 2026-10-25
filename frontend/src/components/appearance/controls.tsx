@@ -3,6 +3,7 @@ import Image from "next/image";
 import {
   GRADIENT_TARGETS,
   TOKEN_KEYS,
+  TOKEN_LABELS,
   type StoreAppearanceV1,
 } from "@/modules/appearance/schema";
 import { PRESETS } from "@/modules/appearance/presets";
@@ -18,6 +19,34 @@ export const TABS = [
   "Riwayat",
 ] as const;
 export type Change = (fn: (draft: StoreAppearanceV1) => void) => void;
+const OPTION_LABELS: Record<string, string> = {
+  text: "Teks",
+  image: "Gambar",
+  both: "Teks & Gambar",
+  classic: "Klasik",
+  centered: "Tengah",
+  compact: "Ringkas",
+  pill: "Pill",
+  bar: "Bottom bar",
+  none: "Tanpa",
+  soft: "Lembut",
+  round: "Membulat",
+  raised: "Tegas",
+  square: "Persegi",
+  system: "Sistem",
+  serif: "Serif",
+  small: "Kecil",
+  normal: "Normal",
+  large: "Besar",
+  left: "Kiri",
+  center: "Tengah",
+  home: "Home",
+  shop: "Shop",
+  cart: "Keranjang",
+  account: "Akun",
+  heart: "Hati",
+  star: "Bintang",
+};
 const inputClass =
   "mt-1 min-h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
 export function Field({
@@ -120,7 +149,9 @@ export function Controls({
         onChange={(e) => change((d) => update(d, e.target.value))}
       >
         {options.map((v) => (
-          <option key={v}>{v}</option>
+          <option key={v} value={v}>
+            {OPTION_LABELS[v] ?? v}
+          </option>
         ))}
       </select>
     </Field>
@@ -134,11 +165,11 @@ export function Controls({
           (d, v) => (d.identity.name = v),
           60,
         )}
-        {text(
-          "Tagline",
-          draft.identity.tagline,
-          (d, v) => (d.identity.tagline = v),
-        )}
+        {text("Tagline", draft.identity.tagline, (d, v) => {
+          const previous = d.identity.tagline;
+          d.identity.tagline = v;
+          if (d.footer.tagline === previous) d.footer.tagline = v;
+        })}
         {select(
           "Mode logo",
           draft.identity.mode,
@@ -236,7 +267,7 @@ export function Controls({
         {TOKEN_KEYS.map((k) => (
           <ColorField
             key={k}
-            label={k}
+            label={TOKEN_LABELS[k]}
             value={draft.colors[k]}
             onChange={(v) => change((d) => (d.colors[k] = v))}
           />
@@ -528,9 +559,20 @@ export function Controls({
           ] as const
         ).map(([key, options]) => (
           <div key={key}>
-            {select(key, draft.styling[key], options, (d, v) => {
-              Object.assign(d.styling, { [key]: v });
-            })}
+            {select(
+              {
+                radius: "Radius sudut",
+                shadow: "Bayangan",
+                button: "Bentuk tombol",
+                font: "Jenis huruf",
+                scale: "Skala huruf",
+              }[key],
+              draft.styling[key],
+              options,
+              (d, v) => {
+                Object.assign(d.styling, { [key]: v });
+              },
+            )}
           </div>
         ))}
       </>

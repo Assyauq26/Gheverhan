@@ -128,3 +128,21 @@ describe("store appearance contract", () => {
     expect(style).toHaveProperty("--store-gradient-buttons");
   });
 });
+
+it("generated semantic button foregrounds remain AA through hover and pressed", () => {
+  for (const preset of PRESETS) {
+    const style = themeStyle(preset.config) as unknown as Record<
+      string,
+      string
+    >;
+    for (const key of ["error", "success"] as const) {
+      const fg = style[`--store-${key}-foreground`];
+      for (const bg of [
+        preset.config.colors[key],
+        style[`--store-${key}-hover`],
+        style[`--store-${key}-pressed`],
+      ])
+        expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});

@@ -1,4 +1,9 @@
-import { GRADIENT_TARGETS, type StoreAppearanceV1, type Token } from "./schema";
+import {
+  GRADIENT_TARGETS,
+  type StoreAppearanceV1,
+  type Token,
+  TOKEN_LABELS,
+} from "./schema";
 export function rgb(hex: string): [number, number, number] {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [
     number,
@@ -96,7 +101,10 @@ export const CONTRAST_PAIRS: [Token, Token, number][] = [
 export function contrastErrors(v: StoreAppearanceV1): string[] {
   const errors = CONTRAST_PAIRS.filter(
     ([fg, bg, min]) => contrast(v.colors[fg], v.colors[bg]) < min,
-  ).map(([fg, bg, min]) => `${fg} / ${bg}: perlu kontras ${min}:1`);
+  ).map(
+    ([fg, bg, min]) =>
+      `${TOKEN_LABELS[fg]} / ${TOKEN_LABELS[bg]}: perlu kontras ${min}:1`,
+  );
   for (const target of GRADIENT_TARGETS) {
     const g = v.gradients[target];
     if (!g.enabled) continue;

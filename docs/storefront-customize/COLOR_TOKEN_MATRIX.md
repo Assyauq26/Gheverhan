@@ -1,6 +1,6 @@
 # Color token matrix
 
-The typed registry has **53 tokens**. Each preset supplies every key; strict validation rejects extra or missing keys. Runtime CSS consumes `--store-<key>` and RGB-channel companions for alpha utilities. No input becomes an arbitrary CSS property.
+The typed registry has **53 tokens**. Each preset supplies every key; strict validation rejects extra or missing keys. Runtime CSS consumes `--store-<key>` and RGB-channel companions for alpha utilities. No input becomes an arbitrary CSS property. Semantic error/success buttons receive generated AA-safe foreground, hover and pressed colors. The editor presents Indonesian labels for these registry keys.
 
 | Group | Registry tokens | Customer application |
 | --- | --- | --- |

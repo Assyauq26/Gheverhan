@@ -34,6 +34,29 @@ export async function normalizeLogo(bytes: Uint8Array, mime: string) {
       "Gambar berisi data tambahan yang tidak diizinkan",
       422,
     );
+  // Reject animation envelopes even if a codec would silently decode only frame one.
+  if (actual === "image/png" || actual === "image/webp") {
+    let offset = actual === "image/png" ? 8 : 12;
+    while (offset + (actual === "image/png" ? 12 : 8) <= b.length) {
+      const png = actual === "image/png",
+        length = png ? b.readUInt32BE(offset) : b.readUInt32LE(offset + 4);
+      const kind = b.toString(
+        "ascii",
+        offset + (png ? 4 : 0),
+        offset + (png ? 8 : 4),
+      );
+      if (offset + length + (png ? 12 : 8) > b.length)
+        throw new HttpError("Struktur gambar tidak valid", 422);
+      if (
+        kind === "acTL" ||
+        kind === "ANIM" ||
+        kind === "ANMF" ||
+        (!png && kind === "VP8X" && length > 0 && (b[offset + 8] & 2) !== 0)
+      )
+        throw new HttpError("Logo animasi tidak diizinkan", 422);
+      offset += length + (png ? 12 : 8) + (png ? 0 : length % 2);
+    }
+  }
   try {
     const image = sharp(b, {
         limitInputPixels: 16000000,

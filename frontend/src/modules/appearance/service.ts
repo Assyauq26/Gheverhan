@@ -32,10 +32,11 @@ export async function readPublishedUncached() {
     where: { key: "primary" },
     select: { published: true, publishedVersion: true },
   });
+  const config = row ? parseAppearance(row.published) : legacyDefault();
   return {
-    config: row ? parseAppearance(row.published) : legacyDefault(),
+    config,
     version: row?.publishedVersion ?? 0,
-    legacy: !row || row.publishedVersion === 0,
+    legacy: JSON.stringify(config) === JSON.stringify(legacyDefault()),
   };
 }
 export async function readDraft() {

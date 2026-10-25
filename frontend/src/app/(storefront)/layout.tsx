@@ -38,7 +38,7 @@ export default async function StorefrontLayout({
             { icon: Truck, t: "Pengiriman Cepat", s: "ke seluruh Indonesia" },
             { icon: ShieldCheck, t: "Belanja Aman", s: "100% transaksi aman" },
             { icon: Headphones, t: "CS Responsif", s: "Siap membantu kamu" },
-            { icon: Star, t: "100K+ Pelanggan", s: "Sudah percaya Gheverhan" },
+            { icon: Star, t: "100K+ Pelanggan", s: `Sudah percaya ${theme.identity.name}` },
           ] : []).map((f, i) => (
             <div key={i} className="flex items-center gap-3">
               <f.icon size={24} className="text-ink" />

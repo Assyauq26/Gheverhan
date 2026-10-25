@@ -2,7 +2,7 @@ import { verifyStoreAppearance } from "./store-appearance-browser";
 import { createServer } from "node:http";
 import { spawn, execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, rm } from "node:fs/promises";
 import { existsSync, createWriteStream, readFileSync } from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -61,6 +61,14 @@ async function main() {
   const portProbe = createServer();
   await new Promise<void>((resolve, reject) => { portProbe.once("error", reject); portProbe.listen(3101, "127.0.0.1", resolve); });
   await new Promise<void>(resolve => portProbe.close(() => resolve()));
+  // A repeated isolated run must not inherit published cache entries from a prior fixture.
+  // Keep the singleton/revisions intact while this server is alive, so version probes
+  // and warmed-cache commerce assertions exercise a consistent database snapshot.
+  await db.storeAppearanceRevision.deleteMany();
+  await db.storeAppearance.deleteMany();
+  await db.storeBrandAsset.deleteMany();
+  await db.storeCustomizeRateLimit.deleteMany();
+  await rm(path.join(root, ".next/cache/fetch-cache"), {recursive:true,force:true});
   // Loopback-only Supabase Storage REST contract double. Never connects to production.
   const storage = createServer(async (req, res) => {
     try {
@@ -428,6 +436,13 @@ async function main() {
     await browser?.close(); server.kill("SIGTERM");
     await new Promise<void>(resolve => { if (server.exitCode !== null) resolve(); else { server.once("exit", () => resolve()); setTimeout(() => { server.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
     log.end(); await new Promise<void>(resolve => storage.close(() => resolve()));
+    // Teardown only after the app has stopped: deleting a published row under a
+    // running tagged cache would create an artificial version mismatch.
+    await db.storeAppearanceRevision.deleteMany();
+    await db.storeAppearance.deleteMany();
+    await db.storeBrandAsset.deleteMany();
+    await db.storeCustomizeRateLimit.deleteMany();
+    await rm(path.join(root, ".next/cache/fetch-cache"), {recursive:true,force:true});
     await db.coupon.deleteMany({ where: { code: couponCode } });
     await db.$disconnect();
     }

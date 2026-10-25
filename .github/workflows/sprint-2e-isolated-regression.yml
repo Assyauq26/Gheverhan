@@ -189,6 +189,7 @@ jobs:
             /tmp/gheverhan-product-browser-*/product-*.png
             /tmp/gheverhan-product-browser-*/native-*.png
             /tmp/gheverhan-product-browser-*/customize-*.png
+            /tmp/gheverhan-product-browser-*/customize-*.json
             /tmp/gheverhan-product-browser-*/editor-v2-*.png
             /tmp/gheverhan-product-browser-*/cart-concurrency-*.json
             /tmp/gheverhan-operations-browser-*/validation-results.json

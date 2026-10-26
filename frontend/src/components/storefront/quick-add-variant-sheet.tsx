@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import { useAppearance } from "@/components/appearance/context";
 import { Button } from "@/components/ui/button";
 import { formatIDR, discountPercent } from "@/lib/money";
 import type { PurchaseProduct } from "@/modules/catalog/purchase-options";
@@ -25,6 +26,7 @@ export function QuickAddVariantSheet({
   onSubmit: (variantId: string, quantity: number) => void;
   onCart: () => void;
 }) {
+  const { config } = useAppearance();
   const selection = useProductOptions(product, initialOptions, initialQuantity),
     { selected, image, quantity } = selection;
   const prices = product.variants.map((v) => v.price),
@@ -55,7 +57,9 @@ export function QuickAddVariantSheet({
             )}
           </div>
           <div className="min-w-0">
-            <p className="mb-1 text-xs">{product.brand}</p>
+            <p className="mb-1 text-xs">
+              {product.brand ?? config.identity.name}
+            </p>
             <h3 className="line-clamp-2 text-base font-semibold">
               {product.name}
             </h3>

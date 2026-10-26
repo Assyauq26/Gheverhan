@@ -98,7 +98,7 @@ export function ProductGallery({
                   aria-label={`Lihat foto produk ${i + 1} dari ${list.length}`}
                   aria-current={index === i ? "true" : undefined}
                   onClick={() => setActive(i)}
-                  className="grid h-11 w-11 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="grid h-11 w-11 place-items-center rounded-full"
                   onKeyDown={(event) => {
                     if (
                       ["ArrowLeft", "ArrowRight", "Home", "End"].includes(

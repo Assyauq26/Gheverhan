@@ -130,9 +130,9 @@ export function CartClient({ initial }: { initial: View }) {
   const total = view.subtotal;
 
   return (
-    <div className="native-cart grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="native-cart grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div
-        className="space-y-4"
+        className="min-w-0 space-y-4"
         data-testid="cart-lines"
         aria-live="polite"
         aria-busy={pendingId !== null}
@@ -170,15 +170,15 @@ export function CartClient({ initial }: { initial: View }) {
               )}
             </Link>
             <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
-              <div className="flex justify-between gap-2">
-                <div>
+              <div className="flex min-w-0 justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <Link
                     href={`/product/${l.product.slug}`}
-                    className="line-clamp-2 text-sm font-semibold text-ink"
+                    className="line-clamp-2 break-words [overflow-wrap:anywhere] text-sm font-semibold text-ink"
                   >
                     {l.product.name}
                   </Link>
-                  <p className="text-xs text-ink-muted">{l.variantLabel}</p>
+                  <p className="break-words [overflow-wrap:anywhere] text-xs text-ink-muted">{l.variantLabel}</p>
                   {!l.inStock && (
                     <p className="text-xs font-semibold text-destructive">
                       Stok tidak cukup
@@ -209,7 +209,7 @@ export function CartClient({ initial }: { initial: View }) {
                   plusId={`cart-inc-${l.id}`}
                   valueId={`cart-quantity-${l.id}`}
                 />
-                <span className="font-display font-bold text-ink">
+                <span className="font-display font-bold text-ink" data-testid={`cart-line-total-${l.id}`}>
                   {formatIDR(l.lineTotal)}
                 </span>
               </div>

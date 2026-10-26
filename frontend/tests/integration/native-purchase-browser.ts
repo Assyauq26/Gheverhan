@@ -329,6 +329,23 @@ export async function verifyNativePurchase({
           .click();
         await expect(page).toHaveURL(`${base}/cart`);
         await expect(page.getByTestId("cart-total")).toHaveText("Rp 395.000");
+        const cartSummaryBox = await page.getByTestId("cart-summary").boundingBox();
+        assert.ok(
+          cartSummaryBox && cartSummaryBox.x >= 0 && cartSummaryBox.x + cartSummaryBox.width <= 390,
+          "Mobile cart summary must fit the viewport",
+        );
+        for (const item of await page.locator(".native-cart .cart-item").all()) {
+          for (const target of [
+            item.locator('[data-testid^="cart-remove-"]'),
+            item.locator('[data-testid^="cart-line-total-"]'),
+          ]) {
+            const box = await target.boundingBox();
+            assert.ok(
+              box && box.width > 0 && box.x >= 0 && box.x + box.width <= 390,
+              "Cart price and remove action must stay within 390px, even for long variant labels",
+            );
+          }
+        }
         await page.screenshot({
           path: path.join(artifactDir, "product-v3-cart-top-390.png"),
         });

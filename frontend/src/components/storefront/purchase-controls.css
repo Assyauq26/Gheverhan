@@ -198,26 +198,9 @@
 .storefront-root .purchase-thumbnail {
   color: var(--store-text, #171717);
 }
-@media (max-width: 767px) {
-  .storefront-root:has(.native-cart) {
-    padding-bottom: calc(18rem + env(safe-area-inset-bottom));
-  }
-  .storefront-root .native-cart .cart-checkout-region {
-    position: fixed;
-    z-index: 39;
-    left: 1rem;
-    right: 1rem;
-    bottom: calc(5.5rem + env(safe-area-inset-bottom));
-    padding: 12px 16px;
-    border-radius: var(--store-radius, 16px);
-    background: rgb(var(--store-card-rgb, 255 255 255) / 0.96);
-    backdrop-filter: blur(12px);
-    box-shadow: var(--store-shell-shadow, 0 4px 16px rgb(0 0 0 / 0.08));
-  }
-  .storefront-root
-    .native-cart
-    .cart-checkout-region
-    [data-testid="checkout-btn"] {
-    font-size: 0.875rem;
-  }
+/* Keep mobile cart totals and checkout inside the themed Ringkasan card.
+   A floating region detached the values and obscured neighbouring content. */
+.storefront-root .native-cart,
+.storefront-root .native-cart > * {
+  min-width: 0;
 }

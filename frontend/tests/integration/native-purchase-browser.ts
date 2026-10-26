@@ -276,6 +276,9 @@ export async function verifyNativePurchase({
         const success = page.getByTestId("cart-success-sheet");
         await expect(success).toBeVisible();
         await expect(page.getByRole("dialog")).toHaveCount(1);
+        await expect(page.getByRole("button", { name: "Tutup", exact: true })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Lanjut Belanja", exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Lihat Keranjang", exact: true })).toBeVisible();
         await expect(page.getByTestId("quick-add-variant-sheet")).toHaveCount(
           0,
         );
@@ -424,6 +427,8 @@ export async function verifyNativePurchase({
             },
           });
         await page.goto(`${base}/product/${multi.slug}`);
+        await expect(page.getByTestId("pdp-back-home")).toHaveAttribute("href", "/");
+        await expect(page.getByTestId("pdp-centered-logo")).toHaveAttribute("href", "/");
         await expect(page.getByTestId("selected-sku")).toHaveCount(0);
         await expect(page.getByTestId("buy-now-btn")).toHaveCount(1);
         await expect(page.getByTestId("buy-now-btn")).toBeDisabled();
@@ -478,6 +483,35 @@ export async function verifyNativePurchase({
             );
             const box = await page.locator(".pdp-topbar").boundingBox();
             assert.ok(box && box.y >= 0 && box.y < 2);
+            const headerAndBar = await page.evaluate(() => {
+              const header = document.querySelector<HTMLElement>(".pdp-topbar")!;
+              const logo = document.querySelector<HTMLElement>(".pdp-topbar-center")!;
+              const actions = document.querySelector<HTMLElement>(".pdp-purchase-actions")!;
+              const headerStyle = getComputedStyle(header);
+              const actionStyle = getComputedStyle(actions);
+              const headerRect = header.getBoundingClientRect();
+              const logoRect = logo.getBoundingClientRect();
+              const barRect = actions.getBoundingClientRect();
+              return {
+                headerBackground: headerStyle.backgroundColor,
+                headerImage: headerStyle.backgroundImage,
+                headerCenter: headerRect.x + headerRect.width / 2,
+                logoCenter: logoRect.x + logoRect.width / 2,
+                barPosition: actionStyle.position,
+                barWidth: barRect.width,
+                barLeft: barRect.left,
+                barBottom: barRect.bottom,
+              };
+            });
+            assert.ok(
+              !headerAndBar.headerBackground.includes("0, 0, 0, 0") ||
+              headerAndBar.headerImage !== "none",
+              "Product header must have a solid Home-matching background",
+            );
+            assert.ok(Math.abs(headerAndBar.headerCenter - headerAndBar.logoCenter) <= 2, "Product logo must be centered");
+            assert.equal(headerAndBar.barPosition, "fixed");
+            assert.ok(Math.abs(headerAndBar.barLeft) <= 1 && Math.abs(headerAndBar.barWidth - width) <= 2, "Purchase navbar must fill the screen");
+            assert.ok(Math.abs(headerAndBar.barBottom - 900) <= 2, "Purchase navbar must reach the viewport bottom");
             assert.equal(
               await page
                 .locator(".pdp-hero")

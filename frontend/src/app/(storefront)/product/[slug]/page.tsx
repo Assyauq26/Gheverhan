@@ -118,18 +118,32 @@ export default async function ProductPage({ params }: ProductRouteProps) {
 
       <ProductSelectionProvider key={product.id}>
         <div className="pdp-main" data-testid="pdp-main">
-              <div className="pdp-topbar" aria-label="Navigasi produk">
-                <Link href="/shop" aria-label="Kembali ke toko"
-                  className="pdp-header-action grid h-11 w-11 place-items-center bg-white/90 shadow-sm backdrop-blur">
-                  <ArrowLeft size={23}/>
-                </Link>
-                <span className="pdp-topbar-center"><StoreLogo /></span>
-                <div className="pdp-topbar-actions">
-                  <WishlistButton productId={product.id} initialActive={wl.has(product.id)}
-                    className="pdp-header-action h-11 w-11 rounded-2xl bg-white/90"/>
-                  <ShareButton title={product.name} iconOnly/>
-                </div>
-              </div>
+          <div className="pdp-topbar" aria-label="Navigasi produk" data-testid="pdp-header">
+            <Link
+              href="/"
+              aria-label="Kembali ke beranda"
+              className="pdp-header-action grid h-11 w-11 place-items-center"
+              data-testid="pdp-back-home"
+            >
+              <ArrowLeft size={23} aria-hidden="true" />
+            </Link>
+            <Link
+              href="/"
+              aria-label="Ke beranda"
+              className="pdp-topbar-center font-display font-extrabold tracking-tight"
+              data-testid="pdp-centered-logo"
+            >
+              <StoreLogo />
+            </Link>
+            <div className="pdp-topbar-actions">
+              <WishlistButton
+                productId={product.id}
+                initialActive={wl.has(product.id)}
+                className="pdp-header-action h-11 w-11"
+              />
+              <ShareButton title={product.name} iconOnly />
+            </div>
+          </div>
           <div className="pdp-hero">
             <div className="pdp-media">
               <ProductGallery images={product.images} name={product.name}/>

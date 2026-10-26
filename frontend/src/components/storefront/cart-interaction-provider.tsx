@@ -258,15 +258,17 @@ export function CartInteractionProvider({ children }: { children: ReactNode }) {
                   ? "Produk sudah dikonfirmasi server. Pilih lanjut belanja atau lihat keranjang."
                   : "Pilih variasi dan jumlah yang tersedia sebelum menambahkan produk."}
               </Dialog.Description>
-              <button
-                type="button"
-                className="purchase-close"
-                aria-label="Tutup"
-                disabled={busy && mutation.current}
-                onClick={close}
-              >
-                <X size={20} />
-              </button>
+              {phase !== "success" && (
+                <button
+                  type="button"
+                  className="purchase-close"
+                  aria-label="Tutup"
+                  disabled={busy && mutation.current}
+                  onClick={close}
+                >
+                  <X size={20} />
+                </button>
+              )}
               {phase === "loading" && (
                 <p role="status" className="flex items-center gap-3 py-8">
                   <Loader2

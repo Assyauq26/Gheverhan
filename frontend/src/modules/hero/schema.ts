@@ -29,8 +29,6 @@ export const heroSchema = z.object({
 }).strict().superRefine((config, context) => {
   if (new Set(config.slides.map(slide => slide.id)).size !== config.slides.length)
     context.addIssue({ code: "custom", path: ["slides"], message: "ID slide harus unik" });
-  if (config.enabled && config.slides.some(slide => !slide.desktopAssetId))
-    context.addIssue({ code: "custom", path: ["slides"], message: "Setiap slide aktif wajib mempunyai gambar desktop" });
 });
 export type HeroConfig = z.infer<typeof heroSchema>;
 export type HeroSlideConfig = HeroConfig["slides"][number];

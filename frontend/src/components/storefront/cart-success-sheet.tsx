@@ -55,7 +55,7 @@ export function CartSuccessSheet({
           <p className="text-sm">
             {item.quantity} × {formatIDR(item.unitPrice)}
           </p>
-          <p className="text-sm font-semibold">
+          <p className="text-sm font-semibold" data-theme-role="price">
             Subtotal: {formatIDR(item.unitPrice * item.quantity)}
           </p>
         </div>

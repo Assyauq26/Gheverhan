@@ -63,7 +63,7 @@ export function QuickAddVariantSheet({
             <h3 className="line-clamp-2 break-words text-base font-semibold">
               {product.name}
             </h3>
-            <p className="mt-2 font-semibold" data-testid="quick-add-price">
+            <p className="mt-2 font-display text-lg font-bold" data-testid="quick-add-price" data-theme-role="price" data-discount={percent > 0}>
               {selected
                 ? formatIDR(selected.price)
                 : prices.length
@@ -71,9 +71,12 @@ export function QuickAddVariantSheet({
                   : "Tidak tersedia"}
             </p>
             {percent > 0 && (
-              <p className="text-xs">
-                <s>{formatIDR(selected!.originalPrice)}</s> · {percent}%
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <s className="text-xs text-ink-muted">{formatIDR(selected!.originalPrice)}</s>
+                <span data-badge-variant="sale" className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {percent}% OFF
+                </span>
+              </div>
             )}
           </div>
         </div>

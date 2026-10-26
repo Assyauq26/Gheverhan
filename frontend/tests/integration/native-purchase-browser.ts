@@ -247,6 +247,8 @@ export async function verifyNativePurchase({
         await expect(page.getByTestId("quick-add-price")).toHaveText(
           "Rp 150.000",
         );
+        await expect(page.getByTestId("quick-add-price")).toHaveAttribute("data-theme-role", "price");
+        await expect(page.getByTestId("quick-add-price")).toHaveAttribute("data-discount", "true");
         await page.getByTestId("qty-plus").click();
         await expect(page.getByTestId("qty-plus")).toBeDisabled();
         await page.setViewportSize({ width: 320, height: 900 });

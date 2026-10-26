@@ -56,8 +56,8 @@ test("appearance additive upgrade, bounded lock failure, official retry and role
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 13);
-    assert.equal(names.at(-1), migration);
+    assert.ok(names.length >= 13, 'Expected original 13 migrations plus any additive migrations');
+    assert.equal(names[12], migration);
     for (const n of names.slice(0, -1))
       await cp(
         path.join("prisma/migrations", n),

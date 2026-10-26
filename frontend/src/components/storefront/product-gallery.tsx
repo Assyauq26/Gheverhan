@@ -23,6 +23,7 @@ export function ProductGallery({
   const previousOption = useRef(optionImage?.url);
   const touchStart = useRef<number | null>(null);
   const focusDot = useRef(false);
+  const [keyboardEpoch, setKeyboardEpoch] = useState(0);
   const dotControls = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (focusDot.current) {
@@ -31,7 +32,7 @@ export function ProductGallery({
         ?.focus({ preventScroll: true });
       focusDot.current = false;
     }
-  }, [active]);
+  }, [active, keyboardEpoch]);
   useEffect(() => {
     if (previousOption.current !== optionImage?.url) {
       previousOption.current = optionImage?.url;
@@ -107,6 +108,7 @@ export function ProductGallery({
                       event.preventDefault();
                       const key = event.key;
                       focusDot.current = true;
+                      setKeyboardEpoch((value) => value + 1);
                       setActive((current) =>
                         key === "Home"
                           ? 0

@@ -20,8 +20,11 @@ export function CartSuccessSheet({
   onCart: () => void;
 }) {
   return (
-    <div data-testid="cart-success-sheet" className="space-y-6">
-      <div className="flex items-center gap-2">
+    <div
+      data-testid="cart-success-sheet"
+      className="flex min-h-0 flex-col gap-6"
+    >
+      <div className="flex shrink-0 items-center gap-2">
         <CheckCircle2
           size={22}
           className="shrink-0 text-success"
@@ -31,7 +34,7 @@ export function CartSuccessSheet({
           Berhasil ditambahkan ke keranjang
         </span>
       </div>
-      <div className="purchase-summary flex gap-4">
+      <div className="purchase-summary flex min-h-0 gap-4 overflow-y-auto">
         <div className="purchase-thumbnail">
           {item.image ? (
             <Image
@@ -47,8 +50,8 @@ export function CartSuccessSheet({
           )}
         </div>
         <div className="min-w-0 space-y-1">
-          <p className="line-clamp-2 font-semibold">{item.name}</p>
-          <p className="text-sm">{item.variantLabel}</p>
+          <p className="line-clamp-2 break-words font-semibold">{item.name}</p>
+          <p className="break-words text-sm">{item.variantLabel}</p>
           <p className="text-sm">
             {item.quantity} × {formatIDR(item.unitPrice)}
           </p>
@@ -57,7 +60,7 @@ export function CartSuccessSheet({
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid shrink-0 grid-cols-2 gap-3">
         <Button variant="outline" className="min-w-0 px-2" onClick={onContinue}>
           Lanjut Belanja
         </Button>

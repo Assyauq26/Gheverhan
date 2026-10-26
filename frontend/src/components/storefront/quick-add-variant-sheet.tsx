@@ -57,10 +57,10 @@ export function QuickAddVariantSheet({
             )}
           </div>
           <div className="min-w-0">
-            <p className="mb-1 text-xs">
+            <p className="mb-1 truncate text-xs">
               {product.brand ?? config.identity.name}
             </p>
-            <h3 className="line-clamp-2 text-base font-semibold">
+            <h3 className="line-clamp-2 break-words text-base font-semibold">
               {product.name}
             </h3>
             <p className="mt-2 font-semibold" data-testid="quick-add-price">

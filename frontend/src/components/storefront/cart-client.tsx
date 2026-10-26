@@ -209,7 +209,7 @@ export function CartClient({ initial }: { initial: View }) {
                   plusId={`cart-inc-${l.id}`}
                   valueId={`cart-quantity-${l.id}`}
                 />
-                <span className="font-display font-bold text-ink" data-testid={`cart-line-total-${l.id}`}>
+                <span className="font-display font-bold text-ink" data-testid={`cart-item-price-${l.id}`}>
                   {formatIDR(l.lineTotal)}
                 </span>
               </div>

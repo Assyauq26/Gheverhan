@@ -339,7 +339,7 @@ export async function verifyNativePurchase({
         for (const item of await page.locator(".native-cart .cart-item").all()) {
           for (const target of [
             item.locator('[data-testid^="cart-remove-"]'),
-            item.locator('[data-testid^="cart-line-total-"]'),
+            item.locator('[data-testid^="cart-item-price-"]'),
           ]) {
             const box = await target.boundingBox();
             assert.ok(

@@ -76,7 +76,8 @@
     justify-content:space-between;
     align-items:center;
     padding:env(safe-area-inset-top, 0px) 0.75rem 0;
-    background:var(--store-gradient-header, var(--store-header, #fff));
+    background-color:var(--store-gradient-header-fallback, var(--store-header, #fff));
+    background-image:var(--store-gradient-header, none);
     color:var(--store-gradient-header-text, var(--store-headerText, #171717));
     box-shadow:none;
     pointer-events:none;

@@ -6,7 +6,10 @@ async function main() {
   );
   const { prisma } = await import("../../src/lib/prisma");
   try {
-    console.log(JSON.stringify(await cleanupBranding()));
+    const logos = await cleanupBranding();
+    const { cleanupHeroMedia } = await import("../../src/modules/hero/media");
+    const hero = await cleanupHeroMedia();
+    console.log(JSON.stringify({ logos, hero }));
   } finally {
     await prisma.$disconnect();
   }

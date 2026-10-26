@@ -33,7 +33,9 @@ function allowed(permissions: string[], item: (typeof links)[number]) {
 }
 
 function activeLink(pathname: string, href: string, exact?: boolean) {
-  return exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+  return exact || href === "/admin/customize"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(href + "/");
 }
 
 export function AdminNav({ permissions }: { permissions: string[] }) {

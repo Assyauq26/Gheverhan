@@ -55,8 +55,9 @@ export async function readHeroImage(id: string, actor?: { id: string; sessionHas
   const asset = await prisma.storeHeroAsset.findUnique({ where: { id } });
   if (!asset?.ready || asset.retiredAt) throw new HttpError("Banner tidak ditemukan", 404);
   const row = await prisma.storeHero.findUnique({ where: { key: "primary" } });
-  const publishedIds = row?.publishedVersion
-    ? (await import("./schema")).parseHero(row.published).slides.flatMap(s => [s.desktopAssetId, s.mobileAssetId])
+  const publishedConfig = row?.publishedVersion ? (await import("./schema")).parseHero(row.published) : null;
+  const publishedIds = publishedConfig?.enabled
+    ? publishedConfig.slides.flatMap(s => [s.desktopAssetId, s.mobileAssetId])
     : [];
   const publicReady = publishedIds.includes(id);
   if (!publicReady) {
@@ -69,10 +70,25 @@ export async function readHeroImage(id: string, actor?: { id: string; sessionHas
 }
 
 export async function cleanupHeroMedia() {
-  const expired = await prisma.storeHeroAsset.findMany({
-    where: { expiresAt: { lt: new Date() } },
-    orderBy: { expiresAt: "asc" }, take: 100,
-  });
+  // Exclude assets retained by draft/published slides BEFORE limiting the
+  // batch. Otherwise a hundred expired-but-in-use banners starve cleanup.
+  const expired = await prisma.$queryRaw<{id:string;path:string}[]>`
+    SELECT a."id", a."path" FROM "StoreHeroAsset" a
+    WHERE a."expiresAt" < NOW()
+      AND NOT EXISTS (
+        SELECT 1 FROM "StoreHero" h,
+          LATERAL jsonb_array_elements(h."draft"->'slides') slide
+        WHERE slide->>'desktopAssetId' = a."id"::text
+           OR slide->>'mobileAssetId' = a."id"::text
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM "StoreHero" h,
+          LATERAL jsonb_array_elements(h."published"->'slides') slide
+        WHERE slide->>'desktopAssetId' = a."id"::text
+           OR slide->>'mobileAssetId' = a."id"::text
+      )
+    ORDER BY a."expiresAt" ASC, a."id" ASC LIMIT 100
+  `;
   let removed = 0;
   for (const asset of expired) {
     if (await heroMediaReferenced(asset.id)) continue;

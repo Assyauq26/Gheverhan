@@ -73,6 +73,10 @@ export async function verifyDirectCheckout(browser: Browser, db: PrismaClient, b
     assert.equal(item.variantId, selected.variants[0].id); assert.equal(item.quantity, 2);
     assert.deepEqual(await db.cartItem.findMany({ where: { cart: { userId: buyer.id } } }), before);
     await page.goto(`${base}/product/${custom.slug}`);
+    // Flight streaming may briefly retain a hidden server buffer. Require the
+    // settled document to contain exactly one panel before using its controls.
+    await expect(page.getByTestId("purchase-panel")).toHaveCount(1);
+    await expect(page.getByTestId("selected-sku")).toHaveCount(1);
     await expect(page.getByTestId("selected-sku")).toContainText(custom.variants[0].sku);
     await page.getByTestId("buy-now-btn").click();
     await expect(page).toHaveURL(/\/checkout\?intent=/);

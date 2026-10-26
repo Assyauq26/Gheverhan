@@ -1,88 +1,41 @@
 "use client";
-
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { quickAddToCartAction } from "@/modules/cart/cart.actions";
-import { emitCartCount, emitCartCountDelta } from "@/modules/cart/cart-events";
-
-const FEEDBACK_MS = 350;
-
+import { useCartInteraction } from "./cart-interaction-provider";
 export function QuickAddButton({
-  variantId,
+  slug,
+  testId,
   disabled,
   className,
 }: {
-  variantId: string | null;
+  slug: string;
+  testId: string;
   disabled?: boolean;
   className?: string;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [showLoading, setShowLoading] = useState(false);
-  const inFlightRef = useRef(false);
-  const router = useRouter();
-
-  function onClick(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!variantId || disabled || inFlightRef.current) return;
-
-    // The UI is deliberately decoupled from server latency:
-    // 1. show the loader immediately;
-    // 2. update both cart badges optimistically;
-    // 3. return to the bag after a short visual acknowledgement;
-    // 4. keep the lightweight server mutation protected in the background.
-    inFlightRef.current = true;
-    setError(null);
-    setShowLoading(true);
-    emitCartCountDelta(1);
-
-    window.setTimeout(() => setShowLoading(false), FEEDBACK_MS);
-
-    void quickAddToCartAction(variantId, 1)
-      .then((res) => {
-        if (res.unauthorized) {
-          emitCartCountDelta(-1);
-          router.push("/login?redirectTo=/cart");
-          return;
-        }
-
-        if (!res.ok) {
-          emitCartCountDelta(-1);
-          setError(res.error || "Gagal menambah produk");
-        } else if (res.data) {
-          emitCartCount(res.data.count);
-        }
-      })
-      .catch(() => {
-        emitCartCountDelta(-1);
-        setError("Koneksi terputus. Periksa keranjang.");
-      })
-      .finally(() => {
-        inFlightRef.current = false;
-        setShowLoading(false);
-        router.refresh();
-      });
-  }
-
+  const interaction = useCartInteraction();
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={disabled || !variantId}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        interaction?.openProduct(slug, e.currentTarget);
+      }}
+      disabled={disabled || interaction?.busy || !interaction}
       aria-label="Tambah ke keranjang"
-      aria-busy={showLoading}
-      title={error || undefined}
-      data-testid={`quick-add-${variantId ?? "none"}`}
+      aria-busy={interaction?.busy ?? false}
+      data-testid={`quick-add-${testId}`}
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-ink shadow-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-40",
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent text-ink shadow-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-40",
         className,
       )}
     >
-      {error && <span role="alert" className="sr-only">{error}</span>}
-      {showLoading ? (
-        <Loader2 size={21} className="animate-spin" />
+      {interaction?.busy ? (
+        <Loader2
+          size={21}
+          className="animate-spin motion-reduce:animate-none"
+        />
       ) : (
         <ShoppingBag size={21} strokeWidth={2} />
       )}

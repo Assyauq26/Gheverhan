@@ -105,8 +105,9 @@ export function ProductCard({
               )}
             </div>
             {!preview && <QuickAddButton
-              variantId={product.variantId}
-              className="h-9 w-9 shrink-0"
+              slug={product.slug}
+              testId={product.variantId ?? product.id}
+              className="shrink-0"
             />}
           </div>
         )}
@@ -129,6 +130,7 @@ export function toCardData(p: {
   brand?: { name: string } | null;
   images: { url: string }[];
   variants: { id: string }[];
+  _count?: { variants: number };
 }): ProductCardData {
   return {
     id: p.id,
@@ -140,6 +142,7 @@ export function toCardData(p: {
     salePrice: activeScheduledFlashPrice(p) ?? p.salePrice,
     ratingAvg: p.ratingAvg,
     reviewCount: p.reviewCount,
-    variantId: p.variants[0]?.id ?? null,
+    // Identifier hint for selectors only; mutation always uses fresh metadata.
+    variantId: p._count?.variants === 1 ? p.variants.find(() => true)?.id ?? null : null,
   };
 }

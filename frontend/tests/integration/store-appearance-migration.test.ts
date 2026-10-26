@@ -56,9 +56,13 @@ test("appearance additive upgrade, bounded lock failure, official retry and role
     const names = (await readdir("prisma/migrations"))
       .filter((n) => /^\d{14}_/.test(n))
       .sort();
-    assert.equal(names.length, 13);
-    assert.equal(names.at(-1), migration);
-    for (const n of names.slice(0, -1))
+    // This test intentionally upgrades only as far as the Customize migration.
+    // Later additive migrations (Hero CMS, etc.) must NOT be applied first,
+    // otherwise Customize has already run before the simulated lock failure.
+    assert.ok(names.includes(migration), `Missing migration ${migration}`);
+    const predecessors = names.filter((name) => name < migration);
+    assert.ok(predecessors.length >= 12, "Expected prior schema migrations");
+    for (const n of predecessors)
       await cp(
         path.join("prisma/migrations", n),
         path.join(dir, "migrations", n),

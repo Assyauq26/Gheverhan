@@ -142,6 +142,9 @@ jobs:
           node --disable-proto=throw --import tsx --test tests/integration/store-appearance.test.ts
           STORAGE_PROVIDER=local STORAGE_LOCAL_ROOT=/tmp node --import tsx scripts/appearance/preflight.ts
 
+      - name: Hero CMS lifecycle, private/public image security and RLS on disposable PostgreSQL
+        run: node --disable-proto=throw --import tsx --test tests/integration/store-hero.test.ts
+
       - name: Chromium product media, upload and RBAC test with loopback storage double
         id: product_browser
         run: npm run test:e2e:products

@@ -8,6 +8,8 @@ import { createServer } from "node:net";
 import { createServer as createHttpServer } from "node:http";
 import { PrismaClient } from "@prisma/client";
 import { chromium, expect } from "@playwright/test";
+import sharp from "sharp";
+import { fallbackHeroSlides } from "../../src/modules/hero/schema";
 const target = new URL(
   process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid",
 );
@@ -120,11 +122,39 @@ async function main() {
     const context = await browser.newContext({
       viewport: { width: 390, height: 844 },
     });
+    // Preserve the existing offline external-network policy. The public
+    // homepage now renders two legacy Unsplash hero banners directly in the
+    // browser. Give ONLY those known fallback images a deterministic local
+    // fixture; any other off-host request still fails closed and is visible
+    // in the console regression check below.
+    const legacyHeroPaths = new Set(
+      fallbackHeroSlides.map((slide) => new URL(slide.image).pathname),
+    );
+    const offlineHeroImage = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 245, g: 245, b: 245 },
+      },
+    }).png().toBuffer();
     await context.route("**/*", (route) => {
       const u = new URL(route.request().url());
-      return ["localhost", "127.0.0.1"].includes(u.hostname)
-        ? route.continue()
-        : route.abort("blockedbyclient");
+      if (["localhost", "127.0.0.1"].includes(u.hostname))
+        return route.continue();
+      if (
+        u.protocol === "https:" &&
+        u.hostname === "images.unsplash.com" &&
+        legacyHeroPaths.has(u.pathname) &&
+        route.request().resourceType() === "image"
+      ) {
+        return route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          body: offlineHeroImage,
+        });
+      }
+      return route.abort("blockedbyclient");
     });
     const page = await context.newPage();
     page.setDefaultTimeout(10000);

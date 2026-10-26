@@ -1,6 +1,8 @@
 import Link from "@/components/ui/navigation";
 import { ArrowRight, Zap } from "lucide-react";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
+import { getPublishedHero } from "@/modules/hero/published";
+import { fallbackHeroSlides } from "@/modules/hero/schema";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { SectionHeader } from "@/components/storefront/section-header";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
@@ -9,19 +11,15 @@ import { listProducts, listCategories } from "@/modules/catalog/catalog.service"
 import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
-const HERO_IMG =
-  "https://images.unsplash.com/photo-1603189343302-e603f7add05a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
-const HERO_IMG2 =
-  "https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
-
 export default async function HomePage() {
   const wishIdsPromise = getStorefrontUserContext().then(user => user ? wishlistProductIds(user.id) : []);
-  const [categories, featured, latest, wishIds, flash] = await Promise.all([
+  const [categories, featured, latest, wishIds, flash, hero] = await Promise.all([
     listCategories(),
     listProducts({ featured: true, pageSize: 4, includeTotal: false }),
     listProducts({ pageSize: 12, includeTotal: false }),
     wishIdsPromise,
     listProducts({ flashSale: true, pageSize: 1, includeTotal: false }),
+    getPublishedHero(),
   ]);
 
   const wl = new Set(wishIds);
@@ -32,20 +30,20 @@ export default async function HomePage() {
   const featuredIds = new Set(featuredItems.map((p) => p.id));
   const recommendedItems = latest.items.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
 
-  const slides = [
-    {
-      image: HERO_IMG,
-      alt: "Gheverhan New Season collection",
-    },
-    {
-      image: HERO_IMG2,
-      alt: "Gheverhan fashion collection",
-    },
-  ];
+  // Zero published versions keep the existing banners until the first Publish.
+  const slides = hero.version === 0
+    ? fallbackHeroSlides
+    : hero.config.enabled ? hero.config.slides.map(slide => ({
+        image: `/api/v1/store-hero/${slide.desktopAssetId}`,
+        mobileImage: slide.mobileAssetId ? `/api/v1/store-hero/${slide.mobileAssetId}` : undefined,
+        alt: slide.alt, heading: slide.heading, description: slide.description,
+        ctaLabel: slide.ctaLabel, ctaHref: slide.ctaHref, align: slide.align,
+        tone: slide.tone, overlay: slide.overlay,
+      })) : [];
 
   return (
     <div className="space-y-6">
-      <HeroCarousel slides={slides} />
+      <HeroCarousel slides={slides} autoplaySeconds={hero.config.autoplaySeconds} />
 
       <section>
         <SectionHeader title="Kategori" href="/shop" />

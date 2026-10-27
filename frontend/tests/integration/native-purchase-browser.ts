@@ -685,6 +685,27 @@ export async function verifyNativePurchase({
               await dialog.evaluate((e) => getComputedStyle(e).backgroundColor),
               `rgb(${rgb(config.colors.modal).join(", ")})`,
             );
+            const disabledSubmit = dialog.getByRole("button", {
+              name: "Masukkan ke Keranjang",
+              exact: true,
+            });
+            await expect(disabledSubmit).toBeDisabled();
+            const disabledColor = await disabledSubmit.evaluate((e) => {
+              const ctx = document.createElement("canvas").getContext("2d")!;
+              ctx.fillStyle = getComputedStyle(e).backgroundColor;
+              ctx.fillRect(0, 0, 1, 1);
+              return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+            });
+            const primary = rgb(config.colors.primary),
+              foreground = rgb(config.colors.primaryText);
+            disabledColor.forEach((channel, i) =>
+              assert.ok(
+                Math.abs(
+                  channel - (primary[i] * 0.65 + foreground[i] * 0.35),
+                ) <= 2,
+                "Disabled purchase tone follows the published primary pair",
+              ),
+            );
             const radius = { square: "0px", soft: "10px", pill: "9999px" }[
               shape
             ];
@@ -873,6 +894,7 @@ export async function verifyNativePurchase({
         await expect(page.getByTestId("buy-now-btn")).toHaveText(
           "Beli Sekarang",
         );
+        await page.setViewportSize({ width: 390, height: 844 });
         await page.goto(`${base}/product/${simple.slug}`);
         await expect(page.getByTestId("buy-now-btn")).toBeEnabled();
         await expect
@@ -913,6 +935,18 @@ export async function verifyNativePurchase({
             exact: true,
           });
           await assertDarkDisabled(submit);
+          await page.getByRole("dialog").evaluate(async (e) => {
+            await Promise.all(
+              e
+                .getAnimations({ subtree: true })
+                .filter((animation) =>
+                  Number.isFinite(
+                    animation.effect?.getComputedTiming().endTime,
+                  ),
+                )
+                .map((animation) => animation.finished.catch(() => {})),
+            );
+          });
           await page.screenshot({
             path: path.join(artifactDir, `hotfix-quick-add-${width}.png`),
           });

@@ -524,17 +524,12 @@ export async function verifyCustomVariations(c: Context) {
           xl = sizes.values.find((v) => v.value === "XL")!;
         await store.goto(`${base}/product/${slug}`);
         await store.getByTestId(`option-${r.id}`).click();
-        await expect(
-          store.getByTestId("product-gallery").locator("img").first(),
-        ).toHaveAttribute(
-          "src",
-          new RegExp(
-            encodeURIComponent(r.image!.url).replace(
-              /[.*+?^${}()|[\]\\]/g,
-              "\\$&",
-            ),
-          ),
-        );
+        const gallerySource = async () => {
+          const source = await store.getByTestId("product-gallery").locator(".pdp-gallery-image").getAttribute("src");
+          const url = new URL(source || "", base);
+          return new URL(url.pathname === "/_next/image" ? url.searchParams.get("url") || "" : source || "", base).href;
+        };
+        await expect.poll(gallerySource).toBe(new URL(r.image!.url, base).href);
         await store.getByTestId("product-gallery").scrollIntoViewIfNeeded();
         await expect
           .poll(() =>
@@ -550,17 +545,7 @@ export async function verifyCustomVariations(c: Context) {
         });
         await store.getByTestId(`option-${g.id}`).click();
         await store.getByTestId(`option-${xl.id}`).click();
-        await expect
-          .poll(async () =>
-            decodeURIComponent(
-              (await store
-                .getByTestId("product-gallery")
-                .locator("img")
-                .first()
-                .getAttribute("src")) || "",
-            ),
-          )
-          .toContain(g.image!.url);
+        await expect.poll(gallerySource).toBe(new URL(g.image!.url, base).href);
         const variant = await db.productVariant.findFirstOrThrow({
           where: {
             productId,

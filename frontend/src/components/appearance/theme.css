@@ -216,12 +216,12 @@
   border-color: var(--store-focus);
 }
 .storefront-root[data-theme-active="true"] .pdp-topbar-center {
-  background: var(--store-header);
-  color: var(--store-headerText);
+  background: transparent;
+  color: inherit;
 }
 .storefront-root[data-theme-active="true"] .pdp-header-action {
-  background: var(--store-header);
-  color: var(--store-headerText) !important;
+  background: transparent;
+  color: inherit !important;
 }
 .storefront-root[data-theme-active="true"] .pdp-page :focus-visible {
   outline-color: var(--store-focus);

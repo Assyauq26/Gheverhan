@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { AppearanceProvider, StoreLogo } from "./context";
 import { StorefrontHeader } from "@/components/storefront/header";
+import { PurchasePreviewSamples } from "./purchase-preview-samples";
 import { BottomNav } from "@/components/storefront/bottom-nav";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,7 @@ export function AppearancePreview() {
               />
             </label>
           </section>
+          <PurchasePreviewSamples />
         </main>
         <footer className="mt-8 p-8">
           {config.footer.showLogo && (

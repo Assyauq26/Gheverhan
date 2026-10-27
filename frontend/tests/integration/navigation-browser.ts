@@ -333,7 +333,8 @@ async function main() {
         await page.goto(`${base}/shop?q=${prefix}&sort=price_asc`);
         await page.getByTestId(`quick-add-${variantId}`).click();
         await expect.poll(() => db.cartItem.findFirst({ where: { variantId, cart: { userId: user.id } }, select: { quantity: true } }).then(item => item?.quantity)).toBe(1);
-        await page.getByTestId('header-cart').click();
+        await expect(page.getByTestId('cart-success-sheet')).toBeVisible();
+        await page.getByRole('button', { name: 'Lihat Keranjang', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Keranjang', exact: true })).toBeVisible();
         await expect(page.getByText(`${prefix} Product ${fixtureIndex}`, { exact: true })).toBeVisible();
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);

@@ -1,0 +1,39 @@
+{
+  "status": "PASS",
+  "checks": 7,
+  "checkpoints": [
+    {
+      "label": "V3: bounded published metadata excludes drafts/private inventory",
+      "status": "PASS"
+    },
+    {
+      "label": "V3: on-demand retry, cancel and explicit sparse selections",
+      "status": "PASS"
+    },
+    {
+      "label": "V3: exact SKU, double-tap guard and persistent confirmed success",
+      "status": "PASS"
+    },
+    {
+      "label": "V3: stock race preserves choices and rejects phantom success",
+      "status": "PASS"
+    },
+    {
+      "label": "V3: native PDP gallery window, fixed topbar and full scroll reachability",
+      "status": "PASS"
+    },
+    {
+      "label": "V3: published dark, colored and gradient purchase controls retain theme and chrome",
+      "status": "PASS"
+    },
+    {
+      "label": "V3: touch dismissal, guest continuation and no unhandled runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "commitSha": "0b1993ece5b146c6f4d87c215e8a7c36190382f8",
+  "nodeVersion": "v22.23.4",
+  "browserVersion": "154.0.8037.57",
+  "buildId": "4NWwD2SOXeLbfZMyRxJ3o",
+  "synthetic": true
+}

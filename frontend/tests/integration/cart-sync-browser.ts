@@ -65,6 +65,8 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
     await page.getByTestId(`quick-add-${products[i].variants[0].id}`).click();
     await expect.poll(async () => (await state()).reduce((sum,x)=>sum+x.quantity,0)).toBe(i+1);
     await badges(i+1);
+    await expect(page.getByTestId("cart-success-sheet")).toBeVisible();
+    await page.getByRole("button",{name:"Lanjut Belanja",exact:true}).click();
    }
    await page.getByTestId('header-cart').click(); await expect(page).toHaveURL(`${base}/cart`);
    await settled(3,3);
@@ -120,17 +122,16 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
     const target=window as unknown as {r20Clicks:string[]}; target.r20Clicks=[];
     document.addEventListener('click',e=>{const button=(e.target as HTMLElement).closest('button[data-testid^="quick-add-"]');if(button)target.r20Clicks.push(button.getAttribute('data-testid')!);},true);
    });
-   // Parallel mouse commands share one pointer and can lose a click. Dispatch
-   // two distinct DOM click events in one turn, then require two acknowledged requests.
-   await page.evaluate(ids=>{
-    for(const id of ids) {
-     const button=[...document.querySelectorAll<HTMLButtonElement>('button[data-testid]')].find(el=>el.dataset.testid===id);
-     if(!button || button.disabled) throw new Error('Concurrent cart control must be enabled');
-     button.click();
-    }
-   },products.slice(0,2).map(product=>`quick-add-${product.variants[0].id}`));
+   // The persistent success sheet serializes user interactions. Rapid duplicate
+   // taps must produce one acknowledged mutation, then a second deliberate add.
+   const firstId=`quick-add-${products[0].variants[0].id}`;
+   await page.getByTestId(firstId).evaluate(button=>{(button as HTMLButtonElement).click();(button as HTMLButtonElement).click();});
+   await expect(page.getByTestId('cart-success-sheet')).toBeVisible();
+   await page.getByRole('button',{name:'Lanjut Belanja',exact:true}).click();
+   await page.getByTestId(`quick-add-${products[1].variants[0].id}`).click();
+   await expect(page.getByTestId('cart-success-sheet')).toBeVisible();
    const hits=await page.evaluate(()=>(window as unknown as {r20Clicks:string[]}).r20Clicks);
-   assert.equal(hits.length,2); assert.equal(new Set(hits).size,2);
+   assert.equal(hits.length,3); assert.equal(new Set(hits).size,2);
    try {
     await expect.poll(()=>transport.filter(event=>event.event==='response'&&event.status===200).length).toBe(2);
     await expect.poll(async ()=>(await state()).reduce((n,x)=>n+x.quantity,0)).toBe(5);
@@ -139,7 +140,7 @@ export async function verifyCartSynchronization(browser: Browser, db: PrismaClie
     throw error;
    }
    await badges(5);
-   await page.getByTestId('header-cart').click(); await expect(page).toHaveURL(`${base}/cart`); await settled(3,5);
+   await page.getByRole('button',{name:'Lihat Keranjang',exact:true}).click(); await expect(page).toHaveURL(`${base}/cart`); await settled(3,5);
    await checkoutBack(); await settled(3,5);
    assert.equal(await page.evaluate(()=>(window as unknown as {r20CartDocument?:string}).r20CartDocument),'preserved','cart flow must not reload the document');
    assert.equal(await db.order.count({where:{userId}}),0,'visiting checkout and history must not create orders');

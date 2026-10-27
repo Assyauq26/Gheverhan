@@ -5,7 +5,13 @@ import { parseAppearance } from "../../src/modules/appearance/schema";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
-import { expect, type Browser, type BrowserContext, type Page, type FrameLocator } from "@playwright/test";
+import {
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type FrameLocator,
+} from "@playwright/test";
 import type { PrismaClient } from "@prisma/client";
 
 // Read real elements, never infer borderlessness from a missing selector.
@@ -15,20 +21,34 @@ async function shellStyles(scope: Page | FrameLocator) {
   await expect(root.locator(":scope > footer")).toHaveCount(1);
   await expect(scope.getByTestId("bottom-nav")).toHaveCount(1);
   return root.evaluate((e) => ({
-    header: getComputedStyle(e.querySelector(":scope > header")!).borderBottomWidth,
-    footer: getComputedStyle(e.querySelector(":scope > footer")!).borderTopWidth,
-    footerFirst: getComputedStyle(e.querySelector(":scope > footer")!.firstElementChild!).borderTopWidth,
-    footerLast: getComputedStyle(e.querySelector(":scope > footer")!.lastElementChild!).borderTopWidth,
+    header: getComputedStyle(e.querySelector(":scope > header")!)
+      .borderBottomWidth,
+    footer: getComputedStyle(e.querySelector(":scope > footer")!)
+      .borderTopWidth,
+    footerFirst: getComputedStyle(
+      e.querySelector(":scope > footer")!.firstElementChild!,
+    ).borderTopWidth,
+    footerLast: getComputedStyle(
+      e.querySelector(":scope > footer")!.lastElementChild!,
+    ).borderTopWidth,
     nav: [
-      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).borderTopWidth,
-      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).borderRightWidth,
-      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).borderBottomWidth,
-      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).borderLeftWidth,
+      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+        .borderTopWidth,
+      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+        .borderRightWidth,
+      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+        .borderBottomWidth,
+      getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+        .borderLeftWidth,
     ],
-    shadow: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).boxShadow,
-    radius: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).borderRadius,
-    position: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).position,
-    surface: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!).backgroundColor,
+    shadow: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+      .boxShadow,
+    radius: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+      .borderRadius,
+    position: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+      .position,
+    surface: getComputedStyle(e.querySelector('[data-testid="bottom-nav"]')!)
+      .backgroundColor,
   }));
 }
 
@@ -38,25 +58,43 @@ async function assertBorderless(scope: Page | FrameLocator, label: string) {
   assert.equal(visual.footer, "0px", `${label}: footer top`);
   assert.equal(visual.footerFirst, "0px", `${label}: trust section top`);
   assert.equal(visual.footerLast, "0px", `${label}: legal section top`);
-  assert.deepEqual(visual.nav, ["0px", "0px", "0px", "0px"], `${label}: navigation shell`);
+  assert.deepEqual(
+    visual.nav,
+    ["0px", "0px", "0px", "0px"],
+    `${label}: navigation shell`,
+  );
   assert.equal(visual.position, "fixed", label);
   assert.notEqual(visual.surface, "rgba(0, 0, 0, 0)", label);
   const nav = scope.getByTestId("bottom-nav");
-  if (await nav.getAttribute("data-style") === "pill") {
+  if ((await nav.getAttribute("data-style")) === "pill") {
     assert.equal(visual.radius, "9999px", label);
     if (!label.includes("shadow none")) {
-      assert.notEqual(visual.shadow, "none", "Floating pill needs elevation against a matching background");
+      assert.notEqual(
+        visual.shadow,
+        "none",
+        "Floating pill needs elevation against a matching background",
+      );
     }
-    const motion = await nav.locator("a").first().evaluate((e) => ({
-      property: getComputedStyle(e).transitionProperty,
-      duration: getComputedStyle(e).transitionDuration,
-    }));
-    assert.ok(motion.property.includes("width") || motion.property.includes("all"), "Active tab width should animate");
-    assert.ok(parseFloat(motion.duration) >= 0.25, "Native-like transition should last at least 250ms");
+    const motion = await nav
+      .locator("a")
+      .first()
+      .evaluate((e) => ({
+        property: getComputedStyle(e).transitionProperty,
+        duration: getComputedStyle(e).transitionDuration,
+      }));
+    assert.ok(
+      motion.property.includes("width") || motion.property.includes("all"),
+      "Active tab width should animate",
+    );
+    assert.ok(
+      parseFloat(motion.duration) >= 0.25,
+      "Native-like transition should last at least 250ms",
+    );
   }
   await expect(nav.locator("a")).toHaveCount(4);
   const hrefs = [];
-  for (const link of await nav.locator("a").all()) hrefs.push(await link.getAttribute("href"));
+  for (const link of await nav.locator("a").all())
+    hrefs.push(await link.getAttribute("href"));
   assert.deepEqual(hrefs.sort(), ["/", "/account", "/cart", "/shop"]);
   await expect(nav.locator('a[aria-current="page"]')).toHaveCount(1);
   return visual;
@@ -65,7 +103,9 @@ async function assertBorderless(scope: Page | FrameLocator, label: string) {
 async function assertSearchFocus(scope: Page | FrameLocator) {
   const input = scope.locator('[data-testid="search-input"]:visible');
   // Both responsive search forms exist. Check the one visible at this viewport.
-  const surfaceBefore = await input.evaluate((e) => getComputedStyle(e).backgroundColor);
+  const surfaceBefore = await input.evaluate(
+    (e) => getComputedStyle(e).backgroundColor,
+  );
   await input.focus();
   const focus = await input.evaluate((e) => ({
     border: getComputedStyle(e).borderTopWidth,
@@ -74,19 +114,49 @@ async function assertSearchFocus(scope: Page | FrameLocator) {
     outline: getComputedStyle(e).outlineStyle,
     shadow: getComputedStyle(e).boxShadow,
   }));
-  assert.equal(focus.surface, surfaceBefore, "Focus should only darken the border, never flash the field background");
+  assert.equal(
+    focus.surface,
+    surfaceBefore,
+    "Focus should only darken the border, never flash the field background",
+  );
   assert.equal(focus.border, "1px", "Search keeps its original single border");
-  assert.notEqual(focus.borderColor, "transparent", "Focused border remains visible");
+  assert.notEqual(
+    focus.borderColor,
+    "transparent",
+    "Focused border remains visible",
+  );
   assert.equal(focus.outline, "none", "Search must not draw a second outline");
   assert.equal(focus.shadow, "none", "Search must not add a focus ring");
 }
 
-async function captureShell(page: Page, scope: Page | FrameLocator, dir: string, label: string) {
-  await scope.locator("body").evaluate((e) => e.ownerDocument.defaultView!.scrollTo(0, 0));
-  await page.screenshot({ path: path.join(dir, `customize-chrome-${label}-top.png`), animations: "disabled" });
-  await scope.locator("body").evaluate((e) => e.ownerDocument.defaultView!.scrollTo(0, e.ownerDocument.documentElement.scrollHeight));
-  await page.screenshot({ path: path.join(dir, `customize-chrome-${label}-footer.png`), animations: "disabled" });
-  await scope.locator("body").evaluate((e) => e.ownerDocument.defaultView!.scrollTo(0, 0));
+async function captureShell(
+  page: Page,
+  scope: Page | FrameLocator,
+  dir: string,
+  label: string,
+) {
+  await scope
+    .locator("body")
+    .evaluate((e) => e.ownerDocument.defaultView!.scrollTo(0, 0));
+  await page.screenshot({
+    path: path.join(dir, `customize-chrome-${label}-top.png`),
+    animations: "disabled",
+  });
+  await scope
+    .locator("body")
+    .evaluate((e) =>
+      e.ownerDocument.defaultView!.scrollTo(
+        0,
+        e.ownerDocument.documentElement.scrollHeight,
+      ),
+    );
+  await page.screenshot({
+    path: path.join(dir, `customize-chrome-${label}-footer.png`),
+    animations: "disabled",
+  });
+  await scope
+    .locator("body")
+    .evaluate((e) => e.ownerDocument.defaultView!.scrollTo(0, 0));
 }
 export async function verifyStoreAppearance({
   browser,
@@ -116,7 +186,7 @@ export async function verifyStoreAppearance({
     await check("customize: legacy storefront chrome evidence", async () => {
       await visitor.goto(base + "/");
       for (const width of [390, 1360]) {
-        await visitor.setViewportSize({width, height: 900});
+        await visitor.setViewportSize({ width, height: 900 });
         await captureShell(visitor, visitor, artifactDir, `legacy-${width}`);
         await assertBorderless(visitor, `legacy ${width}`);
         await assertSearchFocus(visitor);
@@ -231,11 +301,13 @@ export async function verifyStoreAppearance({
               cardBorder: getComputedStyle(card).borderColor,
               cardBackground: getComputedStyle(card).backgroundColor,
               searchBorder: getComputedStyle(
-                card.closest(".storefront-root")!
+                card
+                  .closest(".storefront-root")!
                   .querySelector('[data-testid="search-input"]')!,
               ).borderColor,
               searchBackground: getComputedStyle(
-                card.closest(".storefront-root")!
+                card
+                  .closest(".storefront-root")!
                   .querySelector('[data-testid="search-input"]')!,
               ).backgroundColor,
             }));
@@ -245,8 +317,8 @@ export async function verifyStoreAppearance({
             (value.match(/\d+/g) || []).slice(0, 3).map(Number);
           const largestDifference = (left: string, right: string) =>
             Math.max(
-              ...channels(left).map(
-                (channel, index) => Math.abs(channel - channels(right)[index]),
+              ...channels(left).map((channel, index) =>
+                Math.abs(channel - channels(right)[index]),
               ),
             );
           assert.equal(visual.radius, "16px", preset.name);
@@ -256,20 +328,83 @@ export async function verifyStoreAppearance({
             preset.name,
           );
           assert.ok(
-            largestDifference(visual.searchBorder, visual.searchBackground) < 48,
+            largestDifference(visual.searchBorder, visual.searchBackground) <
+              48,
             preset.name,
           );
           const frame = page.frameLocator('iframe[title="Preview draft toko"]');
           await assertBorderless(frame, preset.name);
+          await expect(
+            frame.getByTestId("preview-purchase-success"),
+          ).toHaveCount(1);
+          assert.equal(
+            await frame
+              .getByTestId("preview-purchase-options")
+              .evaluate((e) => getComputedStyle(e).backgroundColor),
+            `rgb(${rgb(preset.config.colors.modal).join(", ")})`,
+          );
           await assertSearchFocus(frame);
           await expect(frame.getByTestId("bottom-cart-count")).toHaveText("2");
           if (["Gheverhan Monochrome", "Midnight Ink"].includes(preset.name)) {
-            await captureShell(page, frame, artifactDir, `preview-${preset.name.toLowerCase().replaceAll(" ", "-")}-390`);
+            await captureShell(
+              page,
+              frame,
+              artifactDir,
+              `preview-${preset.name.toLowerCase().replaceAll(" ", "-")}-390`,
+            );
           }
         }
         await page
           .getByRole("button", { name: "Midnight Ink", exact: true })
           .click();
+        await page
+          .getByRole("button", { name: "Identitas Toko", exact: true })
+          .click();
+      },
+    );
+    await check(
+      "customize: native purchase controls share button geometry without transactions",
+      async () => {
+        const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        const before = await db.order.count();
+        await page
+          .getByRole("button", { name: "Tombol/Kartu", exact: true })
+          .click();
+        for (const [shape, radius] of [
+          ["square", "0px"],
+          ["soft", "10px"],
+          ["pill", "9999px"],
+        ]) {
+          await page
+            .getByLabel("Bentuk tombol", { exact: true })
+            .selectOption(shape);
+          await expect
+            .poll(() =>
+              frame
+                .getByTestId("preview-purchase-options")
+                .locator(".purchase-swatch")
+                .first()
+                .evaluate((e) => getComputedStyle(e).borderRadius),
+            )
+            .toBe(radius);
+          await expect
+            .poll(() =>
+              frame
+                .getByTestId("preview-purchase-options")
+                .locator(".quantity-stepper")
+                .evaluate((e) => getComputedStyle(e).borderRadius),
+            )
+            .toBe(radius);
+        }
+        await frame
+          .getByTestId("preview-purchase-options")
+          .getByTestId("option-preview-regular")
+          .click();
+        await frame
+          .getByTestId("preview-purchase-options")
+          .getByRole("button", { name: "Masukkan ke Keranjang", exact: true })
+          .click();
+        assert.equal(await db.order.count(), before);
         await page
           .getByRole("button", { name: "Identitas Toko", exact: true })
           .click();
@@ -445,15 +580,32 @@ export async function verifyStoreAppearance({
           )
           .toBe("rgb(255, 255, 255)");
         await assertBorderless(frame, "header gradient");
-        assert.match(await frame.locator("header").evaluate((e) => getComputedStyle(e).backgroundImage), /linear-gradient/);
+        assert.match(
+          await frame
+            .locator("header")
+            .evaluate((e) => getComputedStyle(e).backgroundImage),
+          /linear-gradient/,
+        );
         await page
           .getByRole("group", { name: "header", exact: true })
           .getByLabel("Aktifkan", { exact: true })
           .uncheck();
-        await page.getByRole("group", {name:"footer", exact:true}).getByLabel("Aktifkan", {exact:true}).check();
-        await expect.poll(() => frame.locator("footer").evaluate((e) => getComputedStyle(e).backgroundImage)).toContain("linear-gradient");
+        await page
+          .getByRole("group", { name: "footer", exact: true })
+          .getByLabel("Aktifkan", { exact: true })
+          .check();
+        await expect
+          .poll(() =>
+            frame
+              .locator("footer")
+              .evaluate((e) => getComputedStyle(e).backgroundImage),
+          )
+          .toContain("linear-gradient");
         await assertBorderless(frame, "footer gradient");
-        await page.getByRole("group", {name:"footer", exact:true}).getByLabel("Aktifkan", {exact:true}).uncheck();
+        await page
+          .getByRole("group", { name: "footer", exact: true })
+          .getByLabel("Aktifkan", { exact: true })
+          .uncheck();
         await page
           .getByRole("button", { name: "Preset/Template Warna", exact: true })
           .click();
@@ -477,10 +629,22 @@ export async function verifyStoreAppearance({
         await page
           .getByLabel("Layout header", { exact: true })
           .selectOption("classic");
-        await page.getByLabel("Sticky header", {exact:true}).uncheck();
-        await expect.poll(() => frame.locator("header").evaluate((e) => getComputedStyle(e).position)).toBe("relative");
-        await page.getByLabel("Sticky header", {exact:true}).check();
-        await expect.poll(() => frame.locator("header").evaluate((e) => getComputedStyle(e).position)).toBe("sticky");
+        await page.getByLabel("Sticky header", { exact: true }).uncheck();
+        await expect
+          .poll(() =>
+            frame
+              .locator("header")
+              .evaluate((e) => getComputedStyle(e).position),
+          )
+          .toBe("relative");
+        await page.getByLabel("Sticky header", { exact: true }).check();
+        await expect
+          .poll(() =>
+            frame
+              .locator("header")
+              .evaluate((e) => getComputedStyle(e).position),
+          )
+          .toBe("sticky");
         await page
           .getByRole("button", { name: "Navigasi", exact: true })
           .click();
@@ -559,8 +723,13 @@ export async function verifyStoreAppearance({
         await visitor.unroute(logoUrl.href);
         await visitor.reload();
         for (const width of [390, 1360]) {
-          await visitor.setViewportSize({width, height: 900});
-          await captureShell(visitor, visitor, artifactDir, `midnight-${width}`);
+          await visitor.setViewportSize({ width, height: 900 });
+          await captureShell(
+            visitor,
+            visitor,
+            artifactDir,
+            `midnight-${width}`,
+          );
         }
         assert.equal(
           await page
@@ -609,13 +778,26 @@ export async function verifyStoreAppearance({
           await assertBorderless(visitor, `Midnight ${width}`);
           if (width < 768) {
             await expect(visitor.getByTestId("bottom-nav")).toBeVisible();
-            await visitor.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
-            const footer = await visitor.locator(".storefront-root > footer").boundingBox();
+            await visitor.evaluate(() =>
+              scrollTo(0, document.documentElement.scrollHeight),
+            );
+            const footer = await visitor
+              .locator(".storefront-root > footer")
+              .boundingBox();
             const nav = await visitor.getByTestId("bottom-nav").boundingBox();
-            assert.ok(footer && nav && footer.y + footer.height <= nav.y, `Footer clears floating nav ${width}`);
-            for (const link of await visitor.getByTestId("bottom-nav").locator("a").all()) {
+            assert.ok(
+              footer && nav && footer.y + footer.height <= nav.y,
+              `Footer clears floating nav ${width}`,
+            );
+            for (const link of await visitor
+              .getByTestId("bottom-nav")
+              .locator("a")
+              .all()) {
               const box = await link.boundingBox();
-              assert.ok(box && box.width >= 44 && box.height >= 44, `Touch target ${width}`);
+              assert.ok(
+                box && box.width >= 44 && box.height >= 44,
+                `Touch target ${width}`,
+              );
             }
             await visitor.evaluate(() => scrollTo(0, 0));
           } else await expect(visitor.getByTestId("bottom-nav")).toBeHidden();
@@ -794,33 +976,70 @@ export async function verifyStoreAppearance({
     await check("customize: no editor runtime exceptions", async () => {
       assert.deepEqual(errors, []);
     });
-    await check("customize: shell shadow preferences and published Monochrome", async () => {
-      await page.getByRole("button", {name: "Preset/Template Warna", exact: true}).click();
-      await page.getByRole("button", {name: "Gheverhan Monochrome", exact: true}).click();
-      const frame = page.frameLocator('iframe[title="Preview draft toko"]');
-      await page.getByRole("button", {name: "Tombol/Kartu", exact: true}).click();
-      for (const shadow of ["none", "soft", "raised"]) {
-        await page.getByLabel("Bayangan", {exact:true}).selectOption(shadow);
-        if (shadow === "none") {
-          await expect.poll(() => frame.getByTestId("bottom-nav").evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
-        } else {
-          await expect.poll(() => frame.getByTestId("bottom-nav").evaluate((e) => getComputedStyle(e).boxShadow)).toContain(shadow === "soft" ? "34px" : "40px");
+    await check(
+      "customize: shell shadow preferences and published Monochrome",
+      async () => {
+        await page
+          .getByRole("button", { name: "Preset/Template Warna", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Gheverhan Monochrome", exact: true })
+          .click();
+        const frame = page.frameLocator('iframe[title="Preview draft toko"]');
+        await page
+          .getByRole("button", { name: "Tombol/Kartu", exact: true })
+          .click();
+        for (const shadow of ["none", "soft", "raised"]) {
+          await page
+            .getByLabel("Bayangan", { exact: true })
+            .selectOption(shadow);
+          if (shadow === "none") {
+            await expect
+              .poll(() =>
+                frame
+                  .getByTestId("bottom-nav")
+                  .evaluate((e) => getComputedStyle(e).boxShadow),
+              )
+              .toBe("none");
+          } else {
+            await expect
+              .poll(() =>
+                frame
+                  .getByTestId("bottom-nav")
+                  .evaluate((e) => getComputedStyle(e).boxShadow),
+              )
+              .toContain(shadow === "soft" ? "34px" : "40px");
+          }
+          await assertBorderless(frame, `shadow ${shadow}`);
         }
-        await assertBorderless(frame, `shadow ${shadow}`);
-      }
-      await page.getByLabel("Bayangan", {exact:true}).selectOption("soft");
-      await page.getByRole("button", {name: "Simpan Draft", exact: true}).click();
-      await expect(page.getByRole("status")).toContainText("Draft tersimpan");
-      await page.getByRole("button", {name: "Terbitkan", exact: true}).click();
-      await expect(page.getByRole("status")).toContainText("published diperbarui");
-      await visitor.reload();
-      await expect(visitor.locator(".storefront-root")).toHaveAttribute("data-theme-active", "true");
-      for (const width of [390, 1360]) {
-        await visitor.setViewportSize({width, height: 900});
-        await captureShell(visitor, visitor, artifactDir, `monochrome-${width}`);
-        await assertBorderless(visitor, `published Monochrome ${width}`);
-      }
-    });
+        await page.getByLabel("Bayangan", { exact: true }).selectOption("soft");
+        await page
+          .getByRole("button", { name: "Simpan Draft", exact: true })
+          .click();
+        await expect(page.getByRole("status")).toContainText("Draft tersimpan");
+        await page
+          .getByRole("button", { name: "Terbitkan", exact: true })
+          .click();
+        await expect(page.getByRole("status")).toContainText(
+          "published diperbarui",
+        );
+        await visitor.reload();
+        await expect(visitor.locator(".storefront-root")).toHaveAttribute(
+          "data-theme-active",
+          "true",
+        );
+        for (const width of [390, 1360]) {
+          await visitor.setViewportSize({ width, height: 900 });
+          await captureShell(
+            visitor,
+            visitor,
+            artifactDir,
+            `monochrome-${width}`,
+          );
+          await assertBorderless(visitor, `published Monochrome ${width}`);
+        }
+      },
+    );
   } catch (error) {
     const diagnostics = await page
       .frameLocator('iframe[title="Preview draft toko"]')

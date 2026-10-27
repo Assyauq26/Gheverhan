@@ -12,6 +12,7 @@ import {
 import { trackView } from "@/modules/catalog/recently-viewed.service";
 import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
+import { purchaseGroups } from "@/modules/catalog/purchase-options";
 import { effectivePrice } from "@/lib/money";
 import {
   ProductSelectionProvider,
@@ -82,6 +83,8 @@ export default async function ProductPage({ params }: ProductRouteProps) {
     available: v.inventory ? v.inventory.onHand - v.inventory.reserved : 0,
   }));
 
+  const purchase = { id: product.id, slug: product.slug, name: product.name, brand: product.brand?.name ?? null, image: product.images[0] ?? null, ...purchaseGroups(variantOptions, product.optionsEnabled ? product.optionGroups : []) };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -115,22 +118,37 @@ export default async function ProductPage({ params }: ProductRouteProps) {
 
       <ProductSelectionProvider key={product.id}>
         <div className="pdp-main" data-testid="pdp-main">
+          <div className="pdp-topbar" aria-label="Navigasi produk" data-testid="pdp-header">
+            <Link
+              href="/"
+              aria-label="Kembali ke beranda"
+              className="pdp-header-action grid h-11 w-11 place-items-center"
+              data-testid="pdp-back-home"
+            >
+              <ArrowLeft size={23} aria-hidden="true" />
+            </Link>
+            <Link
+              href="/"
+              aria-label="Ke beranda"
+              className="pdp-topbar-center font-display font-extrabold tracking-tight"
+              data-testid="pdp-centered-logo"
+            >
+              <StoreLogo />
+            </Link>
+            <div className="pdp-topbar-actions">
+              <WishlistButton
+                productId={product.id}
+                initialActive={wl.has(product.id)}
+                className="pdp-header-action h-11 w-11"
+              />
+              <ShareButton title={product.name} iconOnly />
+            </div>
+          </div>
           <div className="pdp-hero">
             <div className="pdp-media">
               <ProductGallery images={product.images} name={product.name}/>
-              <div className="pdp-topbar" aria-label="Navigasi produk">
-                <Link href="/shop" aria-label="Kembali ke toko"
-                  className="pdp-header-action grid h-11 w-11 place-items-center bg-white/90 shadow-sm backdrop-blur">
-                  <ArrowLeft size={23}/>
-                </Link>
-                <span className="pdp-topbar-center"><StoreLogo /></span>
-                <div className="pdp-topbar-actions">
-                  <WishlistButton productId={product.id} initialActive={wl.has(product.id)}
-                    className="pdp-header-action h-11 w-11 rounded-2xl bg-white/90"/>
-                  <ShareButton title={product.name} iconOnly/>
-                </div>
-              </div>
             </div>
+
           </div>
           <div className="pdp-sheet">
             <span className="pdp-handle" aria-hidden="true"/>
@@ -147,12 +165,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
             <div className="my-5">
               <ProductSelectionPrice defaultPrice={price} basePrice={product.basePrice}/>
             </div>
-            <PurchasePanel
-              productId={product.id}
-              variants={variantOptions}
-              groups={product.optionsEnabled ? product.optionGroups : undefined}
-              wishlisted={wl.has(product.id)}
-            />
+            <PurchasePanel product={purchase} />
             <div className="mt-6 border-t border-zinc-100">
               <ProductSizeChart chart={product.sizeChart} image={product.sizeChartImage} name={product.name} />
               <details className="pdp-detail-row group py-4" open>

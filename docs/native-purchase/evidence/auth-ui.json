@@ -1,0 +1,373 @@
+{
+  "status": "PASS",
+  "checkpoints": [
+    "all nine viewports: geometry, labels, native keyboard and logo order",
+    "REST registration cannot bypass OTP or field validation and rejects foreign Origin",
+    "legal links preserve registration fields and do not consent",
+    "required phone and confirmation reject browser and forged form submissions",
+    "client and server both reject missing terms",
+    "password visibility, OTP required before user creation, and pending prevention",
+    "OTP survives reload and failed resend returns to fresh registration",
+    "duplicate contact is rejected before pending mutation or provider delivery",
+    "REST existing email/phone/both cannot call mail or create pending state",
+    "expired UI and interrupted resend reconcile server timing; deleted challenge restarts safely",
+    "five rejected codes lock verification until a server-approved resend",
+    "logout, invalid login and safe login redirect",
+    "forgot password validates input and keeps a neutral response for an unknown account",
+    "reset password rejects invalid token, consumes local token once and revokes old session",
+    "anonymous legal routes have canonical/SEO/draft metadata and footer entry points"
+  ],
+  "geometry": [
+    {
+      "route": "login",
+      "viewport": {
+        "width": 320,
+        "height": 740
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 261.84375,
+        "width": 272,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 403.84375,
+        "width": 272,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 320,
+        "height": 740
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 224.5625,
+        "width": 272,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 552.9375,
+        "width": 272,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 291.84375,
+        "width": 312,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 433.84375,
+        "width": 312,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 202.875,
+        "width": 312,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 531.25,
+        "width": 312,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 297.84375,
+        "width": 327,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 439.84375,
+        "width": 327,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 204.65625,
+        "width": 327,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 533.03125,
+        "width": 327,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 313.84375,
+        "width": 342,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 455.84375,
+        "width": 342,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 220.65625,
+        "width": 342,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 549.03125,
+        "width": 342,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 357.84375,
+        "width": 382,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 499.84375,
+        "width": 382,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "inputBox": {
+        "x": 24,
+        "y": 266.84375,
+        "width": 382,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 24,
+        "y": 590.84375,
+        "width": 382,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "inputBox": {
+        "x": 152,
+        "y": 428.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 152,
+        "y": 570.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "inputBox": {
+        "x": 152,
+        "y": 337.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 152,
+        "y": 661.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "inputBox": {
+        "x": 280,
+        "y": 300.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 280,
+        "y": 442.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "inputBox": {
+        "x": 280,
+        "y": 209.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 280,
+        "y": 533.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "inputBox": {
+        "x": 488,
+        "y": 366.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 488,
+        "y": 508.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "inputBox": {
+        "x": 488,
+        "y": 275.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 488,
+        "y": 599.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "login",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "inputBox": {
+        "x": 728,
+        "y": 456.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 728,
+        "y": 598.4375,
+        "width": 464,
+        "height": 44
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "inputBox": {
+        "x": 728,
+        "y": 365.4375,
+        "width": 464,
+        "height": 44
+      },
+      "submitBox": {
+        "x": 728,
+        "y": 689.4375,
+        "width": 464,
+        "height": 44
+      }
+    }
+  ],
+  "errors": [],
+  "expectedTransportErrors": [
+    "Failed to load resource: net::ERR_FAILED"
+  ],
+  "commitSha": "ec4619106e5a21b1f3758e34f783fb34cadb7492",
+  "nodeVersion": "v22.23.4",
+  "browserVersion": "153.0.8010.12",
+  "buildId": "-Gy8TLlbQiDsdDwwtEiyh",
+  "synthetic": true
+}

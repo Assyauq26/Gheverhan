@@ -2,6 +2,7 @@ import { getPublishedAppearance } from "@/modules/appearance/published";
 import { themeStyle, isLegacy } from "@/modules/appearance/runtime";
 import { AppearanceProvider, PublishedVersionSync, StoreLogo } from "@/components/appearance/context";
 import { StorefrontHeader } from "@/components/storefront/header";
+import { CartInteractionProvider } from "@/components/storefront/cart-interaction-provider";
 import { BottomNav } from "@/components/storefront/bottom-nav";
 import { Truck, ShieldCheck, Headphones, Star } from "lucide-react";
 import Link from "@/components/ui/navigation";
@@ -26,6 +27,7 @@ export default async function StorefrontLayout({
 
   return (
     <AppearanceProvider config={theme}>
+    <CartInteractionProvider>
     <div style={themeStyle(theme)} data-theme-active={!isLegacy(theme)} data-gradient-highlight-card={theme.gradients.highlightCard.enabled} className="storefront-root min-h-screen bg-white pb-24 md:pb-0">
       <PublishedVersionSync version={appearance.version} />
       {user && <RegistrationOtpCleanup />}
@@ -60,6 +62,7 @@ export default async function StorefrontLayout({
 
       <BottomNav cartCount={count} />
     </div>
+    </CartInteractionProvider>
     </AppearanceProvider>
   );
 }

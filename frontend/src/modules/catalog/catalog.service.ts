@@ -12,6 +12,7 @@ const productCardInclude = {
   images: { where: { isVariation: false }, select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
   brand: { select: { name: true } },
   variants: { select: { id: true }, take: 1 },
+  _count: { select: { variants: true } },
 } satisfies Prisma.ProductInclude;
 
 const productDetailInclude = {

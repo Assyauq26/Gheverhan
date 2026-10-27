@@ -587,9 +587,8 @@ export async function verifyCustomVariations(c: Context) {
           path: path.join(artifactDir, "product-custom-store-green-390.png"),
         });
         await store.getByTestId("add-to-cart-btn").click();
-        await expect(store.getByTestId("add-to-cart-btn")).toContainText(
-          "Ditambahkan",
-        );
+        await expect(store.getByTestId("cart-success-sheet")).toBeVisible();
+        await store.getByRole("button", {name:"Lanjut Belanja",exact:true}).click();
         const cart = await db.cartItem.findMany({
           where: { cart: { userId: customer.id } },
         });
@@ -887,22 +886,15 @@ export async function verifyCustomVariations(c: Context) {
           where: { cart: { userId: customer.id } },
         });
         await store.goto(`${base}/product/${sparseSlug}`);
-        // A sparse catalog must start on a real SKU rather than a missing
-        // Cartesian product; deliberately selecting a missing combo still fails.
-        await expect(store.getByTestId("selected-sku")).toContainText(
-          "SPARSE-",
-        );
-        await expect(store.getByTestId("buy-now-btn")).toBeEnabled();
-        await store.getByTestId(`option-${groups[0].values[0].id}`).click();
-        await store.getByTestId(`option-${groups[1].values[0].id}`).click();
-        await expect(
-          store.getByRole("button", {
-            name: "Kombinasi tidak tersedia",
-            exact: true,
-          }),
-        ).toBeDisabled();
+        // Multi-choice sparse products require explicit selection; impossible
+        // combinations are disabled rather than selecting a fallback SKU.
         await expect(store.getByTestId("selected-sku")).toHaveCount(0);
-        await expect(store.getByTestId("add-to-cart-btn")).toHaveCount(0);
+        await expect(store.getByTestId("buy-now-btn")).toBeDisabled();
+        await store.getByTestId(`option-${groups[0].values[0].id}`).click();
+        await expect(store.getByTestId(`option-${groups[1].values[0].id}`)).toBeDisabled();
+        await expect(store.getByTestId("buy-now-btn")).toBeDisabled();
+        await expect(store.getByTestId("selected-sku")).toHaveCount(0);
+        await expect(store.getByTestId("add-to-cart-btn")).toBeDisabled();
         assert.equal(
           await db.cartItem.count({ where: { cart: { userId: customer.id } } }),
           countBefore,

@@ -40,10 +40,15 @@ export function ProductCard({
   return (
     <article
       data-theme-target="highlightCard"
-      className="group relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+      data-featured={featured || undefined}
+      className="product-card group relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
-      <Link prefetch={preview ? false : undefined} href={`/product/${product.slug}`} className="block">
+      <Link
+        prefetch={preview ? false : undefined}
+        href={`/product/${product.slug}`}
+        className="block"
+      >
         <div className="relative aspect-square overflow-hidden rounded-xl bg-surface">
           {product.image ? (
             <Image
@@ -64,7 +69,6 @@ export function ProductCard({
               <Badge variant="sale">{pct}%</Badge>
             </div>
           )}
-
         </div>
       </Link>
       {/* A button must never be nested in a link: invalid interactive HTML
@@ -77,40 +81,38 @@ export function ProductCard({
 
       <div className="px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
-        <Link prefetch={preview ? false : undefined} href={`/product/${product.slug}`}>
+        <Link
+          prefetch={preview ? false : undefined}
+          href={`/product/${product.slug}`}
+        >
           <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-ink">
             {product.name}
           </h3>
         </Link>
 
-        {featured && pct > 0 ? (
-          <div className="mt-1 flex min-w-0 items-center gap-1 whitespace-nowrap">
-            <span data-theme-role="price" data-discount={pct > 0} className="font-display text-sm font-extrabold leading-tight text-ink">
+        <div className="product-card-purchase mt-1 flex min-w-0 items-end justify-between gap-1.5">
+          <div className="product-card-prices flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span
+              data-theme-role="price"
+              data-discount={pct > 0}
+              className="product-card-price font-display font-extrabold leading-tight text-ink"
+            >
               {formatIDR(price)}
             </span>
-            <span className="shrink-0 text-[10px] leading-tight text-ink-muted line-through">
-              {formatIDR(product.basePrice)}
-            </span>
-          </div>
-        ) : (
-          <div className="mt-1 flex items-center justify-between gap-1.5">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span data-theme-role="price" data-discount={pct > 0} className="font-display text-base font-extrabold leading-tight text-ink">
-                {formatIDR(price)}
+            {pct > 0 && (
+              <span className="product-card-original text-ink-muted line-through">
+                {formatIDR(product.basePrice)}
               </span>
-              {pct > 0 && (
-                <span className="text-xs leading-tight text-ink-muted line-through">
-                  {formatIDR(product.basePrice)}
-                </span>
-              )}
-            </div>
-            {!preview && <QuickAddButton
+            )}
+          </div>
+          {!featured && !preview && (
+            <QuickAddButton
               slug={product.slug}
               testId={product.variantId ?? product.id}
               className="shrink-0"
-            />}
-          </div>
-        )}
+            />
+          )}
+        </div>
       </div>
     </article>
   );
@@ -143,6 +145,9 @@ export function toCardData(p: {
     ratingAvg: p.ratingAvg,
     reviewCount: p.reviewCount,
     // Identifier hint for selectors only; mutation always uses fresh metadata.
-    variantId: p._count?.variants === 1 ? p.variants.find(() => true)?.id ?? null : null,
+    variantId:
+      p._count?.variants === 1
+        ? (p.variants.find(() => true)?.id ?? null)
+        : null,
   };
 }

@@ -208,8 +208,8 @@
 /* Purchase intent remains recognizable while incomplete. Derive the muted solid
    from the published primary pair; never fade a pale disabled token to white.
    Scoped to purchase CTAs so admin, fields and cart controls keep their states. */
-.storefront-root :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit)[data-button-variant]:disabled,
-.storefront-root[data-theme-active="true"] :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit)[data-button-variant]:disabled {
+:is(.storefront-root,.storefront-checkout-root) :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit, .checkout-submit)[data-button-variant]:disabled,
+.storefront-root[data-theme-active="true"] :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit, .checkout-submit)[data-button-variant]:disabled {
   background:color-mix(in srgb, var(--store-primary, #171717) 65%, var(--store-primaryText, #fff));
   color:var(--store-primaryText, #fff);
   border-color:transparent;
@@ -218,3 +218,35 @@
   cursor:not-allowed;
   transform:none;
 }
+
+.storefront-root .product-card { container-type:inline-size; }
+.storefront-root .product-card-purchase {flex-wrap:wrap;}
+.storefront-root .product-card-prices { flex:1 1 7.5rem; }
+.storefront-root .product-card[data-featured] .product-card-purchase {min-height:2.25rem;align-items:flex-start;}
+.storefront-root .product-card-purchase > button {margin-left:auto;}
+.storefront-root :is(.product-card-price,.product-card-original) { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.storefront-root .product-card-price { font-size:.875rem;font-size:clamp(.75rem,8cqi,1rem); }
+.storefront-root .product-card-original { font-size:.75rem;font-size:clamp(.625rem,6cqi,.75rem); }
+.storefront-root .product-card[data-featured] .product-card-price { font-size:.875rem;font-size:clamp(.75rem,8cqi,.875rem); }
+:is(.storefront-root,.storefront-checkout-root) .checkout-purchase-bar { display:grid; gap:.75rem; }
+:is(.storefront-root,.storefront-checkout-root) .checkout-sticky-total { display:none; }
+@media(max-width:767px) {
+ :is(.storefront-root,.storefront-checkout-root) .checkout-form { padding-bottom:calc(8rem + env(safe-area-inset-bottom,0px)); }
+ :is(.storefront-root,.storefront-checkout-root) .checkout-purchase-bar {
+   position:fixed;inset:auto 0 0;z-index:40;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;
+   padding:.75rem 1rem calc(.75rem + env(safe-area-inset-bottom,0px));
+   background:var(--store-nav,var(--store-card,#fff));color:var(--store-navText,var(--store-text,#171717));
+   box-shadow:var(--store-shell-shadow,0 -4px 22px rgb(0 0 0 / .06));
+ }
+ :is(.storefront-root,.storefront-checkout-root) .checkout-sticky-total { display:flex;min-width:0;flex-direction:column;gap:.25rem; }
+ :is(.storefront-root,.storefront-checkout-root) .checkout-sticky-total strong {font-size:clamp(.875rem,4vw,1.125rem);white-space:nowrap; font-variant-numeric:tabular-nums;}
+ :is(.storefront-root,.storefront-checkout-root) .checkout-submit { padding-inline:.75rem; }
+}
+.storefront-root .order-review-entry {border:1px solid var(--store-decorative-border,#eee);border-radius:var(--store-radius,16px);padding:1rem;background:var(--store-card,#fff);}
+.storefront-root .review-rating button {height:44px;width:44px;border-radius:var(--store-button-radius,9999px);color:var(--store-primary,#171717);}
+.storefront-root .review-rating button[aria-pressed="true"] svg {fill:currentColor;}
+
+.storefront-root .review-rating label {color:var(--store-primary,#171717);}
+.storefront-root .review-rating .review-star-filled {fill:currentColor;}
+.storefront-root .review-rating label:has(input:focus-visible) {outline:2px solid var(--store-focus,#171717);outline-offset:2px;}
+.storefront-root[data-theme-active="true"] .review-rating svg {color:inherit;}

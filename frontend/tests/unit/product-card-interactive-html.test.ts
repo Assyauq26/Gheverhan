@@ -38,3 +38,11 @@ describe("ProductCard interactive HTML invariants", () => {
     cleanup();
   });
 });
+
+for(const salePrice of [null,299000])it(`featured cards have no purchasing shortcut; sale=${salePrice}`,()=>{
+ const view=render(React.createElement(ProductCard,{featured:true,product:{id:"feature",slug:"feature",name:"Featured",image:null,basePrice:1499000,salePrice,ratingAvg:0,reviewCount:0,variantId:"v"}}));
+ expect(view.container.querySelector('[data-featured="true"]')).not.toBeNull();
+ expect(view.container.querySelectorAll('button')).toHaveLength(0);
+ expect(view.container.querySelector('[data-theme-role="price"]')?.textContent).toBe(salePrice===null?"Rp 1.499.000":"Rp 299.000");
+ cleanup();
+});

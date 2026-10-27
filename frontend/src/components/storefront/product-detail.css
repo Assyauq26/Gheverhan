@@ -64,7 +64,7 @@
     height:calc(72svh - var(--pdp-header-height));
     min-height:300px;
   }
-  .pdp-media { height:100%; }
+  .pdp-media, .pdp-gallery { height:100%; min-height:0; }
   .pdp-gallery-frame { aspect-ratio:auto; height:100%; min-height:0; border-radius:0; }
   /* Same solid published header surface/typography as Home; only its mobile layout changes. */
   .pdp-topbar {
@@ -163,3 +163,17 @@
 .storefront-root .pdp-gallery-dots button:focus-visible { outline:none; }
 .storefront-root .pdp-gallery-dots button:focus-visible .pdp-gallery-dot { outline:2px solid var(--store-focus,#171717); outline-offset:4px; }
 .storefront-root .pdp-gallery-thumb:focus-visible { outline:2px solid var(--store-focus,#171717); outline-offset:2px; }
+
+/* Image fill needs an unbroken mobile height chain through the gallery wrapper. */
+.storefront-root :is(.pdp-gallery-loading, .pdp-gallery-empty) {
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:1rem;
+  background:var(--store-surface, #f5f3f1);
+  color:var(--store-secondaryText, #595959);
+  font-size:0.875rem;
+  text-align:center;
+}
+.storefront-root .pdp-gallery-loading { pointer-events:none; }

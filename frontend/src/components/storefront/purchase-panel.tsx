@@ -162,13 +162,7 @@ export function PurchasePanel({ product }: { product: PurchaseProduct }) {
           disabled={pending || !selected || stock < quantity}
           onClick={() => void buy()}
         >
-          {pending
-            ? "Memproses…"
-            : !selected
-              ? "Pilih variasi"
-              : stock <= 0
-                ? "Stok habis"
-                : "Beli Sekarang"}
+          {pending ? "Memproses…" : "Beli Sekarang"}
         </button>
       </div>
       <p className="text-[11px] leading-relaxed">

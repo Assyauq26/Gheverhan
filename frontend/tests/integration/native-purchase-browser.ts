@@ -247,8 +247,14 @@ export async function verifyNativePurchase({
         await expect(page.getByTestId("quick-add-price")).toHaveText(
           "Rp 150.000",
         );
-        await expect(page.getByTestId("quick-add-price")).toHaveAttribute("data-theme-role", "price");
-        await expect(page.getByTestId("quick-add-price")).toHaveAttribute("data-discount", "true");
+        await expect(page.getByTestId("quick-add-price")).toHaveAttribute(
+          "data-theme-role",
+          "price",
+        );
+        await expect(page.getByTestId("quick-add-price")).toHaveAttribute(
+          "data-discount",
+          "true",
+        );
         await page.getByTestId("qty-plus").click();
         await expect(page.getByTestId("qty-plus")).toBeDisabled();
         await page.setViewportSize({ width: 320, height: 900 });
@@ -276,9 +282,15 @@ export async function verifyNativePurchase({
         const success = page.getByTestId("cart-success-sheet");
         await expect(success).toBeVisible();
         await expect(page.getByRole("dialog")).toHaveCount(1);
-        await expect(page.getByRole("button", { name: "Tutup", exact: true })).toHaveCount(0);
-        await expect(page.getByRole("button", { name: "Lanjut Belanja", exact: true })).toBeVisible();
-        await expect(page.getByRole("button", { name: "Lihat Keranjang", exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "Tutup", exact: true }),
+        ).toHaveCount(0);
+        await expect(
+          page.getByRole("button", { name: "Lanjut Belanja", exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "Lihat Keranjang", exact: true }),
+        ).toBeVisible();
         await expect(page.getByTestId("quick-add-variant-sheet")).toHaveCount(
           0,
         );
@@ -334,12 +346,18 @@ export async function verifyNativePurchase({
           .click();
         await expect(page).toHaveURL(`${base}/cart`);
         await expect(page.getByTestId("cart-total")).toHaveText("Rp 395.000");
-        const cartSummaryBox = await page.getByTestId("cart-summary").boundingBox();
+        const cartSummaryBox = await page
+          .getByTestId("cart-summary")
+          .boundingBox();
         assert.ok(
-          cartSummaryBox && cartSummaryBox.x >= 0 && cartSummaryBox.x + cartSummaryBox.width <= 390,
+          cartSummaryBox &&
+            cartSummaryBox.x >= 0 &&
+            cartSummaryBox.x + cartSummaryBox.width <= 390,
           "Mobile cart summary must fit the viewport",
         );
-        for (const item of await page.locator(".native-cart .cart-item").all()) {
+        for (const item of await page
+          .locator(".native-cart .cart-item")
+          .all()) {
           for (const target of [
             item.locator('[data-testid^="cart-remove-"]'),
             item.locator('[data-testid^="cart-item-price-"]'),
@@ -427,8 +445,14 @@ export async function verifyNativePurchase({
             },
           });
         await page.goto(`${base}/product/${multi.slug}`);
-        await expect(page.getByTestId("pdp-back-home")).toHaveAttribute("href", "/");
-        await expect(page.getByTestId("pdp-centered-logo")).toHaveAttribute("href", "/");
+        await expect(page.getByTestId("pdp-back-home")).toHaveAttribute(
+          "href",
+          "/",
+        );
+        await expect(page.getByTestId("pdp-centered-logo")).toHaveAttribute(
+          "href",
+          "/",
+        );
         await expect(page.getByTestId("selected-sku")).toHaveCount(0);
         await expect(page.getByTestId("buy-now-btn")).toHaveCount(1);
         await expect(page.getByTestId("buy-now-btn")).toBeDisabled();
@@ -484,9 +508,13 @@ export async function verifyNativePurchase({
             const box = await page.locator(".pdp-topbar").boundingBox();
             assert.ok(box && box.y >= 0 && box.y < 2);
             const headerAndBar = await page.evaluate(() => {
-              const header = document.querySelector<HTMLElement>(".pdp-topbar")!;
-              const logo = document.querySelector<HTMLElement>(".pdp-topbar-center")!;
-              const actions = document.querySelector<HTMLElement>(".pdp-purchase-actions")!;
+              const header =
+                document.querySelector<HTMLElement>(".pdp-topbar")!;
+              const logo =
+                document.querySelector<HTMLElement>(".pdp-topbar-center")!;
+              const actions = document.querySelector<HTMLElement>(
+                ".pdp-purchase-actions",
+              )!;
               const headerStyle = getComputedStyle(header);
               const actionStyle = getComputedStyle(actions);
               const headerRect = header.getBoundingClientRect();
@@ -505,13 +533,24 @@ export async function verifyNativePurchase({
             });
             assert.ok(
               !headerAndBar.headerBackground.includes("0, 0, 0, 0") ||
-              headerAndBar.headerImage !== "none",
+                headerAndBar.headerImage !== "none",
               "Product header must have a solid Home-matching background",
             );
-            assert.ok(Math.abs(headerAndBar.headerCenter - headerAndBar.logoCenter) <= 2, "Product logo must be centered");
+            assert.ok(
+              Math.abs(headerAndBar.headerCenter - headerAndBar.logoCenter) <=
+                2,
+              "Product logo must be centered",
+            );
             assert.equal(headerAndBar.barPosition, "fixed");
-            assert.ok(Math.abs(headerAndBar.barLeft) <= 1 && Math.abs(headerAndBar.barWidth - width) <= 2, "Purchase navbar must fill the screen");
-            assert.ok(Math.abs(headerAndBar.barBottom - 900) <= 2, "Purchase navbar must reach the viewport bottom");
+            assert.ok(
+              Math.abs(headerAndBar.barLeft) <= 1 &&
+                Math.abs(headerAndBar.barWidth - width) <= 2,
+              "Purchase navbar must fill the screen",
+            );
+            assert.ok(
+              Math.abs(headerAndBar.barBottom - 900) <= 2,
+              "Purchase navbar must reach the viewport bottom",
+            );
             assert.equal(
               await page
                 .locator(".pdp-hero")
@@ -646,6 +685,27 @@ export async function verifyNativePurchase({
               await dialog.evaluate((e) => getComputedStyle(e).backgroundColor),
               `rgb(${rgb(config.colors.modal).join(", ")})`,
             );
+            const disabledSubmit = dialog.getByRole("button", {
+              name: "Masukkan ke Keranjang",
+              exact: true,
+            });
+            await expect(disabledSubmit).toBeDisabled();
+            const disabledColor = await disabledSubmit.evaluate((e) => {
+              const ctx = document.createElement("canvas").getContext("2d")!;
+              ctx.fillStyle = getComputedStyle(e).backgroundColor;
+              ctx.fillRect(0, 0, 1, 1);
+              return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+            });
+            const primary = rgb(config.colors.primary),
+              foreground = rgb(config.colors.primaryText);
+            disabledColor.forEach((channel, i) =>
+              assert.ok(
+                Math.abs(
+                  channel - (primary[i] * 0.65 + foreground[i] * 0.35),
+                ) <= 2,
+                "Disabled purchase tone follows the published primary pair",
+              ),
+            );
             const radius = { square: "0px", soft: "10px", pill: "9999px" }[
               shape
             ];
@@ -702,9 +762,21 @@ export async function verifyNativePurchase({
             );
             if (index === 0) {
               await page.mouse.move(0, 0);
-              await expect.poll(() => page.getByTestId("checkout-btn").evaluate(e => getComputedStyle(e).backgroundImage)).toContain("linear-gradient");
+              await expect
+                .poll(() =>
+                  page
+                    .getByTestId("checkout-btn")
+                    .evaluate((e) => getComputedStyle(e).backgroundImage),
+                )
+                .toContain("linear-gradient");
               await page.getByTestId("checkout-btn").hover();
-              await expect.poll(() => page.getByTestId("checkout-btn").evaluate(e => getComputedStyle(e).backgroundImage)).toBe("none");
+              await expect
+                .poll(() =>
+                  page
+                    .getByTestId("checkout-btn")
+                    .evaluate((e) => getComputedStyle(e).backgroundImage),
+                )
+                .toBe("none");
               await page.mouse.move(0, 0);
             }
             await page.screenshot({
@@ -729,16 +801,181 @@ export async function verifyNativePurchase({
       },
     );
     await check(
+      "Hotfix: visible PDP images, variant fallback and dark disabled purchase actions",
+      async () => {
+        const before = await lines();
+        await db.inventory.update({
+          where: { variantId: red.id },
+          data: { onHand: 5 },
+        });
+        const bluePhoto = await db.productImage.create({
+          data: {
+            productId: multi.id,
+            url: `${photo.url}?hotfix=blue`,
+            alt: "Hotfix blue photo",
+            sortOrder: 20,
+          },
+        });
+        await db.productOptionValue.update({
+          where: { id: groups[0].values[1].id },
+          data: { imageId: bluePhoto.id },
+        });
+        await db.productOptionValue.update({
+          where: { id: groups[0].values[0].id },
+          data: { imageId: null },
+        });
+        const assertDarkDisabled = async (
+          button: ReturnType<typeof page.getByTestId>,
+        ) => {
+          await expect(button).toBeDisabled();
+          const state = await button.evaluate((e) => {
+            const css = getComputedStyle(e),
+              canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d")!;
+            context.fillStyle = css.backgroundColor;
+            context.fillRect(0, 0, 1, 1);
+            return {
+              rgba: [...context.getImageData(0, 0, 1, 1).data],
+              opacity: css.opacity,
+              image: css.backgroundImage,
+            };
+          });
+          assert.ok(
+            state.rgba.slice(0, 3).every((v) => v < 180),
+            `Disabled purchase action must remain dark: ${JSON.stringify(state)}`,
+          );
+          assert.equal(state.rgba[3], 255);
+          assert.equal(state.opacity, "1");
+          assert.equal(state.image, "none");
+        };
+        const hero = page.locator(".pdp-gallery-frame > img");
+        for (const width of [360, 390, 430]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.goto(`${base}/product/${multi.slug}`);
+          await expect(page.getByTestId("pdp-main")).toBeVisible();
+          await expect(hero).toBeVisible();
+          await expect(hero).toHaveAttribute("alt", photo.alt);
+          await expect
+            .poll(() =>
+              hero.evaluate((e) => (e as HTMLImageElement).naturalWidth),
+            )
+            .toBeGreaterThan(0);
+          const box = await hero.boundingBox();
+          assert.ok(
+            box && box.height > 250 && box.width >= width - 2,
+            "Decoded hero must also occupy visible mobile space",
+          );
+          await expect(page.getByTestId("buy-now-btn")).toHaveText(
+            "Beli Sekarang",
+          );
+          await assertDarkDisabled(page.getByTestId("buy-now-btn"));
+          await assertDarkDisabled(page.getByTestId("add-to-cart-btn"));
+          assert.ok(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+          );
+          await page.screenshot({
+            path: path.join(artifactDir, `hotfix-pdp-${width}.png`),
+          });
+        }
+        await page.getByTestId(`option-${groups[0].values[1].id}`).click();
+        await expect(hero).toHaveAttribute("alt", "Hotfix blue photo");
+        await expect
+          .poll(() =>
+            hero.evaluate((e) => (e as HTMLImageElement).naturalWidth),
+          )
+          .toBeGreaterThan(0);
+        await page.getByTestId(`option-${groups[0].values[0].id}`).click();
+        await expect(hero).toHaveAttribute("alt", photo.alt);
+        for (const g of groups.slice(1))
+          await page.getByTestId(`option-${g.values[0].id}`).click();
+        await expect(page.getByTestId("buy-now-btn")).toBeEnabled();
+        await expect(page.getByTestId("buy-now-btn")).toHaveText(
+          "Beli Sekarang",
+        );
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto(`${base}/product/${simple.slug}`);
+        await expect(page.getByTestId("buy-now-btn")).toBeEnabled();
+        await expect
+          .poll(() =>
+            hero.evaluate((e) => (e as HTMLImageElement).naturalWidth),
+          )
+          .toBeGreaterThan(0);
+        // Invalid first image falls through to the next real gallery image.
+        await db.productImage.create({
+          data: {
+            productId: simple.id,
+            url: "/images/hotfix-missing-cover.webp",
+            alt: "Broken cover",
+            sortOrder: -1,
+          },
+        });
+        await page.goto(`${base}/product/${simple.slug}`);
+        await expect(page.getByTestId("pdp-main")).toBeVisible();
+        await expect(hero).toBeVisible();
+        await expect(hero).toHaveAttribute("alt", "Dummy tote");
+        await expect
+          .poll(() =>
+            hero.evaluate((e) => (e as HTMLImageElement).naturalWidth),
+          )
+          .toBeGreaterThan(0);
+        await page.screenshot({
+          path: path.join(artifactDir, "hotfix-fallback-390.png"),
+        });
+        for (const width of [360, 390, 430]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.goto(`${base}/shop?q=${prefix}-native`);
+          await page
+            .getByTestId(`product-card-${multi.slug}`)
+            .getByRole("button", { name: "Tambah ke keranjang", exact: true })
+            .click();
+          const submit = page.getByRole("button", {
+            name: "Masukkan ke Keranjang",
+            exact: true,
+          });
+          await assertDarkDisabled(submit);
+          await page.getByRole("dialog").evaluate(async (e) => {
+            await Promise.all(
+              e
+                .getAnimations({ subtree: true })
+                .filter((animation) =>
+                  Number.isFinite(
+                    animation.effect?.getComputedTiming().endTime,
+                  ),
+                )
+                .map((animation) => animation.finished.catch(() => {})),
+            );
+          });
+          await page.screenshot({
+            path: path.join(artifactDir, `hotfix-quick-add-${width}.png`),
+          });
+          for (const g of groups)
+            await page.getByTestId(`option-${g.values[0].id}`).click();
+          await expect(submit).toBeEnabled();
+          assert.ok(
+            await page
+              .getByRole("dialog")
+              .evaluate((e) => e.scrollWidth <= e.clientWidth),
+          );
+          await page.keyboard.press("Escape");
+        }
+        assert.deepEqual(
+          await lines(),
+          before,
+          "Hotfix image/CTA selection checks never mutate the cart",
+        );
+      },
+    );
+    await check(
       "V3: touch dismissal, guest continuation and no unhandled runtime errors",
       async () => {
-        const touch = await buyer
-          .browser()!
-          .newContext({
-            viewport: { width: 390, height: 844 },
-            isMobile: true,
-            hasTouch: true,
-            reducedMotion: "reduce",
-          });
+        const touch = await buyer.browser()!.newContext({
+          viewport: { width: 390, height: 844 },
+          isMobile: true,
+          hasTouch: true,
+          reducedMotion: "reduce",
+        });
         try {
           await touch.addCookies(await buyer.cookies());
           const mobile = await touch.newPage();

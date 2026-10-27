@@ -13,10 +13,28 @@ export function ProductGallery({
 }) {
   const selection = useProductSelection();
   const optionImage = selection?.image;
-  // Keep option photos inside the same carousel, without duplicating a gallery photo.
-  const list = optionImage?.url
-    ? [optionImage, ...images.filter((image) => image.url !== optionImage.url)]
-    : images;
+  const [failed, setFailed] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState<string[]>([]);
+  // Never pass an empty/unsupported source to Next Image. Keep gallery order
+  // and remove failed sources so a broken option/cover falls back to a real photo.
+  const seen = new Set<string>();
+  const list = (optionImage ? [optionImage, ...images] : images).filter(
+    (image) => {
+      const url = image.url?.trim();
+      if (!url || url !== image.url || failed.includes(url) || seen.has(url))
+        return false;
+      const local = url.startsWith("/") && !url.startsWith("//");
+      let remote = false;
+      try {
+        remote = new URL(url).protocol === "https:";
+      } catch {
+        /* Local path. */
+      }
+      if (!local && !remote) return false;
+      seen.add(url);
+      return true;
+    },
+  );
   const [active, setActive] = useState(0);
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
@@ -39,7 +57,11 @@ export function ProductGallery({
       setActive(0);
     }
   }, [optionImage?.url]);
-  const index = Math.min(active, Math.max(0, list.length - 1));
+  // Reset immediately on option changes, before the synchronization effect runs.
+  const index =
+    previousOption.current !== optionImage?.url
+      ? 0
+      : Math.min(active, Math.max(0, list.length - 1));
   const displayed = list[index];
   const dotStart = Math.max(0, Math.min(index - 2, list.length - 5));
   const dots = list.length > 5 ? list.slice(dotStart, dotStart + 5) : list;
@@ -56,9 +78,11 @@ export function ProductGallery({
 
   return (
     <div
-      className="min-w-0"
+      className="pdp-gallery min-w-0"
       data-testid="product-gallery"
-      aria-busy={!ready}
+      aria-busy={
+        !ready || Boolean(displayed && !loaded.includes(displayed.url))
+      }
       aria-label="Galeri produk"
     >
       <div
@@ -77,10 +101,29 @@ export function ProductGallery({
             priority={index === 0}
             sizes="(max-width: 767px) 100vw, (max-width: 1280px) 50vw, 560px"
             className="pdp-gallery-image"
+            unoptimized={displayed.url.startsWith("/api/v1/product-images/")}
+            onLoad={() =>
+              setLoaded((previous) =>
+                previous.includes(displayed.url)
+                  ? previous
+                  : [...previous, displayed.url],
+              )
+            }
+            onError={() => {
+              setFailed((previous) =>
+                previous.includes(displayed.url)
+                  ? previous
+                  : [...previous, displayed.url],
+              );
+              setActive(0);
+            }}
           />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-zinc-100 text-sm text-zinc-400">
-            Foto produk belum tersedia
+          <div className="pdp-gallery-empty">Foto produk belum tersedia</div>
+        )}
+        {displayed && !loaded.includes(displayed.url) && (
+          <div className="pdp-gallery-loading" role="status">
+            <span>Memuat foto produk…</span>
           </div>
         )}
         {list.length > 1 && (
@@ -160,6 +203,7 @@ export function ProductGallery({
                 fill
                 sizes="64px"
                 className="object-cover"
+                unoptimized={image.url.startsWith("/api/v1/product-images/")}
               />
             </button>
           ))}

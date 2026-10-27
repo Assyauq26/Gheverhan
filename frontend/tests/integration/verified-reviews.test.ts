@@ -423,3 +423,48 @@ test("a linked review for another product is never projected as verified", async
     await db.product.delete({ where: { id: another.id } });
   }
 });
+
+test("PDP list and rating stay on one snapshot during publication races", async () => {
+  const o = await order(),
+    result = await service.createReview(buyer, o.items[0].id, input);
+  await Promise.all([
+    (async () => {
+      for (let i = 0; i < 16; i++)
+        await service.setReviewStatus(
+          staff,
+          result.id,
+          i % 2 ? "PUBLISHED" : "PENDING",
+        );
+    })(),
+    (async () => {
+      for (let i = 0; i < 30; i++) {
+        const view = await pub.readProductReviewSummary(product);
+        assert.equal(view.reviewCount, view.reviews.length);
+        assert.ok(
+          Math.abs(
+            view.ratingAvg -
+              view.reviews.reduce((sum, r) => sum + r.rating, 0) /
+                view.reviewCount,
+          ) < 0.000001,
+        );
+      }
+    })(),
+  ]);
+});
+test("PDP pagination limits visible rows without truncating aggregate evidence", async () => {
+  const before = (await pub.verifiedRatings([product])).get(product)!;
+  for (let i = 0; i < 21; i++) {
+    const o = await order();
+    await service.createReview(buyer, o.items[0].id, {
+      ...input,
+      rating: i % 2 ? 1 : 5,
+    });
+  }
+  const view = await pub.readProductReviewSummary(product);
+  assert.equal(view.reviews.length, 20);
+  assert.equal(view.reviewCount, before.reviewCount + 21);
+  assert.deepEqual(
+    { ratingAvg: view.ratingAvg, reviewCount: view.reviewCount },
+    (await pub.verifiedRatings([product])).get(product),
+  );
+});

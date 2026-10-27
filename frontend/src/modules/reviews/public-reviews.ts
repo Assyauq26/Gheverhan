@@ -43,7 +43,7 @@ export async function withVerifiedRatings<T extends { id: string }>(
     ...(ratings.get(product.id) ?? { ratingAvg: 0, reviewCount: 0 }),
   }));
 }
-export async function listReviews(productId: string) {
+export async function readProductReviewSummary(productId: string) {
   const rows = await prisma.$queryRaw<
     {
       id: string;
@@ -53,9 +53,11 @@ export async function listReviews(productId: string) {
       createdAt: Date;
       name: string;
       variantLabel: string;
+      ratingAvg: number;
+      reviewCount: number;
     }[]
   >(Prisma.sql`
-    SELECT r.id,r.rating,r.title,r.body,r."createdAt",u.name,i."variantLabel" ${joins}
+    SELECT r.id,r.rating,r.title,r.body,r."createdAt",u.name,i."variantLabel",AVG(r.rating) OVER()::float8 AS "ratingAvg",COUNT(*) OVER()::int AS "reviewCount" ${joins}
     JOIN "User" u ON u.id = r."userId"
     WHERE ${eligible} AND r."productId" = ${productId} ORDER BY r."createdAt" DESC, r.id DESC LIMIT 20`);
   const images = rows.length
@@ -65,11 +67,21 @@ export async function listReviews(productId: string) {
         take: 200,
       })
     : [];
-  return rows.map(({ name, ...row }) => ({
-    ...row,
-    user: { name: reviewDisplayName(name) },
-    images: images
-      .filter((image) => image.reviewId === row.id)
-      .map(({ id, url }) => ({ id, url })),
-  }));
+  const reviews = rows.map(
+    ({ name, ratingAvg: _average, reviewCount: _count, ...row }) => ({
+      ...row,
+      user: { name: reviewDisplayName(name) },
+      images: images
+        .filter((image) => image.reviewId === row.id)
+        .map(({ id, url }) => ({ id, url })),
+    }),
+  );
+  return {
+    reviews,
+    ratingAvg: rows[0]?.ratingAvg ?? 0,
+    reviewCount: rows[0]?.reviewCount ?? 0,
+  };
+}
+export async function listReviews(productId: string) {
+  return (await readProductReviewSummary(productId)).reviews;
 }

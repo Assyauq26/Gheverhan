@@ -1,4 +1,4 @@
-import { withVerifiedRatings, listReviews } from "@/modules/reviews/public-reviews";
+import { withVerifiedRatings, readProductReviewSummary } from "@/modules/reviews/public-reviews";
 import { readSizeChart } from "./product-size-chart";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -170,8 +170,8 @@ export const getProductBySlug = cache(async (slug: string) => {
   const sizeChartImage = sizeChart?.mode === "image" ? await prisma.productImage.findFirst({
     where: { id: sizeChart.imageId, productId: product.id }, select: { url: true, alt: true },
   }) : null;
-  const [rated, reviews] = await Promise.all([withVerifiedRatings([product]), listReviews(product.id)]);
-  return { ...rated[0], sizeChart, sizeChartImage, reviews };
+  const summary = await readProductReviewSummary(product.id);
+  return { ...product, ...summary, sizeChart, sizeChartImage };
 });
 
 export async function getRelatedProducts(product: {

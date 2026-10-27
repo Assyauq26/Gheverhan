@@ -1,3 +1,4 @@
+import { verifyStorefrontV4 } from "./storefront-v4-browser";
 import { verifyNativePurchase } from "./native-purchase-browser";
 import { verifyStoreAppearance } from "./store-appearance-browser";
 import { createServer } from "node:http";
@@ -136,6 +137,10 @@ async function main() {
     await admin.addCookies([await cookie(staff)]); await buyer.addCookies([await cookie(customer)]); await readOnly.addCookies([await cookie(marketing)]);
     const page = await admin.newPage();
     const pageErrors: string[] = []; page.on("pageerror", err => pageErrors.push(err.message));
+    if (process.env.STOREFRONT_V4_ONLY === "1") {
+      await verifyStorefrontV4({browser:browser!,admin,anonymous,db,base,prefix,artifactDir,check});
+      completed=true;return;
+    }
     if (process.env.NATIVE_PURCHASE_ONLY === "1") {
       await verifyNativePurchase({buyer,admin,anonymous,db,base,prefix,artifactDir,check});
       completed=true;return;
@@ -152,6 +157,7 @@ async function main() {
     }
     await verifyStoreAppearance({browser:browser!,admin,anonymous,readOnly,db,base,artifactDir,check});
     await verifyNativePurchase({buyer,admin,anonymous,db,base,prefix,artifactDir,check});
+    await verifyStorefrontV4({browser:browser!,admin,anonymous,db,base,prefix,artifactDir,check});
     await check("protected pages and permission-filtered dashboard", async () => {
       const unauth = await anonymous.request.get(`${base}/admin/products/new`); assert.match(unauth.url(), /\/login/);
       const denied = await readOnly.request.get(`${base}/admin/products/new`); assert.equal(denied.status(), 404);

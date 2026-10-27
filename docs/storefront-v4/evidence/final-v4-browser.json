@@ -1,0 +1,39 @@
+{
+  "status": "PASS",
+  "checks": 7,
+  "checkpoints": [
+    {
+      "label": "V4: responsive intact prices and featured cards without purchasing shortcuts",
+      "status": "PASS"
+    },
+    {
+      "label": "V4: bounded PDP stops38px below header and scrolls its last content with keyboard",
+      "status": "PASS"
+    },
+    {
+      "label": "V4: verified review requires eligible owned item and cannot forge or duplicate publication",
+      "status": "PASS"
+    },
+    {
+      "label": "V4: checkout has one fixed mobile submit and synchronizes ready/loading/error/stale totals",
+      "status": "PASS"
+    },
+    {
+      "label": "V4: regular and direct checkout preserve validation, failure and one successful order",
+      "status": "PASS"
+    },
+    {
+      "label": "V4: price and sticky checkout states inherit dark, sage and gradient published themes",
+      "status": "PASS"
+    },
+    {
+      "label": "V4: no runtime exceptions or unsolicited review publication",
+      "status": "PASS"
+    }
+  ],
+  "commitSha": "b7b2eb03528b7cba68b67bfc073871ce5f04dab0",
+  "nodeVersion": "v22.23.4",
+  "browserVersion": "153.0.8010.12",
+  "buildId": "NEdqlV3VWFEh51u5uEv6Y",
+  "synthetic": true
+}

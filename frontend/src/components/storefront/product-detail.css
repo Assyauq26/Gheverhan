@@ -202,3 +202,6 @@
 @keyframes pdp-detail-in {from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
 
 .storefront-root .pdp-sheet p {overflow-wrap:anywhere;}
+
+.storefront-root .pdp-page .public-review-card,
+.storefront-root[data-theme-active="true"] .pdp-page .public-review-card {border-color:var(--store-decorative-border,#eee);border-radius:var(--store-radius,16px);}

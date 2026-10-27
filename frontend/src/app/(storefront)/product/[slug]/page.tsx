@@ -263,7 +263,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
                   {product.reviews.map((r) => (
                     <div
                       key={r.id}
-                      className="rounded-2xl border border-line p-4"
+                      className="public-review-card min-w-0 rounded-2xl border border-line p-4"
                       data-testid={`review-${r.id}`}
                     >
                       <div className="flex items-center justify-between">
@@ -272,9 +272,9 @@ export default async function ProductPage({ params }: ProductRouteProps) {
                         </span>
                         <Rating value={r.rating} />
                       </div>
-                      <p className="my-2 text-xs font-semibold">
+                      <Badge variant="muted" className="my-2">
                         Pembelian Terverifikasi
-                      </p>
+                      </Badge>
                       <p className="text-xs text-ink-muted">
                         {new Intl.DateTimeFormat("id-ID", {
                           dateStyle: "medium",

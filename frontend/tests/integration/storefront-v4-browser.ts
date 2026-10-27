@@ -168,14 +168,12 @@ export async function verifyStorefrontV4({
         for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await page.setViewportSize({ width, height: 900 });
           await page.goto(base);
-          const section = page
-            .locator("section")
-            .filter({
-              has: page.getByRole("heading", {
-                name: "Produk Pilihan",
-                exact: true,
-              }),
-            });
+          const section = page.locator("section").filter({
+            has: page.getByRole("heading", {
+              name: "Produk Pilihan",
+              exact: true,
+            }),
+          });
           await expect(
             section.locator("[data-featured]").first(),
           ).toBeVisible();
@@ -418,7 +416,26 @@ export async function verifyStorefrontV4({
           where: { orderItemId: received.items[0].id },
         });
         const card = page.getByTestId(`review-${written.id}`);
+        await page.evaluate(() =>
+          scrollTo(0, document.documentElement.scrollHeight),
+        );
+        await expect(
+          page.getByTestId("product-information-sheet"),
+        ).toHaveAttribute("data-expanded", "true");
         await card.scrollIntoViewIfNeeded();
+        await expect(card.locator('[data-badge-variant="muted"]')).toHaveText(
+          "Pembelian Terverifikasi",
+        );
+        const reviewBounds = await card.boundingBox(),
+          purchaseBounds = await page
+            .locator(".pdp-purchase-actions")
+            .boundingBox();
+        assert.ok(
+          reviewBounds &&
+            purchaseBounds &&
+            reviewBounds.y + reviewBounds.height <= purchaseBounds.y + 1,
+          "Verified review stays fully above the purchase navbar",
+        );
         await expect(card).toContainText("Pembelian Terverifikasi");
         await expect(card).toContainText("<img src=x");
         assert.equal(await card.locator("img").count(), 0);

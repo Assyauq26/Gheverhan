@@ -1,0 +1,4 @@
+Helipod release request
+Source commit: 10710380f749f2f0dd9f0c15ab548d812b9e74a7
+Reason: approved PR #108 storefront V3 release to existing Helipod VPS
+Do not enable Vercel Git deployment. Database and media remain managed inside VPS compose.

@@ -1,3 +1,4 @@
+import { withVerifiedRatings, listReviews } from "@/modules/reviews/public-reviews";
 import { readSizeChart } from "./product-size-chart";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -31,20 +32,6 @@ const productDetailInclude = {
       salePrice: true,
       inventory: { select: { onHand: true, reserved: true } },
     },
-  },
-  reviews: {
-    where: { status: "PUBLISHED" },
-    select: {
-      id: true,
-      rating: true,
-      title: true,
-      body: true,
-      createdAt: true,
-      user: { select: { name: true } },
-      images: { select: { id: true, url: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 20,
   },
   questions: {
     select: {
@@ -161,11 +148,12 @@ export async function listProducts(params: ProductListParams = {}) {
   };
   const cacheKey = JSON.stringify(normalized);
 
-  return unstable_cache(
+  const result = await unstable_cache(
     () => listProductsUncached(normalized),
     ["catalog-products", cacheKey],
     { revalidate: normalized.flashSale ? 5 : 30, tags: [CATALOG_CACHE_TAG] },
   )();
+  return {...result, items: await withVerifiedRatings(result.items)};
 }
 
 /**
@@ -182,14 +170,15 @@ export const getProductBySlug = cache(async (slug: string) => {
   const sizeChartImage = sizeChart?.mode === "image" ? await prisma.productImage.findFirst({
     where: { id: sizeChart.imageId, productId: product.id }, select: { url: true, alt: true },
   }) : null;
-  return { ...product, sizeChart, sizeChartImage };
+  const [rated, reviews] = await Promise.all([withVerifiedRatings([product]), listReviews(product.id)]);
+  return { ...rated[0], sizeChart, sizeChartImage, reviews };
 });
 
 export async function getRelatedProducts(product: {
   id: string;
   categoryId: string | null;
 }) {
-  return prisma.product.findMany({
+  return withVerifiedRatings(await prisma.product.findMany({
     where: {
       status: ProductStatus.PUBLISHED,
       id: { not: product.id },
@@ -198,7 +187,7 @@ export async function getRelatedProducts(product: {
     include: productCardInclude,
     take: 8,
     orderBy: { createdAt: "desc" },
-  });
+  }));
 }
 
 export const listCategories = unstable_cache(

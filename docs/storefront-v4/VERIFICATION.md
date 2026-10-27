@@ -45,6 +45,8 @@ On `efa2e35`, unit/policy and production-image builds passed; both integration a
 
 The pointer prerequisite failure was reproduced locally: `:active` was false after mouse-down. Focusing/centering the element alone did not fix it. The harness now brings the anonymous second page to the front, verifies document/element focus, centers the link before pointer input and explicitly checks `:active`. Exact hover/pressed color assertions remain unchanged; no application CSS, auth code or test exclusions changed. The complete auth/legal15 then passed with CI-matched Chromium153 (`/tmp/v4-auth-focused.log`, synthetic evidence `/tmp/gheverhan-v4-auth-focused`). Typecheck/lint also passed (existing hero-editor warning). Final CI on this test-only follow-up is reported in PR112; no Production deployment occurred.
 
+The `a87f09c` CI still reproduced missing `:active`; page focus alone was insufficient. A five-load local pointer diagnostic then observed the same footer node move from y853.75 to y1309.08 after navigation (455.33px) as streamed homepage content replaced its loading fallback. The final harness waits for the actual `Produk Pilihan` heading before pointer positioning instead of treating the browser load event as complete route readiness. No fixed sleep, increased assertion timeout or forced CSS state was introduced. Full auth/legal15 passed on Chromium153 again (`/tmp/v4-auth-streamed.log`, `/tmp/gheverhan-v4-auth-streamed`); final-head CI remains authoritative. The earlier failed attempts remain failures in the record.
+
 | Surface | Before | After |
 |---|---|---|
 | PDP initial | [390](evidence/before/product-v3-pdp-start-390.png) | [390](evidence/after/v4-pdp-initial-390.png) |

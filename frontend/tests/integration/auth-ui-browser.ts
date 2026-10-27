@@ -1378,6 +1378,13 @@ async function main() {
           }
         }
         await p.goto(base + "/");
+        // Next can expose the layout/footer while the streamed homepage is
+        // still showing its loading fallback. Wait for actual route content
+        // before positioning a pointer over a footer that would otherwise
+        // move when product sections arrive (load/hover alone is too early).
+        await expect(
+          p.getByRole("heading", { name: "Produk Pilihan", exact: true }),
+        ).toBeVisible();
         assert.equal(
           await p
             .locator(".storefront-root a")

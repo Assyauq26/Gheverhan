@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/production-public-smoke.yml'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

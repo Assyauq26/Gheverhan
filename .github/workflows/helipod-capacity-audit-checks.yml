@@ -1,0 +1,26 @@
+name: Check read-only capacity diagnostics
+on:
+  pull_request:
+    paths:
+      - 'ops/helipod-capacity/**'
+      - '.github/workflows/helipod-capacity-audit*.yml'
+      - 'docs/operations/helipod-capacity/**'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/helipod-capacity/**'
+      - '.github/workflows/helipod-capacity-audit*.yml'
+permissions:
+  contents: read
+jobs:
+  offline-policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify collector and policy with synthetic metadata only
+        run: |
+          bash -n ops/helipod-capacity/install-capacity-audit.sh
+          python3 -I -m unittest discover -s ops/helipod-capacity/tests -v

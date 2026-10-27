@@ -1,0 +1,83 @@
+name: Helipod read-only capacity audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledgement:
+        description: 'Type READ_ONLY_CAPACITY_V1 (no cleanup or deployment)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gheverhan-helipod-capacity-audit
+  cancel-in-progress: false
+
+jobs:
+  validate-request:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Reject an unapproved ref or acknowledgement without credentials
+        env:
+          DISPATCH_REF: ${{ github.ref }}
+          ACKNOWLEDGEMENT: ${{ inputs.acknowledgement }}
+        run: |
+          test "$DISPATCH_REF" = refs/heads/main && test "$ACKNOWLEDGEMENT" = READ_ONLY_CAPACITY_V1 || { echo 'BLOCKED: wrong ref or acknowledgement'; exit 1; }
+  audit:
+    needs: validate-request
+    if: github.ref == 'refs/heads/main' && inputs.acknowledgement == 'READ_ONLY_CAPACITY_V1'
+    environment: production-diagnostics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      # No checkout, downloaded scripts, database credentials or deploy key.
+      - name: Run the separately installed forced read-only command
+        shell: bash
+        env:
+          AUDIT_KEY_B64: ${{ secrets.HELI_POD_AUDIT_KEY_B64 }}
+          AUDIT_KNOWN_HOSTS: ${{ vars.HELI_POD_AUDIT_KNOWN_HOSTS }}
+          AUDIT_COLLECTOR_SHA256: ${{ vars.HELI_POD_AUDIT_COLLECTOR_SHA256 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/capacity-key"
+          hosts="$RUNNER_TEMP/capacity-hosts"
+          trap 'rm -f "$key" "$hosts" "$RUNNER_TEMP/capacity-ssh-error"' EXIT
+          test -n "$AUDIT_KEY_B64" && test -n "$AUDIT_KNOWN_HOSTS" || { echo 'BLOCKED: separate diagnostics credential/host pin missing'; exit 1; }
+          [[ "$AUDIT_COLLECTOR_SHA256" =~ ^[a-f0-9]{64}$ ]] || { echo 'BLOCKED: approved collector checksum missing'; exit 1; }
+          printf '%s' "$AUDIT_KEY_B64" | base64 --decode > "$key"
+          printf '%s\n' "$AUDIT_KNOWN_HOSTS" > "$hosts"
+          unset AUDIT_KEY_B64 AUDIT_KNOWN_HOSTS
+          ssh-keygen -y -f "$key" >/dev/null 2>&1
+          ssh-keygen -F 43.173.21.197 -f "$hosts" >/dev/null
+          timeout 210 ssh -T -n -i "$key" -p 22 \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o PasswordAuthentication=no \
+            -o KbdInteractiveAuthentication=no -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$hosts" -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            gheverhan-audit@43.173.21.197 gheverhan-capacity-v1 \
+            > "$RUNNER_TEMP/helipod-capacity.json" 2> "$RUNNER_TEMP/capacity-ssh-error"
+          # Only print a numeric summary. Never print stderr or raw report.
+          python3 - <<'PY'
+          import json, os
+          with open(os.environ['RUNNER_TEMP']+'/helipod-capacity.json') as f:
+              r = json.load(f)
+          assert r['schemaVersion'] == 1 and r['readOnly'] is True and 'error' not in r
+          assert r['host'] == '43.173.21.197'
+          assert len(os.environ['AUDIT_COLLECTOR_SHA256']) == 64
+          assert r['collectorSha256'] == os.environ['AUDIT_COLLECTOR_SHA256']
+          assert r['capacityGate']['deploymentAuthorized'] is False
+          root = next(f for f in r['filesystems'] if f['path'] == '/')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('Read-only report received. Root available: %.2f GiB. Capacity gate: %s. Complete: %s. No deployment authorized.\n' % (root['availableBytes']/1024**3, r['capacityGate']['status'], r['complete']))
+          PY
+      - name: Retain only the sanitized metadata report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: helipod-capacity-${{ github.run_id }}
+          path: ${{ runner.temp }}/helipod-capacity.json
+          if-no-files-found: error
+          retention-days: 1

@@ -1,0 +1,16 @@
+{
+  "source": "Helipod monitoring API",
+  "vpsId": "d26bcb57-667f-4e36-b1ed-d88169019ae9",
+  "host": "43.173.21.197",
+  "observedAt": "2026-10-27T14:24:00.000Z",
+  "observedAtJakarta": "Tuesday, 27 October 2026 at 21:24:00 GMT+7",
+  "diskPlanGb": 40,
+  "diskPercent": 94.17,
+  "lastHourMin": 94.15,
+  "lastHourMax": 94.31,
+  "databaseAndMediaBackup": "Helipod VPS backup API returned null; external backups not yet verified",
+  "directSsh": "No configured agent, local SSH directory or audit/deploy key binding in task environment",
+  "filesystemAudit": "NOT_RUN",
+  "cleanupPerformed": false,
+  "productionChanged": false
+}

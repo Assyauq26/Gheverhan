@@ -117,7 +117,7 @@ export function QuickAddVariantSheet({
       </div>
       <div className="purchase-sheet-footer">
         <Button
-          className="w-full"
+          className="purchase-submit w-full"
           disabled={
             busy || (!uncertain && (!selected || selected.available < quantity))
           }

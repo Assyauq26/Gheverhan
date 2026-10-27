@@ -204,3 +204,17 @@
 .storefront-root .native-cart > * {
   min-width: 0;
 }
+
+/* Purchase intent remains recognizable while incomplete. Derive the muted solid
+   from the published primary pair; never fade a pale disabled token to white.
+   Scoped to purchase CTAs so admin, fields and cart controls keep their states. */
+.storefront-root :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit)[data-button-variant]:disabled,
+.storefront-root[data-theme-active="true"] :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit)[data-button-variant]:disabled {
+  background:color-mix(in srgb, var(--store-primary, #171717) 65%, var(--store-primaryText, #fff));
+  color:var(--store-primaryText, #fff);
+  border-color:transparent;
+  opacity:1;
+  box-shadow:none;
+  cursor:not-allowed;
+  transform:none;
+}

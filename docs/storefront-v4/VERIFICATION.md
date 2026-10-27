@@ -39,6 +39,12 @@ Physical Android/iOS Safari, browser-toolbar/keyboard/notch behavior and assisti
 
 ## Screenshots
 
+### Final CI follow-up: legal-footer pointer preconditions
+
+On `efa2e35`, unit/policy and production-image builds passed; both integration attempts passed all238 PostgreSQL tests/23 invocations,64 product-browser and21 operations checkpoints, then failed the unchanged legal-footer pressed-color check (idle gray instead of pressed blue). Hydration/navigation CI was consequently skipped, not counted as passing. Local auth/legal15 and hydration replay had passed independently.
+
+The pointer prerequisite failure was reproduced locally: `:active` was false after mouse-down. Focusing/centering the element alone did not fix it. The harness now brings the anonymous second page to the front, verifies document/element focus, centers the link before pointer input and explicitly checks `:active`. Exact hover/pressed color assertions remain unchanged; no application CSS, auth code or test exclusions changed. The complete auth/legal15 then passed with CI-matched Chromium153 (`/tmp/v4-auth-focused.log`, synthetic evidence `/tmp/gheverhan-v4-auth-focused`). Typecheck/lint also passed (existing hero-editor warning). Final CI on this test-only follow-up is reported in PR112; no Production deployment occurred.
+
 | Surface | Before | After |
 |---|---|---|
 | PDP initial | [390](evidence/before/product-v3-pdp-start-390.png) | [390](evidence/after/v4-pdp-initial-390.png) |

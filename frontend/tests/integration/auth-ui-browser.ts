@@ -1392,6 +1392,17 @@ async function main() {
           true,
         );
         const footerLink = p.locator('footer a[href="/syarat-ketentuan"]');
+        // CSS :active needs the browser page itself to have focus, not just
+        // an element in a background page. The auth flow keeps another page
+        // open. Activate this page and settle scrolling before real pointer
+        // input; retain exact hover/pressed colors and assert :active too.
+        await p.bringToFront();
+        await expect.poll(() => p.evaluate(() => document.hasFocus())).toBe(true);
+        await footerLink.focus();
+        await expect(footerLink).toBeFocused();
+        await footerLink.evaluate((el) =>
+          el.scrollIntoView({ block: "center", behavior: "instant" }),
+        );
         await footerLink.hover();
         await expect(footerLink).toHaveCSS("color", "rgb(37, 99, 235)");
         await footerLink.evaluate((el) =>
@@ -1401,6 +1412,9 @@ async function main() {
         );
         await p.mouse.down();
         try {
+          await expect
+            .poll(() => footerLink.evaluate((el) => el.matches(":active")))
+            .toBe(true);
           await expect(footerLink).toHaveCSS("color", "rgb(29, 78, 216)");
         } finally {
           await p.mouse.up();

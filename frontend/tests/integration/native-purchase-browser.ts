@@ -569,10 +569,12 @@ export async function verifyNativePurchase({
         await page.setViewportSize({ width: 390, height: 844 });
         await page.evaluate(() => scrollTo(0, 500));
         const sheet = await page.locator(".pdp-sheet").boundingBox();
-        assert.ok(
-          sheet && sheet.y <= 844 * 0.15 && sheet.y + sheet.height >= 844,
-          "Detail panel covers at least85% of the effective viewport while remaining document-scrollable",
-        );
+        await expect(page.getByTestId("product-information-sheet")).toHaveAttribute("data-expanded", "true");
+        const header = await page.locator(".pdp-topbar").boundingBox();
+        const bar = await page.locator(".pdp-purchase-actions").boundingBox();
+        assert.ok(sheet && header && bar);
+        assert.ok(sheet.y - (header.y + header.height) >= 36 && sheet.y - (header.y + header.height) <= 40, "Expanded sheet preserves a 38px image strip below the header");
+        assert.ok(Math.abs(sheet.y + sheet.height - bar.y) <= 2, "Sheet content ends above the full-width purchase navbar");
         await page.screenshot({
           path: path.join(artifactDir, "product-v3-pdp-expanded-390.png"),
         });
@@ -613,11 +615,9 @@ export async function verifyNativePurchase({
             ),
             "200%-equivalent reflow has no horizontal overflow",
           );
-          await zoomPage
-            .getByRole("heading", { name: "Tanya Jawab Produk", exact: true })
-            .evaluate((e) =>
-              scrollTo(0, e.getBoundingClientRect().top + scrollY - 100),
-            );
+          await zoomPage.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
+          await expect(zoomPage.getByTestId("product-information-sheet")).toHaveAttribute("data-expanded","true");
+          await zoomPage.getByRole("heading", {name:"Tanya Jawab Produk",exact:true}).scrollIntoViewIfNeeded();
           await expect(
             zoomPage.getByRole("heading", {
               name: "Tanya Jawab Produk",

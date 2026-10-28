@@ -1,3 +1,4 @@
+import { withVerifiedRatings } from "@/modules/reviews/public-reviews";
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 
@@ -44,7 +45,9 @@ export async function getWishlistView(userId: string) {
       },
     },
   });
-  return wl?.items ?? [];
+  const items = wl?.items ?? [];
+  const rated = await withVerifiedRatings(items.map(item=>item.product));
+  return items.map((item,index)=>({...item,product:rated[index]}));
 }
 
 export async function wishlistProductIds(userId: string): Promise<string[]> {

@@ -1,0 +1,35 @@
+{
+  "baseline": "f6e7fbfd24cf618e55adf9bb4d260e0a2ce6ab5f",
+  "existingPostgres": {
+    "invocations": 21,
+    "tests": 215,
+    "status": "PASS"
+  },
+  "reviewMigration": {
+    "tests": 2,
+    "status": "PASS"
+  },
+  "finalReviewSecurity": {
+    "tests": 21,
+    "status": "PASS"
+  },
+  "unit": {
+    "tests": 527,
+    "files": 68,
+    "status": "PASS"
+  },
+  "fullBrowser": {
+    "checks": 64,
+    "chromium": "153.0.8010.12",
+    "status": "PASS",
+    "note": "Before final shared-badge/card presentation refinement; final targeted7 and exact-head CI cover latest source"
+  },
+  "finalV4Browser": {
+    "checks": 7,
+    "status": "PASS"
+  },
+  "ci": "See final PR checks/body; not asserted at evidence commit time",
+  "productionMutations": 0,
+  "referenceImagesAttached": false,
+  "physicalDeviceQA": false
+}

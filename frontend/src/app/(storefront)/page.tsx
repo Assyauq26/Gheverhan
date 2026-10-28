@@ -96,7 +96,7 @@ export default async function HomePage() {
           {featuredItems.map((p) => (
             <div
               key={p.id}
-              className="w-[calc((100%-20px)/3)] min-w-[calc((100%-20px)/3)] shrink-0 snap-start"
+              className="w-[calc((100%-20px)/3)] min-w-[9.25rem] shrink-0 snap-start"
             >
               <ProductCard product={toCardData(p)} wishlisted={wl.has(p.id)} featured />
             </div>

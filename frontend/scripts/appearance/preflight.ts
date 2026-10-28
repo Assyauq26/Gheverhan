@@ -1,3 +1,4 @@
+import { assertReviewSchema } from "../../src/modules/reviews/review-schema";
 import { PrismaClient } from "@prisma/client";
 import { assertSafeDatabaseOperation } from "../assert-safe-db-operation.mjs";
 import { parseAppearance } from "../../src/modules/appearance/schema";
@@ -5,6 +6,7 @@ import { parseHero } from "../../src/modules/hero/schema";
 assertSafeDatabaseOperation();
 const db = new PrismaClient();
 async function main() {
+  await assertReviewSchema(db);
   const tables = await db.$queryRaw<
     { relname: string; relrowsecurity: boolean }[]
   >`SELECT relname,relrowsecurity FROM pg_class WHERE relname IN ('StoreAppearance','StoreAppearanceRevision','StoreBrandAsset','StoreCustomizeRateLimit')`;
@@ -68,6 +70,7 @@ async function main() {
       provider,
       publishedVersion: row?.publishedVersion ?? 0,
       readOnly: true,
+      verifiedReviewSchema: true,
       scope: "schema/config only; upload/provider contract tested separately",
     }),
   );

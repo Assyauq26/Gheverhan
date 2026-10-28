@@ -145,6 +145,11 @@ jobs:
       - name: Hero CMS lifecycle, private/public image security and RLS on disposable PostgreSQL
         run: node --disable-proto=throw --import tsx --test tests/integration/store-hero.test.ts
 
+      - name: Verified purchase review migration, authorization, concurrency and publication
+        run: |
+          node --disable-proto=throw --import tsx --test tests/integration/verified-review-migration.test.ts
+          node --disable-proto=throw --import tsx --test tests/integration/verified-reviews.test.ts
+
       - name: Chromium product media, upload and RBAC test with loopback storage double
         id: product_browser
         run: npm run test:e2e:products

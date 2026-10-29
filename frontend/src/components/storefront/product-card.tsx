@@ -39,17 +39,25 @@ export function ProductCard({
 }) {
   const price = effectivePrice(product.basePrice, product.salePrice);
   const pct = discountPercent(product.basePrice, product.salePrice);
+  const priceLayout =
+    pct > 0
+      ? product.basePrice >= 1_000_000
+        ? "stacked"
+        : "inline"
+      : "single";
 
   return (
     <article
       data-theme-target="highlightCard"
       data-featured={featured || undefined}
+      data-price-layout={priceLayout}
       data-wide-price={
         (!featured &&
-          Math.max(
-            formatIDR(price).length,
-            pct > 0 ? formatIDR(product.basePrice).length : 0,
-          ) > 11) ||
+          (priceLayout === "inline" ||
+            Math.max(
+              formatIDR(price).length,
+              pct > 0 ? formatIDR(product.basePrice).length : 0,
+            ) > 11)) ||
         undefined
       }
       className="product-card group flex h-full flex-col relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
@@ -113,8 +121,8 @@ export function ProductCard({
             <FlashSaleTimer campaign={product.flashCampaign} inline />
           </div>
         )}
-        <div className="product-card-purchase mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-1.5 pt-1">
-          <div className="product-card-prices flex min-w-0 flex-col justify-start gap-1">
+        <div className="product-card-purchase mt-auto min-w-0 pt-1">
+          <div className="product-card-prices min-w-0">
             <span
               data-theme-role="price"
               data-discount={pct > 0}

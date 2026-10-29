@@ -88,18 +88,25 @@ export default async function HomePage() {
           className="stagger flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Produk pilihan"
         >
-          {featuredItems.map((p) => (
-            <div
-              key={p.id}
-              className="w-[calc((100%-20px)/3)] min-w-[9.25rem] shrink-0 snap-start"
-            >
-              <ProductCard
-                product={toCardData(p)}
-                wishlisted={wl.has(p.id)}
-                featured
-              />
-            </div>
-          ))}
+          {featuredItems.map((p) => {
+            const card = toCardData(p);
+            const inlinePrices =
+              card.salePrice != null &&
+              card.salePrice < card.basePrice &&
+              card.basePrice < 1_000_000;
+            return (
+              <div
+                key={p.id}
+                className={`w-[calc((100%-20px)/3)] ${inlinePrices ? "min-w-[12rem]" : "min-w-[9.25rem]"} shrink-0 snap-start`}
+              >
+                <ProductCard
+                  product={card}
+                  wishlisted={wl.has(p.id)}
+                  featured
+                />
+              </div>
+            );
+          })}
         </div>
       </section>
 

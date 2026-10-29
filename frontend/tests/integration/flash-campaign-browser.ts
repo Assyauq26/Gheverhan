@@ -284,8 +284,20 @@ export async function verifyFlashCampaign({
                 )!;
               const a = price.getBoundingClientRect(),
                 b = button.getBoundingClientRect();
+              const original = el.querySelector<HTMLElement>(
+                ".product-card-original",
+              )!;
+              const o = original.getBoundingClientRect();
               return {
                 price: price.textContent,
+                layout: (el as HTMLElement).dataset.priceLayout,
+                originalCenterDelta: Math.abs(
+                  o.y + o.height / 2 - a.y - a.height / 2,
+                ),
+                originalAbove: o.bottom <= a.top + 1,
+                originalBeside: o.left >= a.right + 1,
+                originalClient: original.clientWidth,
+                originalScroll: original.scrollWidth,
                 width: innerWidth,
                 centerDelta: Math.abs(a.y + a.height / 2 - b.y - b.height / 2),
                 touchWidth: b.width,
@@ -300,6 +312,21 @@ export async function verifyFlashCampaign({
             });
             geometry.push(result);
             assert.ok(result.centerDelta <= 1.5, JSON.stringify(result));
+            assert.equal(
+              result.layout,
+              p.basePrice >= 1_000_000 ? "stacked" : "inline",
+            );
+            if (result.layout === "stacked")
+              assert.ok(result.originalAbove, JSON.stringify(result));
+            else
+              assert.ok(
+                result.originalBeside && result.originalCenterDelta <= 1.5,
+                JSON.stringify(result),
+              );
+            assert.ok(
+              result.originalScroll <= result.originalClient + 1,
+              "struck amount clips " + JSON.stringify(result),
+            );
             assert.ok(
               result.cssWidth >= 44 &&
                 result.cssHeight >= 44 &&

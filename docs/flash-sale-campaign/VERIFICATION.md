@@ -9,8 +9,8 @@ Baseline `65addb420fccc74129ed72add4a27465ee0c90f8`; synthetic development envir
 | Node22 `npm run typecheck` | PASS |
 | `npm run lint` | PASS; existing hero-editor `<img>` warning remains |
 | `npm run build` | PASS on final source build before browser regression |
-| `npm test` | PASS: 69 files, 541 tests, including 16 campaign unit cases |
-| Hardened offline container `npm run test:ci` | PASS: 541 unit, 25 containment, 9 braces/security cases |
+| `npm test` | PASS: 69 files, 545 tests, including 16 campaign unit cases |
+| Hardened offline container `npm run test:ci` | PASS: 545 unit, 25 containment, 9 braces/security cases |
 | `node --test .github/tests/production-read-only-preflight.test.mjs` | PASS: 11 |
 | All25 CI PostgreSQL test invocations | PASS: 261 tests, zero failures/skips in final results |
 | Campaign-specific PostgreSQL service cases | Included above: 21 tests |
@@ -41,3 +41,7 @@ The user's two reference screenshots were not attached. Images and products here
 ## Release constraints
 
 Review [ROLLOUT.md](ROLLOUT.md) before any separate release approval. The additive database transition is intentionally gated on explicit legacy conversion/retirement. Old V4 image rollback cannot reproduce central campaign pricing after cutover. No database reset, destructive migration, cloud-provider provisioning or production data edit was performed.
+
+## Price arrangement revision
+
+Original prices belowRp1,000,000 appear alongside the discounted price; original prices at/aboveRp1,000,000 appear above it. The cart remains centered on the discounted-price row in both modes. Four unit cases cover the exact threshold/no-discount case, and the eight-width browser geometry checks also assert original-price position and clipping. The latest PR checks and Actions screenshots cover this revision.

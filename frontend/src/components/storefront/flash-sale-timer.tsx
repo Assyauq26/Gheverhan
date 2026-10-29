@@ -52,8 +52,11 @@ export function FlashSaleTimer({
     () => 0,
   );
   useEffect(() => {
-    if (!anchor)
+    if (!anchor) {
       anchor = { server: campaign.serverNow, monotonic: performance.now() };
+      tick = performance.now();
+      listeners.forEach((fn) => fn());
+    }
   }, [campaign.serverNow]);
   // Server snapshot0 is also the hydration snapshot, even with already-mounted timers.
   const now =

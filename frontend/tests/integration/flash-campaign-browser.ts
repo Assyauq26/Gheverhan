@@ -378,6 +378,8 @@ export async function verifyFlashCampaign({
         );
         for (const width of [390, 1440]) {
           await visitor.setViewportSize({ width, height: 900 });
+          await expect(visitor.getByTestId("flash-sale")).toBeVisible();
+          await visitor.evaluate(() => document.fonts.ready);
           await visitor.screenshot({
             path: path.join(artifactDir, `flash-home-${width}.png`),
             fullPage: true,
@@ -396,6 +398,16 @@ export async function verifyFlashCampaign({
             ),
             false,
           );
+          await expect
+            .poll(() =>
+              visitor
+                .getByTestId("flash-timer")
+                .locator("time")
+                .evaluateAll(
+                  (nodes) => new Set(nodes.map((n) => n.textContent)).size,
+                ),
+            )
+            .toBe(1);
           await visitor.screenshot({
             path: path.join(artifactDir, `flash-listing-${width}.png`),
             fullPage: true,

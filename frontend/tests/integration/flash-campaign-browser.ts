@@ -361,6 +361,25 @@ export async function verifyFlashCampaign({
               path: path.join(artifactDir, `flash-shop-${width}.png`),
               fullPage: true,
             });
+          if (width === 1440) {
+            // A filtered single result must retain a catalog-sized track rather
+            // than stretching into a full-width product hero.
+            const single = await visitor
+              .locator(".grid:has(> .product-card)")
+              .evaluate((grid) => {
+                [...grid.children]
+                  .slice(1)
+                  .forEach((c) => ((c as HTMLElement).style.display = "none"));
+                return {
+                  card: grid.firstElementChild!.getBoundingClientRect().width,
+                  grid: grid.getBoundingClientRect().width,
+                };
+              });
+            assert.ok(
+              single.card <= single.grid / 3 + 1,
+              "single result stretches " + JSON.stringify(single),
+            );
+          }
         }
         // The same card also appears in four-column Home/PDP/preview grids.
         // Check actual cell boundaries, not only each span's intrinsic width.

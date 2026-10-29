@@ -1,4 +1,12 @@
-import { withVerifiedRatings, readProductReviewSummary } from "@/modules/reviews/public-reviews";
+import {
+  withCampaignPricing,
+  campaignPrices,
+  lockCampaignPricing,
+} from "@/modules/promotions/campaign-pricing";
+import {
+  withVerifiedRatings,
+  readProductReviewSummary,
+} from "@/modules/reviews/public-reviews";
 import { readSizeChart } from "./product-size-chart";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -10,7 +18,12 @@ import { CATALOG_CACHE_TAG } from "./catalog-cache";
 // every variant and every inventory row for a 12/48 item grid made the RSC
 // payload and Prisma response much larger than necessary.
 const productCardInclude = {
-  images: { where: { isVariation: false }, select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+  images: {
+    where: { isVariation: false },
+    select: { url: true },
+    orderBy: { sortOrder: "asc" },
+    take: 1,
+  },
   brand: { select: { name: true } },
   variants: { select: { id: true }, take: 1 },
   _count: { select: { variants: true } },
@@ -20,7 +33,22 @@ const productDetailInclude = {
   images: { where: { isVariation: false }, orderBy: { sortOrder: "asc" } },
   brand: { select: { name: true, slug: true } },
   category: { select: { id: true, slug: true, name: true } },
-  optionGroups: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, allowsImage: true, values: { orderBy: { sortOrder: "asc" }, select: { id: true, value: true, image: { select: { url: true, alt: true } } } } } },
+  optionGroups: {
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      name: true,
+      allowsImage: true,
+      values: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          value: true,
+          image: { select: { url: true, alt: true } },
+        },
+      },
+    },
+  },
   variants: {
     select: {
       optionValues: { select: { valueId: true } },
@@ -65,27 +93,47 @@ export type ProductListParams = {
   includeTotal?: boolean;
 };
 
-async function listProductsUncached(params: ProductListParams) {
+async function listProductsUncached(
+  params: ProductListParams,
+  client: Prisma.TransactionClient = prisma,
+  now = new Date(),
+) {
   const requestedPage = params.page ?? 1;
-  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 100_000) : 1;
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? Math.min(requestedPage, 100_000)
+      : 1;
   const requestedSize = params.pageSize ?? 12;
-  const pageSize = Number.isSafeInteger(requestedSize) && requestedSize > 0 ? Math.min(requestedSize, 48) : 12;
+  const pageSize =
+    Number.isSafeInteger(requestedSize) && requestedSize > 0
+      ? Math.min(requestedSize, 48)
+      : 12;
   const includeTotal = params.includeTotal ?? true;
-  const now = new Date();
   const filters: Prisma.ProductWhereInput[] = [];
-  if (params.flashSale) filters.push({
-    OR: [
-      { isFlashSale: true },
-      { flashSalePrice: { not: null }, flashSaleStartsAt: { lte: now }, flashSaleEndsAt: { gt: now } },
-    ],
-  });
-  if (params.search) filters.push({
-    OR: [
-      { name: { contains: params.search, mode: "insensitive" } },
-      { description: { contains: params.search, mode: "insensitive" } },
-      { brand: { name: { contains: params.search, mode: "insensitive" } } },
-    ],
-  });
+  if (params.flashSale) {
+    const active = await client.$queryRaw<
+      { productId: string }[]
+    >`SELECT i."productId" FROM "FlashSaleCampaignItem" i JOIN "FlashSaleCampaign" c ON c.id=i."campaignId" WHERE c."storeKey"='primary' AND c.status='SCHEDULED' AND c."startsAt"<=${now} AND c."endsAt">${now}`;
+    filters.push({
+      id: {
+        in: (
+          await campaignPrices(
+            active.map((i) => i.productId),
+            client,
+            now,
+          )
+        ).map((i) => i.productId),
+      },
+    });
+  }
+  if (params.search)
+    filters.push({
+      OR: [
+        { name: { contains: params.search, mode: "insensitive" } },
+        { description: { contains: params.search, mode: "insensitive" } },
+        { brand: { name: { contains: params.search, mode: "insensitive" } } },
+      ],
+    });
   const where: Prisma.ProductWhereInput = {
     status: ProductStatus.PUBLISHED,
     ...(params.categorySlug ? { category: { slug: params.categorySlug } } : {}),
@@ -102,21 +150,21 @@ async function listProductsUncached(params: ProductListParams) {
         : { createdAt: "desc" };
 
   const [items, total] = await Promise.all([
-    prisma.product.findMany({
+    client.product.findMany({
       where,
       include: productCardInclude,
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    includeTotal ? prisma.product.count({ where }) : Promise.resolve(0),
+    includeTotal ? client.product.count({ where }) : Promise.resolve(0),
   ]);
 
   const pages = includeTotal ? Math.ceil(total / pageSize) : 0;
   // A valid but out-of-range page still has products. Re-read the true last
   // page instead of rendering an empty list with misleading pager controls.
   if (includeTotal && total > 0 && page > pages) {
-    const lastItems = await prisma.product.findMany({
+    const lastItems = await client.product.findMany({
       where,
       include: productCardInclude,
       orderBy,
@@ -142,18 +190,42 @@ export async function listProducts(params: ProductListParams = {}) {
     featured: params.featured ?? false,
     flashSale: params.flashSale ?? false,
     sort: params.sort ?? "newest",
-    page: Number.isSafeInteger(params.page) && (params.page ?? 0) > 0 ? Math.min(params.page!, 100_000) : 1,
-    pageSize: Number.isSafeInteger(params.pageSize) && (params.pageSize ?? 0) > 0 ? Math.min(params.pageSize!, 48) : 12,
+    page:
+      Number.isSafeInteger(params.page) && (params.page ?? 0) > 0
+        ? Math.min(params.page!, 100_000)
+        : 1,
+    pageSize:
+      Number.isSafeInteger(params.pageSize) && (params.pageSize ?? 0) > 0
+        ? Math.min(params.pageSize!, 48)
+        : 12,
     includeTotal: params.includeTotal ?? true,
   };
   const cacheKey = JSON.stringify(normalized);
 
+  if (normalized.flashSale) {
+    const result = await prisma.$transaction(
+      async (tx) => {
+        await lockCampaignPricing(tx);
+        const now = new Date();
+        const rows = await listProductsUncached(normalized, tx, now);
+        return {
+          ...rows,
+          items: await withCampaignPricing(rows.items, tx, now),
+        };
+      },
+      { isolationLevel: "RepeatableRead", timeout: 10000 },
+    );
+    return { ...result, items: await withVerifiedRatings(result.items) };
+  }
   const result = await unstable_cache(
     () => listProductsUncached(normalized),
     ["catalog-products", cacheKey],
     { revalidate: normalized.flashSale ? 5 : 30, tags: [CATALOG_CACHE_TAG] },
   )();
-  return {...result, items: await withVerifiedRatings(result.items)};
+  return {
+    ...result,
+    items: await withCampaignPricing(await withVerifiedRatings(result.items)),
+  };
 }
 
 /**
@@ -167,34 +239,49 @@ export const getProductBySlug = cache(async (slug: string) => {
   });
   if (!product) return null;
   const sizeChart = readSizeChart(product.sizeChart);
-  const sizeChartImage = sizeChart?.mode === "image" ? await prisma.productImage.findFirst({
-    where: { id: sizeChart.imageId, productId: product.id }, select: { url: true, alt: true },
-  }) : null;
+  const sizeChartImage =
+    sizeChart?.mode === "image"
+      ? await prisma.productImage.findFirst({
+          where: { id: sizeChart.imageId, productId: product.id },
+          select: { url: true, alt: true },
+        })
+      : null;
   const summary = await readProductReviewSummary(product.id);
-  return { ...product, ...summary, sizeChart, sizeChartImage };
+  const [priced] = await withCampaignPricing([product]);
+  return { ...priced, ...summary, sizeChart, sizeChartImage };
 });
 
 export async function getRelatedProducts(product: {
   id: string;
   categoryId: string | null;
 }) {
-  return withVerifiedRatings(await prisma.product.findMany({
-    where: {
-      status: ProductStatus.PUBLISHED,
-      id: { not: product.id },
-      ...(product.categoryId ? { categoryId: product.categoryId } : {}),
-    },
-    include: productCardInclude,
-    take: 8,
-    orderBy: { createdAt: "desc" },
-  }));
+  return withCampaignPricing(
+    await withVerifiedRatings(
+      await prisma.product.findMany({
+        where: {
+          status: ProductStatus.PUBLISHED,
+          id: { not: product.id },
+          ...(product.categoryId ? { categoryId: product.categoryId } : {}),
+        },
+        include: productCardInclude,
+        take: 8,
+        orderBy: { createdAt: "desc" },
+      }),
+    ),
+  );
 }
 
 export const listCategories = unstable_cache(
   () =>
     prisma.category.findMany({
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, slug: true, imageUrl: true, iconKey: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        imageUrl: true,
+        iconKey: true,
+      },
     }),
   ["catalog-categories"],
   { revalidate: 60, tags: [CATALOG_CACHE_TAG] },
@@ -226,7 +313,10 @@ export async function searchSuggestions(q: string) {
   if (!q.trim()) return { products: [], brands: [], categories: [] };
   const [products, brands, categories] = await Promise.all([
     prisma.product.findMany({
-      where: { status: ProductStatus.PUBLISHED, name: { contains: q, mode: "insensitive" } },
+      where: {
+        status: ProductStatus.PUBLISHED,
+        name: { contains: q, mode: "insensitive" },
+      },
       select: { id: true, name: true, slug: true },
       take: 6,
     }),

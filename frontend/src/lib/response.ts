@@ -1,3 +1,5 @@
+import { HttpError } from "./http-error";
+export { HttpError } from "./http-error";
 import { logServerFailure } from "./server-error-log";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
@@ -27,12 +29,4 @@ export function handle(
     logServerFailure("api-error", err);
     return fail("Terjadi kesalahan pada server", 500);
   });
-}
-
-export class HttpError extends Error {
-  status: number;
-  constructor(message: string, status = 400) {
-    super(message);
-    this.status = status;
-  }
 }

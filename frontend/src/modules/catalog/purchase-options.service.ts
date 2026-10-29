@@ -1,8 +1,9 @@
+import { withCampaignPricing } from "@/modules/promotions/campaign-pricing";
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 import { effectivePrice } from "@/lib/money";
-import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
+import { activeScheduledFlashPrice, effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
 import {
   MAX_OPTION_GROUPS,
   MAX_OPTION_VALUES,
@@ -13,7 +14,7 @@ import { purchaseGroups, type PurchaseProduct } from "./purchase-options";
 export async function getPurchaseOptions(
   slug: string,
 ): Promise<PurchaseProduct> {
-  const p = await prisma.product.findFirst({
+  const raw = await prisma.product.findFirst({
     where: { slug, status: "PUBLISHED" },
     select: {
       id: true,
@@ -22,6 +23,7 @@ export async function getPurchaseOptions(
       optionsEnabled: true,
       basePrice: true,
       salePrice: true,
+      isFlashSale: true,
       flashSalePrice: true,
       flashSaleStartsAt: true,
       flashSaleEndsAt: true,
@@ -65,7 +67,8 @@ export async function getPurchaseOptions(
       },
     },
   });
-  if (!p) throw new HttpError("Produk tidak ditemukan", 404);
+  if (!raw) throw new HttpError("Produk tidak ditemukan", 404);
+  const [p] = await withCampaignPricing([raw]);
   if (
     p.variants.length > MAX_VARIANTS ||
     p.optionGroups.length > MAX_OPTION_GROUPS ||
@@ -85,9 +88,9 @@ export async function getPurchaseOptions(
         (v.inventory?.onHand ?? 0) - (v.inventory?.reserved ?? 0),
       ),
       price:
-        v.price != null
+        activeScheduledFlashPrice(p) ?? (v.price != null
           ? effectivePrice(v.price, v.salePrice)
-          : effectiveProductPrice(p),
+          : effectiveProductPrice(p)),
       originalPrice: v.price ?? p.basePrice,
       optionValueIds: v.optionValues.map((o) => o.valueId),
     })),

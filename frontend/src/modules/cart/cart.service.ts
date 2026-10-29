@@ -1,8 +1,9 @@
+import { withCampaignPricing } from "@/modules/promotions/campaign-pricing";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { effectivePrice } from "@/lib/money";
-import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
+import { activeScheduledFlashPrice, effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
 import { available } from "@/modules/inventory/inventory.service";
 import { HttpError } from "@/lib/response";
 
@@ -45,6 +46,8 @@ function unitPriceFor(variant: {
     flashSalePrice: number | null; flashSaleStartsAt: Date | null; flashSaleEndsAt: Date | null;
   };
 }): number {
+  const campaignPrice=activeScheduledFlashPrice(variant.product);
+  if (campaignPrice!=null) return campaignPrice;
   if (variant.price != null) {
     return effectivePrice(variant.price, variant.salePrice);
   }
@@ -67,6 +70,7 @@ export const checkoutVariantSelection = {
       status: true,
       basePrice: true,
       salePrice: true,
+      isFlashSale: true,
       flashSalePrice: true,
       flashSaleStartsAt: true,
       flashSaleEndsAt: true,
@@ -108,7 +112,8 @@ export async function getCartView(userId: string, client: Prisma.TransactionClie
 
   if (!cart) return { cartId: null, lines: [], subtotal: 0, count: 0 };
 
-  const lines = cart.items.map(checkoutLine);
+  const priced = await withCampaignPricing(cart.items.map(it=>it.variant.product),client);
+  const lines = cart.items.map((it,index)=>checkoutLine({...it,variant:{...it.variant,product:priced[index]}}));
 
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
   const count = lines.reduce((s, l) => s + l.quantity, 0);
@@ -145,7 +150,8 @@ export async function getDirectCheckoutView(variantId: string, quantity: number,
   validateQuantity(quantity);
   const variant = await client.productVariant.findUnique({ where: { id: variantId }, select: checkoutVariantSelection });
   if (!variant) throw new HttpError("Varian tidak ditemukan", 404);
-  const line = checkoutLine({ id: variantId, variantId, quantity, variant });
+  const [product] = await withCampaignPricing([variant.product],client);
+  const line = checkoutLine({ id: variantId, variantId, quantity, variant:{...variant,product} });
   return { cartId: null, lines: [line], subtotal: line.lineTotal, count: quantity };
 }
 

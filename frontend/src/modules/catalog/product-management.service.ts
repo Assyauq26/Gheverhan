@@ -1,3 +1,4 @@
+import { assertCampaignProductEdit } from "@/modules/promotions/campaign.service";
 import { canonicalProductPricing } from "./product-canonical-pricing";
 import { readSizeChart } from "./product-size-chart";
 import { assertPublishWeight } from "./product-shipping";
@@ -26,6 +27,7 @@ import { removeObject, STORAGE_APP } from "@/lib/storage";
 import { adjustStock } from "@/modules/inventory/inventory.service";
 import {
   categoryInputSchema,
+  hasFlashSaleMutation,
   productInputSchema,
   type CatalogActor,
 } from "./product-management.validation";
@@ -113,6 +115,8 @@ async function lockProduct(
   return { p, updatedAt };
 }
 function parseProduct(value: unknown) {
+  if (hasFlashSaleMutation(value))
+    throw new HttpError("Pengaturan Flash Sale hanya dapat diubah melalui Marketing.",422);
   if (value && typeof value === "object" && "variants" in value && Array.isArray(value.variants) && value.variants.every(v => v && typeof v === "object") && "basePrice" in value) {
     value = canonicalProductPricing(value as Parameters<typeof canonicalProductPricing>[0]);
   }
@@ -300,6 +304,7 @@ export async function updateManagedProduct(
     const receipt = await readSaveReceipt(tx, actor, ctx, payloadHash);
     if (receipt) return receipt as WriteResult;
     const { p, updatedAt } = await lockProduct(tx, id, expected);
+    await assertCampaignProductEdit(tx,id,input);
     const shippingKeys = [
       "weightGrams",
       "packageLengthMm",
@@ -360,8 +365,7 @@ export async function updateManagedProduct(
       }
     if (
       p.flashSalePrice != null &&
-      (input.isFlashSale ||
-        input.salePrice != null ||
+      (input.salePrice != null ||
         input.basePrice <= p.flashSalePrice ||
         input.variants.some((v) => v.price != null || v.salePrice != null))
     )
@@ -646,7 +650,6 @@ function serializeProduct(p: ManagedProduct, actor: CatalogActor) {
     categoryId: p.categoryId,
     brandId: p.brandId,
     isFeatured: p.isFeatured,
-    isFlashSale: p.isFlashSale,
     status: p.status,
     updatedAt: p.updatedAt.toISOString(),
     images: p.images

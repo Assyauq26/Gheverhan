@@ -687,7 +687,7 @@ export async function verifyFlashCampaign({
         await held.bringToFront();
         await held.evaluate(() => window.dispatchEvent(new Event("focus")));
         await expect(sheet.getByTestId("quick-add-price")).toHaveText(
-          formatIDR(299000),
+          formatIDR(279000),
         );
         await expect(
           sheet.getByRole("button", { name: "Merah", exact: true }),

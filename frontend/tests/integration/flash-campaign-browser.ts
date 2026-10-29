@@ -68,12 +68,15 @@ export async function verifyFlashCampaign({
                 ? [
                     {
                       sku: prefix + "-1-red",
+                      price: 279000,
                       color: "Merah",
                       size: "M",
                       inventory: { create: { onHand: 30 } },
                     },
                     {
                       sku: prefix + "-1-black",
+                      price: 289000,
+                      salePrice: 269000,
                       color: "Hitam",
                       size: "M",
                       inventory: { create: { onHand: 30 } },
@@ -569,6 +572,30 @@ export async function verifyFlashCampaign({
       },
     );
     await check(
+      "Flash campaign: PDP selected explicit SKU prices match the active campaign",
+      async () => {
+        await buyer.goto(base + "/product/" + products[1].slug);
+        const panel = buyer.getByTestId("purchase-panel");
+        for (const color of ["Merah", "Hitam"]) {
+          await panel.getByRole("button", { name: color, exact: true }).click();
+          await panel.getByRole("button", { name: "M", exact: true }).click();
+          await expect(
+            buyer.getByTestId("selected-product-price").locator("span").first(),
+          ).toHaveText(formatIDR(249000));
+        }
+        const metadata = (
+          await (
+            await customer.request.get(
+              base + "/api/v1/products/" + products[1].slug + "/purchase",
+            )
+          ).json()
+        ).data;
+        assert.ok(
+          metadata.variants.every((v: { price: number }) => v.price === 249000),
+        );
+      },
+    );
+    await check(
       "Flash campaign: quick add uses the selected campaign SKU and cart retains server pricing",
       async () => {
         await buyer.setViewportSize({ width: 390, height: 900 });
@@ -675,7 +702,24 @@ export async function verifyFlashCampaign({
             ) as { unitPrice: number }[];
             return rows.reduce((n, l) => n + l.unitPrice, 0);
           })
-          .toBe(319000);
+          .toBe(299000);
+        await buyer.goto(base + "/product/" + products[1].slug);
+        for (const [color, regularPrice] of [
+          ["Merah", 279000],
+          ["Hitam", 269000],
+        ] as const) {
+          await buyer
+            .getByTestId("purchase-panel")
+            .getByRole("button", { name: color, exact: true })
+            .click();
+          await buyer
+            .getByTestId("purchase-panel")
+            .getByRole("button", { name: "M", exact: true })
+            .click();
+          await expect(
+            buyer.getByTestId("selected-product-price").locator("span").first(),
+          ).toHaveText(formatIDR(regularPrice));
+        }
         await visitor.goto(base + "/shop?flash=1");
         await expect(
           visitor

@@ -354,7 +354,7 @@ export async function retireLegacy(actor: Actor, value: unknown) {
 }
 export async function listCampaigns(actor: Actor) {
   permit(actor);
-  return prisma.flashSaleCampaign.findMany({
+  const campaigns = await prisma.flashSaleCampaign.findMany({
     where: { storeKey: "primary" },
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -368,12 +368,54 @@ export async function listCampaigns(actor: Actor) {
               basePrice: true,
               salePrice: true,
               status: true,
+              variants: {
+                select: {
+                  price: true,
+                  salePrice: true,
+                  inventory: { select: { onHand: true, reserved: true } },
+                },
+              },
             },
           },
         },
       },
     },
   });
+  return campaigns.map((c) => ({
+    ...c,
+    items: c.items.map((item) => {
+      const p = item.product;
+      const regularPrice = Math.min(
+        effectivePrice(p.basePrice, p.salePrice),
+        ...p.variants.map((v) =>
+          v.price != null
+            ? effectivePrice(v.price, v.salePrice)
+            : effectivePrice(p.basePrice, p.salePrice),
+        ),
+      );
+      const eligibilityWarning =
+        p.status !== "PUBLISHED"
+          ? "Produk tidak terbit"
+          : !p.variants.some(
+                (v) => v.inventory && v.inventory.onHand > v.inventory.reserved,
+              )
+            ? "Stok tidak tersedia"
+            : item.flashSalePrice >= regularPrice
+              ? "Harga promo tidak lagi valid"
+              : null;
+      return {
+        ...item,
+        product: {
+          name: p.name,
+          basePrice: p.basePrice,
+          salePrice: p.salePrice,
+          status: p.status,
+          regularPrice,
+          eligibilityWarning,
+        },
+      };
+    }),
+  }));
 }
 export async function campaignProducts(actor: Actor, value: unknown = {}) {
   permit(actor);

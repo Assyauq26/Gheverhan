@@ -42,6 +42,8 @@ export type CampaignEditorRow = {
       basePrice: number;
       salePrice: number | null;
       status: string;
+      regularPrice?: number;
+      eligibilityWarning?: string | null;
     };
   }[];
 };
@@ -131,7 +133,8 @@ export function FlashCampaignManager({
       c.items.map((i) => ({
         productId: i.productId,
         name: i.product.name,
-        regularPrice: i.product.salePrice ?? i.product.basePrice,
+        regularPrice:
+          i.product.regularPrice ?? i.product.salePrice ?? i.product.basePrice,
         price: String(i.flashSalePrice),
         legacy: false,
       })),
@@ -638,12 +641,19 @@ export function FlashCampaignManager({
                 {formatWibDate(c.startsAt)} — {formatWibDate(c.endsAt)} · revisi{" "}
                 {c.version}
               </p>
+              {c.items.some((i) => i.product.eligibilityWarning) && (
+                <p className="mt-2 text-sm" role="status">
+                  {c.items.filter((i) => i.product.eligibilityWarning).length}{" "}
+                  produk tidak memenuhi syarat dan tidak ditawarkan. Periksa
+                  peserta melalui Edit.
+                </p>
+              )}
               <ul className="mt-2 space-y-1 text-xs text-ink-soft">
                 {c.items.slice(0, 5).map((i) => (
                   <li key={i.productId}>
                     {i.product.name} · {formatIDR(i.flashSalePrice)}
-                    {i.product.status !== "PUBLISHED"
-                      ? " · tidak terbit, tidak ditawarkan"
+                    {i.product.eligibilityWarning
+                      ? ` · ${i.product.eligibilityWarning}`
                       : ""}
                   </li>
                 ))}

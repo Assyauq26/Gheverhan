@@ -1,77 +1,106 @@
 "use client";
-
-import { useEffect, useState } from "react";
-
-function pad(n: number) {
-  return n.toString().padStart(2, "0");
-}
-
-type FlashSaleTimerProps = {
-  endsInSeconds?: number;
-  compact?: boolean;
-};
-
-export function FlashSaleTimer({ endsInSeconds = 8127, compact = false }: FlashSaleTimerProps) {
-  const [remaining, setRemaining] = useState(endsInSeconds);
-
-  useEffect(() => {
-    const t = setInterval(() => setRemaining((r) => (r > 0 ? r - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const h = Math.floor(remaining / 3600);
-  const m = Math.floor((remaining % 3600) / 60);
-  const s = remaining % 60;
-  const cells = [
-    { v: pad(h), l: "JAM" },
-    { v: pad(m), l: "MENIT" },
-    { v: pad(s), l: "DETIK" },
-  ];
-
-  if (compact) {
-    return (
-      <div
-        className="grid w-full grid-cols-[1fr_8px_1fr_8px_1fr] items-start"
-        data-testid="flash-timer"
-      >
-        {cells.map((c, i) => (
-          <div key={c.l} className="contents">
-            <div className="flex min-w-0 flex-col items-center">
-              <span className="flex h-10 w-9 items-center justify-center rounded-[7px] border border-black/[0.06] bg-white font-display text-[15px] font-bold text-ink shadow-[0_2px_8px_rgba(0,0,0,0.035)] sm:h-10 sm:text-[15px]">
-                {c.v}
-              </span>
-              <span className="mt-1 text-[7px] font-semibold uppercase leading-none tracking-[0.02em] text-ink-muted sm:text-[8px]">
-                {c.l}
-              </span>
-            </div>
-            {i < cells.length - 1 && (
-              <span className="flex h-10 w-2 items-center justify-center text-xs font-bold leading-none text-ink sm:text-sm">
-                :
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    );
+import { useEffect, useSyncExternalStore } from "react";
+import {
+  campaignState,
+  type CampaignClock,
+} from "@/modules/promotions/campaign.validation";
+// One monotonic, server-synchronized clock per tab; only timer children subscribe.
+let tick = 0;
+let anchor: { server: number; monotonic: number } | null = null;
+let interval: ReturnType<typeof setInterval> | undefined;
+const listeners = new Set<() => void>();
+function sync(event: Event) {
+  const c = (event as CustomEvent<CampaignClock | null>).detail;
+  if (c) {
+    anchor = { server: c.serverNow, monotonic: performance.now() };
+    tick = performance.now();
+    listeners.forEach((fn) => fn());
   }
-
+}
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  if (!interval) {
+    window.addEventListener("gheverhan:campaign-clock", sync);
+    interval = setInterval(() => {
+      tick = performance.now();
+      listeners.forEach((fn) => fn());
+    }, 1000);
+  }
+  return () => {
+    listeners.delete(listener);
+    if (!listeners.size) {
+      clearInterval(interval);
+      interval = undefined;
+      tick = 0;
+      anchor = null;
+      window.removeEventListener("gheverhan:campaign-clock", sync);
+    }
+  };
+}
+export function FlashSaleTimer({
+  campaign,
+  compact = false,
+  inline = false,
+}: {
+  campaign: CampaignClock;
+  compact?: boolean;
+  inline?: boolean;
+}) {
+  const elapsed = useSyncExternalStore(
+    subscribe,
+    () => tick,
+    () => 0,
+  );
+  useEffect(() => {
+    if (!anchor)
+      anchor = { server: campaign.serverNow, monotonic: performance.now() };
+  }, [campaign.serverNow]);
+  // Server snapshot0 is also the hydration snapshot, even with already-mounted timers.
+  const now =
+    elapsed === 0 || !anchor
+      ? campaign.serverNow
+      : anchor.server + Math.max(0, elapsed - anchor.monotonic);
+  const phase = campaignState(campaign, now);
+  const deadline = Date.parse(
+    phase === "UPCOMING" ? campaign.startsAt : campaign.endsAt,
+  );
+  const remaining =
+    phase === "ACTIVE" || phase === "UPCOMING"
+      ? Math.max(0, Math.ceil((deadline - now) / 1000))
+      : 0;
+  const time = [
+    Math.floor(remaining / 3600),
+    Math.floor((remaining % 3600) / 60),
+    remaining % 60,
+  ]
+    .map((v) => String(v).padStart(2, "0"))
+    .join(":");
+  const label =
+    phase === "UPCOMING"
+      ? "Flash Sale Dimulai Dalam"
+      : phase === "ACTIVE"
+        ? "Berakhir Dalam"
+        : "Flash Sale Telah Berakhir";
   return (
-    <div className="flex items-start gap-2" data-testid="flash-timer">
-      {cells.map((c, i) => (
-        <div key={c.l} className="flex items-start gap-2">
-          <div className="flex flex-col items-center">
-            <span className="flex h-11 w-11 items-center justify-center rounded-[7px] border border-black/[0.06] bg-white font-display text-lg font-bold text-ink shadow-[0_2px_8px_rgba(0,0,0,0.035)]">
-              {c.v}
-            </span>
-            <span className="mt-1 text-[10px] font-semibold uppercase leading-none tracking-[0.02em] text-ink-muted">
-              {c.l}
-            </span>
-          </div>
-          {i < cells.length - 1 && (
-            <span className="pt-2 text-base font-bold leading-none text-ink">:</span>
-          )}
-        </div>
-      ))}
+    <div
+      className={
+        inline
+          ? "flex flex-wrap items-center gap-x-1 text-[10px] leading-relaxed"
+          : compact
+            ? "text-xs"
+            : "text-sm"
+      }
+      data-testid="flash-timer"
+      data-campaign-id={campaign.id}
+      data-deadline={phase === "UPCOMING" ? campaign.startsAt : campaign.endsAt}
+    >
+      <span>{label}</span>
+      <time
+        dateTime={`PT${remaining}S`}
+        className={`font-semibold tabular-nums ${inline ? "" : "mt-1 block tracking-wide " + (compact ? "text-xl" : "text-2xl")}`}
+      >
+        {time}
+      </time>
     </div>
   );
 }

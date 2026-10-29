@@ -1,3 +1,5 @@
+import { FlashSaleTimer } from "./flash-sale-timer";
+import type { CampaignClock } from "@/modules/promotions/campaign.validation";
 import Link from "@/components/ui/navigation";
 import Image from "next/image";
 import { formatIDR, effectivePrice, discountPercent } from "@/lib/money";
@@ -18,6 +20,7 @@ export interface ProductCardData {
   ratingAvg: number;
   reviewCount: number;
   variantId: string | null;
+  flashCampaign?: CampaignClock | null;
 }
 
 export function ProductCard({
@@ -41,7 +44,8 @@ export function ProductCard({
     <article
       data-theme-target="highlightCard"
       data-featured={featured || undefined}
-      className="product-card group relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+      data-wide-price={(!featured && formatIDR(price).length > 13) || undefined}
+      className="product-card group flex h-full flex-col relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
       <Link
@@ -67,6 +71,13 @@ export function ProductCard({
           {pct > 0 && !compact && (
             <div className="absolute left-2 top-2 z-10">
               <Badge variant="sale">{pct}%</Badge>
+              {product.flashCampaign && (
+                <div className="mt-1">
+                  <Badge variant="muted" className="px-1.5 text-[10px]">
+                    Flash Sale
+                  </Badge>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -79,7 +90,7 @@ export function ProductCard({
         </div>
       )}
 
-      <div className="px-0.5 pb-1 pt-2">
+      <div className="flex flex-1 flex-col px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
         <Link
           prefetch={preview ? false : undefined}
@@ -90,12 +101,17 @@ export function ProductCard({
           </h3>
         </Link>
 
-        <div className="product-card-purchase mt-1 flex min-w-0 items-end justify-between gap-1.5">
-          <div className="product-card-prices flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        {product.flashCampaign && (
+          <div className="my-1">
+            <FlashSaleTimer campaign={product.flashCampaign} inline />
+          </div>
+        )}
+        <div className="product-card-purchase mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-1.5 pt-1">
+          <div className="product-card-prices flex min-w-0 flex-col justify-start gap-1">
             <span
               data-theme-role="price"
               data-discount={pct > 0}
-              className="product-card-price font-display font-extrabold leading-tight text-ink"
+              className="product-card-price flex min-h-11 items-center font-display font-extrabold leading-tight text-ink"
             >
               {formatIDR(price)}
             </span>
@@ -124,6 +140,9 @@ export function toCardData(p: {
   name: string;
   basePrice: number;
   salePrice: number | null;
+  flashCampaign?: CampaignClock | null;
+  campaignPriceVerified?: boolean;
+  campaignAsOf?: number;
   flashSalePrice?: number | null;
   flashSaleStartsAt?: Date | null;
   flashSaleEndsAt?: Date | null;
@@ -139,6 +158,7 @@ export function toCardData(p: {
     slug: p.slug,
     name: p.name,
     brandName: p.brand?.name ?? null,
+    flashCampaign: p.flashCampaign ?? null,
     image: p.images[0]?.url ?? null,
     basePrice: p.basePrice,
     salePrice: activeScheduledFlashPrice(p) ?? p.salePrice,

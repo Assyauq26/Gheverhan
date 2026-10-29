@@ -1,94 +1,89 @@
-import Link from "@/components/ui/navigation";
-import { ArrowRight, Zap } from "lucide-react";
+import { publicCampaign } from "@/modules/promotions/campaign-pricing";
+import { campaignState } from "@/modules/promotions/campaign.validation";
+import { FlashSaleBanner } from "@/components/storefront/flash-sale-banner";
 import { HeroCarousel } from "@/components/storefront/hero-carousel";
 import { getPublishedHero } from "@/modules/hero/published";
 import { fallbackHeroSlides } from "@/modules/hero/schema";
 import { CategoryNav } from "@/components/storefront/category-nav";
 import { SectionHeader } from "@/components/storefront/section-header";
 import { ProductCard, toCardData } from "@/components/storefront/product-card";
-import { Button } from "@/components/ui/button";
-import { listProducts, listCategories } from "@/modules/catalog/catalog.service";
+import {
+  listProducts,
+  listCategories,
+} from "@/modules/catalog/catalog.service";
 import { getStorefrontUserContext } from "@/lib/auth/session";
 import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export default async function HomePage() {
-  const wishIdsPromise = getStorefrontUserContext().then(user => user ? wishlistProductIds(user.id) : []);
-  const [categories, featured, latest, wishIds, flash, hero] = await Promise.all([
-    listCategories(),
-    listProducts({ featured: true, pageSize: 4, includeTotal: false }),
-    listProducts({ pageSize: 12, includeTotal: false }),
-    wishIdsPromise,
-    listProducts({ flashSale: true, pageSize: 1, includeTotal: false }),
-    getPublishedHero(),
-  ]);
+  const wishIdsPromise = getStorefrontUserContext().then((user) =>
+    user ? wishlistProductIds(user.id) : [],
+  );
+  const [categories, featured, latest, wishIds, flash, hero, campaign] =
+    await Promise.all([
+      listCategories(),
+      listProducts({ featured: true, pageSize: 4, includeTotal: false }),
+      listProducts({ pageSize: 12, includeTotal: false }),
+      wishIdsPromise,
+      listProducts({ flashSale: true, pageSize: 1, includeTotal: false }),
+      getPublishedHero(),
+      publicCampaign(),
+    ]);
 
   const wl = new Set(wishIds);
   // Some seed/catalog data may not have isFeatured flags yet. Keep the section
   // useful by falling back to the newest published products instead of rendering
   // an empty section when the catalog itself is populated.
-  const featuredItems = featured.items.length > 0 ? featured.items : latest.items.slice(0, 4);
+  const featuredItems =
+    featured.items.length > 0 ? featured.items : latest.items.slice(0, 4);
   const featuredIds = new Set(featuredItems.map((p) => p.id));
-  const recommendedItems = latest.items.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
+  const recommendedItems = latest.items
+    .filter((p) => !featuredIds.has(p.id))
+    .slice(0, 8);
 
   // Zero published versions keep the existing banners until the first Publish.
-  const slides = hero.version === 0
-    ? fallbackHeroSlides
-    : hero.config.enabled ? hero.config.slides.map(slide => ({
-        image: `/api/v1/store-hero/${slide.desktopAssetId}`,
-        mobileImage: slide.mobileAssetId ? `/api/v1/store-hero/${slide.mobileAssetId}` : undefined,
-        alt: slide.alt, heading: slide.heading, description: slide.description,
-        ctaLabel: slide.ctaLabel, ctaHref: slide.ctaHref, align: slide.align,
-        tone: slide.tone, overlay: slide.overlay,
-      })) : [];
+  const slides =
+    hero.version === 0
+      ? fallbackHeroSlides
+      : hero.config.enabled
+        ? hero.config.slides.map((slide) => ({
+            image: `/api/v1/store-hero/${slide.desktopAssetId}`,
+            mobileImage: slide.mobileAssetId
+              ? `/api/v1/store-hero/${slide.mobileAssetId}`
+              : undefined,
+            alt: slide.alt,
+            heading: slide.heading,
+            description: slide.description,
+            ctaLabel: slide.ctaLabel,
+            ctaHref: slide.ctaHref,
+            align: slide.align,
+            tone: slide.tone,
+            overlay: slide.overlay,
+          }))
+        : [];
 
   return (
     <div className="space-y-6">
-      <HeroCarousel slides={slides} autoplaySeconds={hero.config.autoplaySeconds} />
+      <HeroCarousel
+        slides={slides}
+        autoplaySeconds={hero.config.autoplaySeconds}
+      />
 
       <section>
         <SectionHeader title="Kategori" href="/shop" />
         <CategoryNav categories={categories} />
       </section>
 
-      {flash.items.length > 0 && <section
-        className="relative overflow-hidden rounded-xl border border-black/[0.05] bg-[#f7f7f7] px-4 py-3 shadow-[0_5px_16px_rgba(0,0,0,0.03)] sm:px-6 sm:py-3"
-        data-testid="flash-sale"
-        data-theme-target="promo"
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-7 top-1/2 z-0 -translate-y-1/2 text-ink/[0.045]"
-        >
-          <Zap size={150} strokeWidth={1.25} />
-        </div>
-
-        <div className="relative z-10 flex min-h-[92px] items-center gap-3 sm:min-h-[96px] sm:gap-5 md:gap-7">
-          <div className="relative min-w-0 flex-1 self-center">
-            <p className="text-[17px] font-bold leading-tight text-ink sm:text-lg">Flash Sale!</p>
-            <h2 className="mt-0.5 font-display text-[29px] font-black leading-[1.02] tracking-[-0.035em] text-ink sm:text-[32px]">
-              Harga spesial hari ini
-            </h2>
-            <p className="mt-1 text-sm leading-tight text-ink-soft sm:text-base">Lihat penawaran yang sedang aktif.</p>
-          </div>
-
-          <div className="flex w-[145px] shrink-0 flex-col items-end gap-1.5 sm:w-[158px] sm:gap-2 md:w-[166px]">
-            <span className="text-xs font-semibold text-ink-soft" data-testid="flash-active-label">Promo berlangsung</span>
-            <Button
-              asChild
-              className="h-9 w-full rounded-[7px] px-2.5 text-[11px] font-medium sm:h-10 sm:text-xs"
-              data-testid="shop-sale-btn"
-            >
-              <Link href="/shop?flash=1">
-                Beli Sekarang
-                <ArrowRight size={15} />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>}
+      {campaign &&
+        (campaignState(campaign, campaign.serverNow) === "UPCOMING" ||
+          (campaignState(campaign, campaign.serverNow) === "ACTIVE" &&
+            flash.items.length > 0)) && <FlashSaleBanner campaign={campaign} />}
 
       <section>
-        <SectionHeader title="Produk Pilihan" subtitle="Koleksi terbaik untuk gaya harianmu" href="/shop" />
+        <SectionHeader
+          title="Produk Pilihan"
+          subtitle="Koleksi terbaik untuk gaya harianmu"
+          href="/shop"
+        />
         <div
           className="stagger flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Produk pilihan"
@@ -98,7 +93,11 @@ export default async function HomePage() {
               key={p.id}
               className="w-[calc((100%-20px)/3)] min-w-[9.25rem] shrink-0 snap-start"
             >
-              <ProductCard product={toCardData(p)} wishlisted={wl.has(p.id)} featured />
+              <ProductCard
+                product={toCardData(p)}
+                wishlisted={wl.has(p.id)}
+                featured
+              />
             </div>
           ))}
         </div>
@@ -108,7 +107,11 @@ export default async function HomePage() {
         <SectionHeader title="Rekomendasi untukmu" href="/shop" />
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
           {recommendedItems.map((p) => (
-            <ProductCard key={p.id} product={toCardData(p)} wishlisted={wl.has(p.id)} />
+            <ProductCard
+              key={p.id}
+              product={toCardData(p)}
+              wishlisted={wl.has(p.id)}
+            />
           ))}
         </div>
       </section>

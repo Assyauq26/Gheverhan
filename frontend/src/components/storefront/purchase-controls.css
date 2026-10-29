@@ -220,10 +220,10 @@
 }
 
 .storefront-root .product-card { container-type:inline-size; }
-.storefront-root .product-card-purchase {flex-wrap:wrap;}
-.storefront-root .product-card-prices { flex:1 1 7.5rem; }
+.storefront-root .product-card-purchase {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;}
+.storefront-root .product-card-prices { min-width:0;min-height:4.25rem; }
 .storefront-root .product-card[data-featured] .product-card-purchase {min-height:2.25rem;align-items:flex-start;}
-.storefront-root .product-card-purchase > button {margin-left:auto;}
+.storefront-root .product-card-purchase > button {grid-column:2;grid-row:1;}
 .storefront-root :is(.product-card-price,.product-card-original) { white-space:nowrap; font-variant-numeric:tabular-nums; }
 .storefront-root .product-card-price { font-size:.875rem;font-size:clamp(.75rem,8cqi,1rem); }
 .storefront-root .product-card-original { font-size:.75rem;font-size:clamp(.625rem,6cqi,.75rem); }
@@ -250,3 +250,11 @@
 .storefront-root .review-rating .review-star-filled {fill:currentColor;}
 .storefront-root .review-rating label:has(input:focus-visible) {outline:2px solid var(--store-focus,#171717);outline-offset:2px;}
 .storefront-root[data-theme-active="true"] .review-rating svg {color:inherit;}
+
+/* Keep money readable when a two-column card cannot fit a44px action target. */
+@media(max-width:339px) {
+ .storefront-root .grid:has(> .product-card) {grid-template-columns:minmax(0,1fr);}
+}
+@media(max-width:429px) {
+ .storefront-root .grid > .product-card[data-wide-price] {grid-column:1/-1;}
+}

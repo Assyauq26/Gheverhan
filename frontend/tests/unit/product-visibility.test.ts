@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const db = vi.hoisted(() => ({ wishlist: { upsert: vi.fn(), findUnique: vi.fn() }, wishlistItem: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() }, product: { findFirst: vi.fn() } }));
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
+// Next supplies this marker in server builds; unit imports run directly in Node.
+vi.mock("server-only", () => ({}));
 import { toggleWishlist, getWishlistView } from "@/modules/wishlist/wishlist.service";
 beforeEach(() => { vi.clearAllMocks(); db.wishlist.upsert.mockResolvedValue({ id: "wishlist" }); db.wishlistItem.findUnique.mockResolvedValue(null); db.product.findFirst.mockResolvedValue(null); });
 it("requires a published product before creating a buyer wishlist item", async () => {

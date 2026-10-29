@@ -7,6 +7,8 @@ const db = vi.hoisted(() => ({
   productVariant: { findUnique: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
+// Next supplies this marker in server builds; unit imports run directly in Node.
+vi.mock("server-only", () => ({}));
 
 import { addItem, quickAddItem, updateItem } from "@/modules/cart/cart.service";
 

@@ -299,6 +299,7 @@ export async function verifyFlashCampaign({
                 ),
                 originalAbove: o.bottom <= a.top + 1,
                 originalBeside: o.left >= a.right + 1,
+                originalClearOfCart: o.right <= b.left - 1,
                 originalClient: original.clientWidth,
                 originalScroll: original.scrollWidth,
                 width: innerWidth,
@@ -314,6 +315,10 @@ export async function verifyFlashCampaign({
               };
             });
             geometry.push(result);
+            assert.ok(
+              result.originalClearOfCart,
+              "original overlaps cart " + JSON.stringify(result),
+            );
             assert.ok(result.centerDelta <= 1.5, JSON.stringify(result));
             assert.equal(
               result.layout,
@@ -356,6 +361,42 @@ export async function verifyFlashCampaign({
               path: path.join(artifactDir, `flash-shop-${width}.png`),
               fullPage: true,
             });
+        }
+        // The same card also appears in four-column Home/PDP/preview grids.
+        // Check actual cell boundaries, not only each span's intrinsic width.
+        for (const width of [768, 1024, 1360]) {
+          await visitor.setViewportSize({ width, height: 900 });
+          await visitor.goto(base + "/shop?q=" + prefix);
+          await expect(visitor.locator(".product-card").first()).toBeVisible();
+          const grid = visitor.locator(".grid:has(> .product-card)");
+          await grid.evaluate((el, narrow) => {
+            el.classList.remove("md:grid-cols-3");
+            el.classList.add("md:grid-cols-4");
+            if (narrow) (el as HTMLElement).style.width = "600px";
+          }, width === 1360);
+          const bounds = await grid
+            .locator(".product-card")
+            .evaluateAll((cards) =>
+              cards.map((c) => {
+                const original = c
+                  .querySelector<HTMLElement>(".product-card-original")!
+                  .getBoundingClientRect();
+                const button = c
+                  .querySelector<HTMLElement>(
+                    ".product-card-purchase > button",
+                  )!
+                  .getBoundingClientRect();
+                return {
+                  originalRight: original.right,
+                  buttonLeft: button.left,
+                };
+              }),
+            );
+          assert.ok(
+            bounds.every((b) => b.originalRight <= b.buttonLeft - 1),
+            "four-column/narrow grid overlap " +
+              JSON.stringify({ width, bounds }),
+          );
         }
         // CI uses different installed font metrics. A wider fallback must keep
         // the original clipping assertion valid, including seven-digit amounts.

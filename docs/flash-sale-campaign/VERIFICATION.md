@@ -45,3 +45,5 @@ Review [ROLLOUT.md](ROLLOUT.md) before any separate release approval. The additi
 ## Price arrangement revision
 
 Original prices belowRp1,000,000 appear alongside the discounted price; original prices at/aboveRp1,000,000 appear above it. The cart remains centered on the discounted-price row in both modes. Four unit cases cover the exact threshold/no-discount case, and the eight-width browser geometry checks also assert original-price position and clipping. The latest PR checks and Actions screenshots cover this revision.
+
+The price revision also checks simulated four-column grids at768/1024px and a600px content column on desktop. Rich-price grids use their actual available width with readable minimum tracks and a four-column cap, so original prices cannot overlap the cart in Home, PDP recommendations, wishlist or preview.

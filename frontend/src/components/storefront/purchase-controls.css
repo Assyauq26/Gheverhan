@@ -255,6 +255,6 @@
 @media(max-width:339px) {
  .storefront-root .grid:has(> .product-card) {grid-template-columns:minmax(0,1fr);}
 }
-@media(max-width:429px) {
+@media(max-width:479px) {
  .storefront-root .grid > .product-card[data-wide-price] {grid-column:1/-1;}
 }

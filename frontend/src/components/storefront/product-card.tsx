@@ -44,7 +44,14 @@ export function ProductCard({
     <article
       data-theme-target="highlightCard"
       data-featured={featured || undefined}
-      data-wide-price={(!featured && formatIDR(price).length > 13) || undefined}
+      data-wide-price={
+        (!featured &&
+          Math.max(
+            formatIDR(price).length,
+            pct > 0 ? formatIDR(product.basePrice).length : 0,
+          ) > 11) ||
+        undefined
+      }
       className="product-card group flex h-full flex-col relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >

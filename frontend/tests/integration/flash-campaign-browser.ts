@@ -327,6 +327,27 @@ export async function verifyFlashCampaign({
               fullPage: true,
             });
         }
+        // CI uses different installed font metrics. A wider fallback must keep
+        // the original clipping assertion valid, including seven-digit amounts.
+        await visitor.setViewportSize({ width: 360, height: 900 });
+        await visitor.goto(base + "/shop?q=" + prefix);
+        await visitor.addStyleTag({
+          content: ".product-card-price { font-family: Georgia, serif; }",
+        });
+        for (const p of products) {
+          const price = visitor
+            .getByTestId("product-card-" + p.slug)
+            .locator(".product-card-price");
+          await expect(price).toBeVisible();
+          const metrics = await price.evaluate((el) => ({
+            scroll: el.scrollWidth,
+            client: el.clientWidth,
+          }));
+          assert.ok(
+            metrics.scroll <= metrics.client + 1,
+            "wider font amount clips " + JSON.stringify(metrics),
+          );
+        }
       },
     );
     await check(

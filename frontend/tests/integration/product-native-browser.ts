@@ -130,8 +130,12 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await page.goto(base + "/admin/products/" + id);
       await page.evaluate(() => {
         history.pushState({ ...history.state, nativeForwardCheck: true }, "", location.pathname + "?native-forward-check=1");
-        history.back();
       });
+      await expect(page).toHaveURL(base + "/admin/products/" + id + "?native-forward-check=1");
+      // Next patches pushState with a React update. Let that manually-created
+      // entry commit before testing traversal; do not race the test's setup.
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      await page.evaluate(() => history.back());
       await expect(page).toHaveURL(base + "/admin/products/" + id);
       await page.locator("#product-name").fill("Unsaved browser forward");
       const cancelForward = page.waitForEvent("dialog");

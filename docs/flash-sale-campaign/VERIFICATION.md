@@ -12,8 +12,8 @@ Baseline `65addb420fccc74129ed72add4a27465ee0c90f8`; synthetic development envir
 | `npm test` | PASS: 69 files, 541 tests, including 16 campaign unit cases |
 | Hardened offline container `npm run test:ci` | PASS: 541 unit, 25 containment, 9 braces/security cases |
 | `node --test .github/tests/production-read-only-preflight.test.mjs` | PASS: 11 |
-| All25 CI PostgreSQL test invocations | PASS: 260 tests, zero failures/skips in final results |
-| Campaign-specific PostgreSQL service cases | Included above: 20 tests |
+| All25 CI PostgreSQL test invocations | PASS: 261 tests, zero failures/skips in final results |
+| Campaign-specific PostgreSQL service cases | Included above: 21 tests |
 | Official campaign migration and bounded lock recovery | Included above: 2 tests |
 | Legacy cutover CLI inventory with `--conditions=react-server` | PASS, read-only, zero unresolved local legacy records |
 | Chromium full storefront/editor/commerce regression | PASS: 73 checkpoints, including nine campaign scenarios; exact-head CI also runs this entrypoint |
@@ -21,7 +21,7 @@ Baseline `65addb420fccc74129ed72add4a27465ee0c90f8`; synthetic development envir
 
 The full browser record is [evidence/browser-results.json](evidence/browser-results.json), with deadline/64 card geometry measurements in [evidence/flash-campaign-results.json](evidence/flash-campaign-results.json). The PostgreSQL summary is [evidence/postgresql-results.json](evidence/postgresql-results.json). Commands use `SPRINT1_TEST_DATABASE_URL` restricted to loopback and database `gheverhan_sprint1_test`; Production URLs are never used. Existing storage-provider doubles require `STORAGE_PROVIDER` and `STORAGE_LOCAL_ROOT` unset. Existing local-adapter tests set their own bindings. Container containment requires the offline unprivileged/read-only/no-capabilities/no-secrets profile; running those environment assertions directly on the developer host is not valid evidence.
 
-The release-preflight legacy-server test initially overlapped a local `.next` rebuild; rerunning after the build finished passed all15 tests unchanged. Product-editor storage tests initially inherited the local provider instead of their loopback double; correcting the invocation passed all15 unchanged. Browser selectors were narrowed to the actual searched product, and new geometry checks validate computed44px CSS dimensions plus a0.1px tolerance for transformed bounding-box rounding. Cart fixtures that bypass application writes now invalidate catalog metadata through an actual authorized save of a synthetic product before asserting global Shop navigation. This preserves the existing cache and all navigation assertions. Screenshot fixtures use a visible generated garment PNG rather than a one-pixel white image. No existing test was disabled or weakened.
+The release-preflight legacy-server test initially overlapped a local `.next` rebuild; rerunning after the build finished passed all15 tests unchanged. Product-editor storage tests initially inherited the local provider instead of their loopback double; correcting the invocation passed all15 unchanged. Browser selectors were narrowed to the actual searched product, and new geometry checks validate computed44px CSS dimensions plus a0.1px tolerance for transformed bounding-box rounding. Cart fixtures that bypass application writes now invalidate catalog metadata through an actual authorized save of a synthetic product before asserting global Shop navigation. This preserves the existing cache and all navigation assertions. Screenshot fixtures use a visible generated garment PNG rather than a one-pixel white image. The native-history fixture now lets Next commit its manually pushed history entry before exercising Back/Forward; all cancellation/acceptance assertions remain. No existing test was disabled or weakened.
 
 ## Assertions exercised
 

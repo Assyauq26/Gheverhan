@@ -173,6 +173,35 @@ test("central Flash Sale authority, pricing, locking and cutover", async (t) => 
     });
   });
   await t.test(
+    "active overview remains visible beyond fifty newer draft records",
+    async () => {
+      const p = await product();
+      const active = await save(
+        input([{ productId: p.id, flashSalePrice: 70000 }]),
+      );
+      const drafts = Array.from({ length: 55 }, () => ({
+        id: randomUUID(),
+        storeKey: "primary",
+        name: prefix + " recent draft",
+        status: "DRAFT",
+        startsAt: new Date(),
+        endsAt: new Date(Date.now() + 3600000),
+        createdAt: new Date(),
+      }));
+      ownedCampaigns.push(...drafts.map((d) => d.id));
+      await db.flashSaleCampaign.createMany({ data: drafts });
+      const rows = await campaigns.listCampaigns(actor);
+      assert.ok(rows.some((c) => c.id === active.id));
+      assert.ok(rows.length <= 51);
+      assert.ok(
+        (await campaigns.campaignHistory(actor)).some(
+          (event) => event.entityId === active.id,
+        ),
+      );
+      await endAll();
+    },
+  );
+  await t.test(
     "permissions deny customer/foreign actor before side effects",
     async () => {
       const count = await db.flashSaleCampaign.count();
@@ -448,14 +477,23 @@ test("central Flash Sale authority, pricing, locking and cutover", async (t) => 
       });
       assert.ok(picker.items.some((i) => i.reason));
       const live = await product();
-      const campaign = await save(input([{ productId: live.id, flashSalePrice: 70000 }]));
-      await db.inventory.update({ where: { variantId: live.variants[0].id }, data: { onHand: 0 } });
-      const overview = (await campaigns.listCampaigns(actor)).find(c => c.id === campaign.id)!;
-      assert.equal(overview.items[0].product.eligibilityWarning, "Stok tidak tersedia");
+      const campaign = await save(
+        input([{ productId: live.id, flashSalePrice: 70000 }]),
+      );
+      await db.inventory.update({
+        where: { variantId: live.variants[0].id },
+        data: { onHand: 0 },
+      });
+      const overview = (await campaigns.listCampaigns(actor)).find(
+        (c) => c.id === campaign.id,
+      )!;
+      assert.equal(
+        overview.items[0].product.eligibilityWarning,
+        "Stok tidak tersedia",
+      );
       assert.equal(overview.items[0].product.regularPrice, 100000);
       assert.deepEqual(await pricing.campaignPrices([live.id]), []);
       await endAll();
-
     },
   );
   await t.test(

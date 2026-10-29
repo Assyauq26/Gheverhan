@@ -2,7 +2,7 @@
   "environment": "Disposable loopback PostgreSQL17; synthetic fixtures only",
   "baseline": "65addb420fccc74129ed72add4a27465ee0c90f8",
   "status": "PASS",
-  "totalTests": 260,
+  "totalTests": 261,
   "suites": [
     {
       "suite": "auth-security",
@@ -62,8 +62,8 @@
     },
     {
       "suite": "flash-campaign",
-      "tests": 20,
-      "passed": 20,
+      "tests": 21,
+      "passed": 21,
       "failed": 0,
       "skipped": 0
     },

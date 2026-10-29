@@ -115,6 +115,16 @@ export async function verifyFlashCampaign({
   ]);
   const buyer = await customer.newPage();
   buyer.on("pageerror", (e) => errors.push(e.message));
+  for (const tab of [visitor, buyer])
+    tab.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        /hydration|hydrating|did not match|Minified React error #(418|423|425)/i.test(
+          message.text(),
+        )
+      )
+        errors.push(message.text());
+    });
   let campaignId: string | undefined;
   let captured:
     | { action: string; contentType: string; body: string }

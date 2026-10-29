@@ -354,33 +354,50 @@ export async function retireLegacy(actor: Actor, value: unknown) {
 }
 export async function listCampaigns(actor: Actor) {
   permit(actor);
-  const campaigns = await prisma.flashSaleCampaign.findMany({
-    where: { storeKey: "primary" },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      items: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              basePrice: true,
-              salePrice: true,
-              status: true,
-              variants: {
-                select: {
-                  price: true,
-                  salePrice: true,
-                  inventory: { select: { onHand: true, reserved: true } },
-                },
+  const include = {
+    items: {
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            basePrice: true,
+            salePrice: true,
+            status: true,
+            variants: {
+              select: {
+                price: true,
+                salePrice: true,
+                inventory: { select: { onHand: true, reserved: true } },
               },
             },
           },
         },
       },
     },
-  });
+  } satisfies Prisma.FlashSaleCampaignInclude;
+  const [recent, relevant] = await Promise.all([
+    prisma.flashSaleCampaign.findMany({
+      where: { storeKey: "primary" },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include,
+    }),
+    prisma.flashSaleCampaign.findFirst({
+      where: {
+        storeKey: "primary",
+        status: "SCHEDULED",
+        endsAt: { gt: new Date() },
+      },
+      orderBy: { startsAt: "asc" },
+      include,
+    }),
+  ]);
+  // An older active/next campaign must not disappear beneath newer drafts/history.
+  const campaigns =
+    relevant && !recent.some((c) => c.id === relevant.id)
+      ? [relevant, ...recent]
+      : recent;
   return campaigns.map((c) => ({
     ...c,
     items: c.items.map((item) => {
@@ -502,16 +519,29 @@ export async function campaignProducts(actor: Actor, value: unknown = {}) {
 }
 export async function campaignHistory(actor: Actor) {
   permit(actor);
-  const campaigns = await prisma.flashSaleCampaign.findMany({
-    where: { storeKey: "primary" },
-    select: { id: true, name: true },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const [campaigns, relevant] = await Promise.all([
+    prisma.flashSaleCampaign.findMany({
+      where: { storeKey: "primary" },
+      select: { id: true },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.flashSaleCampaign.findFirst({
+      where: {
+        storeKey: "primary",
+        status: "SCHEDULED",
+        endsAt: { gt: new Date() },
+      },
+      select: { id: true },
+      orderBy: { startsAt: "asc" },
+    }),
+  ]);
   return prisma.auditLog.findMany({
     where: {
       entity: "FlashSaleCampaign",
-      entityId: { in: campaigns.map((c) => c.id) },
+      entityId: {
+        in: [...campaigns.map((c) => c.id), ...(relevant ? [relevant.id] : [])],
+      },
     },
     select: { id: true, entityId: true, action: true, createdAt: true },
     orderBy: { createdAt: "desc" },

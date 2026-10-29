@@ -1,3 +1,5 @@
+import sharp from "sharp";
+import { verifyFlashCampaign } from "./flash-campaign-browser";
 import { verifyStorefrontV4 } from "./storefront-v4-browser";
 import { verifyNativePurchase } from "./native-purchase-browser";
 import { verifyStoreAppearance } from "./store-appearance-browser";
@@ -35,7 +37,7 @@ const storageToken = randomUUID();
 const objects = new Map<string, { bytes: Buffer; mime: string }>();
 const brandingObjects = new Map<string, { bytes: Buffer; mime: string }>();
 const emailCodes = new Map<string, string>();
-const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
+let png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=", "base64");
 const db = new PrismaClient({ datasources: { db: { url: target } } });
 const prefix = randomUUID().slice(0, 8);
 const couponCode = `LIVE-${prefix}`.toUpperCase();
@@ -59,6 +61,9 @@ async function cookie(user: { id: string; email: string }) {
   return { name: "gh_session", value: token, domain: "localhost", path: "/", httpOnly: true, secure: true, sameSite: "Lax" as const };
 }
 async function main() {
+  // Visible synthetic garment fixture: screenshots must not disguise a valid
+  // one-pixel white test image as a blank/failed product gallery.
+  png = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><rect width="600" height="800" fill="#e8e5df"/><path d="M205 185 140 225 75 345 165 395 190 345 190 650 410 650 410 345 435 395 525 345 460 225 395 185 350 215 250 215Z" fill="#514d48"/><path d="M250 215Q300 280 350 215" fill="none" stroke="#e8e5df" stroke-width="8"/></svg>')).png().toBuffer();
   await mkdir(artifactDir, { recursive: true });
   // Refuse to exercise another process accidentally if the app port is already occupied.
   const portProbe = createServer();
@@ -265,7 +270,7 @@ async function main() {
       const store = await anonymous.newPage(); await store.goto(`${base}/product/${slug}`); await expect(store.getByTestId("purchase-panel")).toBeVisible(); await expect(store.getByRole("heading", { name: `Kaos Sprint ${prefix} Edited`, exact: true })).toBeVisible();
       await expect.poll(() => store.getByTestId("product-gallery").locator("img").first().evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0); await store.close();
     });
-    await check("admin Marketing UI creates voucher and activates/deactivates flash sale with effective price", async () => {
+    await check("admin Marketing UI creates voucher and schedules/ends a campaign without rewriting product prices", async () => {
       const voucherCode = `WEB-${prefix}`.toUpperCase();
       try {
         await page.goto(`${base}/admin/marketing`);
@@ -288,26 +293,29 @@ async function main() {
         await expect(page.getByTestId("marketing-feedback")).toContainText("Status voucher diperbarui.");
         assert.equal((await db.coupon.findUniqueOrThrow({ where: { code: voucherCode } })).isActive, false);
 
-        await page.getByLabel("Pilih produk terbit").selectOption(product.id);
-        await page.getByLabel("Harga flash sale (Rp)").fill("169000");
-        await page.getByRole("button", { name: "Aktifkan flash sale" }).click();
-        await expect(page.getByTestId("marketing-feedback")).toContainText("berhasil masuk flash sale");
-        await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).salePrice).toBe(169000);
-        await page.getByRole("button", { name: "Akhiri flash sale" }).click();
-        await expect(page.getByTestId("marketing-feedback")).toContainText("harga normal dipulihkan");
-        const ended = await db.product.findUniqueOrThrow({ where: { id: product.id } });
-        assert.equal(ended.salePrice, null); assert.equal(ended.isFlashSale, false);
-        await page.getByLabel("Produk flash sale terjadwal").selectOption(product.id);
-        await page.getByLabel("Harga promo (Rp)").fill("159000");
-        await page.getByLabel("Mulai", { exact: true }).fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
-        await page.getByLabel("Berakhir", { exact: true }).fill(new Date(Date.now() + 3_600_000).toISOString().slice(0, 16));
-        await page.getByRole("button", { name: "Jadwalkan flash sale" }).click();
-        await expect(page.getByTestId("marketing-feedback")).toContainText("terjadwal berhasil disimpan");
-        await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBe(159000);
-        await expect(page.getByText("Berlangsung", { exact: true })).toBeVisible();
-        await page.getByRole("button", { name: `Hapus jadwal ${product.name}`, exact: true }).click();
-        await expect(page.getByTestId("marketing-feedback")).toContainText("Jadwal flash sale berhasil dihapus");
-        await expect.poll(async () => (await db.product.findUniqueOrThrow({ where: { id: product.id } })).flashSalePrice).toBeNull();
+        await page.locator('#campaign-name').fill(`Browser campaign ${prefix}`);
+        const wib=(date:Date)=>new Date(date.getTime()+7*3600000).toISOString().slice(0,16);
+        await page.locator('#campaign-start').fill(wib(new Date(Date.now()-60000)));
+        await page.locator('#campaign-end').fill(wib(new Date(Date.now()+3600000)));
+        await page.locator('#campaign-search').fill(`Kaos Sprint ${prefix} Edited`);
+        await page.getByRole('button',{name:'Cari',exact:true}).click();
+        await expect(page.getByTestId('flash-campaign-manager').getByRole('checkbox')).toHaveCount(1);
+        await page.getByTestId('flash-campaign-manager').getByRole('checkbox').check();
+        await page.locator(`#campaign-price-${product.id}`).fill('159000');
+        page.once('dialog',dialog=>dialog.accept());
+        await page.getByRole('button',{name:'Jadwalkan',exact:true}).click();
+        await expect(page.getByRole('status').filter({hasText:'Kampanye tersimpan'})).toBeVisible();
+        const campaign=await db.flashSaleCampaign.findFirstOrThrow({where:{name:`Browser campaign ${prefix}`},include:{items:true}});
+        assert.equal(campaign.items[0].productId,product.id);assert.equal(campaign.items[0].flashSalePrice,159000);
+        const active=await anonymous.request.get(`${base}/api/v1/products/${slug}`);
+        assert.equal((await active.json()).data.flashSalePrice,159000);
+        const master=await db.product.findUniqueOrThrow({where:{id:product.id}});
+        assert.equal(master.salePrice,null);assert.equal(master.isFlashSale,false);assert.equal(master.flashSalePrice,null);
+        page.once('dialog',dialog=>dialog.accept());
+        await page.getByRole('button',{name:'Akhiri',exact:true}).click();
+        await expect(page.getByRole('status').filter({hasText:'Kampanye diakhiri'})).toBeVisible();
+        assert.equal((await db.flashSaleCampaign.findUniqueOrThrow({where:{id:campaign.id}})).status,'ENDED');
+        assert.equal((await db.product.findUniqueOrThrow({where:{id:product.id}})).salePrice,null);
         // Restore the admin product editor for the subsequent pre-existing checkout regression.
         await page.goto(`${base}/admin/products/${product.id}`);
         await expect(page.locator("#product-price")).toBeVisible();
@@ -315,6 +323,8 @@ async function main() {
         await db.coupon.deleteMany({ where: { code: voucherCode } });
       }
     });
+    await verifyFlashCampaign({page,admin,anonymous,readOnly,db,base,artifactDir,imageUrl:product.images[0].url,check});
+    await page.goto(`${base}/admin/products/${product.id}`);
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
@@ -322,7 +332,13 @@ async function main() {
       await verifyDirectCheckout(browser!, db, base, artifactDir, pageErrors);
     });
     await check("R20 authenticated cart synchronization and rollback at four viewports", async () => {
-      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir, emailCodes);
+      await verifyCartSynchronization(browser!, db, base, prefix, pageErrors, artifactDir, emailCodes, async () => {
+        await page.goto(`${base}/admin/products/${product.id}`);
+        const description = page.locator("#product-description");
+        await description.fill((await description.inputValue()) + "\nSynthetic cache fixture " + randomUUID());
+        await page.getByTestId("save-product").click();
+        await expect(page.getByRole("region", {name:"Status perubahan produk"}).getByRole("status")).toContainText("Produk berhasil disimpan");
+      });
     });
     await check("live checkout coupon is priced by server, shows errors, and updates shipping without creating orders", async () => {
       await db.coupon.create({ data: { code: couponCode, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });

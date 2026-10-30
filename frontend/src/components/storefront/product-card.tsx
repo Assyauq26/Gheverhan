@@ -8,6 +8,7 @@ import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { WishlistButton } from "./wishlist-button";
 import { QuickAddButton } from "./quick-add-button";
+import { FittedCardPrices } from "./fitted-card-prices";
 
 export interface ProductCardData {
   id: string;
@@ -39,12 +40,7 @@ export function ProductCard({
 }) {
   const price = effectivePrice(product.basePrice, product.salePrice);
   const pct = discountPercent(product.basePrice, product.salePrice);
-  const priceLayout =
-    pct > 0
-      ? product.basePrice >= 1_000_000
-        ? "stacked"
-        : "inline"
-      : "single";
+  const priceLayout = pct > 0 ? "inline" : "single";
 
   return (
     <article
@@ -60,7 +56,7 @@ export function ProductCard({
             ) > 11)) ||
         undefined
       }
-      className="product-card group flex h-full flex-col relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+      className="product-card group flex flex-col relative overflow-hidden rounded-xl border border-line/70 bg-white p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
       data-testid={`product-card-${product.slug}`}
     >
       <Link
@@ -105,7 +101,7 @@ export function ProductCard({
         </div>
       )}
 
-      <div className="flex flex-1 flex-col px-0.5 pb-1 pt-2">
+      <div className="flex flex-col px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
         <Link
           prefetch={preview ? false : undefined}
@@ -121,8 +117,8 @@ export function ProductCard({
             <FlashSaleTimer campaign={product.flashCampaign} inline />
           </div>
         )}
-        <div className="product-card-purchase mt-auto min-w-0 pt-1">
-          <div className="product-card-prices min-w-0">
+        <div className="product-card-purchase mt-2 min-w-0">
+          <FittedCardPrices>
             <span
               data-theme-role="price"
               data-discount={pct > 0}
@@ -135,7 +131,7 @@ export function ProductCard({
                 {formatIDR(product.basePrice)}
               </span>
             )}
-          </div>
+          </FittedCardPrices>
           {!featured && !preview && (
             <QuickAddButton
               slug={product.slug}

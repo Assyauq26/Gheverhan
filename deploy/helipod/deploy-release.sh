@@ -121,7 +121,6 @@ GHEVERHAN_IMAGE="$MIGRATION_IMAGE" docker-compose \
   -e "DIRECT_URL=$MIGRATION_DATABASE_URL" \
   --entrypoint node app \
   /app/node_modules/prisma/build/index.js migrate deploy
-unset MIGRATION_DATABASE_URL
 
 # Refresh table and sequence grants for objects introduced by this migration.
 python3 /usr/local/sbin/gheverhan-prepare-runtime.py
@@ -133,6 +132,18 @@ GHEVERHAN_IMAGE="$MIGRATION_IMAGE" docker-compose \
   run --rm --no-deps --entrypoint node app \
   --conditions=react-server --import tsx /app/scripts/appearance/preflight.ts
 echo "Production Customize preflight passed"
+
+# Check the complete ledger/schema/config/storage contract with the runtime
+# identity. The owner connection is scoped solely to the read-only ledger check.
+GHEVERHAN_IMAGE="$MIGRATION_IMAGE" docker-compose \
+  -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE" \
+  run --rm --no-deps --user 1000:1000 \
+  -e GHEVERHAN_DEPLOYMENT_TARGET=helipod \
+  -e GHEVERHAN_ALLOW_VPS_READ_ONLY=1 \
+  -e "PREFLIGHT_LEDGER_DATABASE_URL=$MIGRATION_DATABASE_URL" \
+  --entrypoint node app --import tsx /app/scripts/release/preflight.ts
+unset MIGRATION_DATABASE_URL
+echo "Production full release preflight passed"
 
 
 wait_for_health() {

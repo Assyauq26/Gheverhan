@@ -349,6 +349,7 @@ export async function verifyFlashCampaign({
                 availablePriceWidth: row.getBoundingClientRect().width,
                 mainTextWidth: a.width, originalTextWidth: o.width,
                 priceGap: o.left - a.right, cartGap: b.left - o.right,
+                priceInset: a.left - el.querySelector('h3')!.getBoundingClientRect().left,
                 price: price.textContent,
                 priceFont: parseFloat(getComputedStyle(price).fontSize),
                 originalFont: parseFloat(getComputedStyle(original).fontSize),
@@ -374,6 +375,7 @@ export async function verifyFlashCampaign({
               };
             });
             geometry.push(result);
+            assert.ok(Math.abs(result.priceInset) <= 1, "Prices must start at the title's left edge: " + JSON.stringify(result));
             assert.ok(result.largest && result.priceGap >= 1.9 && result.priceGap <= 4 && result.cartGap >= 1.9, JSON.stringify(result));
             assert.ok(
               result.originalClearOfCart,

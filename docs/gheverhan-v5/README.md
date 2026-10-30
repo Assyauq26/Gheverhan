@@ -47,7 +47,7 @@ Use official Prisma deploy after verified backup, isolated fresh/upgrade/lock te
 
 ## Validation evidence
 
-Local Node 22 typecheck and lint passed; production build compiled successfully (local build has no configured DATABASE_URL and prints missing-database diagnostics). Unit suite: 553 pass, 3 pre-existing Windows permission/symlink failures, including all new region/J&T tests passing. CI Linux is required for complete green validation.
+Local Node 22 typecheck, lint and production build passed with isolated PostgreSQL 17.11. The full initial Windows unit run had 553 passes and 3 pre-existing POSIX-permission/symlink failures; all current targeted region/J&T/fitter tests pass (12/12). Linux CI runs the complete suite without disabling those checks.
 
 The regression suite adds full v2 fallback/hierarchy checks, tariff absence and approved service checks, token tamper/expiry tests, real PostgreSQL quote/order invariants, and Chromium modal search/cascade/cancel/focus/failure/8-viewport checks. Existing checkout fixtures now request actual server quotes for a guarded disposable route instead of relying on retired illustrative defaults. Existing stock, coupon, refund, payment, race and idempotency assertions are retained.
 

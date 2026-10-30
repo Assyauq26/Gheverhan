@@ -596,7 +596,9 @@ export async function verifyStorefrontV4({
           data: { basePrice: 100000 },
         });
         await page.getByTestId("input-coupon").fill("");
-        await expect(page.getByTestId("checkout-price-changed")).toBeVisible();
+        // A held shipping token is bound to the catalog snapshot. The server now
+        // rejects the stale quote before returning any buyer-visible new total.
+        await expect(page.getByTestId("checkout-quote-error")).toContainText(/berubah|kedaluwarsa/);
         await expect(page.getByTestId("place-order-btn")).toBeDisabled();
         await db.product.update({
           where: { id: products[0].id },
@@ -725,6 +727,10 @@ export async function verifyStorefrontV4({
               ).includes("linear-gradient"),
             );
           await screenshot(`v4-checkout-theme-${index}-390.png`);
+          await page.getByTestId("select-location").click();
+          await expect(page.getByTestId("region-dialog")).toBeVisible();
+          await screenshot(`v5-region-theme-${index}-390.png`);
+          await page.getByRole("button", { name: "Tutup pilihan lokasi", exact: true }).click();
           await page.goto(`${base}/product/${products[0].slug}`);
           await page.evaluate(() =>
             scrollTo(0, document.documentElement.scrollHeight),

@@ -29,5 +29,5 @@ export function verifyShippingQuote(token: string | undefined, fingerprint: stri
     const quote = tokenSchema.parse(JSON.parse(Buffer.from(body, "base64url").toString()));
     if (quote.expiresAt <= Date.now() || quote.fingerprint !== fingerprint || quote.courier !== rate.courier || quote.service !== rate.service || quote.cost !== rate.cost) throw new Error();
     return quote;
-  } catch { throw new HttpError("Ongkir berubah atau kedaluwarsa. Silakan periksa kembali total pesanan.", 409); }
+  } catch { throw new HttpError("Alamat, berat, harga, atau ongkir berubah; quote dapat kedaluwarsa. Silakan periksa kembali total pesanan.", 409); }
 }

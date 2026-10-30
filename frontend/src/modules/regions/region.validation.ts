@@ -19,7 +19,7 @@ export interface SelectedLocation extends LocationCodes {
 }
 export const addressSchema = locationSchema.extend({
   recipientName: z.string().trim().min(2).max(100),
-  phone: z.string().trim().regex(/^\+?\d[\d\s()-]{7,19}$/),
+  phone: z.string().trim().max(25).refine(value => /^\+?\d[\d\s()-]+$/.test(value) && value.replace(/\D/g, "").length >= 8 && value.replace(/\D/g, "").length <= 15, "Masukkan nomor HP yang valid."),
   line: z.string().trim().min(4).max(1000),
   // Names submitted by the client are ignored; canonical names come from the provider.
   city: z.string().max(150).optional(), province: z.string().max(150).optional(),

@@ -20,7 +20,7 @@ import { verifyCustomVariations } from "./custom-variations-browser";
 import { verifyDirectCheckout } from "./direct-checkout-browser";
 import { verifyCartSynchronization } from "./cart-sync-browser";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
-import { verifyV5Checkout } from "./checkout-v5-browser";
+import { verifyV5Cards, verifyV5Checkout } from "./checkout-v5-browser";
 
 configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
@@ -146,10 +146,10 @@ async function main() {
     const page = await admin.newPage();
     const pageErrors: string[] = []; page.on("pageerror", err => pageErrors.push(err.message));
     if (process.env.STOREFRONT_V5_ONLY === "1") {
-      await verifyStorefrontV4({browser:browser!,admin,anonymous,db,base,prefix,artifactDir,check});
+      await check("V5: uniform featured dimensions and left alignment at eight widths on default/published themes", () => verifyV5Cards(page,admin,db,base,artifactDir));
       const fixture = await db.product.create({ data: { name: "V5 checkout fixture", slug: `v5-checkout-${prefix}`, status: "PUBLISHED", basePrice: 100000, weightGrams: 250, variants: { create: { sku: `V5-CHECKOUT-${prefix}`, inventory: { create: { onHand: 20 } } } } }, include: { variants: true } });
       await db.cart.upsert({ where: { userId: customer.id }, create: { userId: customer.id, items: { create: { variantId: fixture.variants[0].id, quantity: 2 } } }, update: { items: { deleteMany: {}, create: { variantId: fixture.variants[0].id, quantity: 2 } } } });
-      await verifyV5Checkout(browser!,buyer,base,artifactDir);
+      await check("V5: structured address modal, retry, search, cascading, keyboard and valid J&T quote", () => verifyV5Checkout(browser!,buyer,db,base,artifactDir));
       completed=true;return;
     }
     if (process.env.STOREFRONT_V4_ONLY === "1") {
@@ -339,7 +339,7 @@ async function main() {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
     await check("V5 structured location modal, failure/retry, cascading, cancel, keyboard and eight viewports", async () => {
-      await verifyV5Checkout(browser!, buyer, base, artifactDir);
+      await verifyV5Checkout(browser!, buyer, db, base, artifactDir);
     });
     await check("Buy Now guest login continuation and exact legacy/custom checkout preserve the old cart", async () => {
       await verifyDirectCheckout(browser!, db, base, artifactDir, pageErrors);

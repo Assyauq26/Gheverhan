@@ -3,6 +3,8 @@ import path from "node:path";
 import { writeFile } from "node:fs/promises";
 import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { chooseTestLocation, testAddress } from "../fixtures/jnt-checkout";
+import type { PrismaClient } from "@prisma/client";
+import { PRESETS } from "../../src/modules/appearance/presets";
 
 export async function assertFeaturedConsistency(page: Page) {
   const cards = page.locator('[aria-label="Produk pilihan"] .product-card');
@@ -15,6 +17,8 @@ export async function assertFeaturedConsistency(page: Page) {
     const price = card.querySelector('.product-card-price')!.getBoundingClientRect();
     const original = card.querySelector('.product-card-original')?.getBoundingClientRect();
     return { width: rect.width, height: rect.height, image: Math.abs(image.width - image.height), priceInset: price.left - title.left,
+      mainFontPx: parseFloat(getComputedStyle(card.querySelector('.product-card-price')!).fontSize),
+      originalFontPx: card.querySelector('.product-card-original') ? parseFloat(getComputedStyle(card.querySelector('.product-card-original')!).fontSize) : null,
       purchaseY: price.top + price.height / 2 - rect.top, clipped: original ? original.right > rect.right : price.right > rect.right,
       gap: original ? original.left - price.right : 2 };
   }));
@@ -23,7 +27,40 @@ export async function assertFeaturedConsistency(page: Page) {
   return metrics;
 }
 
-export async function verifyV5Checkout(browser: Browser, buyer: BrowserContext, base: string, artifacts: string) {
+/** Focused local entrypoint; the normal CI path still runs the complete V4 suite. */
+export async function verifyV5Cards(page: Page, admin: BrowserContext, db: PrismaClient, base: string, artifacts: string) {
+  const suffix = Date.now(), ids: string[] = [], results: unknown[] = [];
+  for (const [i, [basePrice, salePrice]] of [[20000, 5000], [299000, 249000], [1999000, 1499000], [8999000, null]].entries()) {
+    const p = await db.product.create({ data: { name: i === 2 ? "Nama produk sangat panjang untuk memastikan ukuran kartu tidak berubah" : `V5 produk ${i}`, slug: `v5-card-${suffix}-${i}`, status: "PUBLISHED", weightGrams: 250, basePrice: basePrice!, salePrice, isFeatured: true, images: { create: { url: "/images/dashboard-fashion-rack.webp" } } } });
+    ids.push(p.id);
+  }
+  const read = async () => (await (await admin.request.get(base + "/api/v1/admin/store-appearance")).json()).data;
+  const original = await read();
+  const command = async (value: Record<string, unknown>) => {
+    const state = await read(); const r = await admin.request.post(base + "/api/v1/admin/store-appearance", { headers: { Origin: base }, data: { ...value, draftVersion: state.draftVersion, publishedVersion: state.publishedVersion } });
+    assert.equal(r.status(), 200, await r.text());
+  };
+  try {
+    for (const mode of ["default", "published"] as const) {
+      if (mode === "published") { await command({ kind: "save", config: PRESETS[0].config }); await command({ kind: "publish" }); }
+      for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
+        await page.setViewportSize({ width, height: 900 }); await page.goto(base);
+        results.push({ mode, width, cards: await assertFeaturedConsistency(page) });
+        if ([320, 390, 1440].includes(width)) await page.screenshot({ path: path.join(artifacts, `v5-featured-${mode}-${width}.png`) });
+      }
+    }
+  } catch (error) {
+    await page.screenshot({ path: path.join(artifacts, "v5-featured-failure.png"), fullPage: true });
+    throw error;
+  } finally {
+    await writeFile(path.join(artifacts, "v5-featured-geometry.json"), JSON.stringify(results, null, 2));
+    await command({ kind: "rollback", revision: original.publishedVersion });
+    await db.product.updateMany({ where: { id: { in: ids } }, data: { status: "ARCHIVED" } });
+  }
+}
+
+export async function verifyV5Checkout(browser: Browser, buyer: BrowserContext, db: PrismaClient, base: string, artifacts: string) {
+  const bank = await db.bankAccount.create({ data: { bankName: "Synthetic", accountHolder: "Disposable V5", accountNumber: "TEST-ONLY", displayName: "V5 disposable bank" } });
   const context = await browser.newContext({ storageState: await buyer.storageState(), isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 }, userAgent: "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36" });
   const page = await context.newPage(), errors: string[] = [], metrics: unknown[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -98,5 +135,6 @@ export async function verifyV5Checkout(browser: Browser, buyer: BrowserContext, 
   } finally {
     await writeFile(path.join(artifacts, "v5-browser-results.json"), JSON.stringify({ metrics, errors }, null, 2));
     await context.close();
+    await db.bankAccount.delete({ where: { id: bank.id } });
   }
 }

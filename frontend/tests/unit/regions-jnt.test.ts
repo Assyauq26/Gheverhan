@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { normalizeRegionList, fetchRegions } from "@/modules/regions/region-provider";
 import { getRegions, validateLocation } from "@/modules/regions/region.service";
-import { locationSchema } from "@/modules/regions/region.validation";
+import { addressSchema, locationSchema } from "@/modules/regions/region.validation";
 import { ManualShippingProvider } from "@/infrastructure/shipping/manual/manual-shipping-provider";
 import { JntProvider } from "@/infrastructure/shipping/jnt/jnt-provider";
 import { issueShippingQuote, verifyShippingQuote } from "@/modules/checkout/shipping-quote";
@@ -20,6 +20,7 @@ describe("Indonesia regions v2 adapter", () => {
     expect(() => normalizeRegionList(response, "districts", "31.71")).toThrow();
     expect(() => normalizeRegionList({ ...response, data: [...response.data, ...response.data] }, "villages", "31.71.01")).toThrow();
     expect(locationSchema.safeParse({ ...codes, cityCode: "3171" }).success).toBe(false);
+    expect(addressSchema.safeParse({ ...codes, recipientName: "Buyer", line: "Street", phone: "0-------" }).success).toBe(false);
   });
   it("bounds provider failures to one retry with timeout signals", async () => {
     const mock = vi.fn().mockRejectedValue(new Error("timeout")); vi.stubGlobal("fetch", mock);

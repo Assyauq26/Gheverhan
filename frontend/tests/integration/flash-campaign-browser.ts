@@ -7,6 +7,50 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { signSession } from "../../src/lib/auth/jwt";
 import { formatIDR } from "../../src/lib/money";
 
+async function assertMobileListingGrid(page: Page, width: number) {
+  if (width >= 768) return;
+  for (const theme of ['published', 'default']) {
+    const result = await page.locator('.product-listing-grid').evaluateAll((grids, theme) => grids.map(grid => {
+      const root = grid.closest<HTMLElement>('.storefront-root')!;
+      const style = root.getAttribute('style'), active = root.getAttribute('data-theme-active');
+      if (theme === 'default') { root.removeAttribute('style'); root.removeAttribute('data-theme-active'); }
+      const result = {
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        cards: [...grid.children].map(card => {
+          const price = card.querySelector<HTMLElement>('.product-card-price')!;
+          const original = card.querySelector<HTMLElement>('.product-card-original');
+          const button = card.querySelector<HTMLButtonElement>('.product-card-purchase > button')!;
+          const priceBox = price.getBoundingClientRect();
+          const cartBox = button.getBoundingClientRect();
+          return {
+            width: card.getBoundingClientRect().width,
+            span: getComputedStyle(card).gridColumn,
+            clipped: price.scrollWidth > price.clientWidth + 1 ||
+              Boolean(original && original.scrollWidth > original.clientWidth + 1),
+            priceFont: parseFloat(getComputedStyle(price).fontSize),
+            originalFont: original ? parseFloat(getComputedStyle(original).fontSize) : null,
+            touchWidth: cartBox.width, touchHeight: cartBox.height,
+            aligned: Math.abs(priceBox.y + priceBox.height / 2 - cartBox.y - cartBox.height / 2) <= 1.5,
+          };
+        }),
+      };
+      if (style !== null) root.setAttribute('style', style);
+      if (active !== null) root.setAttribute('data-theme-active', active);
+      return result;
+    }), theme);
+    assert.ok(result.length > 0, 'real route must render the listing marker');
+    for (const grid of result) {
+      assert.equal(grid.columns, 2, `${width}px ${theme} computed tracks`);
+      assert.ok(grid.cards.every(c =>
+        !c.clipped && c.span === 'auto' &&
+        Math.abs(c.width - grid.cards[0].width) < 1 &&
+        c.priceFont >= 11.99 && (c.originalFont === null || c.originalFont >= 9.99) &&
+        c.touchWidth >= 43.9 && c.touchHeight >= 43.9 && c.aligned
+      ), JSON.stringify(grid));
+    }
+  }
+}
+
 export async function verifyFlashCampaign({
   page,
   admin,
@@ -276,6 +320,7 @@ export async function verifyFlashCampaign({
             await visitor.locator('[data-testid^="product-card-"]').count(),
             8,
           );
+          await assertMobileListingGrid(visitor, width);
           for (const p of products) {
             const card = visitor.getByTestId("product-card-" + p.slug);
             const result = await card.evaluate((el) => {
@@ -324,7 +369,7 @@ export async function verifyFlashCampaign({
               result.layout,
               p.basePrice >= 1_000_000 ? "stacked" : "inline",
             );
-            if (result.layout === "stacked")
+            if (result.layout === "stacked" || width <= 539)
               assert.ok(result.originalAbove, JSON.stringify(result));
             else
               assert.ok(
@@ -361,6 +406,10 @@ export async function verifyFlashCampaign({
               path: path.join(artifactDir, `flash-shop-${width}.png`),
               fullPage: true,
             });
+          if (width < 768) {
+            await visitor.locator('.product-listing-grid').evaluate(el => [...el.children].slice(1).forEach(c => c.remove()));
+            await assertMobileListingGrid(visitor, width);
+          }
           if (width === 1440) {
             // A filtered single result must retain a catalog-sized track rather
             // than stretching into a full-width product hero.
@@ -497,9 +546,10 @@ export async function verifyFlashCampaign({
             .getAttribute("data-deadline"),
           campaign.endsAt.toISOString(),
         );
-        for (const width of [390, 1440]) {
+        for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await visitor.setViewportSize({ width, height: 900 });
           await expect(visitor.getByTestId("flash-sale")).toBeVisible();
+          await assertMobileListingGrid(visitor, width);
           await visitor.evaluate(() => document.fonts.ready);
           await visitor.screenshot({
             path: path.join(artifactDir, `flash-home-${width}.png`),
@@ -513,6 +563,7 @@ export async function verifyFlashCampaign({
             await visitor.locator('[data-testid^="product-card-"]').count(),
             8,
           );
+          await assertMobileListingGrid(visitor, width);
           assert.equal(
             await visitor.evaluate(
               () => document.documentElement.scrollWidth > innerWidth,
@@ -545,12 +596,13 @@ export async function verifyFlashCampaign({
           "/category/" + prefix,
           "/brand/" + prefix,
         ])
-          for (const width of [390, 1440]) {
+          for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
             await visitor.setViewportSize({ width, height: 900 });
             await visitor.goto(base + route);
             await expect(
               visitor.getByTestId("product-card-" + products[0].slug),
             ).toBeVisible();
+            await assertMobileListingGrid(visitor, width);
             await expect(
               visitor
                 .getByTestId("product-card-" + products[0].slug)
@@ -791,6 +843,12 @@ export async function verifyFlashCampaign({
         ).toHaveCount(0);
         await visitor.goto(base + "/");
         await expect(visitor.getByTestId("flash-sale")).toHaveCount(0);
+        for (const width of [320, 360, 375, 390, 430]) {
+          await visitor.setViewportSize({ width, height: 900 });
+          await visitor.goto(base + '/shop?q=' + prefix);
+          await expect(visitor.getByTestId('product-card-' + products[0].slug)).toBeVisible();
+          await assertMobileListingGrid(visitor, width);
+        }
         assert.equal(
           (
             await db.product.findUniqueOrThrow({

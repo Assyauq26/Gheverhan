@@ -112,7 +112,7 @@ export default async function HomePage() {
 
       <section>
         <SectionHeader title="Rekomendasi untukmu" href="/shop" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
+        <div className="product-listing-grid grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
           {recommendedItems.map((p) => (
             <ProductCard
               key={p.id}

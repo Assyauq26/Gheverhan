@@ -1,6 +1,6 @@
 # Gheverhan V5 — cards, structured Indonesia addresses and J&T checkout
 
-Base: main `3115a3646fd56f09abcfb91b529de0b40e2107db` (PR #116). Review-only change; no Production mutation or deployment is authorized for V5.
+Base: main `3115a3646fd56f09abcfb91b529de0b40e2107db` (PR #116). Production release requires explicit owner approval, validated recovery, compatible migrations and all safety gates.
 
 ## Findings and behavior
 
@@ -43,7 +43,7 @@ Address changes discard shipping selection and quote immediately. AbortControlle
 
 `20261030090000_checkout_indonesia_regions_jnt` adds nullable region code/name/source-version fields to CustomerAddress and OrderAddress, and nullable accepted shipping snapshot fields to Order. Old address strings, order snapshots and historical shipments are not rewritten or assigned invented codes. Legacy saved addresses remain visible, with their detail input preserved while the customer completes structured location on a later checkout. New order snapshots use canonical server names and codes. A successful order also saves the confirmed structured address as the customer's default, keeping old addresses intact; a dedicated address advisory lock serializes cart/Buy Now default selection, and the entire write rolls back with a failed order.
 
-Use official Prisma deploy after verified backup, isolated fresh/upgrade/lock tests and release preflight. Lock/statement timeouts bound migration locking. Do not perform a down migration or delete old addresses. To roll back, restore the previous compatible app image and keep additive columns/data; keep snapshots, backups and all media/volumes. Rolling back shipping restrictions also changes checkout policy and needs explicit business approval. No migration has been applied to Production for V5.
+Use official Prisma deploy after verified backup, isolated fresh/upgrade/lock tests and release preflight. Lock/statement timeouts bound migration locking. Do not perform a down migration or delete old addresses. To roll back, restore the previous compatible app image and keep additive columns/data; keep snapshots, backups and all media/volumes. Rolling back shipping restrictions also changes checkout policy and needs explicit business approval. Implementation did not apply a Production migration; record subsequent approved release operations separately.
 
 ## Validation evidence
 
@@ -68,3 +68,7 @@ See [before/after screenshots, viewport measurements and narrow-card limits](EVI
 | Regression evidence | Region/J&T unit tests, new PostgreSQL migration/order tests, existing checkout/payment/legacy-migration fixtures, V5/V4/Flash browser measurements, existing isolated workflow |
 
 The fitted-price algorithm is unchanged. A measured last-stock replay race was repaired by re-checking durable idempotency before returning an availability error; a deterministic delayed-read test protects this case. Existing concurrency, voucher, stock and payment assertions remain active.
+
+## Cross-platform release artifacts
+
+Create operational archives with `git -c core.autocrlf=false archive ...` and verify bytes against the committed blobs. Git's Windows archive conversion can otherwise change SQL line endings. Preflight accepts only original/LF/CRLF SHA-256 variants, matching [Prisma 5.22 migration-history compatibility](https://github.com/prisma/prisma-engines/blob/5.22.0/schema-engine/connectors/schema-connector/src/checksum.rs). It still rejects changed SQL, comments, whitespace, missing/extra terminal newlines, unknown/duplicate/unfinished migrations and altered schemas. It never rewrites the Production ledger. Unit and guarded disposable-PostgreSQL regressions verify both accepted cross-platform history and rejected SQL edits.

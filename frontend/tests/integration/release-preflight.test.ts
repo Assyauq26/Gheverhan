@@ -2,9 +2,9 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import { mkdtemp, cp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, cp, readdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 const target = new URL(process.env.SPRINT1_TEST_DATABASE_URL || 'http://invalid');
@@ -32,6 +32,23 @@ test('preflight refuses unverified remote identity before connecting', () => {
     const r = run('postgresql://unused@unverified.invalid/database');
     assert.equal(r.status, 1);
     assert.equal(r.data.databaseIdentity, false);
+});
+test('read-only ledger verification accepts Prisma LF/CRLF history but rejects edited SQL', async () => {
+    const [row] = await db.$queryRaw<{migration_name:string;checksum:string}[]>`SELECT migration_name,checksum FROM "_prisma_migrations" WHERE rolled_back_at IS NULL ORDER BY migration_name LIMIT 1`;
+    const sql = (await readFile(path.join('prisma/migrations', row.migration_name, 'migration.sql'), 'utf8')).replaceAll('\r\n', '\n');
+    const digest = (text: string) => createHash('sha256').update(text).digest('hex');
+    const alternate = [digest(sql), digest(sql.replaceAll('\n', '\r\n'))].find(value => value !== row.checksum)!;
+    assert.ok(alternate);
+    try {
+        // Guarded disposable PostgreSQL only: simulate cross-platform migration history.
+        await db.$executeRaw`UPDATE "_prisma_migrations" SET checksum=${alternate} WHERE migration_name=${row.migration_name}`;
+        const equivalent = run(); assert.equal(equivalent.status, 0); assert.equal(equivalent.data.ledgerMatches, true);
+        await db.$executeRaw`UPDATE "_prisma_migrations" SET checksum=${digest(sql + '\nSELECT 123;')} WHERE migration_name=${row.migration_name}`;
+        const changed = run(); assert.equal(changed.status, 1); assert.equal(changed.data.ledgerMatches, false);
+    } finally {
+        await db.$executeRaw`UPDATE "_prisma_migrations" SET checksum=${row.checksum} WHERE migration_name=${row.migration_name}`;
+    }
+    assert.equal(run().status, 0);
 });
 test('presence of schema does not hide missing operational configuration', () => {
     const r = run(target.toString(), { CRON_SECRET: '' });

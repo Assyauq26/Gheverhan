@@ -1,0 +1,4473 @@
+{
+  "scope": "Public rendered HTML with candidate CSS/marker injected locally; no deployment",
+  "results": [
+    {
+      "route": "/",
+      "width": 320,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 320,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 136,
+              "price": "Rp 17.000",
+              "font": "5.99129px",
+              "originalFont": "4.79303px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 17.000",
+              "font": "5.99129px",
+              "originalFont": "4.79303px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 1.000",
+              "font": "12.1324px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 149.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 219.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 279.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 89.000",
+              "font": "5.70934px",
+              "originalFont": "4.56747px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 159.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 360,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 360,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 156,
+              "price": "Rp 17.000",
+              "font": "7.80683px",
+              "originalFont": "6.24546px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 17.000",
+              "font": "7.80683px",
+              "originalFont": "6.24546px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 1.000",
+              "font": "15.8088px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 149.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 219.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 279.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 89.000",
+              "font": "7.43945px",
+              "originalFont": "5.95156px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 159.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 375,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 375,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 163.5,
+              "price": "Rp 17.000",
+              "font": "8.48765px",
+              "originalFont": "6.79012px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 17.000",
+              "font": "8.48765px",
+              "originalFont": "6.79012px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 149.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 219.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 279.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 89.000",
+              "font": "8.08823px",
+              "originalFont": "6.47059px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 159.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 390,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 390,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 171,
+              "price": "Rp 17.000",
+              "font": "9.16848px",
+              "originalFont": "7.33479px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 17.000",
+              "font": "9.16848px",
+              "originalFont": "7.33479px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 149.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 219.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 279.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 89.000",
+              "font": "8.73702px",
+              "originalFont": "6.98962px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 159.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 430,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 430,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 191,
+              "price": "Rp 17.000",
+              "font": "10.984px",
+              "originalFont": "8.78722px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 17.000",
+              "font": "10.984px",
+              "originalFont": "8.78722px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 149.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 219.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 89.000",
+              "font": "10.4671px",
+              "originalFont": "8.3737px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 159.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 768,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 768,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 360,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 149.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 219.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 1024,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 1024,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 3,
+          "cards": [
+            {
+              "width": 320,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 149.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 219.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "featured": [
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        },
+        {
+          "gap": 8,
+          "beside": true,
+          "sameRow": true
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 4,
+          "cards": [
+            {
+              "width": 330,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 149.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 219.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 320,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 320,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 136,
+              "price": "Rp 17.000",
+              "font": "5.99129px",
+              "originalFont": "4.79303px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 17.000",
+              "font": "5.99129px",
+              "originalFont": "4.79303px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 1.000",
+              "font": "12.1324px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 149.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 219.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 279.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 499.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 299.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 189.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 89.000",
+              "font": "5.70934px",
+              "originalFont": "4.56747px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 299.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 159.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 360,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 360,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 156,
+              "price": "Rp 17.000",
+              "font": "7.80683px",
+              "originalFont": "6.24546px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 17.000",
+              "font": "7.80683px",
+              "originalFont": "6.24546px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 1.000",
+              "font": "15.8088px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 149.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 219.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 279.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 499.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 299.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 189.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 89.000",
+              "font": "7.43945px",
+              "originalFont": "5.95156px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 299.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 159.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 375,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 375,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 163.5,
+              "price": "Rp 17.000",
+              "font": "8.48765px",
+              "originalFont": "6.79012px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 17.000",
+              "font": "8.48765px",
+              "originalFont": "6.79012px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 149.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 219.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 279.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 499.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 299.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 189.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 89.000",
+              "font": "8.08823px",
+              "originalFont": "6.47059px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 299.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 159.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 390,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 390,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 171,
+              "price": "Rp 17.000",
+              "font": "9.16848px",
+              "originalFont": "7.33479px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 17.000",
+              "font": "9.16848px",
+              "originalFont": "7.33479px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 149.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 219.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 279.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 499.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 299.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 189.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 89.000",
+              "font": "8.73702px",
+              "originalFont": "6.98962px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 299.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 159.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 430,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 430,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 191,
+              "price": "Rp 17.000",
+              "font": "10.984px",
+              "originalFont": "8.78722px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 17.000",
+              "font": "10.984px",
+              "originalFont": "8.78722px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 149.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 219.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 499.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 89.000",
+              "font": "10.4671px",
+              "originalFont": "8.3737px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 299.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 159.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 768,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 768,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 360,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 149.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 219.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 499.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 1024,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 1024,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 3,
+          "cards": [
+            {
+              "width": 320,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 149.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 219.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 499.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop",
+      "width": 1440,
+      "featured": []
+    },
+    {
+      "route": "/shop",
+      "width": 1440,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 4,
+          "cards": [
+            {
+              "width": 330,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 17.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 1.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 149.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 219.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 279.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 499.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/shop?flash=1",
+      "skipped": "No public products on this route; isolated CI covers populated fixture"
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 320,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 320,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 136,
+              "price": "Rp 159.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 189.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 360,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 360,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 156,
+              "price": "Rp 159.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 189.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 375,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 375,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 163.5,
+              "price": "Rp 159.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 189.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 390,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 390,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 171,
+              "price": "Rp 159.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 189.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 430,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 430,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 191,
+              "price": "Rp 159.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 768,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 768,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 360,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 1024,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 1024,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 3,
+          "cards": [
+            {
+              "width": 320,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 1440,
+      "featured": []
+    },
+    {
+      "route": "/search?q=tee",
+      "width": 1440,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 4,
+          "cards": [
+            {
+              "width": 330,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 320,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 320,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 136,
+              "price": "Rp 159.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 189.000",
+              "font": "5.39216px",
+              "originalFont": "4.31373px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 299.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 189.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 360,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 360,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 156,
+              "price": "Rp 159.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 189.000",
+              "font": "7.02614px",
+              "originalFont": "5.62091px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 299.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 189.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 375,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 375,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 163.5,
+              "price": "Rp 159.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 189.000",
+              "font": "7.63889px",
+              "originalFont": "6.11111px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 299.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 189.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 390,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 390,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 171,
+              "price": "Rp 159.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 189.000",
+              "font": "8.25163px",
+              "originalFont": "6.60131px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 299.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 189.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 430,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 430,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 191,
+              "price": "Rp 159.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 189.000",
+              "font": "9.88562px",
+              "originalFont": "7.9085px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 768,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 768,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 360,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 1024,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 1024,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 3,
+          "cards": [
+            {
+              "width": 320,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/category/pria",
+      "width": 1440,
+      "featured": []
+    },
+    {
+      "route": "/category/pria",
+      "width": 1440,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 4,
+          "cards": [
+            {
+              "width": 330,
+              "price": "Rp 159.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 320,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 320,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 136,
+              "price": "Rp 89.000",
+              "font": "5.70934px",
+              "originalFont": "4.56747px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 299.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 136,
+              "price": "Rp 189.000",
+              "font": "9.70588px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 360,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 360,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 156,
+              "price": "Rp 89.000",
+              "font": "7.43945px",
+              "originalFont": "5.95156px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 299.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 156,
+              "price": "Rp 189.000",
+              "font": "12.6471px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 375,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 375,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 163.5,
+              "price": "Rp 89.000",
+              "font": "8.08823px",
+              "originalFont": "6.47059px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 299.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 163.5,
+              "price": "Rp 189.000",
+              "font": "13.75px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 390,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 390,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 171,
+              "price": "Rp 89.000",
+              "font": "8.73702px",
+              "originalFont": "6.98962px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 299.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 171,
+              "price": "Rp 189.000",
+              "font": "14.8529px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 430,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 430,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 191,
+              "price": "Rp 89.000",
+              "font": "10.4671px",
+              "originalFont": "8.3737px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 191,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 768,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 768,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 2,
+          "cards": [
+            {
+              "width": 360,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 360,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 1024,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 1024,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 3,
+          "cards": [
+            {
+              "width": 320,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 320,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 1440,
+      "featured": []
+    },
+    {
+      "route": "/brand/gheverhan",
+      "width": 1440,
+      "baselineAt390": "171px 171px",
+      "metrics": [
+        {
+          "columns": 4,
+          "cards": [
+            {
+              "width": 330,
+              "price": "Rp 89.000",
+              "font": "16px",
+              "originalFont": "12px",
+              "clipped": false,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 299.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            },
+            {
+              "width": 330,
+              "price": "Rp 189.000",
+              "font": "16px",
+              "originalFont": null,
+              "clipped": null,
+              "overlap": false,
+              "aligned": true,
+              "square": true,
+              "touch": true,
+              "wishlist": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 320,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "5.99129px",
+            "originalFont": "4.79303px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.39216px",
+            "originalFont": "4.31373px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.39216px",
+            "originalFont": "4.31373px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "4.49346px",
+            "originalFont": "3.59477px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "4.49346px",
+            "originalFont": "3.59477px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "9.70588px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 360,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "7.80683px",
+            "originalFont": "6.24546px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.02614px",
+            "originalFont": "5.62091px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.02614px",
+            "originalFont": "5.62091px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.85512px",
+            "originalFont": "4.6841px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.85512px",
+            "originalFont": "4.6841px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "12.6471px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 375,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "8.48765px",
+            "originalFont": "6.79012px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.63889px",
+            "originalFont": "6.11111px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.63889px",
+            "originalFont": "6.11111px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.36574px",
+            "originalFont": "5.09259px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.36574px",
+            "originalFont": "5.09259px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "13.75px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 390,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "9.16848px",
+            "originalFont": "7.33479px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.25163px",
+            "originalFont": "6.60131px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.25163px",
+            "originalFont": "6.60131px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.87636px",
+            "originalFont": "5.50109px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.87636px",
+            "originalFont": "5.50109px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "14.8529px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 430,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "10.984px",
+            "originalFont": "8.78722px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "9.88562px",
+            "originalFont": "7.9085px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "9.88562px",
+            "originalFont": "7.9085px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.23802px",
+            "originalFont": "6.59041px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.23802px",
+            "originalFont": "6.59041px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 768,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 1024,
+      "metrics": {
+        "columns": 3,
+        "cards": [
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "published",
+      "width": 1440,
+      "metrics": {
+        "columns": 4,
+        "cards": [
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 320,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "5.99129px",
+            "originalFont": "4.79303px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.39216px",
+            "originalFont": "4.31373px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.39216px",
+            "originalFont": "4.31373px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "4.49346px",
+            "originalFont": "3.59477px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "4.49346px",
+            "originalFont": "3.59477px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "9.70588px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 360,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "7.80683px",
+            "originalFont": "6.24546px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.02614px",
+            "originalFont": "5.62091px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.02614px",
+            "originalFont": "5.62091px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.85512px",
+            "originalFont": "4.6841px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "5.85512px",
+            "originalFont": "4.6841px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "12.6471px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 375,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "8.48765px",
+            "originalFont": "6.79012px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.63889px",
+            "originalFont": "6.11111px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "7.63889px",
+            "originalFont": "6.11111px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.36574px",
+            "originalFont": "5.09259px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.36574px",
+            "originalFont": "5.09259px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "13.75px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 390,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "9.16848px",
+            "originalFont": "7.33479px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.25163px",
+            "originalFont": "6.60131px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.25163px",
+            "originalFont": "6.60131px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.87636px",
+            "originalFont": "5.50109px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "6.87636px",
+            "originalFont": "5.50109px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "14.8529px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 430,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "10.984px",
+            "originalFont": "8.78722px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "9.88562px",
+            "originalFont": "7.9085px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "9.88562px",
+            "originalFont": "7.9085px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.23802px",
+            "originalFont": "6.59041px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "8.23802px",
+            "originalFont": "6.59041px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 768,
+      "metrics": {
+        "columns": 2,
+        "cards": [
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 1024,
+      "metrics": {
+        "columns": 3,
+        "cards": [
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "synthetic prices/countdown",
+      "theme": "default",
+      "width": 1440,
+      "metrics": {
+        "columns": 4,
+        "cards": [
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": "12px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "16px",
+            "originalFont": null,
+            "clipped": null,
+            "overlap": false,
+            "aligned": true
+          }
+        ]
+      }
+    }
+  ]
+}

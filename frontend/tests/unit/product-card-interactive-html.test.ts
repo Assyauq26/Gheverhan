@@ -97,8 +97,8 @@ for (const salePrice of [null, 299000])
 describe("discount price arrangement", () => {
   it.each([
     [999_999, 299_000, "inline"],
-    [1_000_000, 299_000, "stacked"],
-    [1_499_000, 1_199_000, "stacked"],
+    [1_000_000, 299_000, "inline"],
+    [1_499_000, 1_199_000, "inline"],
     [299_000, null, "single"],
   ] as const)(
     "original %s and sale %s select %s layout",

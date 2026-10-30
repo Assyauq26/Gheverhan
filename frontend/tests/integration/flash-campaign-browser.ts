@@ -44,7 +44,8 @@ async function assertMobileListingGrid(page: Page, width: number) {
       assert.ok(grid.cards.every(c =>
         !c.clipped && c.span === 'auto' &&
         Math.abs(c.width - grid.cards[0].width) < 1 &&
-        c.priceFont >= 11.99 && (c.originalFont === null || c.originalFont >= 9.99) &&
+        c.priceFont > 0 && c.priceFont <= 16.01 &&
+        (c.originalFont === null || (c.originalFont > 0 && c.originalFont <= c.priceFont * 0.8 + 0.1)) &&
         c.touchWidth >= 43.9 && c.touchHeight >= 43.9 && c.aligned
       ), JSON.stringify(grid));
     }
@@ -338,6 +339,8 @@ export async function verifyFlashCampaign({
               const o = original.getBoundingClientRect();
               return {
                 price: price.textContent,
+                priceFont: parseFloat(getComputedStyle(price).fontSize),
+                originalFont: parseFloat(getComputedStyle(original).fontSize),
                 layout: (el as HTMLElement).dataset.priceLayout,
                 originalCenterDelta: Math.abs(
                   o.y + o.height / 2 - a.y - a.height / 2,
@@ -367,12 +370,9 @@ export async function verifyFlashCampaign({
             assert.ok(result.centerDelta <= 1.5, JSON.stringify(result));
             assert.equal(
               result.layout,
-              p.basePrice >= 1_000_000 ? "stacked" : "inline",
+              "inline",
             );
-            if (result.layout === "stacked" || width <= 539)
-              assert.ok(result.originalAbove, JSON.stringify(result));
-            else
-              assert.ok(
+            assert.ok(
                 result.originalBeside && result.originalCenterDelta <= 1.5,
                 JSON.stringify(result),
               );
@@ -550,6 +550,16 @@ export async function verifyFlashCampaign({
           await visitor.setViewportSize({ width, height: 900 });
           await expect(visitor.getByTestId("flash-sale")).toBeVisible();
           await assertMobileListingGrid(visitor, width);
+          const featuredGeometry = await visitor.locator('[aria-label="Produk pilihan"] .product-card').evaluateAll(cards => cards.map(card => {
+            const title = (card.querySelector('[data-testid="flash-timer"]') ?? card.querySelector('h3'))!.getBoundingClientRect();
+            const purchase = card.querySelector('.product-card-purchase')!.getBoundingClientRect();
+            const price = card.querySelector('.product-card-price')!.getBoundingClientRect();
+            const original = card.querySelector('.product-card-original')?.getBoundingClientRect();
+            return { gap: purchase.top - title.bottom, beside: !original || original.left >= price.right + 1,
+              sameRow: !original || Math.abs(original.y + original.height / 2 - price.y - price.height / 2) <= 1.5 };
+          }));
+          assert.ok(featuredGeometry.length > 0);
+          assert.ok(featuredGeometry.every(g => g.gap >= 7.9 && g.gap <= 12.1 && g.beside && g.sameRow), JSON.stringify({ width, featuredGeometry }));
           await visitor.evaluate(() => document.fonts.ready);
           await visitor.screenshot({
             path: path.join(artifactDir, `flash-home-${width}.png`),

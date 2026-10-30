@@ -301,11 +301,14 @@ export async function retireLegacy(actor: Actor, value: unknown) {
     .object({
       productId: z.string().min(1).max(64),
       expectedUpdatedAt: z.string().datetime({ offset: true }),
+      retainManualPriceAsRegular: z.literal(true).optional(),
     })
     .strict()
     .safeParse(value);
   if (!parsed.success)
     throw new HttpError("Permintaan konversi tidak valid.", 422);
+  if (parsed.data.retainManualPriceAsRegular)
+    permit(actor, PERMISSIONS.PRODUCT_UPDATE);
   return prisma.$transaction(async (tx) => {
     await lockCampaignPricing(tx, true);
     const { productId, expectedUpdatedAt } = parsed.data;
@@ -329,6 +332,21 @@ export async function retireLegacy(actor: Actor, value: unknown) {
         "Promo legacy berubah. Tinjau ulang arsip sebelum cutover.",
         409,
       );
+    // Explicit business approval only: retain the archived manual amount as a
+    // regular discount in the SAME locked transaction as legacy retirement.
+    // The mapping cannot supply an arbitrary replacement price.
+    const retainRegularPrice = parsed.data.retainManualPriceAsRegular === true;
+    if (
+      retainRegularPrice &&
+      (!p.isFlashSale ||
+        p.salePrice == null ||
+        p.salePrice <= 0 ||
+        p.salePrice >= p.basePrice)
+    )
+      throw new HttpError(
+        "Harga diskon manual tidak valid untuk dipertahankan.",
+        422,
+      );
     await tx.product.update({
       where: { id: productId },
       data: {
@@ -336,7 +354,7 @@ export async function retireLegacy(actor: Actor, value: unknown) {
         flashSalePrice: null,
         flashSaleStartsAt: null,
         flashSaleEndsAt: null,
-        ...(p.isFlashSale ? { salePrice: null } : {}),
+        ...(p.isFlashSale && !retainRegularPrice ? { salePrice: null } : {}),
       },
     });
     await writeAudit(
@@ -345,7 +363,13 @@ export async function retireLegacy(actor: Actor, value: unknown) {
         entity: "Product",
         entityId: productId,
         action: "flash-campaign.legacy-retire",
-        meta: { archived: true },
+        meta: {
+          archived: true,
+          retainManualPriceAsRegular: retainRegularPrice,
+          previousSalePrice: p.salePrice,
+          regularSalePrice:
+            p.isFlashSale && !retainRegularPrice ? null : p.salePrice,
+        },
       },
       tx,
     );

@@ -790,6 +790,124 @@ test("central Flash Sale authority, pricing, locking and cutover", async (t) => 
     },
   );
   await t.test(
+    "reviewed manual retirement retains regular price atomically with permission and audit",
+    async () => {
+      const p = await product({
+        basePrice: 399000,
+        isFlashSale: true,
+        salePrice: 299000,
+      });
+      await archive(p);
+      const archived = await db.flashSaleLegacy.findUniqueOrThrow({
+        where: { productId: p.id },
+      });
+      const mapping = {
+        productId: p.id,
+        expectedUpdatedAt: p.updatedAt.toISOString(),
+        retainManualPriceAsRegular: true,
+      };
+      await assert.rejects(
+        campaigns.retireLegacy(
+          {
+            ...actor,
+            permissions: actor.permissions.filter(
+              (p) => p !== "product.update",
+            ),
+          },
+          mapping,
+        ),
+        { status: 403 },
+      );
+      await assert.rejects(
+        campaigns.retireLegacy(actor, { ...mapping, salePrice: 1 }),
+        { status: 422 },
+      );
+      await assert.rejects(
+        campaigns.retireLegacy(actor, {
+          ...mapping,
+          expectedUpdatedAt: new Date(0).toISOString(),
+        }),
+        { status: 409 },
+      );
+      await campaigns.retireLegacy(actor, mapping);
+      const raw = await db.product.findUniqueOrThrow({
+        where: { id: p.id },
+        include: { variants: { include: { inventory: true } } },
+      });
+      assert.equal(raw.basePrice, 399000);
+      assert.equal(raw.salePrice, 299000);
+      assert.equal(raw.isFlashSale, false);
+      assert.equal(raw.flashSalePrice, null);
+      assert.equal(raw.flashSaleStartsAt, null);
+      assert.equal(raw.flashSaleEndsAt, null);
+      assert.equal(raw.status, p.status);
+      assert.equal(raw.variants[0].id, p.variants[0].id);
+      assert.equal(raw.variants[0].inventory?.onHand, 30);
+      assert.deepEqual(
+        (
+          await db.flashSaleLegacy.findUniqueOrThrow({
+            where: { productId: p.id },
+          })
+        ).snapshot,
+        archived.snapshot,
+      );
+      assert.deepEqual(await pricing.campaignPrices([p.id]), []);
+      const b = await buyer(p.variants[0].id);
+      const quote = await checkout.previewCheckout(b.id, {
+        shipping: { courier: "JNE", service: "REG", cost: 1 },
+      });
+      assert.equal(quote.subtotal, 299000);
+      const audit = await db.auditLog.findFirstOrThrow({
+        where: { entityId: p.id, action: "flash-campaign.legacy-retire" },
+      });
+      assert.deepEqual(audit.meta, {
+        archived: true,
+        retainManualPriceAsRegular: true,
+        previousSalePrice: 299000,
+        regularSalePrice: 299000,
+      });
+    },
+  );
+  await t.test(
+    "retention fails closed for scheduled or invalid manual prices and preserves originals",
+    async () => {
+      for (const extra of [
+        {
+          salePrice: 80000,
+          flashSalePrice: 70000,
+          flashSaleStartsAt: new Date(Date.now() - 7200000),
+          flashSaleEndsAt: new Date(Date.now() - 3600000),
+        },
+        { isFlashSale: true, salePrice: null },
+        { isFlashSale: true, salePrice: 100000 },
+      ]) {
+        const p = await product(extra);
+        await archive(p);
+        await assert.rejects(
+          campaigns.retireLegacy(actor, {
+            productId: p.id,
+            expectedUpdatedAt: p.updatedAt.toISOString(),
+            retainManualPriceAsRegular: true,
+          }),
+          { status: 422 },
+        );
+        const current = await db.product.findUniqueOrThrow({
+          where: { id: p.id },
+        });
+        assert.equal(
+          current.updatedAt.toISOString(),
+          p.updatedAt.toISOString(),
+        );
+        assert.equal(current.salePrice, p.salePrice);
+        assert.equal(current.isFlashSale, p.isFlashSale);
+        await campaigns.retireLegacy(actor, {
+          productId: p.id,
+          expectedUpdatedAt: p.updatedAt.toISOString(),
+        });
+      }
+    },
+  );
+  await t.test(
     "database guards preserve scope, intervals, positive item prices and membership uniqueness",
     async () => {
       const p = await product();

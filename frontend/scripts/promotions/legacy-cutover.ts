@@ -24,12 +24,23 @@ async function main() {
       select: {
         id: true,
         name: true,
+        updatedAt: true,
+        status: true,
         basePrice: true,
         salePrice: true,
         isFlashSale: true,
         flashSalePrice: true,
         flashSaleStartsAt: true,
         flashSaleEndsAt: true,
+        variants: {
+          select: {
+            id: true,
+            sku: true,
+            price: true,
+            salePrice: true,
+            inventory: { select: { onHand: true, reserved: true } },
+          },
+        },
       },
       orderBy: { id: "asc" },
       take: 1001,

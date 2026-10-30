@@ -8,7 +8,7 @@ import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { WishlistButton } from "./wishlist-button";
 import { QuickAddButton } from "./quick-add-button";
-import type { CSSProperties } from "react";
+import { FittedCardPrices } from "./fitted-card-prices";
 
 export interface ProductCardData {
   id: string;
@@ -41,15 +41,12 @@ export function ProductCard({
   const price = effectivePrice(product.basePrice, product.salePrice);
   const pct = discountPercent(product.basePrice, product.salePrice);
   const priceLayout = pct > 0 ? "inline" : "single";
-  // Presentation budget only; amounts and promotion decisions stay unchanged.
-  const priceUnits = (formatIDR(price).length + (pct > 0 ? formatIDR(product.basePrice).length * 0.8 : 0)) * 0.68;
 
   return (
     <article
       data-theme-target="highlightCard"
       data-featured={featured || undefined}
       data-price-layout={priceLayout}
-      style={{ "--product-price-units": priceUnits } as CSSProperties}
       data-wide-price={
         (!featured &&
           (priceLayout === "inline" ||
@@ -121,7 +118,7 @@ export function ProductCard({
           </div>
         )}
         <div className="product-card-purchase mt-2 min-w-0">
-          <div className="product-card-prices min-w-0">
+          <FittedCardPrices>
             <span
               data-theme-role="price"
               data-discount={pct > 0}
@@ -134,7 +131,7 @@ export function ProductCard({
                 {formatIDR(product.basePrice)}
               </span>
             )}
-          </div>
+          </FittedCardPrices>
           {!featured && !preview && (
             <QuickAddButton
               slug={product.slug}

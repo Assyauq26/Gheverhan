@@ -227,17 +227,17 @@
 }
 /* One natural price row. Reserve only the cart and gaps, then budget typography
    from the rendered amount lengths; never change a listing's tracks. */
-.storefront-root .product-card {--product-price-space:calc(100cqi - 3.5rem);--product-price-size:min(1rem,calc(var(--product-price-space)/var(--product-price-units,12)));align-self:start;}
+ .storefront-root .product-card {--product-price-normal:1rem;align-self:start;}
 .storefront-root .product-card-purchase {display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:2px;align-items:center;}
-.storefront-root .product-card-prices {display:flex;gap:2px;align-items:center;min-width:0;}
+.storefront-root .product-card-prices {display:flex;gap:2px;align-items:center;min-width:0;justify-content:flex-end;}
 .storefront-root .product-card-price {flex-shrink:0;}
 .storefront-root .product-card-original {flex-shrink:0;}
 .storefront-root .product-card[data-featured] .product-card-purchase {grid-template-columns:minmax(0,1fr);}
-.storefront-root .product-card[data-featured] {--product-price-space:calc(100cqi - .5rem);--product-price-size:min(.875rem,calc(var(--product-price-space)/var(--product-price-units,12)));}
+.storefront-root .product-card[data-featured] {--product-price-normal:.875rem;}
 .storefront-root .product-card[data-featured] .product-card-price {min-height:0;}
 .storefront-root :is(.product-card-price,.product-card-original) { white-space:nowrap; font-variant-numeric:tabular-nums; }
-.storefront-root .product-card-price {font-size:var(--product-price-size);}
-.storefront-root .product-card-original {font-size:min(.75rem,calc(var(--product-price-size)*.8));}
+.storefront-root .product-card-price {font-size:calc(var(--product-price-normal)*var(--product-price-scale,1));}
+.storefront-root .product-card-original {font-size:calc(min(.75rem,calc(var(--product-price-normal)*.8))*var(--product-price-scale,1));}
 :is(.storefront-root,.storefront-checkout-root) .checkout-purchase-bar { display:grid; gap:.75rem; }
 :is(.storefront-root,.storefront-checkout-root) .checkout-sticky-total { display:none; }
 @media(max-width:767px) {
@@ -282,3 +282,5 @@
  .storefront-root .product-listing-grid .product-card-purchase,
  .storefront-root .product-listing-grid .product-card-prices {column-gap:2px;}
 }
+
+.storefront-root .product-card-prices:not(:has(.product-card-original)) {justify-content:flex-start;}

@@ -189,10 +189,12 @@ export async function verifyStorefrontV4({
               const s = getComputedStyle(e),
                 r = e.getBoundingClientRect(),
                 c = e.closest("article")!.getBoundingClientRect();
-              const card = e.closest("article")!, style = getComputedStyle(card);
-              const content = parseFloat(style.width) - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
-              const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+              const card = e.closest("article")!, row = e.parentElement!;
               const original = card.querySelector('.product-card-original')?.getBoundingClientRect();
+              const scale = parseFloat(row.style.getPropertyValue('--product-price-scale'));
+              row.style.setProperty('--product-price-scale', String(scale + .1 / 16));
+              const larger = [...row.children].reduce((n,child)=>n+child.getBoundingClientRect().width,0) + (row.children.length-1)*2;
+              row.style.setProperty('--product-price-scale', String(scale));
               return {
                 nowrap: s.whiteSpace,
                 font: parseFloat(s.fontSize),
@@ -201,7 +203,7 @@ export async function verifyStorefrontV4({
                 card: c.width,
                 scroll: e.scrollWidth,
                 width: e.clientWidth,
-                expectedFont: Math.min(.875 * rem, (content - .5 * rem) / parseFloat(style.getPropertyValue('--product-price-units'))),
+                largest: scale >= .9999 || larger > row.getBoundingClientRect().width,
                 sameRow: !original || Math.abs(original.y + original.height / 2 - r.y - r.height / 2) <= 1.5,
                 beside: !original || original.left >= r.right + 1,
               };
@@ -209,7 +211,7 @@ export async function verifyStorefrontV4({
             assert.equal(bounds.nowrap, "nowrap");
             // The approved inline layout supersedes the old 12px floor when
             // two nominal strings exceed the fixed featured-card width.
-            assert.ok(bounds.font > 0 && Math.abs(bounds.font - bounds.expectedFont) <= .2, JSON.stringify(bounds));
+            assert.ok(bounds.font > 0 && bounds.largest, JSON.stringify(bounds));
             assert.ok(bounds.sameRow && bounds.beside && bounds.scroll <= bounds.width + 1, JSON.stringify(bounds));
             assert.ok(
               bounds.left >= 0 && bounds.right <= bounds.card + 1,

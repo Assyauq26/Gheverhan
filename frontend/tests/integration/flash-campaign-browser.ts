@@ -324,6 +324,7 @@ export async function verifyFlashCampaign({
           await assertMobileListingGrid(visitor, width);
           for (const p of products) {
             const card = visitor.getByTestId("product-card-" + p.slug);
+            await expect.poll(() => card.locator('.product-card-prices').getAttribute('style')).toContain('--product-price-scale');
             const result = await card.evaluate((el) => {
               const price = el.querySelector<HTMLElement>(
                   ".product-card-price",
@@ -337,7 +338,16 @@ export async function verifyFlashCampaign({
                 ".product-card-original",
               )!;
               const o = original.getBoundingClientRect();
+              const row = price.parentElement!;
+              const scale = parseFloat(row.style.getPropertyValue('--product-price-scale'));
+              row.style.setProperty('--product-price-scale', String(scale + .1 / 16));
+              const larger = price.getBoundingClientRect().width + original.getBoundingClientRect().width + 2;
+              row.style.setProperty('--product-price-scale', String(scale));
               return {
+                largest: scale >= .9999 || larger > row.getBoundingClientRect().width,
+                availablePriceWidth: row.getBoundingClientRect().width,
+                mainTextWidth: a.width, originalTextWidth: o.width,
+                priceGap: o.left - a.right, cartGap: b.left - o.right,
                 price: price.textContent,
                 priceFont: parseFloat(getComputedStyle(price).fontSize),
                 originalFont: parseFloat(getComputedStyle(original).fontSize),
@@ -363,6 +373,7 @@ export async function verifyFlashCampaign({
               };
             });
             geometry.push(result);
+            assert.ok(result.largest && result.priceGap >= 1.9 && result.priceGap <= 4 && result.cartGap >= 1.9 && result.cartGap <= 4, JSON.stringify(result));
             assert.ok(
               result.originalClearOfCart,
               "original overlaps cart " + JSON.stringify(result),

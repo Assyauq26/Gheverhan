@@ -13,7 +13,7 @@ import { getIntentCheckoutView, readCheckoutIntent } from "./checkout-intent";
 import { writeAudit } from "@/modules/audit/audit.service";
 import { addressSchema, type SelectedLocation } from "@/modules/regions/region.validation";
 import { validateLocation } from "@/modules/regions/region.service";
-import type { ShippingInquiry } from "@/infrastructure/shipping/contracts/shipping-provider";
+import type { ShippingInquiry, ShippingRate } from "@/infrastructure/shipping/contracts/shipping-provider";
 import { issueShippingQuote, shippingFingerprint, verifyShippingQuote } from "./shipping-quote";
 
 export interface AddressInput {
@@ -62,7 +62,7 @@ async function shippingInquiry(cart: { lines: Array<{ product: { id: string }; q
 }
 async function checkoutShipping(userId: string, cart: { lines: Array<CheckoutLines[number] & { product: { id: string } }> }, location: SelectedLocation) {
   const inquiry = await shippingInquiry(cart, location);
-  let rates;
+  let rates: ShippingRate[];
   try { rates = (await getShippingProvider().getRates?.(inquiry)) ?? []; }
   catch (error) { if (error instanceof HttpError) throw error; throw new HttpError("Gagal memeriksa ongkir J&T. Coba lagi atau hubungi toko.", 503); }
   if (rates.some(r => r.courier !== "J&T Express" || !Number.isSafeInteger(r.cost) || r.cost < 0)) throw new HttpError("Tarif J&T tidak valid", 502);
@@ -155,7 +155,13 @@ export async function createOrder(
     if (completed) return completed;
     throw new HttpError("Keranjang kosong atau sudah diproses", 409);
   }
-  if (cartView.lines.some(line => !line.inStock)) throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
+  if (cartView.lines.some(line => !line.inStock)) {
+    // A parallel identical request may have reserved this last item after the
+    // initial replay probe but before this availability read completed.
+    const completed = await replay(prisma);
+    if (completed) return completed;
+    throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
+  }
   if (checkoutSignature(confirmation.data) !== checkoutSignature(cartView.lines)) throw new HttpError("Harga atau isi keranjang berubah. Muat ulang checkout dan konfirmasi ulang sebelum membuat pesanan.", 409);
 
   const bank = await prisma.bankAccount.findFirst({
@@ -263,6 +269,15 @@ export async function createOrder(
     for (const line of [...current.lines].sort((a, b) => a.variantId.localeCompare(b.variantId))) {
       await reserveStock(tx, line.variantId, line.quantity, created.orderNumber);
     }
+
+    // Save the confirmed structured address without rewriting any legacy address.
+    // A dedicated address lock serializes cart/Buy Now without changing auth row locking.
+    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`checkout-address:${userId}`}, 0))`);
+    const customer = await tx.customer.upsert({ where: { userId }, create: { userId, fullName: (await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } })).name }, update: {} });
+    const savedAddress = await tx.customerAddress.findFirst({ where: { customerId: customer.id, ...canonicalAddress } });
+    await tx.customerAddress.updateMany({ where: { customerId: customer.id, isDefault: true }, data: { isDefault: false } });
+    if (savedAddress) await tx.customerAddress.update({ where: { id: savedAddress.id }, data: { isDefault: true } });
+    else await tx.customerAddress.create({ data: { customerId: customer.id, ...canonicalAddress, isDefault: true } });
 
     await tx.payment.create({
       data: {

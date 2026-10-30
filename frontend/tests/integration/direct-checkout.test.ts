@@ -124,6 +124,28 @@ test("two intents competing for final stock cannot oversell or partially consume
   assert.equal(await db.checkoutIntent.count({ where: { id: { in: [first.id, second.id] }, consumedAt: { not: null } } }), 1);
 });
 
+test("an identical direct request delayed after its initial replay check returns the committed last-stock order", async () => {
+  const { buyer, variant } = await fixture(1);
+  const intent = await intents.createCheckoutIntent(buyer.id, { variantId: variant.id, quantity: 1 });
+  const input = await orderInput(buyer.id, intent.id);
+  const original = db.productVariant.findUnique.bind(db.productVariant);
+  let enter!: () => void, release!: () => void, delay = true;
+  const ready = new Promise<void>(r => { enter = r; }), gate = new Promise<void>(r => { release = r; });
+  db.productVariant.findUnique = (async (args: Parameters<typeof original>[0]) => {
+    if (delay && args.where.id === variant.id) { delay = false; enter(); await gate; }
+    return original(args);
+  }) as unknown as typeof db.productVariant.findUnique;
+  try {
+    const delayed = checkout.createOrder(buyer.id, input);
+    await ready;
+    const winner = await checkout.createOrder(buyer.id, input);
+    release();
+    assert.equal((await delayed).id, winner.id);
+    assert.equal(await db.order.count({ where: { userId: buyer.id } }), 1);
+    assert.equal((await db.inventory.findUniqueOrThrow({ where: { variantId: variant.id } })).reserved, 1);
+  } finally { release(); db.productVariant.findUnique = original; }
+});
+
 test("direct checkout coupon uses selected subtotal and still enforces usage limit", async () => {
   const { buyer, variant } = await fixture();
   const code = `DIRECT-${randomUUID()}`.toUpperCase();

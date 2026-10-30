@@ -419,7 +419,7 @@ export function CheckoutClient({
           <div className="flex justify-between">
             <span className="text-ink-soft">Ongkir ({rate?.courier})</span>
             <span className="font-semibold">
-              {currentQuote ? formatIDR(currentQuote.shippingCost) : "—"}
+              {currentQuote?.shippingValid ? formatIDR(currentQuote.shippingCost) : "—"}
             </span>
           </div>
           {currentQuote && currentQuote.discount > 0 && (
@@ -440,7 +440,7 @@ export function CheckoutClient({
             className="font-display text-xl font-black text-ink"
             data-testid="checkout-total"
           >
-            {currentQuote ? formatIDR(currentQuote.total) : "—"}
+            {currentQuote?.shippingValid ? formatIDR(currentQuote.total) : "—"}
           </span>
         </div>
         {(!quote || quote.key !== quoteKey || quote.status === "loading") && (
@@ -513,7 +513,7 @@ export function CheckoutClient({
               className="font-display"
               data-testid="checkout-sticky-total"
             >
-              {currentQuote ? formatIDR(currentQuote.total) : "—"}
+              {currentQuote?.shippingValid ? formatIDR(currentQuote.total) : "—"}
             </strong>
           </div>
           <PlaceOrderBtn disabled={!canSubmit} />

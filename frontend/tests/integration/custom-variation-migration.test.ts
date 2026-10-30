@@ -101,6 +101,8 @@ async function legacy(db: PrismaClient) {
     data: { cartId: cart.id, variantId: "legacy-red", quantity: 1 },
   });
   await db.order.create({
+    // Read only columns present in this historical schema stage.
+    select: { id: true },
     data: {
       orderNumber: "DUMMY-HISTORICAL",
       userId: user.id,

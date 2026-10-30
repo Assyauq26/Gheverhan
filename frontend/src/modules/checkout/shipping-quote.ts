@@ -22,6 +22,7 @@ export function verifyShippingQuote(token: string | undefined, fingerprint: stri
   try {
     if (!token || token.length > 4096) throw new Error();
     const [body, signature, extra] = token.split(".");
+    if (!/^[A-Za-z0-9_-]+$/.test(body || "") || !/^[A-Za-z0-9_-]{43}$/.test(signature || "")) throw new Error();
     const expected = createHmac("sha256", secret()).update(body).digest();
     const actual = Buffer.from(signature || "", "base64url");
     if (extra || actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error();

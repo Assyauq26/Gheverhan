@@ -12,7 +12,7 @@ export const manualConfigSchema = z.object({
     ...approval,
   }).refine(r => r.maxWeightGram >= r.minWeightGram)).max(10000),
 }).strict();
-export const areaMappingSchema = z.array(z.object({ indonesiaCode: regionCode, areaCode: z.string().min(1).max(80), reference: z.string().min(4), confirmedAt: z.string().datetime() }).strict()).max(100000);
+export const areaMappingSchema = z.array(z.object({ indonesiaCode: regionCode, areaCode: z.string().min(1).max(80), reference: z.string().min(4), confirmedAt: z.string().datetime() }).strict()).max(100000).refine(rows => new Set(rows.map(row => row.indonesiaCode)).size === rows.length, "Mapping wilayah duplikat");
 export function getManualJntConfig() {
   const raw = process.env.JNT_MANUAL_RATE_CONFIG;
   if (!raw) return null;

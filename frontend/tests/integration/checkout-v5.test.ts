@@ -26,6 +26,8 @@ test("new checkout preserves canonical address, actual weight and approved J&T s
   const address = await db.orderAddress.findUniqueOrThrow({ where: { orderId: order.id } });
   assert.equal(address.villageCode, testAddress.villageCode); assert.equal(address.village, "Gambir"); assert.notEqual(address.province, "Forged");
   assert.equal(address.regionSource, "emsifa-v2");
+  const saved = await db.customerAddress.findFirstOrThrow({ where: { customer: { userId: f.user.id }, isDefault: true } });
+  assert.equal(saved.villageCode, address.villageCode);
 });
 test("forged carrier, route, quote and missing tariff never mutate stock/cart/order", async () => {
   const f = await fixture();

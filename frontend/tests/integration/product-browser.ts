@@ -145,6 +145,13 @@ async function main() {
     await admin.addCookies([await cookie(staff)]); await buyer.addCookies([await cookie(customer)]); await readOnly.addCookies([await cookie(marketing)]);
     const page = await admin.newPage();
     const pageErrors: string[] = []; page.on("pageerror", err => pageErrors.push(err.message));
+    if (process.env.STOREFRONT_V5_ONLY === "1") {
+      await verifyStorefrontV4({browser:browser!,admin,anonymous,db,base,prefix,artifactDir,check});
+      const fixture = await db.product.create({ data: { name: "V5 checkout fixture", slug: `v5-checkout-${prefix}`, status: "PUBLISHED", basePrice: 100000, weightGrams: 250, variants: { create: { sku: `V5-CHECKOUT-${prefix}`, inventory: { create: { onHand: 20 } } } } }, include: { variants: true } });
+      await db.cart.upsert({ where: { userId: customer.id }, create: { userId: customer.id, items: { create: { variantId: fixture.variants[0].id, quantity: 2 } } }, update: { items: { deleteMany: {}, create: { variantId: fixture.variants[0].id, quantity: 2 } } } });
+      await verifyV5Checkout(browser!,buyer,base,artifactDir);
+      completed=true;return;
+    }
     if (process.env.STOREFRONT_V4_ONLY === "1") {
       await verifyStorefrontV4({browser:browser!,admin,anonymous,db,base,prefix,artifactDir,check});
       completed=true;return;

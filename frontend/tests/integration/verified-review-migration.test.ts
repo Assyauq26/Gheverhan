@@ -112,6 +112,7 @@ for (const blocked of [false, true])
         "REVIEW-SKU",
       );
       const o = await db.order.create({
+        select: { id: true, items: true },
         data: {
           orderNumber: randomUUID(),
           userId: "review-user",
@@ -128,7 +129,6 @@ for (const blocked of [false, true])
             },
           },
         },
-        include: { items: true },
       });
       await db.review.create({
         data: {

@@ -2,6 +2,7 @@ import { testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-ch
 import { assertFeaturedConsistency } from "./checkout-v5-browser";
 import assert from "node:assert/strict";
 import path from "node:path";
+import { writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { expect, type Browser, type BrowserContext } from "@playwright/test";
 import type { Prisma, PrismaClient } from "@prisma/client";
@@ -134,6 +135,7 @@ export async function verifyStorefrontV4({
     });
   const screenshot = (name: string) =>
     page.screenshot({ path: path.join(artifactDir, name) });
+  const v5Geometry: unknown[] = [];
   const readTheme = async () => {
     const response = await admin.request.get(
       `${base}/api/v1/admin/store-appearance`,
@@ -166,11 +168,18 @@ export async function verifyStorefrontV4({
     await check(
       "V4: responsive intact prices and featured cards without purchasing shortcuts",
       async () => {
+        for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.goto(base);
+          v5Geometry.push({ theme: "default", width, cards: await assertFeaturedConsistency(page) });
+          if ([320, 390, 1440].includes(width)) await screenshot(`v5-featured-default-${width}.png`);
+        }
         await publishTheme(PRESETS[0].config);
         for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await page.setViewportSize({ width, height: 900 });
           await page.goto(base);
-          await assertFeaturedConsistency(page);
+          v5Geometry.push({ theme: "published", width, cards: await assertFeaturedConsistency(page) });
+          if ([320, 390, 1440].includes(width)) await screenshot(`v5-featured-published-${width}.png`);
           const section = page.locator("section").filter({
             has: page.getByRole("heading", {
               name: "Produk Pilihan",
@@ -653,6 +662,7 @@ export async function verifyStorefrontV4({
         await expect(page.getByTestId("buy-now-btn")).toBeEnabled();
         await page.getByTestId("buy-now-btn").click();
         await expect(page).toHaveURL(/\/checkout\?intent=/);
+        await chooseTestLocation(page);
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await expect(page.getByTestId("place-order-btn")).toHaveCount(1);
         await expect(page.getByTestId("checkout-sticky-total")).toHaveText(
@@ -723,6 +733,8 @@ export async function verifyStorefrontV4({
             page.getByTestId("product-information-sheet"),
           ).toHaveAttribute("data-expanded", "true");
           await screenshot(`v4-pdp-theme-${index}-390.png`);
+          await page.goto(base);
+          v5Geometry.push({ theme: `preset-${index}`, width: 390, cards: await assertFeaturedConsistency(page) });
         }
       },
     );
@@ -747,6 +759,7 @@ export async function verifyStorefrontV4({
       .catch(() => {});
     throw error;
   } finally {
+    await writeFile(path.join(artifactDir, "v5-featured-geometry.json"), JSON.stringify(v5Geometry, null, 2));
     await themeCommand({
       kind: "rollback",
       revision: originalTheme.publishedVersion,

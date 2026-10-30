@@ -6,6 +6,7 @@ import { locationSchema } from "@/modules/regions/region.validation";
 import { ManualShippingProvider } from "@/infrastructure/shipping/manual/manual-shipping-provider";
 import { JntProvider } from "@/infrastructure/shipping/jnt/jnt-provider";
 import { issueShippingQuote, verifyShippingQuote } from "@/modules/checkout/shipping-quote";
+import { areaMappingSchema } from "@/infrastructure/shipping/jnt/jnt-config";
 const codes = { provinceCode: "31", cityCode: "31.71", districtCode: "31.71.01", villageCode: "31.71.01.1001", postalCode: "10110" };
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("Indonesia regions v2 adapter", () => {
@@ -58,5 +59,22 @@ describe("J&T configured services and quote integrity", () => {
     for (const [token, fingerprint, value] of [[quote.quoteToken + "tamper", "fingerprint", rate], [quote.quoteToken, "changed-route", rate], [quote.quoteToken, "fingerprint", { ...rate, cost: 1 }]] as const) expect(() => verifyShippingQuote(token, fingerprint, value)).toThrow();
     vi.useFakeTimers(); vi.setSystemTime(quote.expiresAt + 1);
     expect(() => verifyShippingQuote(quote.quoteToken, "fingerprint", rate)).toThrow(/kedaluwarsa/);
+  });
+  it("official contract exposes only returned services and requires an approved mapping/transport", async () => {
+    const mapping = { indonesiaCode: codes.villageCode, areaCode: "TEST-ONLY-OFFICIAL-DOUBLE", reference: "SYNTHETIC-UAT", confirmedAt: "2026-10-01T00:00:00.000Z" };
+    expect(areaMappingSchema.safeParse([mapping, mapping]).success).toBe(false);
+    expect(areaMappingSchema.safeParse([{ ...mapping, indonesiaCode: "31.1001" }]).success).toBe(false);
+    vi.stubEnv("JNT_OFFICIAL_AREA_MAPPING", JSON.stringify([mapping]));
+    vi.stubEnv("JNT_ORIGIN_WAREHOUSE", "SYNTHETIC-WAREHOUSE");
+    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/belum diaktifkan/);
+    const inquire = vi.fn().mockResolvedValue([{ courier: "J&T Express", service: "EZ", cost: 12345 }]);
+    const adapter = new JntProvider({ inquire });
+    expect(await adapter.getRates(inquiry)).toEqual([{ courier: "J&T Express", service: "EZ", cost: 12345, mode: "official" }]);
+    expect(inquire.mock.calls[0][0].destinationArea).toBe(mapping.areaCode);
+    expect(inquire.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+    inquire.mockRejectedValueOnce(new DOMException("timeout", "TimeoutError"));
+    await expect(adapter.getRates(inquiry)).rejects.toThrow("timeout");
+    inquire.mockResolvedValueOnce([{ courier: "JNE", service: "REG", cost: 1 }]);
+    await expect(adapter.getRates(inquiry)).rejects.toThrow(/tidak valid/);
   });
 });

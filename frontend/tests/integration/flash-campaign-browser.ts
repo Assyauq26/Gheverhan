@@ -18,7 +18,20 @@ async function assertMobileListingGrid(page: Page, width: number) {
         columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
         cards: [...grid.children].map(card => {
           const price = card.querySelector<HTMLElement>('.product-card-price')!;
-          return { width: card.getBoundingClientRect().width, span: getComputedStyle(card).gridColumn, clipped: price.scrollWidth > price.clientWidth + 1 };
+          const original = card.querySelector<HTMLElement>('.product-card-original');
+          const button = card.querySelector<HTMLButtonElement>('.product-card-purchase > button')!;
+          const priceBox = price.getBoundingClientRect();
+          const cartBox = button.getBoundingClientRect();
+          return {
+            width: card.getBoundingClientRect().width,
+            span: getComputedStyle(card).gridColumn,
+            clipped: price.scrollWidth > price.clientWidth + 1 ||
+              Boolean(original && original.scrollWidth > original.clientWidth + 1),
+            priceFont: parseFloat(getComputedStyle(price).fontSize),
+            originalFont: original ? parseFloat(getComputedStyle(original).fontSize) : null,
+            touchWidth: cartBox.width, touchHeight: cartBox.height,
+            aligned: Math.abs(priceBox.y + priceBox.height / 2 - cartBox.y - cartBox.height / 2) <= 1.5,
+          };
         }),
       };
       if (style !== null) root.setAttribute('style', style);
@@ -28,7 +41,12 @@ async function assertMobileListingGrid(page: Page, width: number) {
     assert.ok(result.length > 0, 'real route must render the listing marker');
     for (const grid of result) {
       assert.equal(grid.columns, 2, `${width}px ${theme} computed tracks`);
-      assert.ok(grid.cards.every(c => !c.clipped && c.span === 'auto' && Math.abs(c.width - grid.cards[0].width) < 1), JSON.stringify(grid));
+      assert.ok(grid.cards.every(c =>
+        !c.clipped && c.span === 'auto' &&
+        Math.abs(c.width - grid.cards[0].width) < 1 &&
+        c.priceFont >= 11.99 && (c.originalFont === null || c.originalFont >= 9.99) &&
+        c.touchWidth >= 43.9 && c.touchHeight >= 43.9 && c.aligned
+      ), JSON.stringify(grid));
     }
   }
 }
@@ -351,7 +369,7 @@ export async function verifyFlashCampaign({
               result.layout,
               p.basePrice >= 1_000_000 ? "stacked" : "inline",
             );
-            if (result.layout === "stacked")
+            if (result.layout === "stacked" || width <= 539)
               assert.ok(result.originalAbove, JSON.stringify(result));
             else
               assert.ok(

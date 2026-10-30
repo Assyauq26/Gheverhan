@@ -270,7 +270,7 @@
 }
 
 /* Listing tracks belong to the listing, never to a card's price length.
-   Leave the featured carousel and existing tablet/desktop rules untouched. */
+   Keep the featured carousel and tablet/desktop track rules unchanged. */
 @media(max-width:767px) {
  .storefront-root .product-listing-grid.grid:has(> .product-card) {
    grid-template-columns:repeat(2,minmax(0,1fr));
@@ -281,16 +281,30 @@
  }
  .storefront-root .product-listing-grid .product-card-purchase,
  .storefront-root .product-listing-grid .product-card-prices {column-gap:2px;}
- .storefront-root .product-listing-grid .product-card[data-wide-price] .product-card-price {
-   font-size:clamp(.5rem,calc((100cqi - 3.125rem)/8),1rem);
+ /* Price legibility is a hard constraint; never shrink checkout-critical text
+    to the 5–9px values in the first hotfix candidate. */
+ .storefront-root .product-listing-grid .product-card-price {
+   font-size:clamp(.75rem,3.4vw,1rem);
  }
- .storefront-root .product-listing-grid .product-card[data-price-layout="single"]:not([data-wide-price]) .product-card-price {
-   font-size:min(clamp(.75rem,8cqi,1rem),calc((100cqi - 3.125rem)/6.5));
+ .storefront-root .product-listing-grid .product-card-original {
+   font-size:clamp(.625rem,2.9vw,.75rem);
  }
- .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-price {
-   font-size:clamp(.375rem,calc((100cqi - 4rem)/10),.875rem);
+}
+/* When a 44px cart target and two equal tracks leave too little space,
+   move ONLY the struck regular price above the current price. Keep the
+   numeric amount unbroken and the cart aligned to the discounted price. */
+@media(max-width:539px) {
+ .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-prices {
+   grid-template-columns:minmax(0,1fr);
  }
  .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-original {
-   font-size:clamp(.3125rem,calc((100cqi - 4rem)/12.5),.75rem);
+   grid-column:1;
+   grid-row:1;
+   align-self:start;
+ }
+ .storefront-root .product-listing-grid .product-card-price {
+   white-space:normal;
+   word-break:normal;
+   overflow-wrap:normal;
  }
 }

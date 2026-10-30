@@ -33,9 +33,9 @@ try {
           const a = price.getBoundingClientRect(), b = button.getBoundingClientRect(), o = original?.getBoundingClientRect();
           const image = card.querySelector('.aspect-square').getBoundingClientRect();
           const wishlist = card.querySelector('button[aria-label*="wishlist" i]');
-          return { width: card.getBoundingClientRect().width, price: price.textContent, font: getComputedStyle(price).fontSize,
+          return { width: card.getBoundingClientRect().width, price: price.textContent, font: getComputedStyle(price).fontSize, originalFont: original ? getComputedStyle(original).fontSize : null,
             clipped: price.scrollWidth > price.clientWidth + 1 || (original && original.scrollWidth > original.clientWidth + 1),
-            overlap: o && card.dataset.priceLayout === 'inline' && o.right > b.left - 1,
+            overlap: Boolean(o && o.left < b.right - 1 && o.right > b.left + 1 && o.top < b.bottom - 1 && o.bottom > b.top + 1),
             aligned: Math.abs(a.y + a.height / 2 - b.y - b.height / 2) <= 1.5,
             square: Math.abs(image.width - image.height) <= 1,
             touch: b.width >= 43.9 && b.height >= 43.9,
@@ -53,7 +53,9 @@ try {
           assert.equal(grid.columns, 2, `${route} ${width}`);
           assert.ok(grid.cards.every(c => Math.abs(c.width - grid.cards[0].width) < 1));
         }
-        assert.ok(grid.cards.every(c => !c.clipped && !c.overlap && c.aligned && c.square && c.touch && c.wishlist), JSON.stringify({ route, width, grid }));
+        assert.ok(grid.cards.every(c => !c.clipped && !c.overlap && c.aligned && c.square && c.touch && c.wishlist &&
+          (width >= 768 || (parseFloat(c.font) >= 11.99 && (c.originalFont === null || parseFloat(c.originalFont) >= 9.99)))
+        ), JSON.stringify({ route, width, grid }));
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       results.push({ route, width, baselineAt390: baseline, metrics });
@@ -95,10 +97,10 @@ try {
       const metrics = await page.locator('.product-listing-grid').first().evaluate(grid => ({columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,cards:[...grid.children].map(card=>{
         const p=card.querySelector('.product-card-price'),o=card.querySelector('.product-card-original'),b=card.querySelector('.product-card-purchase>button');
         const a=p.getBoundingClientRect(),r=o?.getBoundingClientRect(),t=b.getBoundingClientRect();
-        return {font:getComputedStyle(p).fontSize,clipped:p.scrollWidth>p.clientWidth+1,overlap:r && r.right>t.left-1,aligned:Math.abs(a.y+a.height/2-t.y-t.height/2)<1.5};
+        return {font:getComputedStyle(p).fontSize,originalFont:o ? getComputedStyle(o).fontSize : null,clipped:p.scrollWidth>p.clientWidth+1 || (o && o.scrollWidth>o.clientWidth+1),overlap:Boolean(r && r.left<t.right-1 && r.right>t.left+1 && r.top<t.bottom-1 && r.bottom>t.top+1),aligned:Math.abs(a.y+a.height/2-t.y-t.height/2)<1.5};
       })}));
       if (width<768) assert.equal(metrics.columns,2);
-      assert.ok(metrics.cards.every(c=>!c.clipped&&!c.overlap&&c.aligned),JSON.stringify({name,width,metrics}));
+      assert.ok(metrics.cards.every(c=>!c.clipped&&!c.overlap&&c.aligned&&(width>=768||(parseFloat(c.font)>=11.99&&(c.originalFont===null||parseFloat(c.originalFont)>=9.99)))),JSON.stringify({name,width,metrics}));
       results.push({fixture:'synthetic prices/countdown',theme:name,width,metrics});
       if ([320,390].includes(width)) await page.screenshot({path:`${out}/after-synthetic-${name}-${width}.png`,fullPage:true});
     }

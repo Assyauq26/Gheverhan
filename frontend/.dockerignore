@@ -12,6 +12,9 @@ node_modules
 **/.npmrc
 .npmrc
 coverage
+# Source route, not generated coverage output.
+!src/app/admin/shipping/coverage
+!src/app/admin/shipping/coverage/page.tsx
 playwright-report
 test-results
 *.tsbuildinfo

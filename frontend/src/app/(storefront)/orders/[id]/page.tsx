@@ -7,6 +7,7 @@ import { MapPin, Truck, CreditCard, ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getOrderForUser } from "@/modules/orders/orders.service";
 import { formatIDR } from "@/lib/money";
+import { formatAddressLocality } from "@/lib/address-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ export default async function OrderDetailPage({
   const needPayment =
     order.paymentStatus === "PENDING_PAYMENT" ||
     order.payment?.status === "REJECTED";
+  const locality = order.address ? formatAddressLocality(order.address) : "";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -196,7 +198,7 @@ export default async function OrderDetailPage({
             </p>
             <p className="text-sm text-ink-soft">{order.address.phone}</p>
             <p className="text-sm text-ink-soft">
-              {order.address.line}, {order.address.city},{" "}
+              {order.address.line}, {locality && `${locality}, `}{order.address.city},{" "}
               {order.address.province} {order.address.postalCode}
             </p>
           </section>

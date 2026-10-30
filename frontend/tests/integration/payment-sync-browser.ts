@@ -45,8 +45,10 @@ export async function verifyPaymentSynchronization(browser: Browser, db: PrismaC
    async function surfaces(label:string) {
     await buyer.goto(`${base}/orders`);await expect(buyer.getByTestId(`order-row-${order.orderNumber}`)).toContainText(label);
     await buyer.getByTestId(`order-row-${order.orderNumber}`).click();await expect(buyer.locator('main')).toContainText(label);
+    await expect(buyer.locator('main')).toContainText('Desa/Kel. Gambir, Kec. Gambir');
     await admin.goto(`${base}/admin/orders?q=${order.orderNumber}`);await expect(admin.getByTestId(`admin-order-${order.orderNumber}`)).toContainText(label);
     await admin.getByRole('link',{name:order.orderNumber,exact:true}).click();await expect(admin.locator('main')).toContainText(label);
+    await expect(admin.locator('address')).toContainText('Desa/Kel. Gambir, Kec. Gambir');
     await dashboard.goto(`${base}/admin`);await expect(dashboard.getByRole('listitem').filter({has:dashboard.getByRole('link',{name:order.orderNumber,exact:true})})).toContainText(label);
     await buyer.goto(`${base}/checkout/payment/${order.id}`);await expect(buyer.locator('main')).toContainText(label);
    }

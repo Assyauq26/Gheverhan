@@ -116,6 +116,8 @@ async function main() {
       return { order, payment: await db.payment.findUniqueOrThrow({ where: { orderId: order.id } }) };
     }
     const sale = await pending(); const cancel = await pending(false); const reject = await pending();
+    // A historical order has only its original free-text address snapshot.
+    await db.orderAddress.update({ where: { orderId: cancel.order.id }, data: { provinceCode: null, cityCode: null, districtCode: null, villageCode: null, district: null, village: null, regionSource: null, regionUpdatedAt: null } });
     browser = await chromium.launch({ headless: true, executablePath: process.env.SPRINT1_CHROMIUM_PATH || (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined), args: ["--no-sandbox"] });
     const context = async (u: { id: string; email: string }) => { const ctx = await browser!.newContext({ viewport: { width: 1360, height: 900 } }); await ctx.addCookies([await cookie(u)]); return ctx; };
     const admin = await context(staff); const fin = await context(finance); const wh = await context(warehouse); const readOnly = await context(viewer); const anonymous = await browser.newContext();
@@ -134,6 +136,30 @@ async function main() {
       await vp.goto(`${base}/admin/inventory/${variant.id}`); await expect(vp.getByRole("form", { name: "Simpan adjustment" })).toHaveCount(0);
       await vp.goto(orderUrl); await expect(vp.getByRole("form")).toHaveCount(0);
       await wp.goto(orderUrl); await expect(wp.getByRole("heading", { name: "Pembayaran", exact: true })).toHaveCount(0);
+    });
+    await check("shipping readiness link resolves and keeps SHIPPING_READ authorization", async () => {
+      await page.goto(`${base}/admin/shipping`);
+      await page.getByRole('link', { name: 'Periksa kesiapan tarif dan mapping J&T Express' }).click();
+      await expect(page).toHaveURL(/\/admin\/shipping\/coverage$/);
+      await expect(page.getByRole('heading', { name: 'Kesiapan pengiriman J&T Express' })).toBeVisible();
+      await expect(page.locator('main')).toContainText('Mapping resmi:');
+      assert.equal((await fin.request.get(`${base}/admin/shipping/coverage`)).status(), 404);
+      assert.match((await anonymous.request.get(`${base}/admin/shipping/coverage`)).url(), /\/login/);
+    });
+    await check("legacy delivery snapshots retain street text without invented locality", async () => {
+      const legacyUser = await db.user.findUniqueOrThrow({ where: { id: cancel.order.userId } });
+      const ctx = await context(legacyUser); const legacyPage = await ctx.newPage();
+      try {
+        await legacyPage.goto(`${base}/orders/${cancel.order.id}`);
+        const address = legacyPage.locator('section').filter({ has: legacyPage.getByRole('heading', { name: 'Alamat', exact: true }) });
+        await expect(address).toContainText('Alamat sintetis pengujian');
+        await expect(address).not.toContainText('Desa/Kel.');
+        await expect(address).not.toContainText('Kec.');
+        await page.goto(`${base}/admin/orders/${cancel.order.id}`);
+        await expect(page.locator('address')).toContainText('Alamat sintetis pengujian');
+        await expect(page.locator('address')).not.toContainText('Desa/Kel.');
+        await expect(page.locator('address')).not.toContainText('Kec.');
+      } finally { await ctx.close(); }
     });
     await check("real HTTP authorization for inventory, status, payment, refund, settlement, return and shipment", async () => {
       const denied = [

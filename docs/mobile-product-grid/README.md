@@ -12,7 +12,7 @@ This patch adds `product-listing-grid` only to ProductListing and Home recommend
 
 Public previews covered five populated routes; the public Flash listing was empty during capture. Synthetic content covers price/countdown layout; it does not test timer logic. The live campaign fixture in isolated CI covers the populated Flash route. Preview tests do not click wishlist or make cart/order mutations; existing isolated browser interactions cover those behaviors.
 
-**Review tradeoff:** keeping inline prices and the existing 44px cart target within two 320px tracks requires the main inline price to shrink to approximately 6.44px (struck price approximately 5.16px). This follows the user's choice to reduce only price typography/spacing, but limits readability at the narrowest width. Do not describe this as a readability/accessibility improvement. Tablet/desktop typography is unchanged.
+**Review tradeoff:** keeping inline prices and the existing 44px cart target within two 320px tracks requires the main inline price to shrink to approximately 6px (struck price approximately 5px). This follows the user's choice to reduce only price typography/spacing, but limits readability at the narrowest width. Do not describe this as a readability/accessibility improvement. Tablet/desktop typography is unchanged.
 
 Local lint and typecheck passed; production build exited successfully, with database-unavailable diagnostics because this workstation has no configured local database. The isolated CI build/database/browser checks are required before acceptance.
 

@@ -16,7 +16,10 @@ async function assertMobileListingGrid(page: Page, width: number) {
       if (theme === 'default') { root.removeAttribute('style'); root.removeAttribute('data-theme-active'); }
       const result = {
         columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
-        cards: [...grid.children].map(card => ({ width: card.getBoundingClientRect().width, span: getComputedStyle(card).gridColumn })),
+        cards: [...grid.children].map(card => {
+          const price = card.querySelector<HTMLElement>('.product-card-price')!;
+          return { width: card.getBoundingClientRect().width, span: getComputedStyle(card).gridColumn, clipped: price.scrollWidth > price.clientWidth + 1 };
+        }),
       };
       if (style !== null) root.setAttribute('style', style);
       if (active !== null) root.setAttribute('data-theme-active', active);
@@ -25,7 +28,7 @@ async function assertMobileListingGrid(page: Page, width: number) {
     assert.ok(result.length > 0, 'real route must render the listing marker');
     for (const grid of result) {
       assert.equal(grid.columns, 2, `${width}px ${theme} computed tracks`);
-      assert.ok(grid.cards.every(c => c.span === 'auto' && Math.abs(c.width - grid.cards[0].width) < 1), JSON.stringify(grid));
+      assert.ok(grid.cards.every(c => !c.clipped && c.span === 'auto' && Math.abs(c.width - grid.cards[0].width) < 1), JSON.stringify(grid));
     }
   }
 }
@@ -822,6 +825,12 @@ export async function verifyFlashCampaign({
         ).toHaveCount(0);
         await visitor.goto(base + "/");
         await expect(visitor.getByTestId("flash-sale")).toHaveCount(0);
+        for (const width of [320, 360, 375, 390, 430]) {
+          await visitor.setViewportSize({ width, height: 900 });
+          await visitor.goto(base + '/shop?q=' + prefix);
+          await expect(visitor.getByTestId('product-card-' + products[0].slug)).toBeVisible();
+          await assertMobileListingGrid(visitor, width);
+        }
         assert.equal(
           (
             await db.product.findUniqueOrThrow({

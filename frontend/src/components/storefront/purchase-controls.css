@@ -284,10 +284,13 @@
  .storefront-root .product-listing-grid .product-card[data-wide-price] .product-card-price {
    font-size:clamp(.5rem,calc((100cqi - 3.125rem)/8),1rem);
  }
+ .storefront-root .product-listing-grid .product-card[data-price-layout="single"]:not([data-wide-price]) .product-card-price {
+   font-size:min(clamp(.75rem,8cqi,1rem),calc((100cqi - 3.125rem)/6.5));
+ }
  .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-price {
-   font-size:clamp(.375rem,calc((100cqi - 4rem)/9),.875rem);
+   font-size:clamp(.375rem,calc((100cqi - 4rem)/10),.875rem);
  }
  .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-original {
-   font-size:clamp(.3125rem,calc((100cqi - 4rem)/11.25),.75rem);
+   font-size:clamp(.3125rem,calc((100cqi - 4rem)/12.5),.75rem);
  }
 }

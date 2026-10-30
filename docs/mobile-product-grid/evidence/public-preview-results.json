@@ -12,7 +12,7 @@
             {
               "width": 136,
               "price": "Rp 5.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -23,7 +23,7 @@
             {
               "width": 136,
               "price": "Rp 17.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -34,7 +34,7 @@
             {
               "width": 136,
               "price": "Rp 1.000",
-              "font": "12px",
+              "font": "11.0769px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -44,7 +44,7 @@
             {
               "width": 136,
               "price": "Rp 149.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -55,7 +55,7 @@
             {
               "width": 136,
               "price": "Rp 219.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -66,7 +66,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -77,7 +77,7 @@
             {
               "width": 136,
               "price": "Rp 50.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -88,7 +88,7 @@
             {
               "width": 136,
               "price": "Rp 159.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -111,7 +111,7 @@
             {
               "width": 156,
               "price": "Rp 5.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -122,7 +122,7 @@
             {
               "width": 156,
               "price": "Rp 17.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -143,7 +143,7 @@
             {
               "width": 156,
               "price": "Rp 149.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -154,7 +154,7 @@
             {
               "width": 156,
               "price": "Rp 219.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -165,7 +165,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -176,7 +176,7 @@
             {
               "width": 156,
               "price": "Rp 50.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -187,7 +187,7 @@
             {
               "width": 156,
               "price": "Rp 159.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -210,7 +210,7 @@
             {
               "width": 163.5,
               "price": "Rp 5.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -221,7 +221,7 @@
             {
               "width": 163.5,
               "price": "Rp 17.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -242,7 +242,7 @@
             {
               "width": 163.5,
               "price": "Rp 149.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -253,7 +253,7 @@
             {
               "width": 163.5,
               "price": "Rp 219.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -264,7 +264,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -275,7 +275,7 @@
             {
               "width": 163.5,
               "price": "Rp 50.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -286,7 +286,7 @@
             {
               "width": 163.5,
               "price": "Rp 159.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -309,7 +309,7 @@
             {
               "width": 171,
               "price": "Rp 5.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -320,7 +320,7 @@
             {
               "width": 171,
               "price": "Rp 17.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -341,7 +341,7 @@
             {
               "width": 171,
               "price": "Rp 149.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -352,7 +352,7 @@
             {
               "width": 171,
               "price": "Rp 219.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -363,7 +363,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -374,7 +374,7 @@
             {
               "width": 171,
               "price": "Rp 50.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -385,7 +385,7 @@
             {
               "width": 171,
               "price": "Rp 159.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -408,7 +408,7 @@
             {
               "width": 191,
               "price": "Rp 5.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -419,7 +419,7 @@
             {
               "width": 191,
               "price": "Rp 17.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -440,7 +440,7 @@
             {
               "width": 191,
               "price": "Rp 149.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -451,7 +451,7 @@
             {
               "width": 191,
               "price": "Rp 219.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -462,7 +462,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -473,7 +473,7 @@
             {
               "width": 191,
               "price": "Rp 50.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -484,7 +484,7 @@
             {
               "width": 191,
               "price": "Rp 159.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -804,7 +804,7 @@
             {
               "width": 136,
               "price": "Rp 5.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -815,7 +815,7 @@
             {
               "width": 136,
               "price": "Rp 17.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -826,7 +826,7 @@
             {
               "width": 136,
               "price": "Rp 1.000",
-              "font": "12px",
+              "font": "11.0769px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -836,7 +836,7 @@
             {
               "width": 136,
               "price": "Rp 149.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -847,7 +847,7 @@
             {
               "width": 136,
               "price": "Rp 219.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -858,7 +858,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -869,7 +869,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -880,7 +880,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -891,7 +891,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -902,7 +902,7 @@
             {
               "width": 136,
               "price": "Rp 50.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -913,7 +913,7 @@
             {
               "width": 136,
               "price": "Rp 299.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -924,7 +924,7 @@
             {
               "width": 136,
               "price": "Rp 159.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -947,7 +947,7 @@
             {
               "width": 156,
               "price": "Rp 5.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -958,7 +958,7 @@
             {
               "width": 156,
               "price": "Rp 17.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -979,7 +979,7 @@
             {
               "width": 156,
               "price": "Rp 149.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -990,7 +990,7 @@
             {
               "width": 156,
               "price": "Rp 219.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1001,7 +1001,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1012,7 +1012,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1023,7 +1023,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1034,7 +1034,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1045,7 +1045,7 @@
             {
               "width": 156,
               "price": "Rp 50.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1056,7 +1056,7 @@
             {
               "width": 156,
               "price": "Rp 299.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1067,7 +1067,7 @@
             {
               "width": 156,
               "price": "Rp 159.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1090,7 +1090,7 @@
             {
               "width": 163.5,
               "price": "Rp 5.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1101,7 +1101,7 @@
             {
               "width": 163.5,
               "price": "Rp 17.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1122,7 +1122,7 @@
             {
               "width": 163.5,
               "price": "Rp 149.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1133,7 +1133,7 @@
             {
               "width": 163.5,
               "price": "Rp 219.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1144,7 +1144,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1155,7 +1155,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1166,7 +1166,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1177,7 +1177,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1188,7 +1188,7 @@
             {
               "width": 163.5,
               "price": "Rp 50.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1199,7 +1199,7 @@
             {
               "width": 163.5,
               "price": "Rp 299.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1210,7 +1210,7 @@
             {
               "width": 163.5,
               "price": "Rp 159.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1233,7 +1233,7 @@
             {
               "width": 171,
               "price": "Rp 5.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1244,7 +1244,7 @@
             {
               "width": 171,
               "price": "Rp 17.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1265,7 +1265,7 @@
             {
               "width": 171,
               "price": "Rp 149.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1276,7 +1276,7 @@
             {
               "width": 171,
               "price": "Rp 219.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1287,7 +1287,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1298,7 +1298,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1309,7 +1309,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1320,7 +1320,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1331,7 +1331,7 @@
             {
               "width": 171,
               "price": "Rp 50.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1342,7 +1342,7 @@
             {
               "width": 171,
               "price": "Rp 299.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1353,7 +1353,7 @@
             {
               "width": 171,
               "price": "Rp 159.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1376,7 +1376,7 @@
             {
               "width": 191,
               "price": "Rp 5.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1387,7 +1387,7 @@
             {
               "width": 191,
               "price": "Rp 17.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1408,7 +1408,7 @@
             {
               "width": 191,
               "price": "Rp 149.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1419,7 +1419,7 @@
             {
               "width": 191,
               "price": "Rp 219.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1430,7 +1430,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1441,7 +1441,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1452,7 +1452,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1463,7 +1463,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1474,7 +1474,7 @@
             {
               "width": 191,
               "price": "Rp 50.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1485,7 +1485,7 @@
             {
               "width": 191,
               "price": "Rp 299.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1496,7 +1496,7 @@
             {
               "width": 191,
               "price": "Rp 159.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1948,7 +1948,7 @@
             {
               "width": 136,
               "price": "Rp 5.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1959,7 +1959,7 @@
             {
               "width": 136,
               "price": "Rp 50.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1970,7 +1970,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1981,7 +1981,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -1992,7 +1992,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2003,7 +2003,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2026,7 +2026,7 @@
             {
               "width": 156,
               "price": "Rp 5.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2037,7 +2037,7 @@
             {
               "width": 156,
               "price": "Rp 50.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2048,7 +2048,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2059,7 +2059,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2070,7 +2070,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2081,7 +2081,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2104,7 +2104,7 @@
             {
               "width": 163.5,
               "price": "Rp 5.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2115,7 +2115,7 @@
             {
               "width": 163.5,
               "price": "Rp 50.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2126,7 +2126,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2137,7 +2137,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2148,7 +2148,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2159,7 +2159,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2182,7 +2182,7 @@
             {
               "width": 171,
               "price": "Rp 5.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2193,7 +2193,7 @@
             {
               "width": 171,
               "price": "Rp 50.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2204,7 +2204,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2215,7 +2215,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2226,7 +2226,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2237,7 +2237,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2260,7 +2260,7 @@
             {
               "width": 191,
               "price": "Rp 5.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2271,7 +2271,7 @@
             {
               "width": 191,
               "price": "Rp 50.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2282,7 +2282,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2293,7 +2293,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2304,7 +2304,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2315,7 +2315,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2572,7 +2572,7 @@
             {
               "width": 136,
               "price": "Rp 159.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2583,7 +2583,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2606,7 +2606,7 @@
             {
               "width": 156,
               "price": "Rp 159.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2617,7 +2617,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2640,7 +2640,7 @@
             {
               "width": 163.5,
               "price": "Rp 159.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2651,7 +2651,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2674,7 +2674,7 @@
             {
               "width": 171,
               "price": "Rp 159.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2685,7 +2685,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2708,7 +2708,7 @@
             {
               "width": 191,
               "price": "Rp 159.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2719,7 +2719,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2848,7 +2848,7 @@
             {
               "width": 136,
               "price": "Rp 50.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2859,7 +2859,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2870,7 +2870,7 @@
             {
               "width": 136,
               "price": "Rp 100.000",
-              "font": "6.44444px",
+              "font": "6px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2893,7 +2893,7 @@
             {
               "width": 156,
               "price": "Rp 50.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2904,7 +2904,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2915,7 +2915,7 @@
             {
               "width": 156,
               "price": "Rp 100.000",
-              "font": "8.66667px",
+              "font": "7.8px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2938,7 +2938,7 @@
             {
               "width": 163.5,
               "price": "Rp 50.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2949,7 +2949,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2960,7 +2960,7 @@
             {
               "width": 163.5,
               "price": "Rp 100.000",
-              "font": "9.5px",
+              "font": "8.55px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2983,7 +2983,7 @@
             {
               "width": 171,
               "price": "Rp 50.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -2994,7 +2994,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -3005,7 +3005,7 @@
             {
               "width": 171,
               "price": "Rp 100.000",
-              "font": "10.3333px",
+              "font": "9.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -3028,7 +3028,7 @@
             {
               "width": 191,
               "price": "Rp 50.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -3039,7 +3039,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -3050,7 +3050,7 @@
             {
               "width": 191,
               "price": "Rp 100.000",
-              "font": "12.5556px",
+              "font": "11.3px",
               "clipped": false,
               "overlap": false,
               "aligned": true,
@@ -3205,25 +3205,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "6.44444px",
+            "font": "6px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "6.44444px",
+            "font": "6px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "6.44444px",
-            "clipped": false,
-            "overlap": false,
-            "aligned": true
-          },
-          {
-            "font": "9px",
+            "font": "6px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3235,7 +3229,13 @@
             "aligned": true
           },
           {
-            "font": "12px",
+            "font": "9px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "11.0769px",
             "clipped": false,
             "aligned": true
           }
@@ -3250,19 +3250,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "8.66667px",
+            "font": "7.8px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "8.66667px",
+            "font": "7.8px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "8.66667px",
+            "font": "7.8px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3295,19 +3295,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "9.5px",
+            "font": "8.55px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "9.5px",
+            "font": "8.55px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "9.5px",
+            "font": "8.55px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3340,19 +3340,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "10.3333px",
+            "font": "9.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "10.3333px",
+            "font": "9.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "10.3333px",
+            "font": "9.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3385,19 +3385,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "12.5556px",
+            "font": "11.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "12.5556px",
+            "font": "11.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "12.5556px",
+            "font": "11.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3565,25 +3565,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "6.44444px",
+            "font": "6px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "6.44444px",
+            "font": "6px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "6.44444px",
-            "clipped": false,
-            "overlap": false,
-            "aligned": true
-          },
-          {
-            "font": "9px",
+            "font": "6px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3595,7 +3589,13 @@
             "aligned": true
           },
           {
-            "font": "12px",
+            "font": "9px",
+            "clipped": false,
+            "overlap": false,
+            "aligned": true
+          },
+          {
+            "font": "11.0769px",
             "clipped": false,
             "aligned": true
           }
@@ -3610,19 +3610,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "8.66667px",
+            "font": "7.8px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "8.66667px",
+            "font": "7.8px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "8.66667px",
+            "font": "7.8px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3655,19 +3655,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "9.5px",
+            "font": "8.55px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "9.5px",
+            "font": "8.55px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "9.5px",
+            "font": "8.55px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3700,19 +3700,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "10.3333px",
+            "font": "9.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "10.3333px",
+            "font": "9.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "10.3333px",
+            "font": "9.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
@@ -3745,19 +3745,19 @@
         "columns": 2,
         "cards": [
           {
-            "font": "12.5556px",
+            "font": "11.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "12.5556px",
+            "font": "11.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true
           },
           {
-            "font": "12.5556px",
+            "font": "11.3px",
             "clipped": false,
             "overlap": false,
             "aligned": true

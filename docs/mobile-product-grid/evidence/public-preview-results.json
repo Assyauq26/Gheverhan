@@ -34,7 +34,7 @@
             {
               "width": 136,
               "price": "Rp 1.000",
-              "font": "9px",
+              "font": "12px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -133,7 +133,7 @@
             {
               "width": 156,
               "price": "Rp 1.000",
-              "font": "11.5px",
+              "font": "12px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -232,7 +232,7 @@
             {
               "width": 163.5,
               "price": "Rp 1.000",
-              "font": "12.4375px",
+              "font": "12px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -331,7 +331,7 @@
             {
               "width": 171,
               "price": "Rp 1.000",
-              "font": "13.375px",
+              "font": "12.56px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -430,7 +430,7 @@
             {
               "width": 191,
               "price": "Rp 1.000",
-              "font": "15.875px",
+              "font": "14.16px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -826,7 +826,7 @@
             {
               "width": 136,
               "price": "Rp 1.000",
-              "font": "9px",
+              "font": "12px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -969,7 +969,7 @@
             {
               "width": 156,
               "price": "Rp 1.000",
-              "font": "11.5px",
+              "font": "12px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -1112,7 +1112,7 @@
             {
               "width": 163.5,
               "price": "Rp 1.000",
-              "font": "12.4375px",
+              "font": "12px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -1255,7 +1255,7 @@
             {
               "width": 171,
               "price": "Rp 1.000",
-              "font": "13.375px",
+              "font": "12.56px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -1398,7 +1398,7 @@
             {
               "width": 191,
               "price": "Rp 1.000",
-              "font": "15.875px",
+              "font": "14.16px",
               "clipped": null,
               "aligned": true,
               "square": true,
@@ -3235,7 +3235,7 @@
             "aligned": true
           },
           {
-            "font": "9px",
+            "font": "12px",
             "clipped": false,
             "aligned": true
           }
@@ -3280,7 +3280,7 @@
             "aligned": true
           },
           {
-            "font": "11.5px",
+            "font": "12px",
             "clipped": false,
             "aligned": true
           }
@@ -3325,7 +3325,7 @@
             "aligned": true
           },
           {
-            "font": "12.4375px",
+            "font": "12px",
             "clipped": false,
             "aligned": true
           }
@@ -3370,7 +3370,7 @@
             "aligned": true
           },
           {
-            "font": "13.375px",
+            "font": "12.56px",
             "clipped": false,
             "aligned": true
           }
@@ -3415,7 +3415,7 @@
             "aligned": true
           },
           {
-            "font": "15.875px",
+            "font": "14.16px",
             "clipped": false,
             "aligned": true
           }
@@ -3595,7 +3595,7 @@
             "aligned": true
           },
           {
-            "font": "9px",
+            "font": "12px",
             "clipped": false,
             "aligned": true
           }
@@ -3640,7 +3640,7 @@
             "aligned": true
           },
           {
-            "font": "11.5px",
+            "font": "12px",
             "clipped": false,
             "aligned": true
           }
@@ -3685,7 +3685,7 @@
             "aligned": true
           },
           {
-            "font": "12.4375px",
+            "font": "12px",
             "clipped": false,
             "aligned": true
           }
@@ -3730,7 +3730,7 @@
             "aligned": true
           },
           {
-            "font": "13.375px",
+            "font": "12.56px",
             "clipped": false,
             "aligned": true
           }
@@ -3775,7 +3775,7 @@
             "aligned": true
           },
           {
-            "font": "15.875px",
+            "font": "14.16px",
             "clipped": false,
             "aligned": true
           }

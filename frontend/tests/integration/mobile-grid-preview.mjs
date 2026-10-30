@@ -72,7 +72,8 @@ try {
     for (const [base, sale] of [[20000,17000],[299000,249000],[499000,299000],[1999000,1499000],[9999000,8999000],[189000,null]]) {
       const card = template.cloneNode(true);
       card.dataset.priceLayout = sale == null ? 'single' : base >= 1000000 ? 'stacked' : 'inline';
-      card.setAttribute('data-wide-price','true');
+      if (card.dataset.priceLayout === 'inline' || ('Rp ' + base.toLocaleString('id-ID')).length > 11) card.setAttribute('data-wide-price','true');
+      else card.removeAttribute('data-wide-price');
       card.querySelector('.product-card-price').textContent = 'Rp ' + (sale ?? base).toLocaleString('id-ID');
       const original = card.querySelector('.product-card-original');
       if (sale == null) original.remove();

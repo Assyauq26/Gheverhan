@@ -281,7 +281,7 @@
  }
  .storefront-root .product-listing-grid .product-card-purchase,
  .storefront-root .product-listing-grid .product-card-prices {column-gap:2px;}
- .storefront-root .product-listing-grid .product-card-price {
+ .storefront-root .product-listing-grid .product-card[data-wide-price] .product-card-price {
    font-size:clamp(.5rem,calc((100cqi - 3.125rem)/8),1rem);
  }
  .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-price {

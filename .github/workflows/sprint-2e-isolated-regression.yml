@@ -126,6 +126,9 @@ jobs:
       - name: Real PostgreSQL checkout and transaction correctness
         run: npm run test:integration:transactions
 
+      - name: Structured Indonesia addresses and server-authoritative J&T quote invariants
+        run: node --disable-proto=throw --import tsx --test tests/integration/checkout-v5.test.ts
+
       - name: Real PostgreSQL refunds, shipping and stock invariants
         run: npm run test:integration:refund-shipping
 
@@ -202,6 +205,8 @@ jobs:
             /tmp/gheverhan-product-browser-*/flash-*.png
             /tmp/gheverhan-product-browser-*/flash-*.json
             /tmp/gheverhan-product-browser-*/product-*.png
+            /tmp/gheverhan-product-browser-*/v5-*.png
+            /tmp/gheverhan-product-browser-*/v5-*.json
             /tmp/gheverhan-product-browser-*/native-*.png
             /tmp/gheverhan-product-browser-*/customize-*.png
             /tmp/gheverhan-product-browser-*/customize-*.json

@@ -1,3 +1,4 @@
+import { configureTestJnt, testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-checkout";
 import sharp from "sharp";
 import { verifyFlashCampaign } from "./flash-campaign-browser";
 import { verifyStorefrontV4 } from "./storefront-v4-browser";
@@ -19,7 +20,9 @@ import { verifyCustomVariations } from "./custom-variations-browser";
 import { verifyDirectCheckout } from "./direct-checkout-browser";
 import { verifyCartSynchronization } from "./cart-sync-browser";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
+import { verifyV5Checkout } from "./checkout-v5-browser";
 
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("SPRINT1_TEST_DATABASE_URL is required; use a disposable local database");
 const dbUrl = new URL(target);
@@ -328,6 +331,9 @@ async function main() {
     await check("buyer cart works for the published variant", async () => {
       const result = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(result.status(), 201); assert.equal((await result.json()).success, true);
     });
+    await check("V5 structured location modal, failure/retry, cascading, cancel, keyboard and eight viewports", async () => {
+      await verifyV5Checkout(browser!, buyer, base, artifactDir);
+    });
     await check("Buy Now guest login continuation and exact legacy/custom checkout preserve the old cart", async () => {
       await verifyDirectCheckout(browser!, db, base, artifactDir, pageErrors);
     });
@@ -347,11 +353,7 @@ async function main() {
         data: { couponCode, shipping: { courier: "JNE", service: "REG", cost: 0 } },
       });
       assert.equal(unauthorized.status(), 401);
-      const verified = await buyer.request.post(`${base}/api/v1/checkout/preview`, {
-        data: { couponCode, shipping: { courier: "JNE", service: "REG", cost: 0 } },
-      });
-      assert.equal(verified.status(), 200);
-      const data = (await verified.json()).data;
+      const { quote: data } = await apiShipping(buyer.request, base, { couponCode });
       assert.equal(data.subtotal, 190000);
       assert.equal(data.shippingCost, 20000, "client shipping cost must be ignored");
       assert.equal(data.discount, 19000);
@@ -359,6 +361,7 @@ async function main() {
       const page = await buyer.newPage();
       try {
         await page.goto(`${base}/checkout`);
+        await chooseTestLocation(page);
         await expect(page.getByTestId("checkout-total")).toHaveText("Rp 210.000");
         await page.getByTestId("input-coupon").fill(couponCode.toLowerCase());
         await expect(page.getByTestId("coupon-feedback")).toContainText("berhasil diterapkan");
@@ -370,10 +373,7 @@ async function main() {
         // Coupon becomes invalid AFTER the customer has seen the discounted total.
         // The createOrder transaction must fail instead of charging a higher amount.
         await db.coupon.update({ where: { code: couponCode }, data: { isActive: false } });
-        for (const [name, value] of Object.entries({
-          recipientName: "Fixture Buyer", phone: "0800000000", line: "Local test address",
-          city: "Bandung", province: "Jawa Barat", postalCode: "40100",
-        })) await page.locator(`input[name="${name}"]`).fill(value);
+
         await page.getByTestId("place-order-btn").click();
         await expect(page.getByTestId("checkout-error")).toContainText("konfirmasi ulang");
         assert.equal(await db.order.count({ where: { userId: customer.id } }), before);
@@ -390,11 +390,11 @@ async function main() {
     await check("customer confirms quoted prices and receives a price conflict without an order", async () => {
       const customerPage = await buyer.newPage(); await customerPage.goto(`${base}/checkout`);
       // Establish the original server-priced quote before simulating a price change.
+      await chooseTestLocation(customerPage);
       await expect(customerPage.getByTestId("place-order-btn")).toBeEnabled();
       const quote = JSON.parse(await customerPage.locator('input[name="expectedLines"]').inputValue());
       assert.equal(quote[0].unitPrice, 190000); assert.match(await customerPage.locator('input[name="requestId"]').inputValue(), /^[0-9a-f-]{36}$/);
       await page.locator("#product-price").fill("195000"); await page.getByTestId("save-product").click(); await expect(page.getByRole("status")).toHaveText("Produk berhasil disimpan.");
-      for (const [name, value] of Object.entries({ recipientName: "Fixture Buyer", phone: "0800000000", line: "Local test address", city: "Test", province: "Test", postalCode: "00000" })) await customerPage.locator(`input[name="${name}"]`).fill(value);
       const before = await db.order.count({ where: { userId: customer.id } });
       await customerPage.getByTestId("place-order-btn").click(); await expect(customerPage.getByTestId("checkout-error")).toContainText("konfirmasi ulang");
       assert.equal(await db.order.count({ where: { userId: customer.id } }), before); assert.equal(await db.cartItem.count({ where: { cart: { userId: customer.id } } }), 1);
@@ -407,7 +407,7 @@ async function main() {
       const listing = await anonymous.request.get(`${base}/api/v1/products?q=${prefix}`); assert.equal((await listing.json()).data.total, 0);
       const add = await buyer.request.post(`${base}/api/v1/cart/items`, { data: { variantId: product.variants[0].id, quantity: 1 } }); assert.equal(add.status(), 404);
       const orderCount = await db.order.count({ where: { userId: customer.id } });
-      const blocked = await buyer.request.post(`${base}/api/v1/orders`, { data: { address: { recipientName: "Fixture", phone: "0800000000", line: "Local test", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: "not-used-after-cart-rejection" } });
+      const blocked = await buyer.request.post(`${base}/api/v1/orders`, { data: { address: testAddress, shipping: { courier: "J&T Express", service: "EZ", cost: 20000, quoteToken: "intentionally-stale" }, bankAccountId: "not-used-after-cart-rejection" } });
       assert.equal(blocked.status(), 409); assert.equal(await db.order.count({ where: { userId: customer.id } }), orderCount);
     });
     await check("archival preserves buyer order and authorized historical media", async () => {

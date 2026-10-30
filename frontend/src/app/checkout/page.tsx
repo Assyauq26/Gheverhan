@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCartView } from "@/modules/cart/cart.service";
 import { listActiveBankAccounts } from "@/modules/payments/payments.service";
-import { getShippingProvider } from "@/infrastructure/shipping";
 import { prisma } from "@/lib/prisma";
 import { CheckoutClient } from "@/components/storefront/checkout-client";
 
@@ -42,7 +41,6 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   ]);
   if (cart.lines.length === 0) redirect("/cart");
 
-  const rates = (await getShippingProvider().getRates?.({ destinationCity: "", weightGram: 1000 })) ?? [];
   const addr = customer?.addresses[0] ?? null;
 
   return (
@@ -58,7 +56,6 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         requestId={randomUUID()}
         subtotal={cart.subtotal}
         expectedLines={cart.lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice }))}
-        rates={rates}
         banks={banks}
         address={addr ? {
           recipientName: addr.recipientName,
@@ -67,6 +64,8 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
           city: addr.city,
           province: addr.province,
           postalCode: addr.postalCode,
+          provinceCode: addr.provinceCode, cityCode: addr.cityCode, districtCode: addr.districtCode, villageCode: addr.villageCode,
+          district: addr.district, village: addr.village, regionSource: addr.regionSource, regionUpdatedAt: addr.regionUpdatedAt,
         } : null}
       />
     </div>

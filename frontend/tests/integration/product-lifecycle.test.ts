@@ -1,3 +1,4 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -6,6 +7,7 @@ import { PERMISSIONS } from "../../src/lib/auth/permissions";
 import type { CatalogActor } from "../../src/modules/catalog/product-management.validation";
 
 // Explicit, disposable local DB only. No dotenv fallback, production URL or seed.
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("Set SPRINT1_TEST_DATABASE_URL to a disposable local gheverhan_sprint1_test database");
 const parsed = new URL(target);
@@ -203,10 +205,10 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     const { addItem, getCartView } = await import("../../src/modules/cart/cart.service");
     const { createOrder } = await import("../../src/modules/checkout/checkout.service");
     const bank = await prisma.bankAccount.create({ data: { bankName: "Test", accountNumber: "fixture-only", accountHolder: "Fixture", displayName: "Test" } });
-    const checkout = { address: { recipientName: "Fixture", phone: "0800000000", line: "Test address", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id };
+    const checkout = { bankAccountId: bank.id, address: testAddress, shipping: { courier: "J&T Express", service: "EZ", cost: 20000 } };
     product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
     await addItem(actor.id, editor.variants[0].id!, 1);
-    const placed = await createOrder(actor.id, { ...checkout, expectedLines: (await getCartView(actor.id)).lines });
+    const placed = await createOrder(actor.id, { ...checkout, ...(await shippingConfirmation(actor.id)), expectedLines: (await getCartView(actor.id)).lines });
     assert.equal(placed.total, 140000);
     assert.equal(await prisma.payment.count({ where: { orderId: placed.id } }), 1);
     await addItem(actor.id, editor.variants[0].id!, 1);
@@ -222,6 +224,8 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
     const { getCartView } = await import("../../src/modules/cart/cart.service");
     const { getShippingProvider } = await import("../../src/infrastructure/shipping");
     const provider = getShippingProvider("manual");
+    product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
+    const confirmedShipping = await shippingConfirmation(actor.id);
     const original = provider.getRates!;
     let release!: () => void;
     let reached!: () => void;
@@ -232,7 +236,7 @@ test("real PostgreSQL product lifecycle and transactional guards", async t => {
       product = await service.changeProductStatus(actor, product.id, product.updatedAt, "PUBLISHED");
       const bank = await prisma.bankAccount.findFirstOrThrow({ where: { accountHolder: "Fixture" } });
       const count = await prisma.order.count({ where: { userId: actor.id } });
-      const pending = createOrder(actor.id, { address: { recipientName: "Fixture", phone: "0800000000", line: "Test", city: "Test", province: "Test", postalCode: "00000" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id, expectedLines: (await getCartView(actor.id)).lines });
+      const pending = createOrder(actor.id, { ...confirmedShipping, bankAccountId: bank.id, expectedLines: (await getCartView(actor.id)).lines });
       const rejected = assert.rejects(pending, { status: 409 });
       await ready;
       product = await service.changeProductStatus(actor, product.id, product.updatedAt, "ARCHIVED");

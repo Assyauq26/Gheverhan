@@ -1,3 +1,4 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { verifyPaymentSynchronization } from "./payment-sync-browser";
 import { createServer } from "node:http";
 import { spawn, execFileSync } from "node:child_process";
@@ -11,6 +12,7 @@ import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "../../src/lib/auth/permissions";
 
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("SPRINT1_TEST_DATABASE_URL is required; use a disposable local database");
 const dbUrl = new URL(target);
@@ -103,13 +105,13 @@ async function main() {
     const customerRole = await fixtureRole("Customer", []);
     const user = (kind: string, roleId: string) => db.user.create({ data: { name: `Ops ${kind}`, email: `${kind}-${prefix}@browser.example.test`, passwordHash: "isolated-fixture", roles: { create: { roleId } } } });
     const [staff, finance, warehouse, viewer] = await Promise.all([user("admin", adminRole.id), user("finance", financeRole.id), user("warehouse", warehouseRole.id), user("viewer", viewerRole.id)]);
-    const product = await db.product.create({ data: { name: `Kaos Operasional ${prefix}`, slug: `ops-${prefix}`, basePrice: 100000, status: "PUBLISHED", images: { create: { url: "https://example.test/fixture.png", alt: "Synthetic fixture" } }, variants: { create: { sku: `OPS-${prefix}`, inventory: { create: { onHand: 6 } } } } }, include: { variants: true } });
+    const product = await db.product.create({ data: { name: `Kaos Operasional ${prefix}`, slug: `ops-${prefix}`, basePrice: 100000, status: "PUBLISHED", weightGrams: 250, images: { create: { url: "https://example.test/fixture.png", alt: "Synthetic fixture" } }, variants: { create: { sku: `OPS-${prefix}`, inventory: { create: { onHand: 6 } } } } }, include: { variants: true } });
     const variant = product.variants[0];
     const bank = await db.bankAccount.create({ data: { displayName: `Ops Bank ${prefix}`, bankName: "Fixture", accountNumber: "1234567890", accountHolder: "Fixture" } });
     let sequence = 0;
     async function pending(proof = true) {
       const buyer = await user(`buyer${++sequence}`, customerRole.id); await db.cart.create({ data: { userId: buyer.id, items: { create: { variantId: variant.id, quantity: 1 } } } });
-      const order = await createOrder(buyer.id, { requestId: randomUUID(), expectedLines: (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })), address: { recipientName: "Pelanggan Fixture", phone: "0800000000", line: "Alamat sintetis pengujian", city: "Bandung", province: "Jawa Barat", postalCode: "40100" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id });
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)), requestId: randomUUID(), expectedLines: (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })),  bankAccountId: bank.id });
       if (proof) { const proofPath = `gheverhan-sprint1-tests/payment-proofs/${buyer.id}/${randomUUID()}.png`; objects.set(proofPath, { bytes: png, mime: "image/png" }); await submitConfirmation(buyer.id, order.id, { senderBank: "Fixture", senderName: "Pelanggan Fixture", amount: order.total, transferDate: new Date(), proofPath, proofMime: "image/png" }); }
       return { order, payment: await db.payment.findUniqueOrThrow({ where: { orderId: order.id } }) };
     }
@@ -236,10 +238,9 @@ async function main() {
       });
       const lines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) =>
         ({ variantId, quantity, unitPrice }));
-      const order = await createOrder(buyer.id, {
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)),
         requestId: randomUUID(), expectedLines: lines,
-        address: { recipientName: "Expired Fixture", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
-        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        
         bankAccountId: bank.id,
       });
       const oldDeadline = new Date(Date.now() - 10 * 60_000);
@@ -282,11 +283,10 @@ async function main() {
       const stranger = await user("storage-smoke-stranger", customerRole.id);
       await db.cart.create({ data: { userId: buyer.id, items: { create: { variantId: smokeProduct.variants[0].id, quantity: 1 } } } });
       const expectedLines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice }));
-      const order = await createOrder(buyer.id, {
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)),
         requestId: randomUUID(),
         expectedLines,
-        address: { recipientName: "Smoke Buyer", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
-        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        
         bankAccountId: bank.id,
       });
       const buyerCtx = await context(buyer);

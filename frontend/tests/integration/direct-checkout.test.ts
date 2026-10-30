@@ -1,9 +1,11 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
+configureTestJnt();
 const target = new URL(process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid");
 assert.equal(process.env.GHEVERHAN_ISOLATED_TESTS, "1");
 assert.ok(["127.0.0.1", "localhost"].includes(target.hostname));
@@ -15,8 +17,8 @@ let cart: typeof import("../../src/modules/cart/cart.service");
 let bank: string;
 const prefix = randomUUID();
 let sequence = 0;
-const shipping = { courier: "JNE", service: "REG", cost: 1 };
-const address = { recipientName: "Dummy Buyer", phone: "0800000000", line: "Dummy local address", city: "Test", province: "Test", postalCode: "00000" };
+
+const address = testAddress;
 before(async () => {
   db = (await import("../../src/lib/prisma")).prisma;
   intents = await import("../../src/modules/checkout/checkout-intent");
@@ -27,12 +29,14 @@ before(async () => {
 after(async () => { await db?.$disconnect(); });
 async function fixture(stock = 10) {
   const id = `${prefix}-${++sequence}`;
-  const product = await db.product.create({ data: { name: "Dummy Buy Now", slug: `direct-${id}`, status: "PUBLISHED", basePrice: 100000, variants: { create: { sku: `DIRECT-${id}`, color: "Merah", size: "M", inventory: { create: { onHand: stock } } } } }, include: { variants: true } });
+  const product = await db.product.create({ data: { name: "Dummy Buy Now", slug: `direct-${id}`, status: "PUBLISHED", weightGrams: 250, basePrice: 100000, variants: { create: { sku: `DIRECT-${id}`, color: "Merah", size: "M", inventory: { create: { onHand: stock } } } } }, include: { variants: true } });
   const buyer = await db.user.create({ data: { name: "Dummy Buyer", email: `direct-${id}@example.test`, passwordHash: "dummy-never-used" } });
   return { buyer, variant: product.variants[0], product };
 }
 async function orderInput(userId: string, intentId?: string) {
-  const quote = await checkout.previewCheckout(userId, { shipping, intentId });
+  const confirmed = await shippingConfirmation(userId, intentId);
+  const shipping = confirmed.shipping;
+  const quote = await checkout.previewCheckout(userId, { shipping, intentId, address });
   return { address, shipping, bankAccountId: bank, requestId: randomUUID(), intentId, expectedLines: quote.lines, expectedQuote: { subtotal: quote.subtotal, shippingCost: quote.shippingCost, discount: quote.discount, total: quote.total } };
 }
 
@@ -126,7 +130,9 @@ test("direct checkout coupon uses selected subtotal and still enforces usage lim
   await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, usageLimit: 1 } });
   await cart.addItem(buyer.id, variant.id, 5);
   const intent = await intents.createCheckoutIntent(buyer.id, { variantId: variant.id, quantity: 1 });
-  const quote = await checkout.previewCheckout(buyer.id, { intentId: intent.id, shipping, couponCode: code });
+  const confirmed = await shippingConfirmation(buyer.id, intent.id);
+  const shipping = confirmed.shipping;
+  const quote = await checkout.previewCheckout(buyer.id, { intentId: intent.id, shipping, address, couponCode: code });
   assert.equal(quote.discount, 10000); assert.equal(quote.subtotal, 100000);
   const input = { ...await orderInput(buyer.id, intent.id), couponCode: code, expectedQuote: { subtotal: quote.subtotal, shippingCost: quote.shippingCost, discount: quote.discount, total: quote.total } };
   await checkout.createOrder(buyer.id, input);

@@ -1,7 +1,9 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("Explicit isolated test database required");
 const parsed = new URL(target);
@@ -32,7 +34,7 @@ after(async () => {
 let seq = 0;
 async function fixture(stock = 100, existing = true) {
   const id = `${prefix}-${++seq}`;
-  const product = await db.product.create({ data: { name: id, slug: id, status: "PUBLISHED", basePrice: 10000,
+  const product = await db.product.create({ data: { name: id, slug: id, status: "PUBLISHED", weightGrams: 250, basePrice: 10000,
     variants: { create: { sku: id, inventory: { create: { onHand: stock } } } },
   }, include: { variants: true } });
   const variantId = product.variants[0].id;
@@ -67,11 +69,11 @@ test("an add racing checkout is retained in either the order or the remaining ca
   for (let attempt = 0; attempt < 5; attempt++) {
     const { userId, variantId } = await fixture();
     const expectedLines = (await cart.getCartView(userId)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice }));
+    const confirmed = await shippingConfirmation(userId);
     const results = await Promise.allSettled([
       cart.quickAddItem(userId, variantId),
       checkout.createOrder(userId, {
-        address: { recipientName: "Local fixture", phone: "0800000000", line: "Local", city: "Test", province: "Test", postalCode: "00000" },
-        shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bankId,
+        ...confirmed, bankAccountId: bankId,
         expectedLines, requestId: randomUUID(),
       }),
     ]);

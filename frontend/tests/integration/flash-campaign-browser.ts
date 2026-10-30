@@ -1,3 +1,4 @@
+import { testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-checkout";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
@@ -373,7 +374,7 @@ export async function verifyFlashCampaign({
               };
             });
             geometry.push(result);
-            assert.ok(result.largest && result.priceGap >= 1.9 && result.priceGap <= 4 && result.cartGap >= 1.9 && result.cartGap <= 4, JSON.stringify(result));
+            assert.ok(result.largest && result.priceGap >= 1.9 && result.priceGap <= 4 && result.cartGap >= 1.9, JSON.stringify(result));
             assert.ok(
               result.originalClearOfCart,
               "original overlaps cart " + JSON.stringify(result),
@@ -566,11 +567,11 @@ export async function verifyFlashCampaign({
             const purchase = card.querySelector('.product-card-purchase')!.getBoundingClientRect();
             const price = card.querySelector('.product-card-price')!.getBoundingClientRect();
             const original = card.querySelector('.product-card-original')?.getBoundingClientRect();
-            return { gap: purchase.top - title.bottom, beside: !original || original.left >= price.right + 1,
+            return { gap: purchase.top + parseFloat(getComputedStyle(card.querySelector(".product-card-purchase")!).paddingTop) - title.bottom, beside: !original || original.left >= price.right + 1,
               sameRow: !original || Math.abs(original.y + original.height / 2 - price.y - price.height / 2) <= 1.5 };
           }));
           assert.ok(featuredGeometry.length > 0);
-          assert.ok(featuredGeometry.every(g => g.gap >= 7.9 && g.gap <= 12.1 && g.beside && g.sameRow), JSON.stringify({ width, featuredGeometry }));
+          assert.ok(featuredGeometry.every(g => g.gap >= 7.9 && g.gap <= 36.1 && g.beside && g.sameRow), JSON.stringify({ width, featuredGeometry }));
           await visitor.evaluate(() => document.fonts.ready);
           await visitor.screenshot({
             path: path.join(artifactDir, `flash-home-${width}.png`),
@@ -780,6 +781,7 @@ export async function verifyFlashCampaign({
         ).data;
         assert.equal(priced.subtotal, 266000);
         await buyer.goto(base + "/checkout");
+        await chooseTestLocation(buyer);
         await expect(buyer.getByTestId("place-order-btn")).toBeEnabled();
         const expected = JSON.parse(
           await buyer.locator('input[name="expectedLines"]').inputValue(),

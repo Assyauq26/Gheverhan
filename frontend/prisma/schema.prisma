@@ -204,6 +204,14 @@ model CustomerAddress {
   city          String
   province      String
   postalCode    String
+  provinceCode String?
+  cityCode String?
+  districtCode String?
+  villageCode String?
+  district String?
+  village String?
+  regionSource String?
+  regionUpdatedAt String?
   isDefault     Boolean  @default(false)
   createdAt     DateTime @default(now())
 
@@ -409,6 +417,11 @@ model Order {
   paymentStatus PaymentStatus @default(PENDING_PAYMENT)
   subtotal      Int
   shippingCost  Int           @default(0)
+  shippingCourier String?
+  shippingService String?
+  shippingMode String?
+  shippingWeightGram Int?
+  shippingQuoteReference String?
   discount      Int           @default(0)
   total         Int
   couponCode    String?
@@ -457,6 +470,14 @@ model OrderAddress {
   city          String
   province      String
   postalCode    String
+  provinceCode String?
+  cityCode String?
+  districtCode String?
+  villageCode String?
+  district String?
+  village String?
+  regionSource String?
+  regionUpdatedAt String?
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

@@ -4,7 +4,9 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { Truck, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Textarea } from "@/components/ui/input";
+import { RegionSelectorDialog } from "./region-selector-dialog";
+import { addressSchema, locationSchema, type SelectedLocation } from "@/modules/regions/region.validation";
 import { formatIDR } from "@/lib/money";
 import { createOrderAction } from "@/modules/checkout/checkout.actions";
 import type { CheckoutLines } from "@/modules/checkout/checkout.validation";
@@ -15,6 +17,9 @@ interface Rate {
   service: string;
   cost: number;
   etd?: string;
+  quoteToken: string;
+  expiresAt: number;
+  mode: "manual" | "official";
 }
 interface Bank {
   id: string;
@@ -30,6 +35,8 @@ interface Addr {
   city: string;
   province: string;
   postalCode: string;
+  provinceCode?: string | null; cityCode?: string | null; districtCode?: string | null; villageCode?: string | null;
+  district?: string | null; village?: string | null; regionSource?: string | null; regionUpdatedAt?: string | null;
 }
 interface CheckoutQuote {
   subtotal: number;
@@ -38,6 +45,9 @@ interface CheckoutQuote {
   total: number;
   couponCode: string | null;
   couponReason: string | null;
+  shippingRates: Rate[];
+  shippingValid: boolean;
+  quoteExpiresAt: number | null;
 }
 type QuoteState =
   | { key: string; status: "loading" }
@@ -64,7 +74,6 @@ export function CheckoutClient({
   expectedLines,
   requestId,
   intentId,
-  rates,
   banks,
   address,
 }: {
@@ -72,7 +81,6 @@ export function CheckoutClient({
   expectedLines: CheckoutLines;
   requestId: string;
   intentId?: string;
-  rates: Rate[];
   banks: Bank[];
   address: Addr | null;
 }) {
@@ -81,7 +89,15 @@ export function CheckoutClient({
   useEffect(() => {
     submitting.current = false;
   }, [state]);
-  const [rateIdx, setRateIdx] = useState(0);
+  const [rates, setRates] = useState<Rate[]>([]);
+  const [rateIdx, setRateIdx] = useState(-1);
+  const [location, setLocation] = useState<SelectedLocation | null>(() =>
+    address && locationSchema.safeParse(address).success && address.district && address.village
+      ? { ...address, ...locationSchema.parse(address), district: address.district, village: address.village, regionSource: address.regionSource || "emsifa-v2", regionUpdatedAt: address.regionUpdatedAt || "" } : null);
+  const [recipient, setRecipient] = useState(address?.recipientName || "");
+  const [phone, setPhone] = useState(address?.phone || "");
+  const [street, setStreet] = useState(address?.line || "");
+  const [now, setNow] = useState(0);
   const [bankId, setBankId] = useState(banks[0]?.id ?? "");
   const [couponCode, setCouponCode] = useState("");
   const [retry, setRetry] = useState(0);
@@ -93,15 +109,17 @@ export function CheckoutClient({
     rate?.courier,
     rate?.service,
     rate?.cost,
+    rate?.quoteToken,
+    location,
     retry,
   ]);
 
   useEffect(() => {
-    if (!rate) {
+    if (!location) {
       setQuote({
         key: quoteKey,
         status: "error",
-        message: "Belum ada metode pengiriman tersedia.",
+        message: "Silakan pilih lokasi pengiriman.",
       });
       return;
     }
@@ -121,11 +139,13 @@ export function CheckoutClient({
             body: JSON.stringify({
               intentId,
               couponCode: couponCode || undefined,
-              shipping: {
+              address: location,
+              shipping: rate ? {
                 courier: rate.courier,
                 service: rate.service,
                 cost: rate.cost,
-              },
+                quoteToken: rate.quoteToken,
+              } : undefined,
             }),
           });
           const result = await response.json();
@@ -146,7 +166,11 @@ export function CheckoutClient({
           ) {
             throw new Error("Ringkasan dari server tidak valid.");
           }
-          if (active) setQuote({ key: quoteKey, status: "ready", data });
+          if (active) {
+            if (!rate) setRates(data.shippingRates);
+            setNow(Date.now());
+            setQuote({ key: quoteKey, status: "ready", data });
+          }
         } catch (error) {
           if (active && !controller.signal.aborted) {
             setQuote({
@@ -165,16 +189,24 @@ export function CheckoutClient({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [quoteKey, couponCode, rate, intentId]);
+  }, [quoteKey, couponCode, rate, intentId, location]);
 
   // Never render stale coupon/rate results, even before a previous request's effect cleanup runs.
   const currentQuote =
     quote?.key === quoteKey && quote.status === "ready" ? quote.data : null;
+  useEffect(() => {
+    if (!currentQuote?.quoteExpiresAt) return;
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, currentQuote.quoteExpiresAt - Date.now()) + 1);
+    return () => clearTimeout(timer);
+  }, [currentQuote?.quoteExpiresAt]);
   const changedQuote =
     !!currentQuote &&
-    (currentQuote.subtotal !== subtotal ||
+    !!rate && (currentQuote.subtotal !== subtotal ||
       currentQuote.shippingCost !== rate?.cost);
-  const canSubmit = !!currentQuote && !changedQuote;
+  const expired = !!currentQuote?.quoteExpiresAt && now >= currentQuote.quoteExpiresAt;
+  const addressValid = addressSchema.safeParse({ ...location, recipientName: recipient, phone, line: street }).success;
+  const canSubmit = !!currentQuote?.shippingValid && !changedQuote && !expired && addressValid && !!bankId;
+  function refreshShipping() { setRateIdx(-1); setRates([]); setRetry(n => n + 1); }
 
   return (
     <form
@@ -211,75 +243,52 @@ export function CheckoutClient({
         }
       />
       <div className="space-y-8">
-        {/* Address */}
+        {/* Recipient and structured address; legacy text stays intact until confirmed. */}
         <section className="space-y-3">
           <h2 className="font-display text-lg font-bold text-ink">
-            Alamat Pengiriman
+            Data Penerima
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label>Nama Penerima</Label>
+              <Label htmlFor="checkout-recipient">Nama Penerima</Label>
               <Input
                 name="recipientName"
-                defaultValue={address?.recipientName}
+                id="checkout-recipient" value={recipient} onChange={e => setRecipient(e.target.value)} minLength={2} maxLength={100} autoComplete="shipping name" placeholder="Nama lengkap penerima"
                 required
                 data-testid="input-recipient"
               />
             </div>
             <div>
-              <Label>No. HP</Label>
+              <Label htmlFor="checkout-phone">Nomor WhatsApp/HP</Label>
               <Input
                 name="phone"
-                defaultValue={address?.phone}
+                id="checkout-phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} autoComplete="shipping tel" placeholder="Contoh: 081234567890"
                 required
                 data-testid="input-phone"
               />
             </div>
           </div>
+        </section>
+        <section className="space-y-3">
+          <h2 className="font-display text-lg font-bold text-ink">Alamat Pengiriman</h2>
+          <RegionSelectorDialog value={location} onChange={value => { setLocation(value); setRateIdx(-1); setRates([]); }} />
+          {!location && address && <p className="text-sm text-ink-soft">Alamat tersimpan: {address.city}, {address.province}. Lengkapi wilayah melalui Pilih Lokasi; detail jalan Anda tetap tersimpan.</p>}
+          {["provinceCode", "cityCode", "districtCode", "villageCode", "province", "city", "postalCode"].map(name => <input key={name} type="hidden" name={name} value={location?.[name as keyof SelectedLocation] || ""} />)}
           <div>
-            <Label>Alamat Lengkap</Label>
-            <Input
+            <Label htmlFor="checkout-street">Detail alamat lengkap</Label>
+            <Textarea
               name="line"
-              defaultValue={address?.line}
+              id="checkout-street" value={street} onChange={e => setStreet(e.target.value)} minLength={4} maxLength={1000} autoComplete="shipping street-address" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi"
               required
               data-testid="input-line"
             />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <Label>Kota</Label>
-              <Input
-                name="city"
-                defaultValue={address?.city}
-                required
-                data-testid="input-city"
-              />
-            </div>
-            <div>
-              <Label>Provinsi</Label>
-              <Input
-                name="province"
-                defaultValue={address?.province}
-                required
-                data-testid="input-province"
-              />
-            </div>
-            <div>
-              <Label>Kode Pos</Label>
-              <Input
-                name="postalCode"
-                defaultValue={address?.postalCode}
-                required
-                data-testid="input-postal"
-              />
-            </div>
           </div>
         </section>
 
         {/* Shipping */}
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Truck size={18} /> Metode Pengiriman
+            <Truck size={18} /> Layanan Pengiriman J&T Express
           </h2>
           <div className="space-y-2">
             {rates.map((r, i) => (
@@ -304,6 +313,7 @@ export function CheckoutClient({
                       {r.courier} - {r.service}
                     </p>
                     <p className="text-xs text-ink-muted">{r.etd}</p>
+                    {r.mode === "manual" && <p className="text-xs text-ink-soft">Tarif manual toko untuk rute dan berat ini</p>}
                   </div>
                 </div>
                 <span className="text-sm font-semibold">
@@ -312,9 +322,12 @@ export function CheckoutClient({
               </label>
             ))}
           </div>
+          {location && currentQuote && rates.length === 0 && <p role="status" className="text-sm text-ink-soft">Layanan J&T belum tersedia untuk alamat ini. Hubungi toko untuk tarif yang valid.</p>}
+          {rates.length > 0 && !rate && <p className="text-sm text-ink-soft">Pilih layanan untuk memeriksa ongkir dan total terbaru.</p>}
           <input type="hidden" name="courier" value={rate?.courier} />
           <input type="hidden" name="service" value={rate?.service} />
           <input type="hidden" name="shippingCost" value={rate?.cost ?? 0} />
+          <input type="hidden" name="quoteToken" value={rate?.quoteToken || ""} />
         </section>
 
         {/* Payment */}
@@ -449,7 +462,7 @@ export function CheckoutClient({
             <button
               type="button"
               className="font-semibold text-primary hover:text-blue-700 focus-visible:text-blue-700 active:text-blue-800"
-              onClick={() => setRetry((value) => value + 1)}
+              onClick={refreshShipping}
             >
               Coba lagi
             </button>
@@ -471,6 +484,8 @@ export function CheckoutClient({
             untuk mengonfirmasi total terbaru.
           </p>
         )}
+        {expired && <p role="alert" className="text-sm">Ongkir kedaluwarsa. <button type="button" className="underline" onClick={refreshShipping}>Periksa ongkir kembali</button></p>}
+        {!addressValid && <p className="text-sm text-ink-soft" role="status">Lengkapi nama penerima, nomor HP yang valid, lokasi, dan alamat rumah atau jalan.</p>}
         {state?.ok === false && state?.error && (
           <p className="text-sm text-destructive" data-testid="checkout-error">
             {state.error}{" "}

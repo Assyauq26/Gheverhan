@@ -1,9 +1,11 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("Explicit disposable local test database required");
 const url = new URL(target);
@@ -21,7 +23,7 @@ let shipping: typeof import("../../src/infrastructure/shipping");
 let adminId: string;
 const prefix = randomUUID().slice(0, 8);
 let seq = 0;
-const address = { recipientName: "Fixture", phone: "0800000000", line: "Local test", city: "Test", province: "Test", postalCode: "00000" };
+const address = testAddress;
 let bankId: string;
 const tracked: string[] = [];
 before(async () => {
@@ -38,14 +40,14 @@ before(async () => {
 });
 after(async () => { await db?.$disconnect(); });
 async function product(stock = 1) {
-  const p = await db.product.create({ data: { name: "Local product", slug: `m2a-${prefix}-${++seq}`, basePrice: 100000, status: "PUBLISHED", images: { create: { url: "https://example.test/fixture.png", alt: "Fixture" } }, variants: { create: { sku: `M2A-${prefix}-${seq}`, inventory: { create: { onHand: stock } } } } }, include: { variants: true } });
+  const p = await db.product.create({ data: { name: "Local product", slug: `m2a-${prefix}-${++seq}`, basePrice: 100000, status: "PUBLISHED", weightGrams: 250, images: { create: { url: "https://example.test/fixture.png", alt: "Fixture" } }, variants: { create: { sku: `M2A-${prefix}-${seq}`, inventory: { create: { onHand: stock } } } } }, include: { variants: true } });
   tracked.push(p.variants[0].id); return p;
 }
 async function buyer(variantId: string) {
   return db.user.create({ data: { name: "Test buyer", email: `buyer-${prefix}-${++seq}@test.example`, passwordHash: "fixture-not-for-login", cart: { create: { items: { create: { variantId, quantity: 1 } } } } } });
 }
 async function input(userId: string) {
-  return { address, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bankId, requestId: randomUUID(), expectedLines: (await cart.getCartView(userId)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })) };
+  return { ...(await shippingConfirmation(userId)), bankAccountId: bankId, requestId: randomUUID(), expectedLines: (await cart.getCartView(userId)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })) };
 }
 const proof = { senderBank: "Fixture", senderName: "Fixture", amount: 120000, transferDate: new Date(), proofPath: "nonproduction/fixture.png", proofMime: "image/png" };
 async function pending() {
@@ -114,8 +116,8 @@ test("PostgreSQL transaction correctness", async t => {
     const code = `CAP-${prefix}-${++seq}`.toUpperCase();
     await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, usageLimit: 1 } });
     const ai = await input(a.id); const bi = await input(b.id);
-    const aq = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
-    const bq = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bi.shipping });
+    const aq = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping, address });
+    const bq = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bi.shipping, address });
     const fields = (q: typeof aq) => ({ subtotal: q.subtotal, shippingCost: q.shippingCost, discount: q.discount, total: q.total });
     assert.equal(aq.discount, 10000); assert.equal(bq.discount, 10000);
     const results = await Promise.allSettled([
@@ -127,7 +129,7 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal(await db.order.count({ where: { couponCode: code } }), 1);
     assert.equal(await movements(p.variants[0].id, "RESERVATION"), 1);
     const loser = results[0].status === "rejected" ? a : b;
-    const after = await checkout.previewCheckout(loser.id, { couponCode: code, shipping: ai.shipping });
+    const after = await checkout.previewCheckout(loser.id, { couponCode: code, shipping: loser.id === a.id ? ai.shipping : bi.shipping, address });
     assert.equal(after.discount, 0); assert.match(after.couponReason || "", /Kuota/);
     assert.equal((await cart.getCartView(loser.id)).count, 1);
     await invariant();
@@ -138,16 +140,16 @@ test("PostgreSQL transaction correctness", async t => {
     const code = `RELEASE-CAP-${prefix}-${++seq}`.toUpperCase();
     await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, usageLimit: 1, perUserLimit: 1 } });
     const ai = await input(a.id);
-    const first = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
+    const first = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping, address });
     const orderA = await checkout.createOrder(a.id, { ...ai, couponCode: code,
       expectedQuote: { subtotal: first.subtotal, shippingCost: first.shippingCost, discount: first.discount, total: first.total } });
     const bInput = await input(b.id);
-    const held = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bInput.shipping });
+    const held = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bInput.shipping, address });
     assert.equal(held.discount, 0, "Active pending checkout must reserve the only slot");
     await cart.addItem(a.id, p.variants[0].id, 1);
     await orders.transitionOrder(orderA.id, "CANCELLED", adminId);
-    const availableForA = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
-    const availableForB = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bInput.shipping });
+    const availableForA = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping, address });
+    const availableForB = await checkout.previewCheckout(b.id, { couponCode: code, shipping: bInput.shipping, address });
     assert.equal(availableForA.discount, 10000, "Cancellation restores per-user eligibility");
     assert.equal(availableForB.discount, 10000, "Cancellation restores global quota");
     const orderB = await checkout.createOrder(b.id, { ...bInput, couponCode: code,
@@ -158,7 +160,7 @@ test("PostgreSQL transaction correctness", async t => {
     const listed = await marketing.listMarketing(actor);
     assert.equal(listed.vouchers.find(v => v.code === code)?.usedCount, 1, "Cancelled coupon order must not show as redeemed in Marketing");
     await orders.transitionOrder(orderB.id, "EXPIRED", adminId);
-    const afterExpiry = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping });
+    const afterExpiry = await checkout.previewCheckout(a.id, { couponCode: code, shipping: ai.shipping, address });
     assert.equal(afterExpiry.discount, 10000, "Expired checkout restores quota");
     assert.equal((await marketing.listMarketing(actor)).vouchers.find(v => v.code === code)?.usedCount, 0);
     await invariant();
@@ -171,10 +173,10 @@ test("PostgreSQL transaction correctness", async t => {
       startsAt: new Date(Date.now() + 86_400_000),
     } });
     const initial = await input(b.id);
-    const future = await checkout.previewCheckout(b.id, { couponCode: code, shipping: initial.shipping });
+    const future = await checkout.previewCheckout(b.id, { couponCode: code, shipping: initial.shipping, address });
     assert.equal(future.discount, 0); assert.match(future.couponReason || "", /belum mulai/);
     await db.coupon.update({ where: { code }, data: { startsAt: new Date(Date.now() - 86_400_000) } });
-    const current = await checkout.previewCheckout(b.id, { couponCode: code, shipping: initial.shipping });
+    const current = await checkout.previewCheckout(b.id, { couponCode: code, shipping: initial.shipping, address });
     assert.equal(current.discount, 5000);
     const accepted = await checkout.createOrder(b.id, { ...initial, couponCode: code,
       expectedQuote: { subtotal: current.subtotal, shippingCost: current.shippingCost, discount: current.discount, total: current.total } });
@@ -184,7 +186,7 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal(replay.id, accepted.id, "idempotent replay must not consume a second slot");
     await cart.addItem(b.id, p.variants[0].id, 1);
     const nextInput = await input(b.id);
-    const subsequent = await checkout.previewCheckout(b.id, { couponCode: code, shipping: nextInput.shipping });
+    const subsequent = await checkout.previewCheckout(b.id, { couponCode: code, shipping: nextInput.shipping, address });
     assert.equal(subsequent.discount, 0); assert.match(subsequent.couponReason || "", /Batas penggunaan/);
     await assert.rejects(checkout.createOrder(b.id, { ...nextInput, couponCode: code,
       expectedQuote: { subtotal: current.subtotal, shippingCost: current.shippingCost, discount: current.discount, total: current.total } }), { status: 409 });
@@ -196,7 +198,7 @@ test("PostgreSQL transaction correctness", async t => {
     const code = `QUOTE-${prefix}-${++seq}`.toUpperCase();
     await db.coupon.create({ data: { code, discountType: "PERCENT", discountValue: 10, minSpend: 0 } });
     const base = await input(b.id);
-    const confirmed = await checkout.previewCheckout(b.id, { couponCode: code, shipping: base.shipping });
+    const confirmed = await checkout.previewCheckout(b.id, { couponCode: code, shipping: base.shipping, address });
     const quote = { subtotal: confirmed.subtotal, shippingCost: confirmed.shippingCost, discount: confirmed.discount, total: confirmed.total };
     assert.equal(quote.total, 110000); assert.equal(quote.discount, 10000);
 
@@ -209,7 +211,7 @@ test("PostgreSQL transaction correctness", async t => {
     assert.equal(await movements(p.variants[0].id, "RESERVATION"), 0);
     assert.equal((await cart.getCartView(b.id)).count, 1, "cart must remain untouched");
 
-    const refreshed = await checkout.previewCheckout(b.id, { couponCode: code, shipping: base.shipping });
+    const refreshed = await checkout.previewCheckout(b.id, { couponCode: code, shipping: base.shipping, address });
     const accepted = await checkout.createOrder(b.id, { ...base, couponCode: code,
       expectedQuote: { subtotal: refreshed.subtotal, shippingCost: refreshed.shippingCost, discount: refreshed.discount, total: refreshed.total } });
     assert.equal(accepted.discount, 5000);

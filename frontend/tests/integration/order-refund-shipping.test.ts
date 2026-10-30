@@ -1,9 +1,11 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("Explicit disposable local test database required");
 const url = new URL(target);
@@ -22,7 +24,7 @@ let cart: typeof import("../../src/modules/cart/cart.service");
 let adminId: string;
 const prefix = randomUUID().slice(0, 8);
 let seq = 0;
-const address = { recipientName: "Fixture", phone: "0800000000", line: "Local test", city: "Test", province: "Test", postalCode: "00000" };
+const address = testAddress;
 let bankId: string;
 const tracked: string[] = [];
 before(async () => {
@@ -49,14 +51,14 @@ before(async () => {
 });
 after(async () => { await db?.$disconnect(); });
 async function product(stock = 1) {
-  const p = await db.product.create({ data: { name: "Local product", slug: `m2b-${prefix}-${++seq}`, basePrice: 100000, status: "PUBLISHED", images: { create: { url: "https://example.test/fixture.png", alt: "Fixture" } }, variants: { create: { sku: `M2B-${prefix}-${seq}`, inventory: { create: { onHand: stock } } } } }, include: { variants: true } });
+  const p = await db.product.create({ data: { name: "Local product", slug: `m2b-${prefix}-${++seq}`, basePrice: 100000, status: "PUBLISHED", weightGrams: 250, images: { create: { url: "https://example.test/fixture.png", alt: "Fixture" } }, variants: { create: { sku: `M2B-${prefix}-${seq}`, inventory: { create: { onHand: stock } } } } }, include: { variants: true } });
   tracked.push(p.variants[0].id); return p;
 }
 async function buyer(variantId: string) {
   return db.user.create({ data: { name: "Test buyer", email: `buyer-${prefix}-${++seq}@test.example`, passwordHash: "fixture-not-for-login", cart: { create: { items: { create: { variantId, quantity: 1 } } } } } });
 }
 async function input(userId: string) {
-  return { address, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bankId, requestId: randomUUID(), expectedLines: (await cart.getCartView(userId)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })) };
+  return { ...(await shippingConfirmation(userId)), bankAccountId: bankId, requestId: randomUUID(), expectedLines: (await cart.getCartView(userId)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })) };
 }
 const proof = { senderBank: "Fixture", senderName: "Fixture", amount: 120000, transferDate: new Date(), proofPath: "nonproduction/fixture.png", proofMime: "image/png" };
 async function pending() {

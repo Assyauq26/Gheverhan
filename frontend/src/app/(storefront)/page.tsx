@@ -90,14 +90,10 @@ export default async function HomePage() {
         >
           {featuredItems.map((p) => {
             const card = toCardData(p);
-            const inlinePrices =
-              card.salePrice != null &&
-              card.salePrice < card.basePrice &&
-              card.basePrice < 1_000_000;
             return (
               <div
                 key={p.id}
-                className={`w-[calc((100%-20px)/3)] ${inlinePrices ? "min-w-[12rem]" : "min-w-[9.25rem]"} shrink-0 snap-start`}
+                className="featured-card-track flex w-[calc((100%-20px)/3)] min-w-[12rem] shrink-0 snap-start"
               >
                 <ProductCard
                   product={card}

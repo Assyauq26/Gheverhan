@@ -1,3 +1,5 @@
+import { testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-checkout";
+import { assertFeaturedConsistency } from "./checkout-v5-browser";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -38,7 +40,7 @@ export async function verifyStorefrontV4({
           basePrice: price,
           salePrice: index === 2 ? 299000 : index === 3 ? 1299000 : null,
           isFeatured: true,
-          status: "PUBLISHED",
+          status: "PUBLISHED", weightGrams: 250,
           ratingAvg: 4.9,
           reviewCount: 999,
           description: "Informasi panjang produk.\n".repeat(100),
@@ -168,6 +170,7 @@ export async function verifyStorefrontV4({
         for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await page.setViewportSize({ width, height: 900 });
           await page.goto(base);
+          await assertFeaturedConsistency(page);
           const section = page.locator("section").filter({
             has: page.getByRole("heading", {
               name: "Produk Pilihan",
@@ -510,6 +513,7 @@ export async function verifyStorefrontV4({
         for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await page.setViewportSize({ width, height: 844 });
           await page.goto(`${base}/checkout`);
+          await chooseTestLocation(page);
           await expect(page.getByTestId("place-order-btn")).toBeEnabled();
           await expect(page.getByTestId("place-order-btn")).toHaveCount(1);
           if (width < 768) {
@@ -541,6 +545,7 @@ export async function verifyStorefrontV4({
         }
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto(`${base}/checkout`);
+          await chooseTestLocation(page);
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await page.getByTestId("ship-option-1").click();
         await expect(page.getByTestId("checkout-total")).toHaveText(
@@ -575,6 +580,7 @@ export async function verifyStorefrontV4({
         await page
           .getByRole("button", { name: "Coba lagi", exact: true })
           .click();
+        await page.getByTestId("ship-option-1").click();
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await db.product.update({
           where: { id: products[0].id },
@@ -597,17 +603,14 @@ export async function verifyStorefrontV4({
             recipientName: "V4 Buyer",
             phone: "0800000000",
             line: "Alamat fixture lokal",
-            city: "Test",
-            province: "Test",
-            postalCode: "00000",
           }))
-            await page.locator(`input[name="${name}"]`).fill(value);
+            await page.locator(`[name="${name}"]`).fill(value);
           await page.getByTestId(`bank-option-${bank.id}`).click();
         };
         await page.goto(`${base}/checkout`);
-        await expect(page.getByTestId("place-order-btn")).toBeEnabled();
+          await chooseTestLocation(page, false);
+        await expect(page.getByTestId("place-order-btn")).toBeDisabled();
         const before = await db.order.count({ where: { userId: user.id } });
-        await page.getByTestId("place-order-btn").click();
         assert.equal(
           await page
             .locator('input[name="recipientName"]')
@@ -634,6 +637,7 @@ export async function verifyStorefrontV4({
           data: { onHand: 100 },
         });
         await page.reload();
+        await chooseTestLocation(page);
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await fill();
         await page.getByTestId("place-order-btn").evaluate((e) => {
@@ -673,6 +677,7 @@ export async function verifyStorefrontV4({
             }),
           );
           await page.goto(directUrl);
+          await chooseTestLocation(page, true, false);
           await expect(page.getByTestId("checkout-quote-error")).toBeVisible();
           const submit = page.getByTestId("place-order-btn");
           await expect(submit).toBeDisabled();
@@ -699,6 +704,7 @@ export async function verifyStorefrontV4({
           await page
             .getByRole("button", { name: "Coba lagi", exact: true })
             .click();
+          await page.getByTestId("ship-option-0").click();
           await expect(submit).toBeEnabled();
           if (index === 0)
             assert.ok(

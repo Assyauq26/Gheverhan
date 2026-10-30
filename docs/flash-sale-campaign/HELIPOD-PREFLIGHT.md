@@ -8,4 +8,6 @@ Production origin must be `https://gheverhan.store`, provider `local`, and root 
 
 The official deploy script runs the full gate before switching the app. Install the reviewed script using the existing administrative access before the approved release; do not rerun bootstrap or regenerate SSH keys. Keep the deployment lock and restricted SSH forced-command protections unchanged.
 
+The runtime preparation script grants EXECUTE only on `gheverhan_backfill_legacy_options(text)`, the SECURITY INVOKER function required by the existing product-options gate. PUBLIC remains revoked. Deploy this reviewed preparation script alongside the handler before the release; do not grant broad function execution or schema ownership.
+
 Regression checks run with `node --test .github/tests/helipod-preflight.test.mjs` in the unit workflow. Database integration checks remain required, as do migration checksums, runtime privileges, campaign/appearance checks, backup verification and zero unresolved legacy rows. A profile match alone never establishes release readiness.

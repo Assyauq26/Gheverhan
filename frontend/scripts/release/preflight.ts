@@ -1,9 +1,9 @@
 import { PrismaClient } from "@prisma/client";
-import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { isHelipodIdentity, verifyLocalMedia } from "./helipod-preflight.mjs";
 import { verifyPrivateProductBucket } from "./storage-preflight";
+import { migrationChecksumVariants } from "./migration-checksums.mjs";
 // Read-only release check. Secret values and customer rows never enter output.
 async function main() {
   const env = process.env;
@@ -55,14 +55,12 @@ async function main() {
     return;
   }
   const directory = path.join(process.cwd(), "prisma/migrations");
-  const expectedLedger = new Map<string, string>();
+  const expectedLedger = new Map<string, Set<string>>();
   for (const name of await readdir(directory)) {
     if (!/^\d{14}_/.test(name)) continue;
     expectedLedger.set(
       name,
-      createHash("sha256")
-        .update(await readFile(path.join(directory, name, "migration.sql")))
-        .digest("hex"),
+      migrationChecksumVariants(await readFile(path.join(directory, name, "migration.sql"))),
     );
   }
   const db = new PrismaClient();
@@ -170,7 +168,7 @@ async function main() {
         expectedLedger.size &&
       active.every((row) => row.finished) &&
       facts.ledger.every(
-        (row) => expectedLedger.get(row.migration_name) === row.checksum,
+        (row) => expectedLedger.get(row.migration_name)?.has(row.checksum) === true,
       );
     const schemaReady =
       facts.schema.schemaUsage &&

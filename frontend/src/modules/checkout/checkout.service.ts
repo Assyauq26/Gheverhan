@@ -11,6 +11,10 @@ import { getShippingProvider } from "@/infrastructure/shipping";
 import { checkoutLinesSchema, checkoutQuoteSchema, checkoutSignature, type CheckoutLines, type CheckoutQuoteConfirmation } from "./checkout.validation";
 import { getIntentCheckoutView, readCheckoutIntent } from "./checkout-intent";
 import { writeAudit } from "@/modules/audit/audit.service";
+import { addressSchema, type SelectedLocation } from "@/modules/regions/region.validation";
+import { validateLocation } from "@/modules/regions/region.service";
+import type { ShippingInquiry, ShippingRate } from "@/infrastructure/shipping/contracts/shipping-provider";
+import { issueShippingQuote, shippingFingerprint, verifyShippingQuote } from "./shipping-quote";
 
 export interface AddressInput {
   recipientName: string;
@@ -19,12 +23,15 @@ export interface AddressInput {
   city: string;
   province: string;
   postalCode: string;
+  provinceCode?: string; cityCode?: string; districtCode?: string; villageCode?: string;
+  district?: string; village?: string; regionSource?: string; regionUpdatedAt?: string;
 }
 
 export interface ShippingChoice {
   courier: string;
   service: string;
   cost: number;
+  quoteToken?: string;
 }
 
 function genOrderNumber(): string {
@@ -37,24 +44,47 @@ function genOrderNumber(): string {
  * Resolve a trusted shipping cost from the server-side rate table.
  * The client-submitted cost is never trusted; only courier/service are used to look it up.
  */
-async function resolveShippingCost(courier: string, service: string): Promise<number> {
-  const rates = (await getShippingProvider().getRates?.({ destinationCity: "", weightGram: 1000 })) ?? [];
-  const match = rates.find((r) => r.courier === courier && r.service === service);
-  if (!match) throw new HttpError("Metode pengiriman tidak valid", 400);
-  return match.cost;
+async function shippingInquiry(cart: { lines: Array<{ product: { id: string }; quantity: number }> }, destination: SelectedLocation, tx: Prisma.TransactionClient = prisma): Promise<ShippingInquiry> {
+  const ids = [...new Set(cart.lines.map(l => l.product.id))].sort();
+  const products = await tx.product.findMany({ where: { id: { in: ids } }, select: { id: true, weightGrams: true, packageLengthMm: true, packageWidthMm: true, packageHeightMm: true } });
+  let weightGram = 0;
+  const quantities = new Map<string, number>();
+  for (const line of cart.lines) quantities.set(line.product.id, (quantities.get(line.product.id) || 0) + line.quantity);
+  const packages = ids.map(id => {
+    const p = products.find(p => p.id === id);
+    if (!p || !Number.isSafeInteger(p.weightGrams) || !p.weightGrams || p.weightGrams <= 0) throw new HttpError("Berat produk belum valid. Hubungi toko sebelum checkout.", 422);
+    const quantity = quantities.get(id)!;
+    weightGram += p.weightGrams * quantity;
+    return { productId: id, quantity, weightGram: p.weightGrams, lengthMm: p.packageLengthMm, widthMm: p.packageWidthMm, heightMm: p.packageHeightMm };
+  });
+  if (!Number.isSafeInteger(weightGram) || weightGram <= 0 || weightGram > 2_147_483_647) throw new HttpError("Berat pesanan tidak valid", 422);
+  return { destination, weightGram, packages };
+}
+async function checkoutShipping(userId: string, cart: { lines: Array<CheckoutLines[number] & { product: { id: string } }> }, location: SelectedLocation) {
+  const inquiry = await shippingInquiry(cart, location);
+  let rates: ShippingRate[];
+  try { rates = (await getShippingProvider().getRates?.(inquiry)) ?? []; }
+  catch (error) { if (error instanceof HttpError) throw error; throw new HttpError("Gagal memeriksa ongkir J&T. Coba lagi atau hubungi toko.", 503); }
+  if (rates.some(r => r.courier !== "J&T Express" || !Number.isSafeInteger(r.cost) || r.cost < 0)) throw new HttpError("Tarif J&T tidak valid", 502);
+  const fingerprint = shippingFingerprint(userId, inquiry, checkoutSignature(cart.lines));
+  return { inquiry, fingerprint, rates, options: rates.map(r => issueShippingQuote(fingerprint, r)) };
 }
 
 /** Server-side recalculation only. Client-submitted totals are ignored. */
 export async function previewCheckout(
   userId: string,
-  input: { couponCode?: string; shipping?: ShippingChoice; intentId?: string },
+  input: { couponCode?: string; shipping?: ShippingChoice; intentId?: string; address?: unknown },
 ) {
   const cart = input.intentId ? await getIntentCheckoutView(input.intentId, userId) : await getCartView(userId);
   if (cart.lines.length === 0) throw new HttpError("Keranjang kosong", 400);
 
-  const shippingCost = input.shipping
-    ? await resolveShippingCost(input.shipping.courier, input.shipping.service)
-    : 0;
+  const location = input.address ? await validateLocation(input.address) : null;
+  if (input.shipping && !location) throw new HttpError("Silakan pilih lokasi pengiriman.", 422);
+  const shipping = location ? await checkoutShipping(userId, cart, location) : null;
+  const selected = input.shipping ? shipping?.rates.find(r => r.courier === input.shipping!.courier && r.service === input.shipping!.service) : null;
+  if (input.shipping && !selected) throw new HttpError("Layanan J&T belum tersedia untuk alamat ini.", 422);
+  const accepted = selected ? verifyShippingQuote(input.shipping?.quoteToken, shipping!.fingerprint, selected) : null;
+  const shippingCost = selected?.cost ?? 0;
   const { discount, code, reason } = await computeDiscount(input.couponCode, cart.subtotal, prisma, userId);
   const total = cart.subtotal + shippingCost - discount;
   return {
@@ -65,6 +95,9 @@ export async function previewCheckout(
     couponCode: code,
     couponReason: reason ?? null,
     total,
+    shippingRates: shipping?.options ?? [],
+    shippingValid: !!selected,
+    quoteExpiresAt: accepted?.expiresAt ?? null,
   };
 }
 
@@ -122,7 +155,13 @@ export async function createOrder(
     if (completed) return completed;
     throw new HttpError("Keranjang kosong atau sudah diproses", 409);
   }
-  if (cartView.lines.some(line => !line.inStock)) throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
+  if (cartView.lines.some(line => !line.inStock)) {
+    // A parallel identical request may have reserved this last item after the
+    // initial replay probe but before this availability read completed.
+    const completed = await replay(prisma);
+    if (completed) return completed;
+    throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
+  }
   if (checkoutSignature(confirmation.data) !== checkoutSignature(cartView.lines)) throw new HttpError("Harga atau isi keranjang berubah. Muat ulang checkout dan konfirmasi ulang sebelum membuat pesanan.", 409);
 
   const bank = await prisma.bankAccount.findFirst({
@@ -131,7 +170,15 @@ export async function createOrder(
   if (!bank) throw new HttpError("Rekening bank tidak valid", 400);
 
 
-  const shippingCost = await resolveShippingCost(input.shipping.courier, input.shipping.service);
+  const parsedAddress = addressSchema.parse(input.address);
+  const location = await validateLocation(parsedAddress);
+  const canonicalAddress = { recipientName: parsedAddress.recipientName, phone: parsedAddress.phone, line: parsedAddress.line, ...location };
+  const quotedShipping = await checkoutShipping(userId, cartView, location);
+  const selectedRate = quotedShipping.rates.find(r => r.courier === input.shipping.courier && r.service === input.shipping.service);
+  if (!selectedRate) throw new HttpError("Layanan J&T belum tersedia untuk alamat ini.", 422);
+  verifyShippingQuote(input.shipping.quoteToken, quotedShipping.fingerprint, selectedRate);
+  if (!acceptedQuote?.success) throw new HttpError("Konfirmasi total dan ongkir diperlukan.", 409);
+  const shippingCost = selectedRate.cost;
 
   const orderNumber = genOrderNumber();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -163,6 +210,10 @@ export async function createOrder(
     if (!current.lines.length) throw new HttpError("Keranjang sudah diproses. Periksa pesanan Anda.", 409);
     if (checkoutSignature(current.lines) !== checkoutSignature(confirmation.data)) throw new HttpError("Harga atau isi keranjang berubah. Muat ulang checkout dan konfirmasi ulang sebelum membuat pesanan.", 409);
     if (current.lines.some(l => !l.inStock || !Number.isSafeInteger(l.quantity) || l.quantity <= 0)) throw new HttpError("Produk tidak tersedia atau stok tidak mencukupi", 409);
+    // Product locks also protect shipping metadata. Reject address/cart/weight/config changes
+    // and expired quotes before any order, stock, payment, or cart mutation.
+    const lockedInquiry = await shippingInquiry(current, location, tx);
+    verifyShippingQuote(input.shipping.quoteToken, shippingFingerprint(userId, lockedInquiry, checkoutSignature(current.lines)), selectedRate);
     const lockedBank = await tx.bankAccount.findFirst({ where: { id: bank.id, isActive: true } });
     if (!lockedBank) throw new HttpError("Rekening bank tidak valid", 409);
     // Serializes redemptions for capped coupons across concurrent checkout transactions.
@@ -203,7 +254,12 @@ export async function createOrder(
             lineTotal: l.lineTotal,
           })),
         },
-        address: { create: input.address },
+        address: { create: canonicalAddress },
+        shippingCourier: selectedRate.courier,
+        shippingService: selectedRate.service,
+        shippingMode: selectedRate.mode || "official",
+        shippingWeightGram: lockedInquiry.weightGram,
+        shippingQuoteReference: selectedRate.reference,
         history: {
           create: { toStatus: "PENDING_PAYMENT", note: "Order dibuat", createdBy: userId },
         },
@@ -213,6 +269,15 @@ export async function createOrder(
     for (const line of [...current.lines].sort((a, b) => a.variantId.localeCompare(b.variantId))) {
       await reserveStock(tx, line.variantId, line.quantity, created.orderNumber);
     }
+
+    // Save the confirmed structured address without rewriting any legacy address.
+    // A dedicated address lock serializes cart/Buy Now without changing auth row locking.
+    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`checkout-address:${userId}`}, 0))`);
+    const customer = await tx.customer.upsert({ where: { userId }, create: { userId, fullName: (await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } })).name }, update: {} });
+    const savedAddress = await tx.customerAddress.findFirst({ where: { customerId: customer.id, ...canonicalAddress } });
+    await tx.customerAddress.updateMany({ where: { customerId: customer.id, isDefault: true }, data: { isDefault: false } });
+    if (savedAddress) await tx.customerAddress.update({ where: { id: savedAddress.id }, data: { isDefault: true } });
+    else await tx.customerAddress.create({ data: { customerId: customer.id, ...canonicalAddress, isDefault: true } });
 
     await tx.payment.create({
       data: {

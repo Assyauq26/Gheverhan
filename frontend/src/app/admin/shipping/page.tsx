@@ -22,6 +22,7 @@ export default async function AdminShippingPage() {
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-black text-ink">Pengiriman Manual</h1>
+      <Link href="/admin/shipping/coverage" className="inline-block text-sm font-semibold underline">Periksa kesiapan tarif dan mapping J&T Express</Link>
       {orders.length === 0 ? (
         <EmptyState icon={<Truck size={40} />} title="Belum ada pesanan untuk dikirim" />
       ) : (

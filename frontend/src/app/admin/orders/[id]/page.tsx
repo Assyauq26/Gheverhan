@@ -12,6 +12,7 @@ import { activeRefund, REFUNDABLE_ORDER_STATUSES } from "@/modules/payments/refu
 import { listRefundLedger, refundReturnEligibility } from "@/modules/payments/refund.service";
 import { manualShipmentOptions } from "@/modules/shipping/shipping-policy";
 import { formatIDR } from "@/lib/money";
+import { formatAddressLocality } from "@/lib/address-format";
 import { ORDER_STATUS_LABEL, orderDisplayStatus, paymentDisplayStatus } from "@/lib/order-status";
 import { OrderStatusControl } from "@/components/admin/order-status-control";
 import { PaymentVerify } from "@/components/admin/payment-verify";
@@ -27,6 +28,7 @@ export default async function OrderDetail(props: { params: Promise<{ id: string 
 async function OrderDetailContent({ params, actor }: { params: Promise<{ id: string }> } & { actor: AuthUser }) {
   const { id } = await params;
   const order = await getOrderById(id); if (!order) notFound();
+  const locality = order.address ? formatAddressLocality(order.address) : "";
   const has = (key: string) => actor.permissions.includes(key);
   const payment = order.payment;
   const active = payment ? await activeRefund(prisma, payment.id) : null;
@@ -58,6 +60,6 @@ async function OrderDetailContent({ params, actor }: { params: Promise<{ id: str
         { name: "receiptReference", label: "Referensi penerimaan gudang", required: true, maxLength: 160 }, { name: "receivedAt", label: "Waktu barang diterima", type: "datetime-local", required: true }, { name: "reason", label: "Catatan kondisi / alasan retur", type: "textarea", required: true }, { name: "physicalReturnVerified", label: "Barang fisik sudah diterima, diperiksa, dan layak dikembalikan ke stok jual.", type: "checkbox", required: true },
       ]} /> : <p className="text-sm text-ink-soft">Tidak ada item yang dapat diterima. Retur memerlukan refund terverifikasi dan sisa kuantitas barang yang belum dikembalikan.</p>}</OperationSection>}
       {has(PERMISSIONS.SHIPPING_READ) && <OperationSection title="Pengiriman">{order.shipment ? <div className="space-y-2 text-sm"><p>{order.shipment.courier} · {order.shipment.service} · {order.shipment.status}</p><p className="break-all">Resi: {order.shipment.trackingNumber || "Belum diisi"}</p><ol className="space-y-2">{order.shipment.events.map(e => <li key={e.id}><span className="font-medium">{e.status}</span> · {date(e.occurredAt)}<p className="text-xs text-ink-soft">{e.description}</p></li>)}</ol></div> : <p className="text-sm text-ink-soft">Belum ada shipment.</p>}{has(PERMISSIONS.SHIPPING_UPDATE) && <ShipmentForm key={`${order.status}-${order.shipment?.status || "new"}-${!!active}`} orderId={id} orderStatus={order.status} initial={order.shipment} allowed={allowedShipment} />}</OperationSection>}
-    </div><aside className="min-w-0 space-y-8"><OperationSection title="Pelanggan"><p className="break-words text-sm">{order.user.name}</p><p className="break-all text-sm text-ink-soft">{order.user.email}</p>{order.user.phone && <p className="text-sm">{order.user.phone}</p>}</OperationSection><OperationSection title="Alamat pengiriman">{order.address ? <address className="break-words text-sm not-italic leading-6">{order.address.recipientName}<br />{order.address.phone}<br />{order.address.line}<br />{order.address.city}, {order.address.province} {order.address.postalCode}</address> : <p className="text-sm text-ink-soft">Alamat belum tersedia.</p>}</OperationSection>{order.note && <OperationSection title="Catatan pelanggan"><p className="break-words text-sm">{order.note}</p></OperationSection>}</aside></div>
+    </div><aside className="min-w-0 space-y-8"><OperationSection title="Pelanggan"><p className="break-words text-sm">{order.user.name}</p><p className="break-all text-sm text-ink-soft">{order.user.email}</p>{order.user.phone && <p className="text-sm">{order.user.phone}</p>}</OperationSection><OperationSection title="Alamat pengiriman">{order.address ? <address className="break-words text-sm not-italic leading-6">{order.address.recipientName}<br />{order.address.phone}<br />{order.address.line}<br />{locality && <>{locality}<br /></>}{order.address.city}, {order.address.province} {order.address.postalCode}</address> : <p className="text-sm text-ink-soft">Alamat belum tersedia.</p>}</OperationSection>{order.note && <OperationSection title="Catatan pelanggan"><p className="break-words text-sm">{order.note}</p></OperationSection>}</aside></div>
   </div>;
 }

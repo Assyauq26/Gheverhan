@@ -1,3 +1,4 @@
+import { testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-checkout";
 /** Real product editor/actions/storage adapter/storefront/cart, local fixtures only. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -587,24 +588,12 @@ export async function verifyCustomVariations(c: Context) {
             displayName: "Disposable only",
           },
         });
-        const previewResponse = await buyer.request.post(
-          `${base}/api/v1/checkout/preview`,
-          { data: { shipping: { courier: "JNE", service: "REG", cost: 0 } } },
-        );
-        assert.equal(previewResponse.status(), 200);
-        const quote = (await previewResponse.json()).data;
+        const { quote, shipping: selectedShipping } = await apiShipping(buyer.request, base);
         const order = await buyer.request.post(`${base}/api/v1/orders`, {
           data: {
             requestId: randomUUID(),
-            address: {
-              recipientName: "Dummy",
-              phone: "0800000000",
-              line: "Disposable test address",
-              city: "Test",
-              province: "Test",
-              postalCode: "00000",
-            },
-            shipping: { courier: "JNE", service: "REG", cost: 0 },
+            address: testAddress,
+            shipping: selectedShipping,
             bankAccountId: bank.id,
             expectedLines: quote.lines.map(
               (l: {

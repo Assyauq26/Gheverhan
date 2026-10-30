@@ -101,7 +101,7 @@ export function ProductCard({
         </div>
       )}
 
-      <div className="flex flex-col px-0.5 pb-1 pt-2">
+      <div className="product-card-body flex flex-col px-0.5 pb-1 pt-2">
         <Rating value={product.ratingAvg} count={product.reviewCount} />
         <Link
           prefetch={preview ? false : undefined}

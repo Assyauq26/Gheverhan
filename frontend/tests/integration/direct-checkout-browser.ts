@@ -1,3 +1,4 @@
+import { testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-checkout";
 /** Runs against the product-browser loopback server and dummy provider adapters only. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -10,7 +11,7 @@ export async function verifyDirectCheckout(browser: Browser, db: PrismaClient, b
   assert.equal(new URL(base).hostname, "localhost");
   const suffix = randomUUID(), password = `Dummy-only-${randomUUID()}`;
   const buyer = await db.user.create({ data: { name: "Direct checkout dummy", email: `buy-now-${suffix}@example.test`, passwordHash: await bcrypt.hash(password, 12), customer: { create: { fullName: "Dummy" } } } });
-  const create = (kind: string, price: number) => db.product.create({ data: { name: `Dummy ${kind} ${suffix}`, slug: `direct-${kind}-${suffix}`, status: "PUBLISHED", basePrice: price, variants: { create: { sku: `DIRECT-${kind}-${suffix}`, inventory: { create: { onHand: 10 } } } } }, include: { variants: true } });
+  const create = (kind: string, price: number) => db.product.create({ data: { name: `Dummy ${kind} ${suffix}`, slug: `direct-${kind}-${suffix}`, status: "PUBLISHED", weightGrams: 250, basePrice: price, variants: { create: { sku: `DIRECT-${kind}-${suffix}`, inventory: { create: { onHand: 10 } } } } }, include: { variants: true } });
   const old = await create("cart", 71000), selected = await create("legacy", 130000);
   const custom = await create("custom", 90000);
   const groupId = `g${randomUUID().replaceAll("-", "")}`, valueId = `v${randomUUID().replaceAll("-", "")}`;
@@ -55,14 +56,15 @@ export async function verifyDirectCheckout(browser: Browser, db: PrismaClient, b
     await page.getByTestId("login-form").getByRole("button", { name: "Masuk", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/checkout\\?intent=${intentId}$`));
     await expect(page.getByTestId("direct-checkout-summary")).toContainText(selected.name);
+    await chooseTestLocation(page);
     await expect(page.getByTestId("checkout-total")).toHaveText("Rp 280.000");
     assert.equal((await db.checkoutIntent.findUniqueOrThrow({ where: { id: intentId } })).userId, buyer.id);
     await page.reload();
+    await chooseTestLocation(page);
     await expect(page.getByTestId("checkout-total")).toHaveText("Rp 280.000");
     assert.equal(await page.getByTestId("direct-checkout-summary").textContent().then(text => text?.includes(old.name)), false);
     await page.screenshot({ path: path.join(artifactDir, "product-direct-checkout-390.png"), fullPage: true });
     const confirm = async () => {
-      for (const [name, value] of Object.entries({ recipientName: "Dummy Buyer", phone: "0800000000", line: "Dummy address", city: "Test", province: "Test", postalCode: "00000" })) await page.locator(`input[name="${name}"]`).fill(value);
       await expect(page.getByTestId("place-order-btn")).toBeEnabled();
       await page.getByTestId("place-order-btn").click();
       await expect(page).toHaveURL(/\/checkout\/payment\//);
@@ -81,6 +83,7 @@ export async function verifyDirectCheckout(browser: Browser, db: PrismaClient, b
     await page.getByTestId("buy-now-btn").click();
     await expect(page).toHaveURL(/\/checkout\?intent=/);
     await expect(page.getByTestId("direct-checkout-summary")).toContainText("Motif: Polos × 1");
+    await chooseTestLocation(page);
     await expect(page.getByTestId("checkout-total")).toHaveText("Rp 119.000");
     const customOrder = await confirm();
     const customItem = await db.orderItem.findFirstOrThrow({ where: { orderId: customOrder } });
@@ -91,6 +94,7 @@ export async function verifyDirectCheckout(browser: Browser, db: PrismaClient, b
     await expect(page.getByRole("alert").filter({ hasText: "Checkout tidak tersedia" })).toBeVisible();
     await page.goto(`${base}/checkout`);
     await expect(page.getByTestId("direct-checkout-summary")).toHaveCount(0);
+    await chooseTestLocation(page);
     await expect(page.getByTestId("checkout-total")).toHaveText("Rp 233.000");
   } finally {
     await context.close();

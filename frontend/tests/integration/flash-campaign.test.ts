@@ -1,8 +1,10 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { ALL_PERMISSIONS } from "../../src/lib/auth/permissions";
+configureTestJnt();
 const target = new URL(
   process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid",
 );
@@ -120,29 +122,9 @@ async function buyer(variantId: string) {
   return b;
 }
 async function orderInput(userId: string) {
-  const quote = await checkout.previewCheckout(userId, {
-    shipping: { courier: "JNE", service: "REG", cost: 1 },
-  });
-  return {
-    address: {
-      recipientName: "Fixture",
-      phone: "0800000000",
-      line: "Local",
-      city: "Test",
-      province: "Test",
-      postalCode: "00000",
-    },
-    shipping: { courier: "JNE", service: "REG", cost: 1 },
-    bankAccountId: bank,
-    requestId: randomUUID(),
-    expectedLines: quote.lines,
-    expectedQuote: {
-      subtotal: quote.subtotal,
-      shippingCost: quote.shippingCost,
-      discount: quote.discount,
-      total: quote.total,
-    },
-  };
+  const confirmed = await shippingConfirmation(userId);
+  const quote = await checkout.previewCheckout(userId, { shipping: confirmed.shipping, address: testAddress });
+  return { ...confirmed, bankAccountId: bank, requestId: randomUUID(), expectedLines: quote.lines };
 }
 async function archive(p: Awaited<ReturnType<typeof product>>) {
   await db.flashSaleLegacy.create({
@@ -854,7 +836,7 @@ test("central Flash Sale authority, pricing, locking and cutover", async (t) => 
       assert.deepEqual(await pricing.campaignPrices([p.id]), []);
       const b = await buyer(p.variants[0].id);
       const quote = await checkout.previewCheckout(b.id, {
-        shipping: { courier: "JNE", service: "REG", cost: 1 },
+        address: testAddress,
       });
       assert.equal(quote.subtotal, 299000);
       const audit = await db.auditLog.findFirstOrThrow({

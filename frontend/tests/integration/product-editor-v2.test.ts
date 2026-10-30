@@ -1,3 +1,4 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
@@ -7,6 +8,7 @@ import { createServer, type Server } from "node:http";
 import type { PrismaClient } from "@prisma/client";
 import { PERMISSIONS } from "../../src/lib/auth/permissions";
 import type { CatalogActor } from "../../src/modules/catalog/product-management.validation";
+configureTestJnt();
 const target = new URL(
   process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid",
 );
@@ -525,7 +527,7 @@ test("product editor V2 database, media and compatibility", async (t) => {
     },
   );
   await t.test(
-    "shipping metadata leaves manual checkout quote and financial total unchanged",
+    "shipping metadata invalidates the previous quote while a fresh admin tariff preserves financial total",
     async () => {
       const product = await db.product.create({
         data: {
@@ -560,12 +562,9 @@ test("product editor V2 database, media and compatibility", async (t) => {
       const { previewCheckout } = await import(
         "../../src/modules/checkout/checkout.service"
       );
-      const { ManualShippingProvider } = await import(
-        "../../src/infrastructure/shipping/manual/manual-shipping-provider"
-      );
-      const rates = await new ManualShippingProvider().getRates();
-      const choice = rates[0];
-      const first = await previewCheckout(buyer.id, { shipping: choice });
+      const confirmed = await shippingConfirmation(buyer.id);
+      const choice = confirmed.shipping;
+      const first = await previewCheckout(buyer.id, { shipping: choice, address: testAddress });
       await db.product.update({
         where: { id: product.id },
         data: {
@@ -575,7 +574,9 @@ test("product editor V2 database, media and compatibility", async (t) => {
           packageHeightMm: 700,
         },
       });
-      const second = await previewCheckout(buyer.id, { shipping: choice });
+      await assert.rejects(previewCheckout(buyer.id, { shipping: choice, address: testAddress }), { status: 409 });
+      const refreshed = await shippingConfirmation(buyer.id);
+      const second = await previewCheckout(buyer.id, { shipping: refreshed.shipping, address: testAddress });
       assert.equal(second.shippingCost, first.shippingCost);
       assert.equal(second.total, first.total);
       assert.equal(second.subtotal, 200000);

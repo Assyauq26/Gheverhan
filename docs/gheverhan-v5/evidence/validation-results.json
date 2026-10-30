@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "checks": 2,
+  "checkpoints": [
+    {
+      "label": "V5: uniform featured dimensions and left alignment at eight widths on default/published themes",
+      "status": "PASS"
+    },
+    {
+      "label": "V5: structured address modal, retry, search, cascading, keyboard and valid J&T quote",
+      "status": "PASS"
+    }
+  ],
+  "commitSha": "a6711320f1632d3cc15fe94d2ae36bc5fd128ce1",
+  "nodeVersion": "v22.23.4",
+  "browserVersion": "153.0.8010.12",
+  "buildId": "KMdRuayamybg1IQCdMe8R",
+  "synthetic": true
+}

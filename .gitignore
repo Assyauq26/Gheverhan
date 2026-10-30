@@ -13,6 +13,9 @@ credentials.json
 node_modules/
 .next/
 coverage/
+# Application route, not a generated test coverage directory.
+!frontend/src/app/admin/shipping/coverage/
+!frontend/src/app/admin/shipping/coverage/page.tsx
 playwright-report/
 test-results/
 *.tsbuildinfo

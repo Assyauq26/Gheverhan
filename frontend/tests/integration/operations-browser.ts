@@ -1,3 +1,4 @@
+import { configureTestJnt, testAddress, shippingConfirmation } from "../fixtures/jnt-checkout";
 import { verifyPaymentSynchronization } from "./payment-sync-browser";
 import { createServer } from "node:http";
 import { spawn, execFileSync } from "node:child_process";
@@ -11,6 +12,7 @@ import { chromium, expect } from "@playwright/test";
 import { signSession } from "../../src/lib/auth/jwt";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "../../src/lib/auth/permissions";
 
+configureTestJnt();
 const target = process.env.SPRINT1_TEST_DATABASE_URL;
 if (!target) throw new Error("SPRINT1_TEST_DATABASE_URL is required; use a disposable local database");
 const dbUrl = new URL(target);
@@ -103,22 +105,24 @@ async function main() {
     const customerRole = await fixtureRole("Customer", []);
     const user = (kind: string, roleId: string) => db.user.create({ data: { name: `Ops ${kind}`, email: `${kind}-${prefix}@browser.example.test`, passwordHash: "isolated-fixture", roles: { create: { roleId } } } });
     const [staff, finance, warehouse, viewer] = await Promise.all([user("admin", adminRole.id), user("finance", financeRole.id), user("warehouse", warehouseRole.id), user("viewer", viewerRole.id)]);
-    const product = await db.product.create({ data: { name: `Kaos Operasional ${prefix}`, slug: `ops-${prefix}`, basePrice: 100000, status: "PUBLISHED", images: { create: { url: "https://example.test/fixture.png", alt: "Synthetic fixture" } }, variants: { create: { sku: `OPS-${prefix}`, inventory: { create: { onHand: 6 } } } } }, include: { variants: true } });
+    const product = await db.product.create({ data: { name: `Kaos Operasional ${prefix}`, slug: `ops-${prefix}`, basePrice: 100000, status: "PUBLISHED", weightGrams: 250, images: { create: { url: "https://example.test/fixture.png", alt: "Synthetic fixture" } }, variants: { create: { sku: `OPS-${prefix}`, inventory: { create: { onHand: 6 } } } } }, include: { variants: true } });
     const variant = product.variants[0];
     const bank = await db.bankAccount.create({ data: { displayName: `Ops Bank ${prefix}`, bankName: "Fixture", accountNumber: "1234567890", accountHolder: "Fixture" } });
     let sequence = 0;
     async function pending(proof = true) {
       const buyer = await user(`buyer${++sequence}`, customerRole.id); await db.cart.create({ data: { userId: buyer.id, items: { create: { variantId: variant.id, quantity: 1 } } } });
-      const order = await createOrder(buyer.id, { requestId: randomUUID(), expectedLines: (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })), address: { recipientName: "Pelanggan Fixture", phone: "0800000000", line: "Alamat sintetis pengujian", city: "Bandung", province: "Jawa Barat", postalCode: "40100" }, shipping: { courier: "JNE", service: "REG", cost: 20000 }, bankAccountId: bank.id });
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)), address: { ...testAddress, recipientName: "Pelanggan Fixture", line: "Alamat sintetis pengujian" }, requestId: randomUUID(), expectedLines: (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })), bankAccountId: bank.id });
       if (proof) { const proofPath = `gheverhan-sprint1-tests/payment-proofs/${buyer.id}/${randomUUID()}.png`; objects.set(proofPath, { bytes: png, mime: "image/png" }); await submitConfirmation(buyer.id, order.id, { senderBank: "Fixture", senderName: "Pelanggan Fixture", amount: order.total, transferDate: new Date(), proofPath, proofMime: "image/png" }); }
       return { order, payment: await db.payment.findUniqueOrThrow({ where: { orderId: order.id } }) };
     }
     const sale = await pending(); const cancel = await pending(false); const reject = await pending();
+    // A historical order has only its original free-text address snapshot.
+    await db.orderAddress.update({ where: { orderId: cancel.order.id }, data: { provinceCode: null, cityCode: null, districtCode: null, villageCode: null, district: null, village: null, regionSource: null, regionUpdatedAt: null } });
     browser = await chromium.launch({ headless: true, executablePath: process.env.SPRINT1_CHROMIUM_PATH || (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined), args: ["--no-sandbox"] });
     const context = async (u: { id: string; email: string }) => { const ctx = await browser!.newContext({ viewport: { width: 1360, height: 900 } }); await ctx.addCookies([await cookie(u)]); return ctx; };
     const admin = await context(staff); const fin = await context(finance); const wh = await context(warehouse); const readOnly = await context(viewer); const anonymous = await browser.newContext();
     const page = await admin.newPage(); const fp = await fin.newPage(); const wp = await wh.newPage(); const vp = await readOnly.newPage();
-    const errors: string[] = []; for (const p of [page, fp, wp, vp]) p.on("pageerror", e => errors.push(e.message));
+    const errors: string[] = []; for (const p of [page, fp, wp, vp]) p.on("pageerror", e => errors.push(`${p.url()}: ${e.stack ?? e.message}`));
     const orderUrl = `${base}/admin/orders/${sale.order.id}`;
     async function submit(p: typeof page, label: string, url: string) {
       const f = p.getByRole("form", { name: label, exact: true }); await f.getByRole("button", { name: label, exact: true }).click();
@@ -132,6 +136,30 @@ async function main() {
       await vp.goto(`${base}/admin/inventory/${variant.id}`); await expect(vp.getByRole("form", { name: "Simpan adjustment" })).toHaveCount(0);
       await vp.goto(orderUrl); await expect(vp.getByRole("form")).toHaveCount(0);
       await wp.goto(orderUrl); await expect(wp.getByRole("heading", { name: "Pembayaran", exact: true })).toHaveCount(0);
+    });
+    await check("shipping readiness link resolves and keeps SHIPPING_READ authorization", async () => {
+      await page.goto(`${base}/admin/shipping`);
+      await page.getByRole('link', { name: 'Periksa kesiapan tarif dan mapping J&T Express' }).click();
+      await expect(page).toHaveURL(/\/admin\/shipping\/coverage$/);
+      await expect(page.getByRole('heading', { name: 'Kesiapan pengiriman J&T Express' })).toBeVisible();
+      await expect(page.locator('main')).toContainText('Mapping resmi:');
+      assert.equal((await fin.request.get(`${base}/admin/shipping/coverage`)).status(), 404);
+      assert.match((await anonymous.request.get(`${base}/admin/shipping/coverage`)).url(), /\/login/);
+    });
+    await check("legacy delivery snapshots retain street text without invented locality", async () => {
+      const legacyUser = await db.user.findUniqueOrThrow({ where: { id: cancel.order.userId } });
+      const ctx = await context(legacyUser); const legacyPage = await ctx.newPage();
+      try {
+        await legacyPage.goto(`${base}/orders/${cancel.order.id}`);
+        const address = legacyPage.locator('section').filter({ has: legacyPage.getByRole('heading', { name: 'Alamat', exact: true }) });
+        await expect(address).toContainText('Alamat sintetis pengujian');
+        await expect(address).not.toContainText('Desa/Kel.');
+        await expect(address).not.toContainText('Kec.');
+        await page.goto(`${base}/admin/orders/${cancel.order.id}`);
+        await expect(page.locator('address')).toContainText('Alamat sintetis pengujian');
+        await expect(page.locator('address')).not.toContainText('Desa/Kel.');
+        await expect(page.locator('address')).not.toContainText('Kec.');
+      } finally { await ctx.close(); }
     });
     await check("real HTTP authorization for inventory, status, payment, refund, settlement, return and shipment", async () => {
       const denied = [
@@ -236,10 +264,9 @@ async function main() {
       });
       const lines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) =>
         ({ variantId, quantity, unitPrice }));
-      const order = await createOrder(buyer.id, {
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)),
         requestId: randomUUID(), expectedLines: lines,
-        address: { recipientName: "Expired Fixture", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
-        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        
         bankAccountId: bank.id,
       });
       const oldDeadline = new Date(Date.now() - 10 * 60_000);
@@ -272,7 +299,7 @@ async function main() {
     await check("private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval", async () => {
       const smokeProduct = await db.product.create({
         data: {
-          name: `Storage Smoke ${prefix}`, slug: `storage-smoke-${prefix}`, basePrice: 100000, status: "PUBLISHED",
+          name: `Storage Smoke ${prefix}`, slug: `storage-smoke-${prefix}`, basePrice: 100000, status: "PUBLISHED", weightGrams: 250,
           images: { create: { url: "https://example.test/isolated-proof.png", alt: "Synthetic fixture" } },
           variants: { create: { sku: `STORAGE-SMOKE-${prefix}`, inventory: { create: { onHand: 3 } } } },
         },
@@ -282,11 +309,10 @@ async function main() {
       const stranger = await user("storage-smoke-stranger", customerRole.id);
       await db.cart.create({ data: { userId: buyer.id, items: { create: { variantId: smokeProduct.variants[0].id, quantity: 1 } } } });
       const expectedLines = (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice }));
-      const order = await createOrder(buyer.id, {
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)),
         requestId: randomUUID(),
         expectedLines,
-        address: { recipientName: "Smoke Buyer", phone: "0800000000", line: "Alamat test", city: "Bandung", province: "Jawa Barat", postalCode: "40100" },
-        shipping: { courier: "JNE", service: "REG", cost: 20000 },
+        
         bankAccountId: bank.id,
       });
       const buyerCtx = await context(buyer);

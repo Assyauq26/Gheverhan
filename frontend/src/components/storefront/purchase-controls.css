@@ -229,12 +229,15 @@
    from the rendered amount lengths; never change a listing's tracks. */
  .storefront-root .product-card {--product-price-normal:1rem;align-self:start;}
 .storefront-root .product-card-purchase {display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:2px;align-items:center;}
-.storefront-root .product-card-prices {display:flex;gap:2px;align-items:center;min-width:0;justify-content:flex-end;}
+.storefront-root .product-card-prices {display:flex;gap:2px;align-items:center;min-width:0;justify-content:flex-start;}
 .storefront-root .product-card-price {flex-shrink:0;}
 .storefront-root .product-card-original {flex-shrink:0;}
 .storefront-root .product-card[data-featured] .product-card-purchase {grid-template-columns:minmax(0,1fr);}
 .storefront-root .product-card[data-featured] {--product-price-normal:.875rem;}
 .storefront-root .product-card[data-featured] .product-card-price {min-height:0;}
+.storefront-root .featured-card-track .product-card[data-featured] {height:100%;width:100%;align-self:stretch;}
+.storefront-root .featured-card-track .product-card-body {flex:1;}
+.storefront-root .featured-card-track .product-card-purchase {margin-top:auto;padding-top:8px;min-height:28px;}
 .storefront-root :is(.product-card-price,.product-card-original) { white-space:nowrap; font-variant-numeric:tabular-nums; }
 .storefront-root .product-card-price {font-size:calc(var(--product-price-normal)*var(--product-price-scale,1));}
 .storefront-root .product-card-original {font-size:calc(min(.75rem,calc(var(--product-price-normal)*.8))*var(--product-price-scale,1));}
@@ -284,3 +287,18 @@
 }
 
 .storefront-root .product-card-prices:not(:has(.product-card-original)) {justify-content:flex-start;}
+
+/* Region dialog remains inside the themed storefront root, including checkout. */
+:is(.storefront-root,.storefront-checkout-root) .region-trigger {display:flex;align-items:center;gap:12px;width:100%;min-height:76px;padding:16px;border:1px solid var(--store-decorative-border,#e5e5e5);border-radius:var(--store-radius,12px);background:var(--store-field,#fff);color:var(--store-fieldText,#171717);}
+:is(.storefront-root,.storefront-checkout-root) .region-overlay {position:fixed;inset:0;z-index:110;background:rgb(0 0 0 / .4);}
+:is(.storefront-root,.storefront-checkout-root) .region-dialog {position:fixed;z-index:111;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;gap:12px;width:calc(100% - 24px);max-width:540px;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:20px;border:1px solid var(--store-decorative-border,#e5e5e5);border-radius:var(--store-radius,20px);background:var(--store-modal,#fff);color:var(--store-modalText,#171717);box-shadow:0 12px 40px rgb(0 0 0 / .18);}
+:is(.storefront-root,.storefront-checkout-root) .region-close {display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:50%;}
+:is(.storefront-root,.storefront-checkout-root) .region-steps {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;}
+:is(.storefront-root,.storefront-checkout-root) .region-steps button {min-width:0;min-height:48px;padding:8px;text-align:left;font-size:12px;border-bottom:2px solid var(--store-decorative-border,#e5e5e5);}
+:is(.storefront-root,.storefront-checkout-root) .region-steps button[aria-current] {border-color:var(--store-focus,#171717);}
+:is(.storefront-root,.storefront-checkout-root) .region-steps button:disabled {opacity:.45;cursor:not-allowed;}
+:is(.storefront-root,.storefront-checkout-root) .region-options {min-height:100px;max-height:40dvh;overflow-y:auto;overscroll-behavior:contain;}
+:is(.storefront-root,.storefront-checkout-root) .region-option {display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:48px;padding:12px 8px;text-align:left;font-size:14px;border-bottom:1px solid var(--store-decorative-border,#eee);}
+:is(.storefront-root,.storefront-checkout-root) .region-option svg {flex-shrink:0;}
+:is(.storefront-root,.storefront-checkout-root) .region-option[aria-pressed=true], :is(.storefront-root,.storefront-checkout-root) .region-option:hover {background:var(--store-surface,#f5f5f5);}
+:is(.storefront-root,.storefront-checkout-root) :is(.region-trigger,.region-close,.region-option,.region-steps button):focus-visible {outline:2px solid var(--store-focus,#171717);outline-offset:2px;}

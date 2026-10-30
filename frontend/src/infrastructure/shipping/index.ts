@@ -12,7 +12,8 @@ const registry: Record<string, ShippingProvider> = {
 export function getShippingProvider(
   code = process.env.SHIPPING_PROVIDER || "manual",
 ): ShippingProvider {
-  return registry[code] ?? registry.manual;
+  if (!["manual", "jnt"].includes(code)) throw new Error("Checkout hanya mendukung J&T Express");
+  return registry[code];
 }
 
 export type {

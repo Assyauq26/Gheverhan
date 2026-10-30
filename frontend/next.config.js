@@ -4,6 +4,7 @@ require('node:child_process').execFileSync(process.execPath, [require('node:path
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: { "/*": ["./src/modules/regions/data/snapshot.json.gz"] },
   async headers() {
     return [{ source: "/api/v1/admin/store-appearance", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Vary", value: "Cookie" }] }, { source: "/admin/customize", headers: [{ key: "Cache-Control", value: "private, no-store" }] }, { source: "/api/v1/admin/store-branding/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Vary", value: "Cookie" }] }, { source: "/store-customize-preview", headers: [
       { key: "Cache-Control", value: "private, no-store" },

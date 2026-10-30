@@ -8,6 +8,7 @@ import { runAction } from "@/lib/action";
 import { checkoutLinesSchema, checkoutQuoteSchema } from "./checkout.validation";
 import { checkoutIntentId } from "./checkout-intent";
 import { createOrder } from "./checkout.service";
+import { addressSchema } from "@/modules/regions/region.validation";
 
 const schema = z.object({
   recipientName: z.string().min(2),
@@ -19,6 +20,8 @@ const schema = z.object({
   courier: z.string().min(1),
   service: z.string().min(1),
   shippingCost: z.coerce.number().int().nonnegative(),
+  quoteToken: z.string().min(1).max(4096),
+  provinceCode: z.string(), cityCode: z.string(), districtCode: z.string(), villageCode: z.string(),
   bankAccountId: z.string().min(1),
   couponCode: z.string().optional(),
   note: z.string().optional(),
@@ -38,6 +41,7 @@ export async function createOrderAction(_prev: unknown, formData: FormData) {
     const user = await requireUser();
     const order = await createOrder(user.id, {
       address: {
+        ...addressSchema.parse(d),
         recipientName: d.recipientName,
         phone: d.phone,
         line: d.line,
@@ -45,7 +49,7 @@ export async function createOrderAction(_prev: unknown, formData: FormData) {
         province: d.province,
         postalCode: d.postalCode,
       },
-      shipping: { courier: d.courier, service: d.service, cost: d.shippingCost },
+      shipping: { courier: d.courier, service: d.service, cost: d.shippingCost, quoteToken: d.quoteToken },
       bankAccountId: d.bankAccountId,
       couponCode: d.couponCode,
       note: d.note,

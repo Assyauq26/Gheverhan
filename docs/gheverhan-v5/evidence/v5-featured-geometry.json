@@ -1,0 +1,1650 @@
+[
+  {
+    "mode": "default",
+    "width": 320,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 320,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 11.1875,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 71.953125,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 5.99609,
+          "originalFontPx": 4.49707,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 42.140625,
+          "originalTextWidth": 27.8125
+        },
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 7.59766,
+          "originalFontPx": 5.69824,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 42.046875,
+          "originalTextWidth": 27.953125
+        },
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 9.21875,
+          "originalFontPx": 6.91406,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 39.78125,
+          "originalTextWidth": 30.21875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 360,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 360,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 14.2969,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 91.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 7.70312,
+          "originalFontPx": 5.77734,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 54.171875,
+          "originalTextWidth": 35.8125
+        },
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 9.75781,
+          "originalFontPx": 7.31836,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 54,
+          "originalTextWidth": 35.90625
+        },
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 11.8477,
+          "originalFontPx": 8.88574,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 51.140625,
+          "originalTextWidth": 38.828125
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 375,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 375,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 15.4688,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 99.5,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 8.34375,
+          "originalFontPx": 6.25781,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 58.671875,
+          "originalTextWidth": 38.796875
+        },
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 10.5781,
+          "originalFontPx": 7.93359,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 58.546875,
+          "originalTextWidth": 38.953125
+        },
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 12.8398,
+          "originalFontPx": 9.62988,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 55.40625,
+          "originalTextWidth": 42.0625
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 390,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 390,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 8.98438,
+          "originalFontPx": 6.73828,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 63.171875,
+          "originalTextWidth": 41.78125
+        },
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 11.3867,
+          "originalFontPx": 8.54004,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 63.03125,
+          "originalTextWidth": 41.953125
+        },
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 13.8242,
+          "originalFontPx": 10.3682,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 59.6875,
+          "originalTextWidth": 45.296875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 430,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 430,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 10.6992,
+          "originalFontPx": 8.02441,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 75.203125,
+          "originalTextWidth": 49.78125
+        },
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 13.5586,
+          "originalFontPx": 10.1689,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 75.046875,
+          "originalTextWidth": 49.90625
+        },
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 768,
+    "cards": [
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 768,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 112.5625,
+          "originalTextWidth": 74.484375
+        },
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 88.609375,
+          "originalTextWidth": 58.9375
+        },
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 1024,
+    "cards": [
+      {
+        "width": 324,
+        "height": 403.99993896484375,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 382.99993896484375,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 324,
+        "height": 403.99993896484375,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 382.99993896484375,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 324,
+        "height": 403.99993896484375,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 382.99993896484375,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 324,
+        "height": 403.99993896484375,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 382.99993896484375,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 1024,
+    "listing": {
+      "columns": 3,
+      "cards": [
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 112.5625,
+          "originalTextWidth": 74.484375
+        },
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 88.609375,
+          "originalTextWidth": 58.9375
+        },
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "default",
+    "width": 1440,
+    "cards": [
+      {
+        "width": 449.328125,
+        "height": 529.3280639648438,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 508.328125,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 449.328125,
+        "height": 529.3280639648438,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 508.328125,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 449.328125,
+        "height": 529.3280639648438,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 508.328125,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 449.328125,
+        "height": 529.3280639648438,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 508.328125,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "default",
+    "width": 1440,
+    "listing": {
+      "columns": 4,
+      "cards": [
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 112.5625,
+          "originalTextWidth": 74.484375
+        },
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 88.609375,
+          "originalTextWidth": 58.9375
+        },
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 320,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 320,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 11.1875,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 71.953125,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 5.99609,
+          "originalFontPx": 4.49707,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 42.140625,
+          "originalTextWidth": 27.8125
+        },
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 7.59766,
+          "originalFontPx": 5.69824,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 42.046875,
+          "originalTextWidth": 27.953125
+        },
+        {
+          "width": 136,
+          "available": 72,
+          "mainFontPx": 9.21875,
+          "originalFontPx": 6.91406,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 39.78125,
+          "originalTextWidth": 30.21875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 360,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 360,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 14.2969,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 91.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 7.70312,
+          "originalFontPx": 5.77734,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 54.171875,
+          "originalTextWidth": 35.8125
+        },
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 9.75781,
+          "originalFontPx": 7.31836,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 54,
+          "originalTextWidth": 35.90625
+        },
+        {
+          "width": 156,
+          "available": 92,
+          "mainFontPx": 11.8477,
+          "originalFontPx": 8.88574,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 51.140625,
+          "originalTextWidth": 38.828125
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 375,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 375,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 15.4688,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 99.5,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 8.34375,
+          "originalFontPx": 6.25781,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 58.671875,
+          "originalTextWidth": 38.796875
+        },
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 10.5781,
+          "originalFontPx": 7.93359,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 58.546875,
+          "originalTextWidth": 38.953125
+        },
+        {
+          "width": 163.5,
+          "available": 99.5,
+          "mainFontPx": 12.8398,
+          "originalFontPx": 9.62988,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 55.40625,
+          "originalTextWidth": 42.0625
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 390,
+    "cards": [
+      {
+        "width": 192,
+        "height": 271.99993896484375,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 250.99996948242188,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 271.99993896484375,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 250.99996948242188,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 271.99993896484375,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 250.99996948242188,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 271.99993896484375,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 250.99996948242188,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 390,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 8.98438,
+          "originalFontPx": 6.73828,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 63.171875,
+          "originalTextWidth": 41.78125
+        },
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 11.3867,
+          "originalFontPx": 8.54004,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 63.03125,
+          "originalTextWidth": 41.953125
+        },
+        {
+          "width": 171,
+          "available": 107,
+          "mainFontPx": 13.8242,
+          "originalFontPx": 10.3682,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 59.6875,
+          "originalTextWidth": 45.296875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 430,
+    "cards": [
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 192,
+        "height": 272,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 251,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 430,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 10.6992,
+          "originalFontPx": 8.02441,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 75.203125,
+          "originalTextWidth": 49.78125
+        },
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 13.5586,
+          "originalFontPx": 10.1689,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 75.046875,
+          "originalTextWidth": 49.90625
+        },
+        {
+          "width": 191,
+          "available": 127,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 768,
+    "cards": [
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 238.65625,
+        "height": 318.65625,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 297.65625,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 768,
+    "listing": {
+      "columns": 2,
+      "cards": [
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 112.5625,
+          "originalTextWidth": 74.484375
+        },
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 88.609375,
+          "originalTextWidth": 58.9375
+        },
+        {
+          "width": 360,
+          "available": 296,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 1024,
+    "cards": [
+      {
+        "width": 324,
+        "height": 404,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 383,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 324,
+        "height": 404,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 383,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 324,
+        "height": 404,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 383,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 324,
+        "height": 404,
+        "image": 0,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 383,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 1024,
+    "listing": {
+      "columns": 3,
+      "cards": [
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 112.5625,
+          "originalTextWidth": 74.484375
+        },
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 88.609375,
+          "originalTextWidth": 58.9375
+        },
+        {
+          "width": 320,
+          "available": 256,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  },
+  {
+    "mode": "published",
+    "width": 1440,
+    "cards": [
+      {
+        "width": 449.328125,
+        "height": 529.3281860351562,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": null,
+        "purchaseY": 508.32818603515625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 449.328125,
+        "height": 529.3281860351562,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 508.32818603515625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 449.328125,
+        "height": 529.3281860351562,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 508.32818603515625,
+        "clipped": false,
+        "gap": 2
+      },
+      {
+        "width": 449.328125,
+        "height": 529.3281860351562,
+        "image": 0.00006103515625,
+        "priceInset": 0,
+        "mainFontPx": 14,
+        "originalFontPx": 11.2,
+        "purchaseY": 508.32818603515625,
+        "clipped": false,
+        "gap": 2
+      }
+    ]
+  },
+  {
+    "mode": "published",
+    "width": 1440,
+    "listing": {
+      "columns": 4,
+      "cards": [
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": null,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 102.96875,
+          "originalTextWidth": 0
+        },
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 112.5625,
+          "originalTextWidth": 74.484375
+        },
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 88.609375,
+          "originalTextWidth": 58.9375
+        },
+        {
+          "width": 330,
+          "available": 266,
+          "mainFontPx": 16,
+          "originalFontPx": 12,
+          "priceInset": 0,
+          "clipped": false,
+          "cartWidth": 44,
+          "mainTextWidth": 69.09375,
+          "originalTextWidth": 52.46875
+        }
+      ]
+    }
+  }
+]

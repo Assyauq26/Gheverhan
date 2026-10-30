@@ -1,5 +1,8 @@
+import { testAddress, apiShipping, chooseTestLocation } from "../fixtures/jnt-checkout";
+import { assertFeaturedConsistency } from "./checkout-v5-browser";
 import assert from "node:assert/strict";
 import path from "node:path";
+import { writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { expect, type Browser, type BrowserContext } from "@playwright/test";
 import type { Prisma, PrismaClient } from "@prisma/client";
@@ -38,7 +41,7 @@ export async function verifyStorefrontV4({
           basePrice: price,
           salePrice: index === 2 ? 299000 : index === 3 ? 1299000 : null,
           isFeatured: true,
-          status: "PUBLISHED",
+          status: "PUBLISHED", weightGrams: 250,
           ratingAvg: 4.9,
           reviewCount: 999,
           description: "Informasi panjang produk.\n".repeat(100),
@@ -132,6 +135,7 @@ export async function verifyStorefrontV4({
     });
   const screenshot = (name: string) =>
     page.screenshot({ path: path.join(artifactDir, name) });
+  const v5Geometry: unknown[] = [];
   const readTheme = async () => {
     const response = await admin.request.get(
       `${base}/api/v1/admin/store-appearance`,
@@ -164,10 +168,18 @@ export async function verifyStorefrontV4({
     await check(
       "V4: responsive intact prices and featured cards without purchasing shortcuts",
       async () => {
+        for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.goto(base);
+          v5Geometry.push({ theme: "default", width, cards: await assertFeaturedConsistency(page) });
+          if ([320, 390, 1440].includes(width)) await screenshot(`v5-featured-default-${width}.png`);
+        }
         await publishTheme(PRESETS[0].config);
         for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await page.setViewportSize({ width, height: 900 });
           await page.goto(base);
+          v5Geometry.push({ theme: "published", width, cards: await assertFeaturedConsistency(page) });
+          if ([320, 390, 1440].includes(width)) await screenshot(`v5-featured-published-${width}.png`);
           const section = page.locator("section").filter({
             has: page.getByRole("heading", {
               name: "Produk Pilihan",
@@ -510,6 +522,7 @@ export async function verifyStorefrontV4({
         for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await page.setViewportSize({ width, height: 844 });
           await page.goto(`${base}/checkout`);
+          await chooseTestLocation(page);
           await expect(page.getByTestId("place-order-btn")).toBeEnabled();
           await expect(page.getByTestId("place-order-btn")).toHaveCount(1);
           if (width < 768) {
@@ -541,6 +554,7 @@ export async function verifyStorefrontV4({
         }
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto(`${base}/checkout`);
+          await chooseTestLocation(page);
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await page.getByTestId("ship-option-1").click();
         await expect(page.getByTestId("checkout-total")).toHaveText(
@@ -575,13 +589,16 @@ export async function verifyStorefrontV4({
         await page
           .getByRole("button", { name: "Coba lagi", exact: true })
           .click();
+        await page.getByTestId("ship-option-1").click();
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await db.product.update({
           where: { id: products[0].id },
           data: { basePrice: 100000 },
         });
         await page.getByTestId("input-coupon").fill("");
-        await expect(page.getByTestId("checkout-price-changed")).toBeVisible();
+        // A held shipping token is bound to the catalog snapshot. The server now
+        // rejects the stale quote before returning any buyer-visible new total.
+        await expect(page.getByTestId("checkout-quote-error")).toContainText(/berubah|kedaluwarsa/);
         await expect(page.getByTestId("place-order-btn")).toBeDisabled();
         await db.product.update({
           where: { id: products[0].id },
@@ -597,17 +614,14 @@ export async function verifyStorefrontV4({
             recipientName: "V4 Buyer",
             phone: "0800000000",
             line: "Alamat fixture lokal",
-            city: "Test",
-            province: "Test",
-            postalCode: "00000",
           }))
-            await page.locator(`input[name="${name}"]`).fill(value);
+            await page.locator(`[name="${name}"]`).fill(value);
           await page.getByTestId(`bank-option-${bank.id}`).click();
         };
         await page.goto(`${base}/checkout`);
-        await expect(page.getByTestId("place-order-btn")).toBeEnabled();
+          await chooseTestLocation(page, false);
+        await expect(page.getByTestId("place-order-btn")).toBeDisabled();
         const before = await db.order.count({ where: { userId: user.id } });
-        await page.getByTestId("place-order-btn").click();
         assert.equal(
           await page
             .locator('input[name="recipientName"]')
@@ -634,6 +648,7 @@ export async function verifyStorefrontV4({
           data: { onHand: 100 },
         });
         await page.reload();
+        await chooseTestLocation(page);
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await fill();
         await page.getByTestId("place-order-btn").evaluate((e) => {
@@ -649,6 +664,7 @@ export async function verifyStorefrontV4({
         await expect(page.getByTestId("buy-now-btn")).toBeEnabled();
         await page.getByTestId("buy-now-btn").click();
         await expect(page).toHaveURL(/\/checkout\?intent=/);
+        await chooseTestLocation(page);
         await expect(page.getByTestId("place-order-btn")).toBeEnabled();
         await expect(page.getByTestId("place-order-btn")).toHaveCount(1);
         await expect(page.getByTestId("checkout-sticky-total")).toHaveText(
@@ -673,6 +689,7 @@ export async function verifyStorefrontV4({
             }),
           );
           await page.goto(directUrl);
+          await chooseTestLocation(page, true, false);
           await expect(page.getByTestId("checkout-quote-error")).toBeVisible();
           const submit = page.getByTestId("place-order-btn");
           await expect(submit).toBeDisabled();
@@ -699,6 +716,7 @@ export async function verifyStorefrontV4({
           await page
             .getByRole("button", { name: "Coba lagi", exact: true })
             .click();
+          await page.getByTestId("ship-option-0").click();
           await expect(submit).toBeEnabled();
           if (index === 0)
             assert.ok(
@@ -709,6 +727,10 @@ export async function verifyStorefrontV4({
               ).includes("linear-gradient"),
             );
           await screenshot(`v4-checkout-theme-${index}-390.png`);
+          await page.getByTestId("select-location").click();
+          await expect(page.getByTestId("region-dialog")).toBeVisible();
+          await screenshot(`v5-region-theme-${index}-390.png`);
+          await page.getByRole("button", { name: "Tutup pilihan lokasi", exact: true }).click();
           await page.goto(`${base}/product/${products[0].slug}`);
           await page.evaluate(() =>
             scrollTo(0, document.documentElement.scrollHeight),
@@ -717,6 +739,8 @@ export async function verifyStorefrontV4({
             page.getByTestId("product-information-sheet"),
           ).toHaveAttribute("data-expanded", "true");
           await screenshot(`v4-pdp-theme-${index}-390.png`);
+          await page.goto(base);
+          v5Geometry.push({ theme: `preset-${index}`, width: 390, cards: await assertFeaturedConsistency(page) });
         }
       },
     );
@@ -741,6 +765,7 @@ export async function verifyStorefrontV4({
       .catch(() => {});
     throw error;
   } finally {
+    await writeFile(path.join(artifactDir, "v5-featured-geometry.json"), JSON.stringify(v5Geometry, null, 2));
     await themeCommand({
       kind: "rollback",
       revision: originalTheme.publishedVersion,

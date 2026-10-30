@@ -1,0 +1,81 @@
+{
+  "commit": "3115a3646fd56f09abcfb91b529de0b40e2107db",
+  "synthetic": true,
+  "evidence": [
+    {
+      "width": 320,
+      "cards": [
+        {
+          "width": 148,
+          "height": 225.5,
+          "priceInset": 0
+        },
+        {
+          "width": 148,
+          "height": 221.328125,
+          "priceInset": 0.046875
+        },
+        {
+          "width": 192,
+          "height": 269.5,
+          "priceInset": 39.4375
+        },
+        {
+          "width": 192,
+          "height": 269.5,
+          "priceInset": 62.5625
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "cards": [
+        {
+          "width": 148,
+          "height": 225.5,
+          "priceInset": 0
+        },
+        {
+          "width": 148,
+          "height": 221.328125,
+          "priceInset": 0.046875
+        },
+        {
+          "width": 192,
+          "height": 269.5,
+          "priceInset": 39.4375
+        },
+        {
+          "width": 192,
+          "height": 269.5,
+          "priceInset": 62.5625
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "cards": [
+        {
+          "width": 449.328125,
+          "height": 526.828125,
+          "priceInset": 0
+        },
+        {
+          "width": 449.328125,
+          "height": 526.828125,
+          "priceInset": 261.3125
+        },
+        {
+          "width": 449.328125,
+          "height": 526.828125,
+          "priceInset": 296.765625
+        },
+        {
+          "width": 449.328125,
+          "height": 526.828125,
+          "priceInset": 319.890625
+        }
+      ]
+    }
+  ]
+}

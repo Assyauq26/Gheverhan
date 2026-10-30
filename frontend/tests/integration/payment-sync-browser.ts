@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { expireStaleOrders } from '../../src/modules/orders/orders.service';
+import { chooseTestLocation } from '../fixtures/jnt-checkout';
 
 export async function verifyPaymentSynchronization(browser: Browser, db: PrismaClient, base: string,
  bankId: string, customerRoleId: string, finance: BrowserContext, dashboard: Page,
@@ -12,15 +13,15 @@ export async function verifyPaymentSynchronization(browser: Browser, db: PrismaC
  for (const width of [390,1360]) {
   const prefix=`r20pay-${randomUUID().slice(0,8)}`;
   const user=await db.user.create({data:{name:'Synthetic Payment Buyer',email:prefix+'@example.test',passwordHash:'unused',roles:{create:{roleId:customerRoleId}}}});
-  const product=await db.product.create({data:{name:prefix,slug:prefix,status:'PUBLISHED',basePrice:100000,variants:{create:{sku:prefix,inventory:{create:{onHand:3}}}}},include:{variants:true}});
+  const product=await db.product.create({data:{name:prefix,slug:prefix,status:'PUBLISHED',basePrice:100000,weightGrams:250,variants:{create:{sku:prefix,inventory:{create:{onHand:3}}}}},include:{variants:true}});
   const variantId=product.variants[0].id;
   await db.cart.create({data:{userId:user.id,items:{create:{variantId,quantity:1}}}});
   const ctx=await browser.newContext({viewport:{width,height:900}}); await ctx.addCookies([await cookie(user)]);
-  ctx.on('page',page=>page.on('pageerror',err=>errors.push(err.message)));
-  const buyer=await ctx.newPage();const admin=await finance.newPage();admin.on('pageerror',err=>errors.push(err.message));
+  ctx.on('page',page=>page.on('pageerror',err=>errors.push(`${page.url()}: ${err.stack ?? err.message}`)));
+  const buyer=await ctx.newPage();const admin=await finance.newPage();admin.on('pageerror',err=>errors.push(`${admin.url()}: ${err.stack ?? err.message}`));
   try {
    await buyer.goto(`${base}/checkout`);
-   for(const [name,value] of Object.entries({recipientName:'Synthetic Buyer',phone:'0800000000',line:'Alamat disposable',city:'Bandung',province:'Jawa Barat',postalCode:'40100'})) await buyer.locator(`input[name="${name}"]`).fill(value);
+   await chooseTestLocation(buyer);
    await buyer.getByTestId(`bank-option-${bankId}`).locator('input').check();
    await expect(buyer.getByTestId('place-order-btn')).toBeEnabled();
    await buyer.getByTestId('place-order-btn').click(); await expect(buyer).toHaveURL(/\/checkout\/payment\//);

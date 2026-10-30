@@ -53,4 +53,18 @@ The regression suite adds full v2 fallback/hierarchy checks, tariff absence and 
 
 Eight widths: 320, 360, 375, 390, 430, 768, 1024, 1440. Featured measurements assert ≤1 CSS px width/height/price-position differences and left alignment. Existing published-theme tests remain enabled. Browser screenshots/results are uploaded with the existing isolated CI artifact. Android coverage is Chromium mobile/touch emulation, not a physical-device claim.
 
-Before evidence uses PR #116's measured browser captures; after evidence and exact-head CI results are recorded in the PR once complete. Four screenshot references described in the supplied brief were not present as image files in the attachment directory; the existing application/theme is the visual authority.
+See [before/after screenshots, viewport measurements and narrow-card limits](EVIDENCE.md). The baseline was captured from the actual #116 source in an isolated checkout. After captures use the V5 branch; final exact-head CI links are recorded in the PR. Four screenshot references described in the supplied brief were not present as image files in the attachment directory; the existing application/theme is the visual authority.
+
+## Changed surfaces and review map
+
+| Area | Files |
+|---|---|
+| Featured cards and left alignment | `app/(storefront)/page.tsx`, `components/storefront/product-card.tsx`, `purchase-controls.css` |
+| Address selection | `components/storefront/region-selector-dialog.tsx`, `modules/regions/*`, `app/api/v1/regions/route.ts`, `scripts/regions/snapshot.mjs` |
+| Checkout and signed quotes | `app/checkout/page.tsx`, `components/storefront/checkout-client.tsx`, `modules/checkout/checkout.service.ts`, `checkout.actions.ts`, `shipping-quote.ts`, preview/order API routes |
+| J&T adapter/configuration | `infrastructure/shipping/contracts/*`, `manual/*`, `jnt/*`, `infrastructure/shipping/index.ts` |
+| Additive persistence | `prisma/schema.prisma`, `20261030090000_checkout_indonesia_regions_jnt/migration.sql` |
+| Operator readiness | `/admin/shipping/coverage`, shipping page link, optional empty Compose/env fields |
+| Regression evidence | Region/J&T unit tests, new PostgreSQL migration/order tests, existing checkout/payment/legacy-migration fixtures, V5/V4/Flash browser measurements, existing isolated workflow |
+
+The fitted-price algorithm is unchanged. A measured last-stock replay race was repaired by re-checking durable idempotency before returning an availability error; a deterministic delayed-read test protects this case. Existing concurrency, voucher, stock and payment assertions remain active.

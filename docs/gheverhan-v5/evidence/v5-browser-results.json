@@ -1,0 +1,85 @@
+{
+  "metrics": [
+    {
+      "width": 320,
+      "dialog": {
+        "x": 12,
+        "y": 202,
+        "width": 296,
+        "height": 496
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 360,
+      "dialog": {
+        "x": 12,
+        "y": 212,
+        "width": 336,
+        "height": 476
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 375,
+      "dialog": {
+        "x": 12,
+        "y": 212,
+        "width": 351,
+        "height": 476
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 390,
+      "dialog": {
+        "x": 12,
+        "y": 212,
+        "width": 366,
+        "height": 476
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 430,
+      "dialog": {
+        "x": 12,
+        "y": 212,
+        "width": 406,
+        "height": 476
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 768,
+      "dialog": {
+        "x": 114,
+        "y": 232,
+        "width": 540,
+        "height": 436
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 1024,
+      "dialog": {
+        "x": 242,
+        "y": 232,
+        "width": 540,
+        "height": 436
+      },
+      "focusTrapped": true
+    },
+    {
+      "width": 1440,
+      "dialog": {
+        "x": 450,
+        "y": 232,
+        "width": 540,
+        "height": 436
+      },
+      "focusTrapped": true
+    }
+  ],
+  "errors": []
+}

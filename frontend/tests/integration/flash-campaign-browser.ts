@@ -85,10 +85,10 @@ export async function verifyFlashCampaign({
   const products: Prisma.ProductGetPayload<{ include: { variants: true } }>[] =
     [];
   const prices = [
-    20000, 299000, 499000, 1999000, 99000, 17000, 125000, 9999000,
+    20000, 299000, 499000, 1999000, 99000, 17000, 99999000, 9999000,
   ];
   const discounts = [
-    17000, 249000, 299000, 1499000, 79000, 15000, 95000, 8999000,
+    17000, 249000, 299000, 1499000, 79000, 15000, 89999000, 8999000,
   ];
   for (const [i, price] of prices.entries())
     products.push(

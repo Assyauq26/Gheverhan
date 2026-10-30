@@ -111,7 +111,7 @@ async function main() {
     let sequence = 0;
     async function pending(proof = true) {
       const buyer = await user(`buyer${++sequence}`, customerRole.id); await db.cart.create({ data: { userId: buyer.id, items: { create: { variantId: variant.id, quantity: 1 } } } });
-      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)), requestId: randomUUID(), expectedLines: (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })),  bankAccountId: bank.id });
+      const order = await createOrder(buyer.id, { ...(await shippingConfirmation(buyer.id)), address: { ...testAddress, recipientName: "Pelanggan Fixture", line: "Alamat sintetis pengujian" }, requestId: randomUUID(), expectedLines: (await getCartView(buyer.id)).lines.map(({ variantId, quantity, unitPrice }) => ({ variantId, quantity, unitPrice })), bankAccountId: bank.id });
       if (proof) { const proofPath = `gheverhan-sprint1-tests/payment-proofs/${buyer.id}/${randomUUID()}.png`; objects.set(proofPath, { bytes: png, mime: "image/png" }); await submitConfirmation(buyer.id, order.id, { senderBank: "Fixture", senderName: "Pelanggan Fixture", amount: order.total, transferDate: new Date(), proofPath, proofMime: "image/png" }); }
       return { order, payment: await db.payment.findUniqueOrThrow({ where: { orderId: order.id } }) };
     }
@@ -120,7 +120,7 @@ async function main() {
     const context = async (u: { id: string; email: string }) => { const ctx = await browser!.newContext({ viewport: { width: 1360, height: 900 } }); await ctx.addCookies([await cookie(u)]); return ctx; };
     const admin = await context(staff); const fin = await context(finance); const wh = await context(warehouse); const readOnly = await context(viewer); const anonymous = await browser.newContext();
     const page = await admin.newPage(); const fp = await fin.newPage(); const wp = await wh.newPage(); const vp = await readOnly.newPage();
-    const errors: string[] = []; for (const p of [page, fp, wp, vp]) p.on("pageerror", e => errors.push(e.message));
+    const errors: string[] = []; for (const p of [page, fp, wp, vp]) p.on("pageerror", e => errors.push(`${p.url()}: ${e.stack ?? e.message}`));
     const orderUrl = `${base}/admin/orders/${sale.order.id}`;
     async function submit(p: typeof page, label: string, url: string) {
       const f = p.getByRole("form", { name: label, exact: true }); await f.getByRole("button", { name: label, exact: true }).click();
@@ -273,7 +273,7 @@ async function main() {
     await check("private payment proof upload over HTTP uses isolated Supabase storage with owner-only retrieval", async () => {
       const smokeProduct = await db.product.create({
         data: {
-          name: `Storage Smoke ${prefix}`, slug: `storage-smoke-${prefix}`, basePrice: 100000, status: "PUBLISHED",
+          name: `Storage Smoke ${prefix}`, slug: `storage-smoke-${prefix}`, basePrice: 100000, status: "PUBLISHED", weightGrams: 250,
           images: { create: { url: "https://example.test/isolated-proof.png", alt: "Synthetic fixture" } },
           variants: { create: { sku: `STORAGE-SMOKE-${prefix}`, inventory: { create: { onHand: 3 } } } },
         },

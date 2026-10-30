@@ -30,8 +30,8 @@ export async function assertFeaturedConsistency(page: Page) {
 /** Focused local entrypoint; the normal CI path still runs the complete V4 suite. */
 export async function verifyV5Cards(page: Page, admin: BrowserContext, db: PrismaClient, base: string, artifacts: string) {
   const suffix = Date.now(), ids: string[] = [], results: unknown[] = [];
-  for (const [i, [basePrice, salePrice]] of [[20000, 5000], [299000, 249000], [1999000, 1499000], [8999000, null]].entries()) {
-    const p = await db.product.create({ data: { name: i === 2 ? "Nama produk sangat panjang untuk memastikan ukuran kartu tidak berubah" : `V5 produk ${i}`, slug: `v5-card-${suffix}-${i}`, status: "PUBLISHED", weightGrams: 250, basePrice: basePrice!, salePrice, isFeatured: true, images: { create: { url: "/images/dashboard-fashion-rack.webp" } } } });
+  for (const [i, [basePrice, salePrice]] of [[20000, 5000], [299000, 249000], [99999000, 89999000], [8999000, null]].entries()) {
+    const p = await db.product.create({ data: { name: i === 2 ? "Nama produk sangat panjang untuk memastikan ukuran kartu tidak berubah" : `V5 produk ${i}`, description: `v5-card-${suffix}`, slug: `v5-card-${suffix}-${i}`, status: "PUBLISHED", weightGrams: 250, basePrice: basePrice!, salePrice, isFeatured: true, images: { create: { url: "/images/dashboard-fashion-rack.webp" } } } });
     ids.push(p.id);
   }
   const read = async () => (await (await admin.request.get(base + "/api/v1/admin/store-appearance")).json()).data;
@@ -47,6 +47,18 @@ export async function verifyV5Cards(page: Page, admin: BrowserContext, db: Prism
         await page.setViewportSize({ width, height: 900 }); await page.goto(base);
         results.push({ mode, width, cards: await assertFeaturedConsistency(page) });
         if ([320, 390, 1440].includes(width)) await page.screenshot({ path: path.join(artifacts, `v5-featured-${mode}-${width}.png`) });
+        await page.goto(`${base}/shop?q=v5-card-${suffix}`);
+        await expect(page.locator('.product-card')).toHaveCount(4);
+        await expect.poll(() => page.locator('.product-card-prices').evaluateAll(rows => rows.every(row => (row as HTMLElement).style.getPropertyValue('--product-price-scale')))).toBe(true);
+        await page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+        const listing = await page.locator('.product-listing-grid').evaluate(grid => ({ columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, cards: [...grid.querySelectorAll('.product-card')].map(card => {
+          const title = card.querySelector('h3')!.getBoundingClientRect(), price = card.querySelector('.product-card-price')!, row = price.parentElement!, original = card.querySelector('.product-card-original'), button = card.querySelector('.product-card-purchase > button')!.getBoundingClientRect();
+          const p = price.getBoundingClientRect(), o = original?.getBoundingClientRect();
+          return { width: card.getBoundingClientRect().width, available: row.getBoundingClientRect().width, mainFontPx: parseFloat(getComputedStyle(price).fontSize), originalFontPx: original ? parseFloat(getComputedStyle(original).fontSize) : null, priceInset: p.left - title.left, clipped: (o?.right ?? p.right) > button.left - 1, cartWidth: button.width, mainTextWidth: p.width, originalTextWidth: o?.width ?? 0 };
+        }) }));
+        if (width < 768) assert.equal(listing.columns, 2);
+        assert.ok(listing.cards.every(c => Math.abs(c.priceInset) <= 1 && !c.clipped && c.cartWidth >= 44), JSON.stringify(listing));
+        results.push({ mode, width, listing });
       }
     }
   } catch (error) {
@@ -79,6 +91,7 @@ export async function verifyV5Checkout(browser: Browser, buyer: BrowserContext, 
     await expect(dialog.getByText("Gagal memuat wilayah. Coba lagi.")).toBeVisible();
     await dialog.getByRole("button", { name: "Coba lagi", exact: true }).click();
     await expect(dialog.getByRole("button", { name: "Aceh", exact: true })).toBeVisible();
+    await page.screenshot({ path: path.join(artifacts, "v5-region-provinces-390.png") });
     assert.equal(await dialog.locator("nav button:disabled").count(), 3);
     await dialog.getByLabel("Cari Provinsi").fill("tidak-ada-wilayah-ini");
     await expect(dialog.getByText("Wilayah tidak ditemukan. Coba kata lain.")).toBeVisible();
@@ -121,6 +134,8 @@ export async function verifyV5Checkout(browser: Browser, buyer: BrowserContext, 
     await expect(page.getByText("JNE", { exact: true })).toHaveCount(0);
     await expect(page.getByText("SiCepat", { exact: true })).toHaveCount(0);
     await page.screenshot({ path: path.join(artifacts, "v5-checkout-ready-1440.png"), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.screenshot({ path: path.join(artifacts, "v5-checkout-ready-390.png"), fullPage: true });
     // Replacing the destination invalidates the old quote immediately, with no order submission.
     await page.getByTestId("select-location").click();
     await dialog.getByRole("button", { name: /Desa\/Kelurahan/ }).click();

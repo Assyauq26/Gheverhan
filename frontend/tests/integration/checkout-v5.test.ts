@@ -20,6 +20,7 @@ async function fixture() {
 }
 test("new checkout preserves canonical address, actual weight and approved J&T service snapshot", async () => {
   const f = await fixture();
+  const legacy = await db.customer.create({ data: { userId: f.user.id, fullName: "Existing customer", addresses: { create: { recipientName: "Legacy recipient", phone: "0800000000", line: "Preserved legacy street", city: "Legacy city", province: "Legacy province", postalCode: "00000", isDefault: true } } }, include: { addresses: true } });
   const order = await checkout.createOrder(f.user.id, { ...f.input, address: { ...f.input.address, province: "Forged", city: "Forged" }, shipping: { ...f.input.shipping, cost: 0 } });
   assert.equal(order.shippingCost, 20000); assert.equal(order.shippingWeightGram, 500);
   assert.equal(order.shippingCourier, "J&T Express"); assert.equal(order.shippingService, "EZ"); assert.equal(order.shippingMode, "manual");
@@ -28,6 +29,9 @@ test("new checkout preserves canonical address, actual weight and approved J&T s
   assert.equal(address.regionSource, "emsifa-v2");
   const saved = await db.customerAddress.findFirstOrThrow({ where: { customer: { userId: f.user.id }, isDefault: true } });
   assert.equal(saved.villageCode, address.villageCode);
+  const old = await db.customerAddress.findUniqueOrThrow({ where: { id: legacy.addresses[0].id } });
+  assert.equal(old.line, "Preserved legacy street"); assert.equal(old.city, "Legacy city"); assert.equal(old.villageCode, null); assert.equal(old.isDefault, false);
+  assert.equal(await db.customerAddress.count({ where: { customerId: legacy.id } }), 2);
 });
 test("forged carrier, route, quote and missing tariff never mutate stock/cart/order", async () => {
   const f = await fixture();

@@ -189,6 +189,10 @@ export async function verifyStorefrontV4({
               const s = getComputedStyle(e),
                 r = e.getBoundingClientRect(),
                 c = e.closest("article")!.getBoundingClientRect();
+              const card = e.closest("article")!, style = getComputedStyle(card);
+              const content = parseFloat(style.width) - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+              const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+              const original = card.querySelector('.product-card-original')?.getBoundingClientRect();
               return {
                 nowrap: s.whiteSpace,
                 font: parseFloat(s.fontSize),
@@ -197,10 +201,16 @@ export async function verifyStorefrontV4({
                 card: c.width,
                 scroll: e.scrollWidth,
                 width: e.clientWidth,
+                expectedFont: Math.min(.875 * rem, (content - .5 * rem) / parseFloat(style.getPropertyValue('--product-price-units'))),
+                sameRow: !original || Math.abs(original.y + original.height / 2 - r.y - r.height / 2) <= 1.5,
+                beside: !original || original.left >= r.right + 1,
               };
             });
             assert.equal(bounds.nowrap, "nowrap");
-            assert.ok(bounds.font >= 12 && bounds.font <= 16);
+            // The approved inline layout supersedes the old 12px floor when
+            // two nominal strings exceed the fixed featured-card width.
+            assert.ok(bounds.font > 0 && Math.abs(bounds.font - bounds.expectedFont) <= .2, JSON.stringify(bounds));
+            assert.ok(bounds.sameRow && bounds.beside && bounds.scroll <= bounds.width + 1, JSON.stringify(bounds));
             assert.ok(
               bounds.left >= 0 && bounds.right <= bounds.card + 1,
               "Entire price remains inside its card",

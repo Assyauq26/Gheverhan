@@ -64,6 +64,52 @@ export function CartInteractionProvider({ children }: { children: ReactNode }) {
       refresh();
     }
   }, [pathname, refresh]);
+  // Refresh an already-open sheet without resetting its selected options/quantity.
+  // A router refresh alone preserves this provider's client-held product snapshot.
+  useEffect(() => {
+    if (phase !== "options" || !product?.slug) return;
+    const slug = product.slug;
+    let active = true;
+    let request: AbortController | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const update = async () => {
+      if (mutation.current || request) return;
+      request = new AbortController();
+      timer = setTimeout(() => request?.abort(), 5000);
+      setBusy(true);
+      try {
+        const response = await fetch(
+          `/api/v1/products/${encodeURIComponent(slug)}/purchase`,
+          { cache: "no-store", signal: request.signal },
+        );
+        const result = await response.json();
+        if (!response.ok || !result.success)
+          throw new Error(
+            "Pilihan berubah. Tutup dan buka kembali untuk memuat harga terbaru.",
+          );
+        if (active && opened.current)
+          setProduct(result.data as PurchaseProduct);
+      } catch {
+        if (active) {
+          setError(
+            "Harga diperbarui. Tutup dan buka kembali untuk memuat pilihan terbaru.",
+          );
+          setUncertain(true);
+        }
+      } finally {
+        clearTimeout(timer);
+        request = null;
+        if (active) setBusy(false);
+      }
+    };
+    window.addEventListener("gheverhan:campaign-changed", update);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      request?.abort();
+      window.removeEventListener("gheverhan:campaign-changed", update);
+    };
+  }, [phase, product?.slug]);
   function close() {
     if (mutation.current) return;
     controller.current?.abort();

@@ -3,22 +3,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BadgePercent, Bolt, Tag } from "lucide-react";
+import { BadgePercent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { formatIDR } from "@/lib/money";
-import { formatWibDate, scheduledFlashStatusAt, voucherStatusAt } from "@/modules/promotions/marketing-display";
-import { saveVoucherAction, toggleVoucherAction, setFlashSaleAction, setScheduledFlashSaleAction } from "@/modules/promotions/marketing.actions";
+import { formatWibDate, voucherStatusAt } from "@/modules/promotions/marketing-display";
+import { saveVoucherAction, toggleVoucherAction } from "@/modules/promotions/marketing.actions";
 
 type Voucher = {
   id: string; code: string; discountType: "PERCENT" | "FIXED"; discountValue: number;
   minSpend: number; maxDiscount: number | null; isActive: boolean; startsAt: string | null; expiresAt: string | null;
   usageLimit: number | null; perUserLimit: number | null; usedCount: number; createdAt: string;
-};
-type Product = {
-  id: string; name: string; slug: string; basePrice: number; salePrice: number | null;
-  isFlashSale: boolean; updatedAt: string; eligible: boolean; scheduleEligible: boolean;
-  flashSalePrice: number | null; flashSaleStartsAt: string | null; flashSaleEndsAt: string | null;
 };
 type VoucherDraft = {
   code: string; discountType: "PERCENT" | "FIXED"; discountValue: string;
@@ -33,22 +28,14 @@ const localDate = (iso: string | null) => {
   const date = new Date(iso);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 };
-export function MarketingManager({ vouchers, products, canCreate, canUpdate, canReadProducts, asOfMs }: {
-  vouchers: Voucher[]; products: Product[]; canCreate: boolean; canUpdate: boolean; canReadProducts: boolean; asOfMs: number;
+export function MarketingManager({ vouchers, canCreate, canUpdate, asOfMs }: {
+  vouchers: Voucher[]; canCreate: boolean; canUpdate: boolean; asOfMs: number;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<VoucherDraft>(initial);
-  const [productId, setProductId] = useState("");
-  const [price, setPrice] = useState("");
-  const [scheduledId, setScheduledId] = useState("");
-  const [scheduledPrice, setScheduledPrice] = useState("");
-  const [scheduledStart, setScheduledStart] = useState("");
-  const [scheduledEnd, setScheduledEnd] = useState("");
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "error" | "success"; text: string } | null>(null);
-  const selected = products.find(p => p.id === productId);
-  const scheduledSelected = products.find(p => p.id === scheduledId);
   // SSR and the initial browser render must agree, even at a time boundary.
   // Update status after hydration and periodically while the page stays open.
   const [nowMs, setNowMs] = useState(asOfMs);
@@ -93,50 +80,6 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
       const result = await toggleVoucherAction(v.id, !v.isActive);
       if (!result.ok) notice("error", result.error || "Gagal memperbarui voucher");
       else { notice("success", "Status voucher diperbarui."); router.refresh(); }
-    } catch { notice("error", "Gagal menghubungi server."); }
-    finally { setPending(false); }
-  }
-  async function flash(product: Product, enabled: boolean, salePrice: number | null) {
-    setPending(true); setFeedback(null);
-    try {
-      const result = await setFlashSaleAction({ productId: product.id, expectedUpdatedAt: product.updatedAt, enabled, salePrice });
-      if (!result.ok) notice("error", result.error || "Flash sale gagal diperbarui");
-      else { notice("success", enabled ? "Produk berhasil masuk flash sale." : "Flash sale dinonaktifkan dan harga normal dipulihkan."); setProductId(""); setPrice(""); router.refresh(); }
-    } catch { notice("error", "Gagal menghubungi server."); }
-    finally { setPending(false); }
-  }
-  function setScheduledProduct(id: string) {
-    setScheduledId(id);
-    const p = products.find(row => row.id === id);
-    setScheduledPrice(p?.flashSalePrice == null ? "" : String(p.flashSalePrice));
-    setScheduledStart(localDate(p?.flashSaleStartsAt || null));
-    setScheduledEnd(localDate(p?.flashSaleEndsAt || null));
-  }
-  async function saveSchedule(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!scheduledSelected) return;
-    setPending(true); setFeedback(null);
-    try {
-      const result = await setScheduledFlashSaleAction({
-        productId: scheduledSelected.id, expectedUpdatedAt: scheduledSelected.updatedAt,
-        enabled: true, price: Number(scheduledPrice),
-        startsAt: scheduledStart ? new Date(scheduledStart).toISOString() : null,
-        endsAt: scheduledEnd ? new Date(scheduledEnd).toISOString() : null,
-      });
-      if (!result.ok) notice("error", result.error || "Jadwal gagal disimpan.");
-      else { notice("success", "Flash sale terjadwal berhasil disimpan."); setScheduledProduct(""); router.refresh(); }
-    } catch { notice("error", "Gagal menghubungi server."); }
-    finally { setPending(false); }
-  }
-  async function clearSchedule(product: Product) {
-    setPending(true); setFeedback(null);
-    try {
-      const result = await setScheduledFlashSaleAction({
-        productId: product.id, expectedUpdatedAt: product.updatedAt,
-        enabled: false, price: null, startsAt: null, endsAt: null,
-      });
-      if (!result.ok) notice("error", result.error || "Jadwal gagal dihapus.");
-      else { notice("success", "Jadwal flash sale berhasil dihapus."); setScheduledProduct(""); router.refresh(); }
     } catch { notice("error", "Gagal menghubungi server."); }
     finally { setPending(false); }
   }
@@ -198,67 +141,5 @@ export function MarketingManager({ vouchers, products, canCreate, canUpdate, can
       </div>
     </section>
 
-    <section id="flash-sale" className="space-y-4 scroll-mt-24">
-      <div className="flex items-center gap-2"><Bolt size={20}/><h2 className="text-xl font-bold">Flash sale produk</h2></div>
-      <p className="text-sm text-ink-soft">Gunakan kontrol ini untuk flash sale manual. Untuk harga promo yang aktif dan berakhir otomatis, gunakan bagian Flash Sale terjadwal di bawah.</p>
-      {canUpdate && canReadProducts && <div className="grid gap-3 rounded-2xl border border-line bg-white p-5 md:grid-cols-[1fr_180px_auto] md:items-end">
-        <div className="min-w-0"><Label htmlFor="flash-product">Pilih produk terbit</Label><select id="flash-product" value={productId} onChange={e => { setProductId(e.target.value); setPrice(""); }}
-          className="h-11 w-full min-w-0 rounded-xl border border-line bg-white px-3 text-sm">
-          <option value="">Pilih produk</option>
-          {products.filter(p => !p.isFlashSale && p.flashSalePrice == null).map(p => <option key={p.id} value={p.id} disabled={!p.eligible}>{p.name}{!p.eligible ? " — harga promo reguler/varian" : ""}</option>)}
-        </select></div>
-        <div><Label htmlFor="flash-price">Harga flash sale (Rp)</Label><Input id="flash-price" type="number" min={1} max={selected ? selected.basePrice - 1 : undefined}
-          value={price} onChange={e => setPrice(e.target.value)} placeholder={selected ? `Di bawah ${selected.basePrice}` : "Masukkan harga"} /></div>
-        <Button type="button" disabled={pending || !selected || !selected.eligible || !price || !Number.isSafeInteger(Number(price)) || Number(price) <= 0 || Number(price) >= (selected?.basePrice || 0)}
-          onClick={() => selected && flash(selected, true, Number(price))}>Aktifkan flash sale</Button>
-        {selected && <p className="text-xs text-ink-soft md:col-span-3">Harga normal {formatIDR(selected.basePrice)}. Hanya produk dengan harga varian mengikuti harga produk yang bisa diproses di sini.</p>}
-      </div>}
-      {!canReadProducts ? <p className="rounded-2xl border border-line bg-white p-5 text-sm">Role ini tidak memiliki izin membaca katalog produk.</p> :
-        !products.some(p => p.isFlashSale) ? <p className="rounded-2xl border border-line bg-white p-5 text-sm text-ink-soft">Belum ada flash sale aktif.</p>
-          : <ul className="divide-y divide-line rounded-2xl border border-line bg-white">{products.filter(p => p.isFlashSale).map(p => <li key={p.id}
-            className="flex flex-wrap items-center justify-between gap-3 p-4"><div className="min-w-0"><p className="font-semibold">{p.name}</p>
-              <p className="text-sm text-ink-soft">{formatIDR(p.basePrice)} → {p.salePrice != null ? formatIDR(p.salePrice) : "Periksa harga varian"}</p></div>
-            <div className="flex flex-wrap gap-2"><Link href={`/product/${p.slug}`} className="self-center text-xs underline">Lihat produk</Link>
-              {canUpdate && <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => flash(p, false, null)}>Akhiri flash sale</Button>}</div>
-          </li>)}</ul>}
-      {products.length === 60 && <p className="text-xs text-ink-soft">Menampilkan 60 produk terbit terbaru/flash sale. Gunakan editor produk untuk item di luar daftar.</p>}
-    </section>
-    <section id="scheduled-flash-sale" className="space-y-4 scroll-mt-24">
-      <div className="flex items-center gap-2"><Bolt size={20}/><h2 className="text-xl font-bold">Flash sale terjadwal</h2></div>
-      <p className="text-sm text-ink-soft">Harga promo aktif otomatis mulai dari tanggal/jam yang ditentukan dan kembali normal setelah berakhir. Semua waktu menggunakan zona waktu perangkat saat diisi.</p>
-      {canUpdate && canReadProducts && <form onSubmit={saveSchedule} className="space-y-4 rounded-2xl border border-line bg-white p-5">
-        <fieldset disabled={pending} className="space-y-4">
-          <div><Label htmlFor="scheduled-product">Produk flash sale terjadwal</Label>
-            <select id="scheduled-product" value={scheduledId} onChange={e => setScheduledProduct(e.target.value)} required
-              className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm">
-              <option value="">Pilih produk</option>
-              {products.filter(p => !p.isFlashSale && p.scheduleEligible).map(p => <option key={p.id} value={p.id}>{p.name}{p.flashSalePrice != null ? " — sudah terjadwal" : ""}</option>)}
-            </select>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div><Label htmlFor="scheduled-price">Harga promo (Rp)</Label><Input id="scheduled-price" type="number" min={1} step={1}
-              max={scheduledSelected ? scheduledSelected.basePrice - 1 : undefined} value={scheduledPrice} onChange={e => setScheduledPrice(e.target.value)} required/></div>
-            <div><Label htmlFor="scheduled-start">Mulai</Label><Input id="scheduled-start" type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} required/></div>
-            <div><Label htmlFor="scheduled-end">Berakhir</Label><Input id="scheduled-end" type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} required/></div>
-          </div>
-          <Button disabled={pending || !scheduledSelected || !scheduledSelected.scheduleEligible || !scheduledPrice || Number(scheduledPrice) >= (scheduledSelected?.basePrice ?? 0)}
-            type="submit">{pending ? "Menyimpan..." : scheduledSelected?.flashSalePrice != null ? "Perbarui jadwal" : "Jadwalkan flash sale"}</Button>
-        </fieldset>
-      </form>}
-      {canReadProducts && (products.some(p => p.flashSalePrice != null) ?
-        <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
-          {products.filter(p => p.flashSalePrice != null).map(p => {
-            const starts = p.flashSaleStartsAt || "";
-            const ends = p.flashSaleEndsAt || "";
-            const status = scheduledFlashStatusAt(starts, ends, nowMs);
-            return <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div><p className="font-semibold">{p.name} <span className="ml-1 rounded-full bg-surface px-2 py-1 text-xs font-normal">{status}</span></p>
-                <p className="mt-1 text-sm text-ink-soft">{formatIDR(p.basePrice)} → {formatIDR(p.flashSalePrice!)} · {formatWibDate(starts)} sampai {formatWibDate(ends)}</p></div>
-              {canUpdate && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => clearSchedule(p)}>Hapus jadwal<span className="sr-only"> {p.name}</span></Button>}
-            </li>;
-          })}
-        </ul> : <p className="rounded-2xl border border-line bg-white p-4 text-sm text-ink-soft">Belum ada flash sale terjadwal.</p>)}
-    </section>
-    <p className="flex items-start gap-2 text-xs text-ink-soft"><Tag size={16} className="shrink-0"/>Voucher terjadwal dan kuota, serta flash sale terjadwal sudah tersedia. Voucher khusus produk, kuota flash sale, banner promosi publik dan laporan kampanye disiapkan pada sprint berikutnya.</p>
   </div>;
 }

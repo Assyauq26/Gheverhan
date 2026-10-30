@@ -129,6 +129,11 @@ jobs:
       - name: Real PostgreSQL refunds, shipping and stock invariants
         run: npm run test:integration:refund-shipping
 
+      - name: Central Flash Sale migration, legacy archive, pricing and concurrency
+        run: |
+          node --disable-proto=throw --import tsx --test tests/integration/flash-campaign-migration.test.ts
+          node --disable-proto=throw --import tsx --test tests/integration/flash-campaign.test.ts
+
       - name: Product editor V2 staged media, shipping and migration recovery
         working-directory: frontend
         run: |
@@ -194,6 +199,8 @@ jobs:
           path: |
             /tmp/gheverhan-navigation-*/navigation-results.json
             /tmp/gheverhan-product-browser-*/validation-results.json
+            /tmp/gheverhan-product-browser-*/flash-*.png
+            /tmp/gheverhan-product-browser-*/flash-*.json
             /tmp/gheverhan-product-browser-*/product-*.png
             /tmp/gheverhan-product-browser-*/native-*.png
             /tmp/gheverhan-product-browser-*/customize-*.png

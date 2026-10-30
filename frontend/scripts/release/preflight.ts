@@ -2,16 +2,17 @@ import { PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { isHelipodIdentity, verifyLocalMedia } from "./helipod-preflight.mjs";
 import { verifyPrivateProductBucket } from "./storage-preflight";
 // Read-only release check. Secret values and customer rows never enter output.
 async function main() {
   const env = process.env;
+  const helipod = isHelipodIdentity(env);
   const keys = [
     "DATABASE_URL",
     "DIRECT_URL",
     "JWT_SECRET",
-    "SUPABASE_URL",
-    "SUPABASE_SERVICE_ROLE_KEY",
+    ...(!helipod ? ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] : ["PREFLIGHT_LEDGER_DATABASE_URL"]),
     "CRON_SECRET",
     "RESEND_API_KEY",
     "PASSWORD_RESET_FROM",
@@ -43,10 +44,10 @@ async function main() {
     );
   const identity =
     sameDatabase &&
-    (local
+    (helipod || (local
       ? env.GHEVERHAN_ISOLATED_TESTS === "1"
-      : matches(database) && matches(direct));
-  if (!identity || (!local && env.R21_ALLOW_PRODUCTION_READ_ONLY !== "1")) {
+      : matches(database) && matches(direct)));
+  if (!identity || (!local && !helipod && env.R21_ALLOW_PRODUCTION_READ_ONLY !== "1")) {
     console.log(
       JSON.stringify({ status: "BLOCKED", databaseIdentity: false, presence }),
     );
@@ -65,21 +66,17 @@ async function main() {
     );
   }
   const db = new PrismaClient();
+  const ledgerDb = helipod ? new PrismaClient({ datasources: { db: { url: env.PREFLIGHT_LEDGER_DATABASE_URL } } }) : db;
   try {
+    const ledger = await ledgerDb.$transaction(async (tx) => {
+      await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+      await tx.$executeRaw`SET LOCAL statement_timeout = '5s'`;
+      return tx.$queryRaw<{migration_name:string;checksum:string;finished:boolean;rolled_back:boolean}[]>`SELECT migration_name,checksum,finished_at IS NOT NULL AS finished,rolled_back_at IS NOT NULL AS rolled_back FROM public._prisma_migrations ORDER BY migration_name`;
+    });
     const facts = await db.$transaction(
       async (tx) => {
         await tx.$executeRaw`SET TRANSACTION READ ONLY`;
         await tx.$executeRaw`SET LOCAL statement_timeout = '5s'`;
-        const ledger = await tx.$queryRaw<
-          {
-            migration_name: string;
-            checksum: string;
-            finished: boolean;
-            rolled_back: boolean;
-          }[]
-        >`
-        SELECT migration_name,checksum,finished_at IS NOT NULL AS finished,rolled_back_at IS NOT NULL AS rolled_back
-        FROM public._prisma_migrations ORDER BY migration_name`;
         const schema = await tx.$queryRaw<
           {
             productEditorV2: boolean;
@@ -199,7 +196,7 @@ async function main() {
       maintenanceMode !== "UNCONFIGURED" &&
       Object.values(presence).every(Boolean) &&
       (env.JWT_SECRET?.length || 0) >= 16;
-    const productStorage = local
+    const productStorage = helipod ? await verifyLocalMedia(env) : local
       ? { status: "NOT APPLICABLE", reason: "LOCAL_MOCK_STORAGE_TESTED_SEPARATELY" }
       : await verifyPrivateProductBucket(env);
     const storageReady = local || productStorage.status === "PASS";
@@ -231,6 +228,7 @@ async function main() {
     if (!ledgerMatches || !schemaReady || !configReady || !storageReady) process.exitCode = 1;
   } finally {
     await db.$disconnect();
+    if (ledgerDb !== db) await ledgerDb.$disconnect();
   }
 }
 main().catch(() => {

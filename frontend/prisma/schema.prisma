@@ -238,6 +238,7 @@ model Brand {
 }
 
 model Product {
+  flashCampaignItems FlashSaleCampaignItem[]
   weightGrams Int?
   packageLengthMm Int?
   packageWidthMm Int?
@@ -859,4 +860,38 @@ model StoreHeroAsset {
 
   @@unique([actorId, sessionHash, requestId])
   @@index([expiresAt])
+}
+
+// Single-store campaign authority. Legacy Product fields are retained for archival cutover only.
+model FlashSaleCampaign {
+  id String @id @db.Uuid
+  storeKey String @default("primary") @db.VarChar(16)
+  name String @db.VarChar(120)
+  status String @default("DRAFT") @db.VarChar(16)
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt DateTime @db.Timestamptz(3)
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items FlashSaleCampaignItem[]
+  @@index([status, startsAt, endsAt])
+}
+model FlashSaleCampaignItem {
+  id String @id @db.Uuid
+  campaignId String @db.Uuid
+  productId String
+  flashSalePrice Int
+  campaign FlashSaleCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  @@unique([campaignId, productId])
+  @@index([productId])
+}
+model FlashSaleControl {
+  key String @id @default("primary") @db.VarChar(16)
+}
+model FlashSaleLegacy {
+  productId String @id
+  snapshot Json
+  capturedAt DateTime @default(now())
+  resolvedCampaignId String? @db.Uuid
 }

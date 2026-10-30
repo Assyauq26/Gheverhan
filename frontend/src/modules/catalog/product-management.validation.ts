@@ -1,6 +1,9 @@
 import { sizeChartSchema } from "./product-size-chart";
 import { z } from "zod";
-import { shippingMetadataSchema, shippingMetadataShape } from "./product-shipping";
+import {
+  shippingMetadataSchema,
+  shippingMetadataShape,
+} from "./product-shipping";
 import {
   canonicalOption,
   combinationKey,
@@ -55,7 +58,7 @@ const variant = z
     "Harga diskon varian harus lebih kecil dari harga varian",
   );
 
-export const productInputSchema = z
+const productObjectSchema = z
   .object({
     ...shippingMetadataShape,
     name: z.string().trim().min(2, "Nama produk minimal 2 karakter").max(160),
@@ -70,7 +73,7 @@ export const productInputSchema = z
     categoryId: z.string().max(64).nullable().optional(),
     brandId: z.string().max(64).nullable().optional(),
     isFeatured: z.boolean().default(false),
-    isFlashSale: z.boolean().default(false),
+
     optionsEnabled: z.boolean().optional(),
     optionGroups: optionGroups.optional(),
     optionImages: z
@@ -102,12 +105,6 @@ export const productInputSchema = z
         code: "custom",
         path: ["salePrice"],
         message: "Harga diskon harus lebih kecil dari harga normal",
-      });
-    if (v.isFlashSale && v.salePrice == null)
-      ctx.addIssue({
-        code: "custom",
-        path: ["salePrice"],
-        message: "Flash sale memerlukan harga diskon",
       });
     if (v.optionsEnabled === true && !v.optionGroups?.length)
       ctx.addIssue({
@@ -172,6 +169,34 @@ export const productInputSchema = z
         });
     }
   });
+/** Reject promotion fields even inside variant/import-shaped payloads; never silently strip them. */
+export function hasFlashSaleMutation(value: unknown): boolean {
+  const pending = [value];
+  const seen = new WeakSet<object>();
+  let visited = 0;
+  while (pending.length) {
+    const current = pending.pop();
+    if (!current || typeof current !== "object") continue;
+    if (seen.has(current)) continue;
+    if (++visited > 10000) return true;
+    seen.add(current);
+    for (const [key, child] of Object.entries(current)) {
+      if (/^(isFlashSale|flashSale|campaign)/i.test(key)) return true;
+      if (child && typeof child === "object") pending.push(child);
+    }
+  }
+  return false;
+}
+export const productInputSchema = z.preprocess((value, ctx) => {
+  if (hasFlashSaleMutation(value)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Pengaturan Flash Sale hanya melalui Marketing.",
+    });
+    return z.NEVER;
+  }
+  return value;
+}, productObjectSchema);
 export type ProductInput = z.infer<typeof productInputSchema>;
 export const categoryInputSchema = z.object({
   name: z.string().trim().min(2).max(120),

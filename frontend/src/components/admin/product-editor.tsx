@@ -80,7 +80,6 @@ function valuesFor(p?: ProductEditorData): Values {
     categoryId: null,
     brandId: null,
     isFeatured: false,
-    isFlashSale: false,
     optionGroups: [],
     optionImages: [],
     images: [],
@@ -1458,15 +1457,7 @@ export function ProductEditor({
                     className="h-5 w-5 accent-black"
                   />
                 </label>
-                <label className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-zinc-200 px-4 text-sm font-medium">
-                  <span>Flash sale</span>
-                  <input
-                    type="checkbox"
-                    checked={values.isFlashSale}
-                    onChange={(e) => change("isFlashSale", e.target.checked)}
-                    className="h-5 w-5 accent-black"
-                  />
-                </label>
+
               </div>
               <p className="text-xs leading-relaxed text-zinc-500">
                 Draft dan arsip tidak dapat dibeli melalui storefront. Arsip

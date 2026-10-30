@@ -1,3 +1,5 @@
+import { publicCampaign } from "@/modules/promotions/campaign-pricing";
+import { CampaignSync } from "@/components/storefront/campaign-sync";
 import { getPublishedAppearance } from "@/modules/appearance/published";
 import { themeStyle, isLegacy } from "@/modules/appearance/runtime";
 import { AppearanceProvider, PublishedVersionSync, StoreLogo } from "@/components/appearance/context";
@@ -21,13 +23,14 @@ export default async function StorefrontLayout({
 }) {
   // The shared layout needs identity + cart badge only. Resolve both from
   // one request-scoped database lookup instead of user query + cart query.
-  const [user, appearance] = await Promise.all([getStorefrontUserContext(), getPublishedAppearance()]);
+  const [user, appearance,campaign] = await Promise.all([getStorefrontUserContext(), getPublishedAppearance(),publicCampaign()]);
   const theme = appearance.config;
   const count = user?.cartCount ?? 0;
 
   return (
     <AppearanceProvider config={theme}>
     <CartInteractionProvider>
+    <CampaignSync initial={campaign}/>
     <div style={themeStyle(theme)} data-theme-active={!isLegacy(theme)} data-gradient-highlight-card={theme.gradients.highlightCard.enabled} className="storefront-root min-h-screen bg-white pb-24 md:pb-0">
       <PublishedVersionSync version={appearance.version} />
       {user && <RegistrationOtpCleanup />}

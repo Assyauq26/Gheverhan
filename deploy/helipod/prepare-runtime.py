@@ -38,6 +38,7 @@ DO $$ DECLARE t record; BEGIN
  END LOOP;
 END $$;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gheverhan_runtime;
+GRANT EXECUTE ON FUNCTION public.gheverhan_backfill_legacy_options(text) TO gheverhan_runtime;
 """ % password
 # RLS is kept enabled. This is the trusted server role, matching the app's existing
 # server-side authorization model; it is never exposed to browsers or a public DB port.

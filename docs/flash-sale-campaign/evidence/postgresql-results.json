@@ -1,0 +1,183 @@
+{
+  "environment": "Disposable loopback PostgreSQL17; synthetic fixtures only",
+  "baseline": "65addb420fccc74129ed72add4a27465ee0c90f8",
+  "status": "PASS",
+  "totalTests": 261,
+  "suites": [
+    {
+      "suite": "auth-security",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "cart-concurrency",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "custom-variation-migration",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "custom-variations",
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "database-entrypoints",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "direct-checkout-migration",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "direct-checkout",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "flash-campaign-migration",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "flash-campaign",
+      "tests": 21,
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "order-refund-shipping",
+      "tests": 30,
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "product-editor-v2-migration",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "product-editor-v2",
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "product-lifecycle",
+      "tests": 23,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "product-size-chart-migration",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "registration-conflicts",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "registration-indexes",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "registration-migration",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "registration-otp",
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "release-preflight",
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "store-appearance-migration",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "store-appearance",
+      "tests": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "store-hero",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "transaction-correctness",
+      "tests": 27,
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "verified-review-migration",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "verified-reviews",
+      "tests": 21,
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0
+    }
+  ]
+}

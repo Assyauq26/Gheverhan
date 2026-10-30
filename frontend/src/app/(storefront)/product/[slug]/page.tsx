@@ -25,7 +25,10 @@ import {
   ProductSelectionProvider,
   ProductSelectionPrice,
 } from "@/components/storefront/product-selection";
-import { effectiveProductPrice } from "@/modules/promotions/scheduled-flash-sale";
+import {
+  activeScheduledFlashPrice,
+  effectiveProductPrice,
+} from "@/modules/promotions/scheduled-flash-sale";
 import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { ProductGallery } from "@/components/storefront/product-gallery";
@@ -78,11 +81,14 @@ export default async function ProductPage({ params }: ProductRouteProps) {
 
   const wl = new Set(wishIds);
   const price = effectiveProductPrice(product);
+  const campaignPrice = activeScheduledFlashPrice(product);
   const variantOptions = product.variants.map((v) => ({
     id: v.id,
     sku: v.sku,
     optionValueIds: v.optionValues.map((s) => s.valueId),
-    price: v.price != null ? effectivePrice(v.price, v.salePrice) : price,
+    price:
+      campaignPrice ??
+      (v.price != null ? effectivePrice(v.price, v.salePrice) : price),
     originalPrice: v.price ?? product.basePrice,
     color: v.color,
     size: v.size,

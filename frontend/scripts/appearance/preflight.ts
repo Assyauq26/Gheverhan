@@ -1,3 +1,4 @@
+import { assertCampaignSchema } from "../../src/modules/promotions/campaign-preflight";
 import { assertReviewSchema } from "../../src/modules/reviews/review-schema";
 import { PrismaClient } from "@prisma/client";
 import { assertSafeDatabaseOperation } from "../assert-safe-db-operation.mjs";
@@ -7,6 +8,7 @@ assertSafeDatabaseOperation();
 const db = new PrismaClient();
 async function main() {
   await assertReviewSchema(db);
+  await assertCampaignSchema(db);
   const tables = await db.$queryRaw<
     { relname: string; relrowsecurity: boolean }[]
   >`SELECT relname,relrowsecurity FROM pg_class WHERE relname IN ('StoreAppearance','StoreAppearanceRevision','StoreBrandAsset','StoreCustomizeRateLimit')`;

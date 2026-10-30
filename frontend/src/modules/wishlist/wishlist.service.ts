@@ -1,3 +1,4 @@
+import { withCampaignPricing } from "@/modules/promotions/campaign-pricing";
 import { withVerifiedRatings } from "@/modules/reviews/public-reviews";
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
@@ -46,7 +47,7 @@ export async function getWishlistView(userId: string) {
     },
   });
   const items = wl?.items ?? [];
-  const rated = await withVerifiedRatings(items.map(item=>item.product));
+  const rated = await withCampaignPricing(await withVerifiedRatings(items.map(item=>item.product)));
   return items.map((item,index)=>({...item,product:rated[index]}));
 }
 

@@ -5,13 +5,16 @@ import type { Browser } from '@playwright/test';
 import { expect } from '@playwright/test';
 import type { PrismaClient } from '@prisma/client';
 
-export async function verifyCartSynchronization(browser: Browser, db: PrismaClient, base: string, prefix: string, errors: string[], artifacts: string, emailCodes: Map<string, string>) {
+export async function verifyCartSynchronization(browser: Browser, db: PrismaClient, base: string, prefix: string, errors: string[], artifacts: string, emailCodes: Map<string, string>, invalidateCatalog: () => Promise<void>) {
  for (const width of [390, 768, 1024, 1360]) {
   const scope = `r20cart-${prefix}-${width}`;
   const email = `${scope}@example.test`;
   const password = 'R20-disposable-fixture-password';
   const products: { id: string; variants: { id: string }[] }[] = [];
   for (let i=0;i<3;i++) products.push(await db.product.create({ data: { name: `${scope} item ${i}`, slug: `${scope}-${i}`, status: 'PUBLISHED', basePrice: 10000+i*1000, variants: { create: { sku: `${scope}-${i}`, inventory: { create: { onHand: 20 } } } } }, include: { variants: true } }));
+  // Fixtures above bypass application writes; invalidate through the real admin
+  // save action before expecting newly-created records on a warmed /shop cache.
+  await invalidateCatalog();
   const ctx = await browser.newContext({ viewport: { width, height: 900 } });
   ctx.on('page', page => page.on('pageerror', err => errors.push(err.message)));
   let userId: string | undefined;

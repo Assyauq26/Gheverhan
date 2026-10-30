@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify manual Production workflow protection offline
-        run: node --test .github/tests/production-read-only-preflight.test.mjs
+        run: node --test .github/tests/production-read-only-preflight.test.mjs .github/tests/helipod-preflight.test.mjs
       - name: Prepare locked dependencies without online application execution
         run: docker build --file frontend/Dockerfile.test --tag gheverhan-unit-tests frontend
       - name: Run all unit and containment tests offline without host credentials

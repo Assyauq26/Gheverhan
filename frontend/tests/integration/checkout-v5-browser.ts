@@ -15,7 +15,7 @@ export async function assertFeaturedConsistency(page: Page) {
     const price = card.querySelector('.product-card-price')!.getBoundingClientRect();
     const original = card.querySelector('.product-card-original')?.getBoundingClientRect();
     return { width: rect.width, height: rect.height, image: Math.abs(image.width - image.height), priceInset: price.left - title.left,
-      purchaseY: price.top - rect.top, clipped: original ? original.right > rect.right : price.right > rect.right,
+      purchaseY: price.top + price.height / 2 - rect.top, clipped: original ? original.right > rect.right : price.right > rect.right,
       gap: original ? original.left - price.right : 2 };
   }));
   assert.ok(metrics.length >= 4, 'At least four real featured cards are required');
@@ -45,7 +45,7 @@ export async function verifyV5Checkout(browser: Browser, buyer: BrowserContext, 
     assert.equal(await dialog.locator("nav button:disabled").count(), 3);
     await dialog.getByLabel("Cari Provinsi").fill("tidak-ada-wilayah-ini");
     await expect(dialog.getByText("Wilayah tidak ditemukan. Coba kata lain.")).toBeVisible();
-    for (const [search, name] of [["Jakarta", "DKI Jakarta"], ["Jakarta Pusat", "Kota Administrasi Jakarta Pusat"], ["Gambir", "Gambir"], ["Gambir", "Gambir"]]) {
+    for (const [search, name] of [["Jakarta", "Daerah Khusus Ibukota Jakarta"], ["Jakarta Pusat", "Kota Administrasi Jakarta Pusat"], ["Gambir", "Gambir"], ["Gambir", "Gambir"]]) {
       await dialog.locator("#region-search").fill(search);
       await dialog.getByRole("button", { name, exact: true }).click();
     }

@@ -127,7 +127,9 @@ jobs:
         run: npm run test:integration:transactions
 
       - name: Structured Indonesia addresses and server-authoritative J&T quote invariants
-        run: node --disable-proto=throw --import tsx --test tests/integration/checkout-v5.test.ts
+        run: |
+          node --disable-proto=throw --import tsx --test tests/integration/checkout-v5-migration.test.ts
+          node --disable-proto=throw --import tsx --test tests/integration/checkout-v5.test.ts
 
       - name: Real PostgreSQL refunds, shipping and stock invariants
         run: npm run test:integration:refund-shipping

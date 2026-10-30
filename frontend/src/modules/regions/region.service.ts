@@ -25,6 +25,7 @@ export async function getRegions(level: RegionLevel, parent = ""): Promise<Regio
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return hit.list;
   if (pending.has(key)) return pending.get(key)!;
+  if (pending.size >= 16) return fallback;
   const request = (async () => {
     let list: RegionList;
     try { list = await fetchRegions(level, parent); } catch { list = fallback; }

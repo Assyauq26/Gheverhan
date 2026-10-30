@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import type { APIRequestContext, Page } from "@playwright/test";
 export const testAddress = {
   recipientName: "Synthetic Buyer", phone: "0800000000", line: "Disposable test address",
-  provinceCode: "31", province: "DKI Jakarta", cityCode: "31.71", city: "Kota Administrasi Jakarta Pusat",
+  provinceCode: "31", province: "Daerah Khusus Ibukota Jakarta", cityCode: "31.71", city: "Kota Administrasi Jakarta Pusat",
   districtCode: "31.71.01", district: "Gambir", villageCode: "31.71.01.1001", village: "Gambir", postalCode: "10110",
 };
 /** Sample rates are confined to guarded, disposable tests; no production default exists. */
@@ -39,7 +39,7 @@ export async function chooseTestLocation(page: Page, fillRecipient = true, selec
   const dialog = page.getByTestId("region-dialog");
   // Reopening an existing valid selection offers confirmation immediately.
   if (!(await dialog.getByRole("button", { name: "Gunakan lokasi ini", exact: true }).count())) {
-    for (const name of ["DKI Jakarta", "Kota Administrasi Jakarta Pusat", "Gambir", "Gambir"]) {
+    for (const name of ["Daerah Khusus Ibukota Jakarta", "Kota Administrasi Jakarta Pusat", "Gambir", "Gambir"]) {
       await dialog.getByRole("button", { name, exact: true }).click();
     }
   }

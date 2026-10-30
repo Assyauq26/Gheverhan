@@ -268,3 +268,26 @@
 @media(max-width:479px) {
  .storefront-root .grid > .product-card[data-wide-price] {grid-column:1/-1;}
 }
+
+/* Listing tracks belong to the listing, never to a card's price length.
+   Leave the featured carousel and existing tablet/desktop rules untouched. */
+@media(max-width:767px) {
+ .storefront-root .product-listing-grid.grid:has(> .product-card) {
+   grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ .storefront-root .product-listing-grid.grid > .product-card {
+   grid-column:auto;
+   min-width:0;
+ }
+ .storefront-root .product-listing-grid .product-card-purchase,
+ .storefront-root .product-listing-grid .product-card-prices {column-gap:2px;}
+ .storefront-root .product-listing-grid .product-card-price {
+   font-size:clamp(.5rem,calc((100cqi - 3.125rem)/8),1rem);
+ }
+ .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-price {
+   font-size:clamp(.375rem,calc((100cqi - 4rem)/9),.875rem);
+ }
+ .storefront-root .product-listing-grid .product-card[data-price-layout="inline"] .product-card-original {
+   font-size:clamp(.3125rem,calc((100cqi - 4rem)/11.25),.75rem);
+ }
+}

@@ -7,6 +7,29 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { signSession } from "../../src/lib/auth/jwt";
 import { formatIDR } from "../../src/lib/money";
 
+async function assertMobileListingGrid(page: Page, width: number) {
+  if (width >= 768) return;
+  for (const theme of ['published', 'default']) {
+    const result = await page.locator('.product-listing-grid').evaluateAll((grids, theme) => grids.map(grid => {
+      const root = grid.closest<HTMLElement>('.storefront-root')!;
+      const style = root.getAttribute('style'), active = root.getAttribute('data-theme-active');
+      if (theme === 'default') { root.removeAttribute('style'); root.removeAttribute('data-theme-active'); }
+      const result = {
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        cards: [...grid.children].map(card => ({ width: card.getBoundingClientRect().width, span: getComputedStyle(card).gridColumn })),
+      };
+      if (style !== null) root.setAttribute('style', style);
+      if (active !== null) root.setAttribute('data-theme-active', active);
+      return result;
+    }), theme);
+    assert.ok(result.length > 0, 'real route must render the listing marker');
+    for (const grid of result) {
+      assert.equal(grid.columns, 2, `${width}px ${theme} computed tracks`);
+      assert.ok(grid.cards.every(c => c.span === 'auto' && Math.abs(c.width - grid.cards[0].width) < 1), JSON.stringify(grid));
+    }
+  }
+}
+
 export async function verifyFlashCampaign({
   page,
   admin,
@@ -276,6 +299,7 @@ export async function verifyFlashCampaign({
             await visitor.locator('[data-testid^="product-card-"]').count(),
             8,
           );
+          await assertMobileListingGrid(visitor, width);
           for (const p of products) {
             const card = visitor.getByTestId("product-card-" + p.slug);
             const result = await card.evaluate((el) => {
@@ -361,6 +385,10 @@ export async function verifyFlashCampaign({
               path: path.join(artifactDir, `flash-shop-${width}.png`),
               fullPage: true,
             });
+          if (width < 768) {
+            await visitor.locator('.product-listing-grid').evaluate(el => [...el.children].slice(1).forEach(c => c.remove()));
+            await assertMobileListingGrid(visitor, width);
+          }
           if (width === 1440) {
             // A filtered single result must retain a catalog-sized track rather
             // than stretching into a full-width product hero.
@@ -497,9 +525,10 @@ export async function verifyFlashCampaign({
             .getAttribute("data-deadline"),
           campaign.endsAt.toISOString(),
         );
-        for (const width of [390, 1440]) {
+        for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
           await visitor.setViewportSize({ width, height: 900 });
           await expect(visitor.getByTestId("flash-sale")).toBeVisible();
+          await assertMobileListingGrid(visitor, width);
           await visitor.evaluate(() => document.fonts.ready);
           await visitor.screenshot({
             path: path.join(artifactDir, `flash-home-${width}.png`),
@@ -513,6 +542,7 @@ export async function verifyFlashCampaign({
             await visitor.locator('[data-testid^="product-card-"]').count(),
             8,
           );
+          await assertMobileListingGrid(visitor, width);
           assert.equal(
             await visitor.evaluate(
               () => document.documentElement.scrollWidth > innerWidth,
@@ -545,12 +575,13 @@ export async function verifyFlashCampaign({
           "/category/" + prefix,
           "/brand/" + prefix,
         ])
-          for (const width of [390, 1440]) {
+          for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
             await visitor.setViewportSize({ width, height: 900 });
             await visitor.goto(base + route);
             await expect(
               visitor.getByTestId("product-card-" + products[0].slug),
             ).toBeVisible();
+            await assertMobileListingGrid(visitor, width);
             await expect(
               visitor
                 .getByTestId("product-card-" + products[0].slug)

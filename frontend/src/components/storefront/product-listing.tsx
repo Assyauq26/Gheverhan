@@ -82,7 +82,7 @@ export function ProductListing({
           description="Coba kata kunci lain atau jelajahi kategori kami."
         />
       ) : (
-        <div className="stagger grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+        <div className="product-listing-grid stagger grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => (
             <ProductCard key={p.id} product={toCardData(p)} wishlisted={wishlisted.has(p.id)} />
           ))}

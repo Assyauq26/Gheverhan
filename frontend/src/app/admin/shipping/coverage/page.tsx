@@ -25,10 +25,10 @@ export default async function ShippingCoveragePage() {
   const matched=new Set(mapped.map(r=>r.emsifaDistrictCode));
   const missing=recent.filter(r=>!r.districtCode||!matched.has(r.districtCode));
   return <div className="space-y-5">
-    <h1 className="font-display text-2xl font-bold">Kesiapan J&T Express L3</h1>
+    <h1 className="font-display text-2xl font-bold">Kesiapan pengiriman J&T Express</h1>
     <p className="text-sm text-zinc-600">Alamat pelanggan tetap memakai Emsifa sampai desa/kelurahan. Pengiriman menggunakan kecamatan dan kode resmi J&T yang telah divalidasi.</p>
     <div className="grid gap-3 sm:grid-cols-3">
-      {[["Mapping rilis aktif",release?release.activeVersion.slice(0,12):"Belum ada"],["Kecamatan J&T",String(total)],["Kecamatan terverifikasi",String(verified)]].map(([label,value])=><div key={label} className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-xs text-zinc-500">{label}</p><p className="mt-1 break-all text-lg font-bold">{value}</p></div>)}
+      {[["Mapping resmi: versi aktif",release?release.activeVersion.slice(0,12):"Belum ada"],["Kecamatan J&T",String(total)],["Kecamatan terverifikasi",String(verified)]].map(([label,value])=><div key={label} className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-xs text-zinc-500">{label}</p><p className="mt-1 break-all text-lg font-bold">{value}</p></div>)}
     </div>
     <p className="text-sm">Mapping yang belum cocok/ambigu dalam rilis: {unmatched}. Tarif manual yang disetujui: {manual?manual.rates.filter(r=>Date.parse(r.validUntil)>Date.now()).length:0} aturan aktif.</p>
     <section className="space-y-3 rounded-2xl bg-white p-4">

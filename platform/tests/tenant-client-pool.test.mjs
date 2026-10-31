@@ -40,3 +40,18 @@ test('rejects inactive scopes and invalid connection budgets',async()=>{
   for(const s of [null,{...scope('a'),status:'SUSPENDED'},{...scope('a'),databaseSecretRef:''}])await assert.rejects(pool.lease(s));
   await pool.close();
 });
+test('pending acquisitions are bounded without blocking lease release',async()=>{
+  let enter,unblock;
+  const entered=new Promise(r=>{enter=r;}),gate=new Promise(r=>{unblock=r;});
+  const pool=new TenantClientPool(async()=>{enter();await gate;return {$disconnect:async()=>{}};},{maxPending:2});
+  const first=pool.lease(scope('a'));await entered;const second=pool.lease(scope('a'));
+  await assert.rejects(pool.lease(scope('b')),/queue capacity/);unblock();
+  const leases=await Promise.all([first,second]);for(const lease of leases)await lease.release();await pool.close();
+});
+test('per-tenant in-flight leases are bounded and recover after release',async()=>{
+  const pool=new TenantClientPool(async()=>({$disconnect:async()=>{}}),{maxLeasesPerTenant:1});
+  const a=await pool.lease(scope('a'));
+  await assert.rejects(pool.lease(scope('a')),/active lease capacity/);
+  const b=await pool.lease(scope('b'));await a.release();
+  const again=await pool.lease(scope('a'));await again.release();await b.release();await pool.close();
+});

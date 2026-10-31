@@ -6,9 +6,11 @@ export class TenantClientPool {
   #tail = Promise.resolve();
   #clock = 0;
   #closed = false;
-  constructor(factory, {maxClients = 4, connectionLimit = 2} = {}) {
-    if (typeof factory !== 'function' || !Number.isInteger(maxClients) || maxClients < 1 || maxClients > 16 || !Number.isInteger(connectionLimit) || connectionLimit < 1 || connectionLimit > 4) throw Error('Invalid pool budget');
+  #pending = 0;
+  constructor(factory, {maxClients = 4, connectionLimit = 2, maxPending = 32, maxLeasesPerTenant = 8} = {}) {
+    if (typeof factory !== 'function' || !Number.isInteger(maxClients) || maxClients < 1 || maxClients > 16 || !Number.isInteger(connectionLimit) || connectionLimit < 1 || connectionLimit > 4 || !Number.isInteger(maxPending) || maxPending < 1 || maxPending > 256 || !Number.isInteger(maxLeasesPerTenant) || maxLeasesPerTenant < 1 || maxLeasesPerTenant > 32) throw Error('Invalid pool budget');
     this.factory = factory; this.maxClients = maxClients; this.connectionLimit = connectionLimit;
+    this.maxPending = maxPending; this.maxLeasesPerTenant = maxLeasesPerTenant;
     Object.freeze(this);
   }
   async #exclusive(fn) {
@@ -22,7 +24,9 @@ export class TenantClientPool {
     if (!scope || scope.status !== 'ACTIVE' || typeof scope.tenantId !== 'string' || !scope.tenantId || typeof scope.databaseSecretRef !== 'string' || !scope.databaseSecretRef) throw Error('Active verified tenant scope required');
     // Copy before any await; a caller cannot mutate an in-flight selection.
     const tenantId = scope.tenantId, secretRef = scope.databaseSecretRef;
-    return this.#exclusive(async () => {
+    if (this.#pending >= this.maxPending) throw Error('Tenant acquisition queue capacity reached');
+    this.#pending++;
+    try { return await this.#exclusive(async () => {
       if (this.#closed) throw Error('Pool closed');
       let entry = this.#slots.get(tenantId);
       if (entry && entry.secretRef !== secretRef) {
@@ -40,12 +44,13 @@ export class TenantClientPool {
         entry = {client, secretRef, leases: 0, used: ++this.#clock};
         this.#slots.set(tenantId, entry);
       }
+      if (entry.leases >= this.maxLeasesPerTenant) throw Error('Tenant active lease capacity reached');
       entry.leases++; entry.used = ++this.#clock;
       let released = false;
       return Object.freeze({client: entry.client, release: () => this.#exclusive(() => {
         if (!released) { entry.leases--; entry.used = ++this.#clock; released = true; }
       })});
-    });
+    }); } finally { this.#pending--; }
   }
   async withTenant(scope, run) {
     const lease = await this.lease(scope);

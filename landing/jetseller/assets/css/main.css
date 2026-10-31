@@ -173,7 +173,7 @@ a { color: var(--red); }
 }
 .icon-tile svg { width: 30px; height: 30px; }
 
-.eyebrow { display: flex; align-items: center; gap: 10px; color: var(--red); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 10px; }
+.eyebrow { display: flex; align-items: center; gap: 10px; color: var(--red-dark); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 10px; }
 .eyebrow span { display: inline-block; width: 28px; height: 4px; border-radius: 2px; background: var(--red); }
 .section-title { font-size: clamp(1.6rem, 3vw, 2.4rem); letter-spacing: -0.02em; margin: 0 0 8px; text-align: center; }
 .steps-section .section-title { text-align: left; }

@@ -16,6 +16,7 @@ assert.equal(adminUrl.hostname,centralUrl.hostname);assert.equal(adminUrl.port,c
 const admin=new PrismaClient({datasources:{db:{url:adminUrl.toString()}}});
 const db=new PrismaClient({datasources:{db:{url:centralUrl.toString()}}});
 const id=randomUUID(),seller='seller-'+id,tenant='tenant-'+id;
+const pgError=code=>error=>error.code==='P2010' && error.meta?.code===code;
 const migrate=()=>{
  const result=spawnSync(process.execPath,[require.resolve('prisma/build/index.js'),'migrate','deploy','--schema',fileURLToPath(new URL('platform/prisma/schema.prisma',root))],{cwd:fileURLToPath(root),env:{...process.env,PLATFORM_DATABASE_URL:centralUrl.toString()},encoding:'utf8',timeout:60000});
  assert.equal(result.status,0,result.stdout+result.stderr);
@@ -38,21 +39,22 @@ test('accounts and tenants default inactive; one seller cannot create two stores
  const [row]=await db.$queryRaw`SELECT role,active FROM "PlatformAccount" WHERE id=${id}`;
  assert.equal(row.role,'SELLER');assert.equal(row.active,false);
  assert.equal((await db.$queryRaw`SELECT status FROM "Tenant" WHERE id=${tenant}`)[0].status,'PROVISIONING');
- await assert.rejects(db.$executeRaw`INSERT INTO "Tenant"(id,"sellerId",slug,"databaseSecretRef","updatedAt") VALUES(${tenant+'-duplicate'},${seller},${id+'-duplicate'},${'vault:'+id+'-duplicate'},NOW())`);
+ await assert.rejects(db.$executeRaw`INSERT INTO "Tenant"(id,"sellerId",slug,"databaseSecretRef","updatedAt") VALUES(${tenant+'-duplicate'},${seller},${id+'-duplicate'},${'vault:'+id+'-duplicate'},NOW())`,pgError('23505'));
 });
 test('domain registry cannot assign the same hostname twice or reference an absent tenant',async()=>{
  const host=id+'.example.test';
  await db.$executeRaw`INSERT INTO "TenantDomain"(hostname,"tenantId","challengeHash","challengeExpiresAt") VALUES(${host},${tenant},${'0'.repeat(64)},NOW()+INTERVAL '1 hour')`;
  const [domain]=await db.$queryRaw`SELECT status,"verifiedAt","tlsReadyAt" FROM "TenantDomain" WHERE hostname=${host}`;
  assert.equal(domain.status,'PENDING');assert.equal(domain.verifiedAt,null);assert.equal(domain.tlsReadyAt,null);
- await assert.rejects(db.$executeRaw`INSERT INTO "TenantDomain"(hostname,"tenantId","challengeHash","challengeExpiresAt") VALUES(${host},${tenant},${'0'.repeat(64)},NOW())`);
- await assert.rejects(db.$executeRaw`INSERT INTO "TenantDomain"(hostname,"tenantId","challengeHash","challengeExpiresAt") VALUES(${id+'.missing.test'},'tenant-not-present',${'0'.repeat(64)},NOW())`);
+ await assert.rejects(db.$executeRaw`INSERT INTO "TenantDomain"(hostname,"tenantId","challengeHash","challengeExpiresAt") VALUES(${host},${tenant},${'0'.repeat(64)},NOW())`,pgError('23505'));
+ await assert.rejects(db.$executeRaw`INSERT INTO "TenantDomain"(hostname,"tenantId","challengeHash","challengeExpiresAt") VALUES(${id+'.missing.test'},'tenant-not-present',${'0'.repeat(64)},NOW())`,pgError('23503'));
 });
 test('concurrent provisioning reservations cannot duplicate an idempotency key',async()=>{
  const reserve=()=>db.$executeRaw`INSERT INTO "ProvisioningJob"(id,"tenantId","idempotencyKey","payloadHash","updatedAt") VALUES(${randomUUID()},${tenant},${'provision:'+id},${'1'.repeat(64)},NOW())`;
  const outcomes=await Promise.allSettled([reserve(),reserve()]);
  assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
  assert.equal(outcomes.filter(r=>r.status==='rejected').length,1);
+ assert.ok(pgError('23505')(outcomes.find(r=>r.status==='rejected').reason));
  const [job]=await db.$queryRaw`SELECT status,attempts FROM "ProvisioningJob" WHERE "idempotencyKey"=${'provision:'+id}`;
  assert.equal(job.status,'QUEUED');assert.equal(job.attempts,0);
 });

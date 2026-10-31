@@ -1,0 +1,47 @@
+# DRAFT ONLY -- do not apply without separate deployment approval.
+# This is a complete candidate Caddyfile for review, not a command to run.
+# Confirm the /data mount Source again immediately before deployment.
+
+www.gheverhan.store {
+  redir https://gheverhan.store{uri} permanent
+}
+
+gheverhan.store {
+  encode zstd gzip
+  reverse_proxy app:3000
+}
+
+www.jetseller.web.id {
+  redir https://jetseller.web.id{uri} permanent
+}
+
+jetseller.web.id {
+  encode zstd gzip
+  root * /data/landing/jetseller
+
+  # Asset names are not content-hashed yet: cache briefly and revalidate.
+  @assets path /assets/*
+  header @assets Cache-Control "public, max-age=3600, must-revalidate"
+
+  # HTML must always revalidate so status/copy updates become visible quickly.
+  @html path / /index.html /daftar/ /daftar/index.html /masuk/ /masuk/index.html /404.html
+  header @html Cache-Control "no-cache"
+
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+    X-Frame-Options DENY
+    -Server
+  }
+
+  file_server
+
+  handle_errors {
+    rewrite * /404.html
+    file_server
+  }
+}
+
+# No wildcard routing.
+# dashboard.jetseller.web.id and seller subdomains are future platform routes.
+# jetseller.web.id is static-only and never reverse-proxies to app:3000.

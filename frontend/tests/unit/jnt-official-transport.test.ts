@@ -82,10 +82,11 @@ describe("official J&T API transport (network mocked)", () => {
     await expect(cancelJntOrder("GHV-TEST-001", "Cancelled by seller")).resolves.toMatchObject({ cancelled: true });
   });
   it("uses Basic Authorization for tracking and keeps AWB in JSON body", async () => {
-    const mock = vi.fn().mockResolvedValue(respond({ awb: "JO9001348812", detail: [] }));
+    const mock = vi.fn().mockResolvedValue(respond({ awb: "JO9001348812", orderid: "GH-TEST-ID", detail: { receiver: { phone: "SECRET-PHONE" } }, history: [{ status: "Paket diproses", date_time: "2026-10-31 10:30:00", city_name: "JAKARTA", driverPhone: "SECRET-PHONE" }] }));
     vi.stubGlobal("fetch", mock);
     const result = await trackJntOrder("JO9001348812");
-    expect(result).toMatchObject({ awb: "JO9001348812" });
+    expect(result).toMatchObject({ awb: "JO9001348812", events: [{ status: "Paket diproses", time: "2026-10-31 10:30:00", note: "JAKARTA" }] });
+    expect(JSON.stringify(result)).not.toContain("SECRET-PHONE");
     const [, options] = mock.mock.calls[0];
     expect(options.headers.Authorization).toBe("Basic " + Buffer.from("SYNTHETIC-USERNAME:SYNTHETIC-PASSWORD").toString("base64"));
     expect(JSON.parse(options.body)).toEqual({ awb: "JO9001348812", eccompanyid: "SYNTHETIC-USERNAME" });

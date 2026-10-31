@@ -5,7 +5,9 @@ Target: static `file_server` pada Caddy existing, tanpa container baru, tanpa ap
 
 ## 0. Konteks eksekusi — jangan mencampur shell
 
-Dokumen ini memakai dua konteks berbeda:
+Dokumen ini memakai dua konteks berbeda. Variabel shell tidak bertahan ketika
+sesi SSH ditutup. Semua langkah mutasi mulai langkah 3 harus dijalankan dalam
+satu sesi Bash VPS yang sama, atau diawali ulang dengan blok bootstrap konteks.
 
 | Tanda | Konteks | Contoh |
 |---|---|---|
@@ -64,7 +66,28 @@ Aturan keras:
 
 - `$CADDY_DATA` **tidak boleh** ditulis manual dari memori/dokumentasi lama; harus berasal dari output `docker inspect` di sesi yang sama.
 - Jika perintah di atas berhenti (exit 1), **hentikan seluruh prosedur**. Jangan lanjut ke backup/upload.
-- Variabel ini hilang saat sesi SSH baru dimulai; ulangi langkah ini di setiap sesi baru.
+- Variabel ini hilang saat sesi SSH baru dimulai; ulangi bootstrap konteks sebelum
+  langkah 3, 5, atau 8 jika sesi berubah.
+
+Bootstrap konteks wajib untuk sesi VPS baru:
+
+```bash
+set -u
+CADDY_DATA=$(sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}')
+if [ -z "$CADDY_DATA" ] || [ ! -d "$CADDY_DATA" ]; then echo "FATAL: CADDY_DATA kosong/tidak ada" >&2; exit 1; fi
+TS=${TS:-$(date +%Y%m%d-%H%M%S)}
+ACTIVE="$CADDY_DATA/landing/jetseller"
+PREV="$CADDY_DATA/landing/jetseller.prev-$TS"
+BACKUP_CADDY="/opt/gheverhan/deploy/Caddyfile.bak-$TS"
+BACKUP_ASSET="/opt/gheverhan/deploy/landing-jetseller-$TS.tgz"
+case "$CADDY_DATA" in /|/opt|/opt/gheverhan|/opt/gheverhan/deploy) echo "FATAL: CADDY_DATA tidak aman" >&2; exit 1;; esac
+test "$ACTIVE" = "$CADDY_DATA/landing/jetseller" || { echo "FATAL: ACTIVE tidak aman" >&2; exit 1; }
+sudo -n test -d "$CADDY_DATA" || { echo "FATAL: CADDY_DATA tidak dapat diakses" >&2; exit 1; }
+printf 'Context OK: CADDY_DATA=%s ACTIVE=%s PREV=%s TS=%s\n' "$CADDY_DATA" "$ACTIVE" "$PREV" "$TS"
+```
+
+Gunakan nilai `TS`, `BACKUP_CADDY`, `BACKUP_ASSET`, `ACTIVE`, dan `PREV` yang
+sama untuk langkah 3, 5, dan 8. Jangan membuat timestamp baru di tengah prosedur.
 
 Periksa kapasitas sebelum menyentuh aset:
 
@@ -78,11 +101,16 @@ free -h
 Backup gagal = deployment berhenti. Tidak ada pengabaian error pada langkah backup.
 
 ```bash
-TS=$(date +%Y%m%d-%H%M%S)
+TS=${TS:-$(date +%Y%m%d-%H%M%S)}
 BACKUP_CADDY="/opt/gheverhan/deploy/Caddyfile.bak-$TS"
 BACKUP_ASSET="/opt/gheverhan/deploy/landing-jetseller-$TS.tgz"
 ACTIVE="$CADDY_DATA/landing/jetseller"
 PREV="$CADDY_DATA/landing/jetseller.prev-$TS"
+
+case "$CADDY_DATA" in /|/opt|/opt/gheverhan|/opt/gheverhan/deploy) echo "FATAL: CADDY_DATA tidak aman" >&2; exit 1;; esac
+test -n "$TS" || { echo "FATAL: TS kosong" >&2; exit 1; }
+test -d "$CADDY_DATA" || { echo "FATAL: CADDY_DATA tidak ada" >&2; exit 1; }
+test "$ACTIVE" = "$CADDY_DATA/landing/jetseller" || { echo "FATAL: ACTIVE tidak aman" >&2; exit 1; }
 
 sudo cp -a /opt/gheverhan/deploy/Caddyfile "$BACKUP_CADDY"
 sudo test -s "$BACKUP_CADDY" || { echo "FATAL: backup Caddyfile gagal" >&2; exit 1; }
@@ -104,19 +132,22 @@ Keberhasilan backup dipaksa oleh `test -s` dan `tar -tzf`; jika salah satu gagal
 
 ## 4. [PS-WIN] Upload ke staging server (dari Windows)
 
-Kembali ke PowerShell Windows. Upload hanya aset runtime; `deploy/` dan `tests/` tidak ikut:
+Kembali ke PowerShell Windows. Upload hanya aset runtime; `deploy/` dan `tests/` tidak ikut.
+Staging lama dibersihkan dan staging baru dibuat **sebelum** SCP; ini hanya
+menyentuh `/tmp`, bukan aset Production.
 
 ```powershell
 cd "$env:USERPROFILE\Projects\Gheverhan"
+ssh gheverhan-vps "rm -rf /tmp/jetseller-staging && mkdir -p /tmp/jetseller-staging && test -d /tmp/jetseller-staging"
 scp -r landing\jetseller\index.html landing\jetseller\404.html gheverhan-vps:/tmp/jetseller-staging/
 scp -r landing\jetseller\daftar landing\jetseller\masuk landing\jetseller\assets gheverhan-vps:/tmp/jetseller-staging/
-ssh gheverhan-vps "ls -R /tmp/jetseller-staging"
+ssh gheverhan-vps "find /tmp/jetseller-staging -type f -print | sort"
 ```
 
 Jika `scp` gagal di tengah jalan, staging server tidak lengkap: hapus dan ulangi, jangan lanjut ke langkah 5.
 
 ```powershell
-ssh gheverhan-vps "rm -rf /tmp/jetseller-staging"
+ssh gheverhan-vps "rm -rf /tmp/jetseller-staging && test ! -e /tmp/jetseller-staging"
 ```
 
 ## 5. [BASH-VPS] Pertukaran aset atomik (aset aktif tidak dihapus sebelum pengganti siap)
@@ -124,6 +155,10 @@ ssh gheverhan-vps "rm -rf /tmp/jetseller-staging"
 Di terminal Ubuntu:
 
 ```bash
+test -n "$CADDY_DATA" && test -d "$CADDY_DATA" || { echo "FATAL: konteks CADDY_DATA hilang" >&2; exit 1; }
+test -n "$TS" || { echo "FATAL: konteks TS hilang" >&2; exit 1; }
+test "$ACTIVE" = "$CADDY_DATA/landing/jetseller" || { echo "FATAL: ACTIVE tidak aman" >&2; exit 1; }
+test "$PREV" = "$CADDY_DATA/landing/jetseller.prev-$TS" || { echo "FATAL: PREV/TS tidak konsisten" >&2; exit 1; }
 sudo rm -rf "$CADDY_DATA/landing/jetseller.new"
 sudo mkdir -p "$CADDY_DATA/landing/jetseller.new"
 sudo rsync -a --delete /tmp/jetseller-staging/ "$CADDY_DATA/landing/jetseller.new/"
@@ -144,15 +179,23 @@ fi
 sudo mv "$CADDY_DATA/landing/jetseller.new" "$ACTIVE"
 sudo test -f "$ACTIVE/index.html" || { echo "FATAL: aset baru tidak terpasang" >&2; exit 1; }
 echo "Aset aktif terpasang. Versi sebelumnya: $PREV (jika ada)."
-rm -rf /tmp/jetseller-staging
+sudo rm -rf /tmp/jetseller-staging
+sudo test ! -e /tmp/jetseller-staging || { echo "FATAL: staging gagal dibersihkan" >&2; exit 1; }
 ```
 
 Prinsip: `$ACTIVE` hanya dipindahkan (rename, operasi atomik satu filesystem) setelah staging terverifikasi. Tidak ada `rm -rf` terhadap direktori aktif.
 
 ## 6. [BASH-VPS] Terapkan Caddyfile aditif dan validasi
 
-Salin blok dari `Caddyfile.jetseller.DRAFT` ke **akhir** Caddyfile VPS.
-Jangan mengubah blok `gheverhan.store` atau `www.gheverhan.store`.
+Jangan menyalin seluruh `Caddyfile.jetseller.DRAFT` ke VPS. Draft lengkap
+memuat blok existing Gheverhan hanya sebagai konteks referensi. Tambahkan
+hanya dua blok aditif berikut ke Caddyfile existing VPS:
+
+1. `www.jetseller.web.id` — redirect ke apex.
+2. `jetseller.web.id` — static `file_server` pada `/data/landing/jetseller`.
+
+Jangan menyalin ulang atau mengedit blok `gheverhan.store` dan
+`www.gheverhan.store`.
 
 ```bash
 sudo docker exec deploy_proxy_1 caddy validate \
@@ -194,6 +237,11 @@ Ekspektasi:
 Syarat rollback aman: `$BACKUP_CADDY` ada dan hasil `test -s` sebelumnya hijau. Aset aktif juga **tidak dihapus** sebelum versi lama siap dipasang kembali.
 
 ```bash
+test -n "$CADDY_DATA" && test -d "$CADDY_DATA" || { echo "FATAL: konteks CADDY_DATA hilang" >&2; exit 1; }
+test -n "$TS" && test -n "$BACKUP_CADDY" && test -n "$BACKUP_ASSET" || { echo "FATAL: konteks backup/TS hilang" >&2; exit 1; }
+test -n "$BACKUP_CADDY" && test -s "$BACKUP_CADDY" || { echo "FATAL: backup Caddyfile tidak ditemukan" >&2; exit 1; }
+test "$ACTIVE" = "$CADDY_DATA/landing/jetseller" || { echo "FATAL: ACTIVE tidak aman" >&2; exit 1; }
+test "$PREV" = "$CADDY_DATA/landing/jetseller.prev-$TS" || { echo "FATAL: PREV/TS tidak konsisten" >&2; exit 1; }
 sudo test -s "$BACKUP_CADDY" || { echo "FATAL: backup Caddyfile tidak ditemukan" >&2; exit 1; }
 sudo cp -a "$BACKUP_CADDY" /opt/gheverhan/deploy/Caddyfile
 sudo docker exec deploy_proxy_1 caddy validate \

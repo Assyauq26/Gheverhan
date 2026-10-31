@@ -74,6 +74,15 @@ jobs:
           npx playwright install --with-deps chromium
           node -e 'const { chromium } = require("@playwright/test"); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "SPRINT1_CHROMIUM_PATH=" + chromium.executablePath() + "\n");'
 
+      - name: Reconcile official J&T L3 with bundled Emsifa snapshot (offline, no carrier calls)
+        run: |
+          node scripts/jnt/reconcile-l3.mjs --preview
+          JNT_MAPPING_IMPORT_APPROVED=yes node scripts/jnt/reconcile-l3.mjs --stage
+          JNT_MAPPING_IMPORT_APPROVED=yes \
+            JNT_MAPPING_APPROVED_VERSION="$(node -e 'const fs=require("fs"),crypto=require("crypto");console.log(crypto.createHash("sha256").update(fs.readFileSync("resources/jnt-l3-official.csv","utf8").replace(/^\uFEFF/,"")).digest("hex"))')" \
+            JNT_MAPPING_REVIEWER=isolated-ci-test \
+            node scripts/jnt/reconcile-l3.mjs --activate
+
       - name: Check types, ESLint and production build
         run: |
           npm run typecheck

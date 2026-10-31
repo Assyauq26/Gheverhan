@@ -83,6 +83,14 @@ jobs:
             JNT_MAPPING_REVIEWER=isolated-ci-test \
             node scripts/jnt/reconcile-l3.mjs --activate
 
+      - name: Retain J&T L3 reconciliation evidence for manual mismatch review
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jnt-l3-mapping-${{ github.run_id }}
+          path: frontend/.jnt-mapping-report/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Check types, ESLint and production build
         run: |
           npm run typecheck

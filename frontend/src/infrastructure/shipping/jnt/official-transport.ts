@@ -155,15 +155,32 @@ export async function cancelJntOrder(orderId: string, remark: string) {
   }
   return { orderId, cancelled: true };
 }
-export async function trackJntOrder(awb: string): Promise<unknown> {
+export type JntTrackingEvent = {status:string;time:string|null;note:string|null};
+export async function trackJntOrder(awb: string): Promise<{ awb: string; events: JntTrackingEvent[] }> {
   if (!/^[A-Z0-9]{8,30}$/.test(awb)) throw new HttpError("Nomor resi tidak valid", 422);
   const cfg: JntConfig = await activeJntConfig();
   const auth = Buffer.from(cfg.credentials.trackingUsername + ":" + cfg.credentials.trackingPassword).toString("base64");
   const response = await postJnt(cfg.endpoints.tracking,
     JSON.stringify({ awb, eccompanyid: cfg.credentials.trackingUsername }), "Basic " + auth);
-  const parsed = z.object({ awb: z.string().optional(), detail: z.unknown().optional(), error_id: z.unknown().optional() }).passthrough().safeParse(response);
-  if (!parsed.success || parsed.data.error_id && parsed.data.error_id !== "0") {
-    throw new HttpError("Tracking J&T belum tersedia", 502);
+  const parsed = z.object({
+    awb: z.string().optional(),
+    error_id: z.union([z.string(), z.number()]).optional(),
+    history: z.array(z.object({
+      date_time: z.string().max(40).optional(),
+      city_name: z.string().max(100).optional(),
+      status: z.string().max(200).optional(),
+      status_code: z.union([z.string(),z.number()]).optional(),
+    }).passthrough()).max(200).optional(),
+  }).passthrough().safeParse(response);
+  if (!parsed.success || (parsed.data.error_id != null &&
+      String(parsed.data.error_id) !== "0" && String(parsed.data.error_id) !== "") ||
+      (parsed.data.awb && parsed.data.awb !== awb)) {
+    throw new HttpError("Tracking J&T belum tersedia atau AWB tidak cocok", 502);
   }
-  return parsed.data;
+  // Deliberately excludes personal names, phone numbers, addresses, drivers and raw notes.
+  return {awb, events:(parsed.data.history||[]).map(row=>({
+    status:row.status || (row.status_code != null ? String(row.status_code) : "Status tidak tersedia"),
+    time:row.date_time || null,
+    note:row.city_name || null,
+  }))};
 }

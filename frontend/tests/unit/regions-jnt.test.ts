@@ -67,7 +67,7 @@ describe("J&T configured services and quote integrity", () => {
     expect(areaMappingSchema.safeParse([{ ...mapping, indonesiaCode: "31.1001" }]).success).toBe(false);
     vi.stubEnv("JNT_OFFICIAL_AREA_MAPPING", JSON.stringify([mapping]));
     vi.stubEnv("JNT_ORIGIN_WAREHOUSE", "SYNTHETIC-WAREHOUSE");
-    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/belum disetujui/);
+    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/belum diaktifkan/);
     const inquire = vi.fn().mockResolvedValue([{ courier: "J&T Express", service: "EZ", cost: 12345 }]);
     const adapter = new JntProvider({ inquire });
     expect(await adapter.getRates(inquiry)).toEqual([{ courier: "J&T Express", service: "EZ", cost: 12345, mode: "official" }]);

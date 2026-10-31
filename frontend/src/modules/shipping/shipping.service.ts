@@ -36,6 +36,7 @@ export async function upsertManualShipment(orderId: string, adminId: string, val
     }
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { payment: true, shipment: true } });
     if (!order.payment) throw new HttpError("Pembayaran tidak ditemukan", 409);
+    if (order.shippingMode === "official" || order.shipment?.provider === "jnt") throw new HttpError("Order J&T resmi harus dikelola melalui alur API pengiriman, bukan form manual", 409);
     await assertNoActiveRefund(tx, order.payment.id);
 
     // Gheverhan business rule: saving a tracking number for a PACKED order

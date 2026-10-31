@@ -1,6 +1,5 @@
 import type { ShippingInquiry, ShippingProvider, ShippingRate } from "@/infrastructure/shipping/contracts/shipping-provider";
 import { getJntAreaMappings } from "./jnt-config";
-import { checkJntRate } from "./official-transport";
 import { HttpError } from "@/lib/http-error";
 
 /** Injectable for isolated tests; production uses the reviewed J&T transport. */
@@ -26,6 +25,9 @@ export class JntProvider implements ShippingProvider {
       if (!requested.length || new Set(requested).size !== requested.length || requested.some(s => !known.includes(s as typeof known[number]))) {
         throw new HttpError("Layanan J&T belum disetujui operator server.", 503);
       }
+      // Load official transport only after carrier mapping/service gates pass.
+      // Isolated unit tests with injected adapters must not initialize Prisma or credentials.
+      const { checkJntRate } = await import("./official-transport");
       const results = await Promise.all(requested.map(service => checkJntRate({
         originSite: originWarehouse, destinationArea: mapping.areaCode, weightGram: input.weightGram,
         productType: service as typeof known[number],

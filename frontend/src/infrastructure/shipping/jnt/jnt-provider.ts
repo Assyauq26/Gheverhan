@@ -32,6 +32,9 @@ export class JntProvider implements ShippingProvider {
       if (!requested.length || new Set(requested).size !== requested.length || requested.some(s => !known.includes(s as typeof known[number]))) {
         throw new HttpError("Layanan J&T belum disetujui operator server.", 503);
       }
+      // A tariff response alone does not authorize an AWB service type.
+      // Public Create Order contract is proven only for EZ; no checkout of HBO/JND/ECO yet.
+      if (requested.some(s => s !== "EZ")) throw new HttpError("Checkout otomatis J&T saat ini hanya mendukung EZ", 503);
       // Load official transport only after carrier mapping/service gates pass.
       // Isolated unit tests with injected adapters must not initialize Prisma or credentials.
       const { checkJntRate } = await import("./official-transport");

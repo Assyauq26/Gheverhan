@@ -15,6 +15,7 @@ const orderInclude = {
   address: true,
   payment: { include: { bankAccount: true, confirmations: { orderBy: { createdAt: "desc" } } } },
   shipment: { include: { events: { orderBy: { occurredAt: "asc" } } } },
+  jntShipmentRequest: true,
   history: { orderBy: { createdAt: "asc" } },
   user: { select: { name: true, email: true, phone: true } },
 } satisfies Prisma.OrderInclude;

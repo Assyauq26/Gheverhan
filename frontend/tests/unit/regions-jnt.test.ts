@@ -42,7 +42,7 @@ describe("J&T configured services and quote integrity", () => {
   it("has no dummy default tariff and official integration never invents a mapping", async () => {
     vi.stubEnv("JNT_MANUAL_RATE_CONFIG", ""); vi.stubEnv("JNT_OFFICIAL_AREA_MAPPING", "");
     expect(await new ManualShippingProvider().getRates(inquiry)).toEqual([]);
-    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/terpetakan/);
+    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/belum diaktifkan/);
   });
   it("serves only approved unexpired exact village/weight rules; other services are absent", async () => {
     vi.stubEnv("REGION_DATA_MODE", "snapshot");

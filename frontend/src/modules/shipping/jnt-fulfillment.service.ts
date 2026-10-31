@@ -171,6 +171,61 @@ export async function handoverJntPackage(orderId:string,actorId:string) {
     return {ok:true,replayed:false};
   },{timeout:18000});
 }
+/**
+ * A carrier AWB is not proof of delivery. Only an authorized shipping operator
+ * who has independently checked J&T's delivery proof may attest delivery.
+ * Proof references are fingerprinted, not stored as free-form customer PII.
+ */
+export async function confirmJntDelivery(
+  orderId: string, actorId: string,
+  input: { evidenceReference: string; attested: boolean },
+) {
+  const reference = input.evidenceReference?.trim();
+  if (input.attested !== true || !reference ||
+      !/^[A-Za-z0-9][A-Za-z0-9:._/-]{7,119}$/.test(reference)) {
+    throw new HttpError("Konfirmasi dan referensi bukti pengantaran J&T wajib valid", 422);
+  }
+  const proofHash = createHash("sha256").update(reference).digest("hex");
+  return prisma.$transaction(async tx => {
+    await assertStaffPermission(tx, actorId, PERMISSIONS.SHIPPING_UPDATE);
+    await lockOrder(tx, orderId);
+    const order = await tx.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: { shipment: true, jntShipmentRequest: true, payment: true },
+    });
+    const shipment = order.shipment;
+    const request = order.jntShipmentRequest;
+    if (order.shippingMode !== "official" || shipment?.provider !== "jnt" ||
+        request?.state !== "SUCCEEDED" || !request.awb ||
+        request.awb !== shipment.trackingNumber) {
+      throw new HttpError("Resi resmi J&T belum terkonfirmasi", 409);
+    }
+    if (order.status === "DELIVERED" && shipment.status === "DELIVERED") {
+      return { delivered: true, replayed: true };
+    }
+    if (order.status !== "SHIPPED" || !["SHIPPED", "IN_TRANSIT"].includes(shipment.status) ||
+        order.paymentStatus !== "PAID" || order.payment?.status !== "PAID") {
+      throw new HttpError("Pesanan belum dapat dikonfirmasi diterima", 409);
+    }
+    await assertNoActiveRefund(tx, order.payment.id);
+    const now = new Date();
+    await transitionOrderInTransaction(tx, orderId, "DELIVERED", actorId,
+      "Bukti pengantaran J&T telah diverifikasi operator", { source: "shipment" });
+    await tx.shipment.update({
+      where: { orderId }, data: { status: "DELIVERED" },
+    });
+    await tx.shipmentEvent.create({
+      data: { shipmentId: shipment.id, status: "DELIVERED",
+        description: "Pengantaran J&T terverifikasi (referensi SHA256: " + proofHash.slice(0, 20) + ")",
+        occurredAt: now },
+    });
+    await writeAudit({
+      userId: actorId, action: "jnt.delivery.attested", entity: "Order", entityId: orderId,
+      meta: { awb: request.awb, referenceHash: proofHash, attested: true },
+    }, tx);
+    return { delivered: true, replayed: false };
+  }, { timeout: 18000 });
+}
 export async function getJntTracking(orderId:string,actorId:string) {
   await assertStaffPermission(prisma,actorId,PERMISSIONS.SHIPPING_READ);
   const order=await prisma.order.findUnique({where:{id:orderId},include:{shipment:true,jntShipmentRequest:true}});

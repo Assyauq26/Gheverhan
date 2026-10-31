@@ -169,9 +169,8 @@ export async function getJntTracking(orderId:string,actorId:string) {
   if(!order?.shipment||order.shipment.provider!=="jnt"||order.jntShipmentRequest?.state!=="SUCCEEDED"||
      !order.shipment.trackingNumber||order.shipment.trackingNumber!==order.jntShipmentRequest.awb)
     throw new HttpError("Resi J&T tidak tersedia untuk pesanan ini",404);
-  const raw=await trackJntOrder(order.shipment.trackingNumber);
-  // Carrier response may include recipient/driver PII. Never return raw carrier objects to browser.
-  return {awb:order.shipment.trackingNumber,carrierStatus:raw};
+  // Transport already projects only non-PII status/time/city fields.
+  return trackJntOrder(order.shipment.trackingNumber);
 }
 export async function cancelJntAwb(orderId:string,actorId:string) {
   requireFlag("JNT_ENABLE_CANCELLATION");
@@ -184,6 +183,7 @@ export async function cancelJntAwb(orderId:string,actorId:string) {
        order.shipment?.provider!=="jnt"||!order.shipment.trackingNumber||
        order.jntShipmentRequest?.state!=="SUCCEEDED")throw new HttpError("J&T hanya dapat membatalkan AWB sebelum paket diproses",409);
     await tx.jntShipmentRequest.update({where:{orderId},data:{state:"UNKNOWN",errorCode:"CANCELLATION_PENDING"}});
+    await writeAudit({userId:actorId,action:"jnt.cancel.requested",entity:"Order",entityId:orderId,meta:{externalOrderId:order.jntShipmentRequest.externalOrderId}},tx);
     return {existing:false as const,externalOrderId:order.jntShipmentRequest.externalOrderId};
   });
   if(request.existing)return {cancelled:true,replayed:true};

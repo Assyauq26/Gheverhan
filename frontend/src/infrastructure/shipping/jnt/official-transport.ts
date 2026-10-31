@@ -156,7 +156,7 @@ export async function cancelJntOrder(orderId: string, remark: string) {
   return { orderId, cancelled: true };
 }
 export type JntTrackingEvent = {status:string;time:string|null;note:string|null};
-export async function trackJntOrder(awb: string): Promise<{ awb: string; events: JntTrackingEvent[] }> {
+export async function trackJntOrder(awb: string, expectedOrderId?: string): Promise<{ awb: string; events: JntTrackingEvent[] }> {
   if (!/^[A-Z0-9]{8,30}$/.test(awb)) throw new HttpError("Nomor resi tidak valid", 422);
   const cfg: JntConfig = await activeJntConfig();
   const auth = Buffer.from(cfg.credentials.trackingUsername + ":" + cfg.credentials.trackingPassword).toString("base64");
@@ -164,6 +164,7 @@ export async function trackJntOrder(awb: string): Promise<{ awb: string; events:
     JSON.stringify({ awb, eccompanyid: cfg.credentials.trackingUsername }), "Basic " + auth);
   const parsed = z.object({
     awb: z.string().optional(),
+    orderid: z.string().optional(),
     error_id: z.union([z.string(), z.number()]).optional(),
     history: z.array(z.object({
       date_time: z.string().max(40).optional(),
@@ -174,7 +175,8 @@ export async function trackJntOrder(awb: string): Promise<{ awb: string; events:
   }).passthrough().safeParse(response);
   if (!parsed.success || (parsed.data.error_id != null &&
       String(parsed.data.error_id) !== "0" && String(parsed.data.error_id) !== "") ||
-      (parsed.data.awb && parsed.data.awb !== awb)) {
+      parsed.data.awb !== awb ||
+      (expectedOrderId && parsed.data.orderid && parsed.data.orderid !== expectedOrderId)) {
     throw new HttpError("Tracking J&T belum tersedia atau AWB tidak cocok", 502);
   }
   // Deliberately excludes personal names, phone numbers, addresses, drivers and raw notes.

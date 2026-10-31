@@ -11,7 +11,7 @@ function secret() {
 }
 const tokenSchema = z.object({ fingerprint: z.string(), courier: z.literal("J&T Express"), service: z.string(), cost: z.number().int().nonnegative(), expiresAt: z.number().int() });
 export function shippingFingerprint(userId: string, inquiry: ShippingInquiry, lines: unknown) {
-  return hash({ userId, inquiry, lines, config: hash([process.env.SHIPPING_PROVIDER || "manual", process.env.JNT_MANUAL_RATE_CONFIG || "", process.env.JNT_OFFICIAL_AREA_MAPPING || "", process.env.JNT_ORIGIN_WAREHOUSE || ""]) });
+  return hash({ userId, inquiry, lines, config: hash([process.env.SHIPPING_PROVIDER || "manual", process.env.JNT_MANUAL_RATE_CONFIG || "", process.env.JNT_OFFICIAL_AREA_MAPPING || "", process.env.JNT_ORIGIN_WAREHOUSE || "", process.env.JNT_API_ENV || "", process.env.JNT_RATE_SERVICES || ""]) });
 }
 export function issueShippingQuote(fingerprint: string, rate: ShippingRate) {
   const expiresAt = Math.min(Date.now() + 5 * 60_000, rate.validUntil ? new Date(rate.validUntil).getTime() : Infinity);

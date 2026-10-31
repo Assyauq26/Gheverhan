@@ -161,6 +161,10 @@ test('trusted role needs every required privilege, not only SELECT', async () =>
         assert.equal(missingDirect.status, 1);
         assert.equal(missingDirect.data.schema.directCheckout, false);
         await db.$executeRawUnsafe(`GRANT DELETE ON "CheckoutIntent", "Product", "ProductImage", "ProductVariant", "Inventory", "StagedProductMedia", "ProductEditorSave" TO "${role}"`);
+        const missingJnt = run(limited.toString());
+        assert.equal(missingJnt.status, 1);
+        assert.equal(missingJnt.data.schema.jntOfficial, false);
+        await db.$executeRawUnsafe(`GRANT DELETE ON "JntPlatformIntegration", "JntL3Mapping", "JntMappingRelease", "JntShipmentRequest" TO "${role}"`);
         const complete = run(limited.toString());
         assert.equal(complete.status, 0);
         assert.equal(complete.data.schema.trusted, true);

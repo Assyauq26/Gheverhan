@@ -4,6 +4,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { HttpError } from "@/lib/response";
 import type { AuthUser } from "@/lib/auth/session";
+import { writeAudit } from "@/modules/audit/audit.service";
+import type { Prisma } from "@prisma/client";
 
 export const jntEnvironment = z.enum(["sandbox", "production"]);
 export type JntEnvironment = z.infer<typeof jntEnvironment>;
@@ -110,8 +112,8 @@ export function isJntPlatformOwner(user: Pick<AuthUser, "id" | "roles"> | null) 
   // Fail closed without an explicit owner ID; seller's own Super Admin role is insufficient.
   return !!user && user.roles.includes("Super Admin") && approved.includes(user.id);
 }
-export async function readJntSettings(environment: JntEnvironment) {
-  const row = await prisma.jntPlatformIntegration.findUnique({ where: { environment } });
+export async function readJntSettings(environment: JntEnvironment, db: Prisma.TransactionClient = prisma) {
+  const row = await db.jntPlatformIntegration.findUnique({ where: { environment } });
   return row ? { config: decrypt(row.encryptedConfig), enabled: row.enabled, updatedAt: row.updatedAt } : null;
 }
 export async function readJntPublicStatus(environment: JntEnvironment) {
@@ -129,24 +131,36 @@ export async function saveJntSettings(input: z.infer<typeof jntSettingsInput>, a
   for (const kind of Object.keys(validPaths) as Array<keyof JntConfig["endpoints"]>) {
     validateEndpoint(kind, input.endpoints[kind], input.environment);
   }
-  const previous = await readJntSettings(input.environment);
-  const merged: Record<string, string> = {};
-  for (const key of credentialKeys) {
-    merged[key] = input.credentials[key] || previous?.config.credentials[key] || "";
-  }
-  const config = jntConfigSchema.safeParse({ endpoints: input.endpoints, credentials: merged });
-  if (!config.success) throw new HttpError("Lengkapi seluruh kredensial J&T sebelum menyimpan", 422);
   // Secrets are encrypted before DB persistence; never return them, even to the owner.
-  const row = await prisma.jntPlatformIntegration.upsert({
+  const row = await prisma.$transaction(async tx => {
+    // Serialize even the first insert so blank updates cannot undo a concurrent rotation.
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${"jnt-settings:" + input.environment}))::text`;
+    const previous = await readJntSettings(input.environment, tx);
+    const merged: Record<string, string> = {};
+    for (const key of credentialKeys) {
+      merged[key] = input.credentials[key] || previous?.config.credentials[key] || "";
+    }
+    const config = jntConfigSchema.safeParse({ endpoints: input.endpoints, credentials: merged });
+    if (!config.success) throw new HttpError("Lengkapi seluruh kredensial J&T sebelum menyimpan", 422);
+    const saved = await tx.jntPlatformIntegration.upsert({
     where: { environment: input.environment },
     create: { environment: input.environment, enabled: input.enabled, encryptedConfig: encrypt(config.data), updatedBy: actorId },
     update: { enabled: input.enabled, encryptedConfig: encrypt(config.data), updatedBy: actorId },
+    });
+    await writeAudit({ userId: actorId, action: "jnt.integration.updated",
+      entity: "JntPlatformIntegration", entityId: input.environment,
+      meta: { environment: input.environment, enabled: input.enabled } }, tx);
+    return saved;
   });
   return { environment: input.environment, configured: true, enabled: row.enabled, updatedAt: row.updatedAt.toISOString() };
 }
 export async function activeJntConfig() {
   const environment = jntEnvironment.safeParse(process.env.JNT_API_ENV);
   if (!environment.success) throw new HttpError("Environment J&T belum dipilih oleh operator server", 503);
+  // An owner may prepare credentials without authorizing any live carrier request.
+  if (environment.data === "production" && process.env.JNT_PRODUCTION_API_APPROVED !== "yes") {
+    throw new HttpError("Operasi API J&T Production belum disetujui operator server", 503);
+  }
   const settings = await readJntSettings(environment.data);
   if (!settings?.enabled) throw new HttpError("Integrasi J&T belum diaktifkan", 503);
   return settings.config;

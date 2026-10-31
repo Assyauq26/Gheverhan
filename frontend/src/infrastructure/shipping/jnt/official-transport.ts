@@ -24,8 +24,26 @@ async function postJnt(url: string, body: URLSearchParams | string, auth?: strin
   if (Number(response.headers.get("content-length") || 0) > 65536) {
     throw new HttpError("Respons J&T terlalu besar", 502);
   }
-  const responseText = await response.text();
-  if (responseText.length > 65536) throw new HttpError("Respons J&T terlalu besar", 502);
+  const reader = response.body?.getReader();
+  if (!reader) throw new HttpError("Respons J&T kosong", 502);
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 65536) {
+        await reader.cancel();
+        throw new HttpError("Respons J&T terlalu besar", 502);
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError("Respons J&T tidak dapat dibaca", 502);
+  } finally { reader.releaseLock(); }
+  const responseText = Buffer.concat(chunks).toString("utf8");
   try { return JSON.parse(responseText); }
   catch { throw new HttpError("Respons J&T bukan JSON valid", 502); }
 }

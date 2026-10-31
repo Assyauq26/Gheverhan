@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { assertSameOrigin } from "@/lib/mutation-origin";
 import { getCurrentUser } from "@/lib/auth/session";
 import { handle, HttpError } from "@/lib/response";
-import { writeAudit } from "@/modules/audit/audit.service";
 import {
   isJntPlatformOwner, jntEnvironment, jntSettingsInput,
   readJntPublicStatus, saveJntSettings,
@@ -36,14 +35,6 @@ export async function PUT(req: Request) {
     if (Number(req.headers.get("content-length") || 0) > 16384) throw new HttpError("Konfigurasi terlalu besar", 413);
     const body = jntSettingsInput.parse(await req.json());
     const saved = await saveJntSettings(body, actor.id);
-    // Audit only nonsecret flags; never log input body, decrypted config or auth headers.
-    await writeAudit({
-      userId: actor.id,
-      action: "jnt.integration.updated",
-      entity: "JntPlatformIntegration",
-      entityId: body.environment,
-      meta: { environment: body.environment, enabled: body.enabled },
-    });
     return privateResponse(saved);
   });
 }

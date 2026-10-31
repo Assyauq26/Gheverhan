@@ -2,7 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const state = vi.hoisted(() => ({ rows: new Map<string, any>() }));
 vi.mock("@/lib/prisma", () => ({
-  prisma: { jntPlatformIntegration: {
+  prisma: { $transaction: async (fn: any) => fn({
+    $queryRaw: vi.fn(), auditLog: { create: vi.fn() },
+    jntPlatformIntegration: {
+      findUnique: async ({ where }: any) => state.rows.get(where.environment) || null,
+      upsert: async ({ where, create, update }: any) => {
+        const next = { ...(state.rows.get(where.environment) || create), ...(state.rows.has(where.environment) ? update : {}), updatedAt: new Date() };
+        state.rows.set(where.environment, next); return next;
+      },
+    },
+  }), jntPlatformIntegration: {
     findUnique: vi.fn(async ({ where }: { where: { environment: string } }) =>
       state.rows.get(where.environment) || null),
     upsert: vi.fn(async ({ where, create, update }: any) => {
@@ -13,7 +22,7 @@ vi.mock("@/lib/prisma", () => ({
     }),
   } },
 }));
-import { isJntPlatformOwner, readJntPublicStatus, saveJntSettings } from "@/infrastructure/shipping/jnt/official-config";
+import { activeJntConfig, isJntPlatformOwner, readJntPublicStatus, saveJntSettings } from "@/infrastructure/shipping/jnt/official-config";
 
 afterEach(() => { state.rows.clear(); vi.unstubAllEnvs(); });
 const endpoints = {
@@ -28,6 +37,13 @@ const credentials = {
   trackingUsername: "SANDBOX-OWNER", trackingPassword: "SYNTHETIC-PASSWORD",
 };
 describe("J&T global platform secrets", () => {
+  it("blocks Production API independently of saved credentials and owner UI enablement", async () => {
+    vi.stubEnv("JNT_API_ENV", "production");
+    vi.stubEnv("JNT_PRODUCTION_API_APPROVED", "no");
+    await expect(activeJntConfig()).rejects.toThrow(/belum disetujui/);
+    vi.stubEnv("JNT_PRODUCTION_API_APPROVED", "yes");
+    await expect(activeJntConfig()).rejects.toThrow(/belum diaktifkan/);
+  });
   it("denies all users without an explicit owner allowlist and a Super Admin role", () => {
     const owner = { id: "owner-1", roles: ["Super Admin"] };
     expect(isJntPlatformOwner(owner)).toBe(false);

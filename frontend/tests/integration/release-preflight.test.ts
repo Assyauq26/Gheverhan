@@ -25,6 +25,7 @@ test('read-only preflight accepts reviewed local schema and never outputs fixtur
     assert.equal(r.data.readOnly, true);
     assert.equal(r.data.ledgerMatches, true);
     assert.equal(r.data.schema.trusted, true);
+    assert.equal(r.data.schema.jntOfficial, true);
     for (const secret of Object.values(fixtures))
         assert.ok(!JSON.stringify(r.data).includes(secret));
 });

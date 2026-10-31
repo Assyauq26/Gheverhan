@@ -7,3 +7,4 @@ coverage
 !src/app/admin/shipping/coverage/page.tsx
 playwright-report
 test-results
+.jnt-mapping-report/

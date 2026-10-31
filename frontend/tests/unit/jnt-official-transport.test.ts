@@ -23,6 +23,14 @@ const respond = (value: unknown, status = 200) => new Response(JSON.stringify(va
   status, headers: { "content-type": "application/json" },
 });
 describe("official J&T API transport (network mocked)", () => {
+  it("cancels oversized chunked responses without buffering the full body", async () => {
+    const cancelled = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new ReadableStream({
+      pull(controller) { controller.enqueue(new Uint8Array(32768)); }, cancel: cancelled,
+    }))));
+    await expect(checkJntRate({ originSite: "BATANG", destinationArea: "WARUNGASEM", weightGram: 3000, productType: "EZ" })).rejects.toThrow(/terlalu besar/);
+    expect(cancelled).toHaveBeenCalledOnce();
+  });
   it("signs ASCII MD5 hex rather than raw digest bytes", () => {
     const hash = officialJntSignature("{}", "secret");
     expect(hash).toMatch(/^[A-Za-z0-9+/]+=*$/);

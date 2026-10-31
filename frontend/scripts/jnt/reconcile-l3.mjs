@@ -16,7 +16,7 @@ const cwd=process.cwd();
 const csvPath=join(cwd,"resources/jnt-l3-official.csv");
 const snapshotPath=join(cwd,"src/modules/regions/data/snapshot.json.gz");
 const columns=["Provinsi","Kota","Kecamatan","Provinsi JNT","Kota JNT","Kode Kota JNT","Kecamatan JNT","Kode JNT"];
-const raw=readFileSync(csvPath,"utf8").replace(/^\uFEFF/,"");
+const raw=readFileSync(csvPath,"utf8").replace(/^\uFEFF/,"").replaceAll("\r\n","\n");
 export const version=createHash("sha256").update(raw).digest("hex");
 export function parseCsv(value) {
   const lines=[];let fields=[],field="",quoted=false;
@@ -141,6 +141,14 @@ async function main() {
     if(confirmed<1)throw Error("No exact matches available");
     // Activation publishes *only exact, uniquely matched districts*.
     await db.$transaction(async tx=>{
+      await tx.$executeRaw`SET LOCAL lock_timeout = '5s'`;
+      await tx.$executeRaw`LOCK TABLE "JntL3Mapping" IN SHARE ROW EXCLUSIVE MODE`;
+      const staged=await tx.jntL3Mapping.findMany({where:{version},orderBy:{sourceRow:"asc"}});
+      // Counts alone cannot prove that a staged code/status/crosswalk was not edited.
+      if(staged.length!==rows.length || rows.some((expected,i)=>
+        Object.keys(expected).filter(k=>k!=="approvedAt").some(k=>staged[i][k]!==expected[k]))) {
+        throw Error("Staged mapping differs from the reviewed official source; activation blocked");
+      }
       await tx.jntL3Mapping.updateMany({where:{version,matchStatus:"EXACT",emsifaDistrictCode:{not:null}},data:{approvedAt:new Date()}});
       await tx.jntMappingRelease.upsert({
         where:{key:"primary"},

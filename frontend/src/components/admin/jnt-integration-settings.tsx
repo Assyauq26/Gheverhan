@@ -74,6 +74,7 @@ export function JntIntegrationSettings() {
         return json.data as Status;
       })
       .then(data => {
+        if (controller.signal.aborted) return;
         setStatus(data);
         setEnabled(data.enabled);
         setEndpoints(data.endpoints || defaults(environment));
@@ -119,7 +120,7 @@ export function JntIntegrationSettings() {
       </div>
       <div className="rounded-full bg-zinc-100 p-1" role="group" aria-label="Lingkungan J&T">
         {(["sandbox", "production"] as const).map(env => <button key={env} type="button"
-          aria-pressed={environment === env} onClick={() => setEnvironment(env)}
+          aria-pressed={environment === env} disabled={saving} onClick={() => setEnvironment(env)}
           className={"rounded-full px-4 py-2 text-sm font-medium " + (environment === env ? "bg-black text-white" : "text-zinc-600")}>
           {env === "sandbox" ? "Testing" : "Production"}
         </button>)}

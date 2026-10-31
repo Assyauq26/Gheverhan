@@ -34,6 +34,7 @@ Required for platform settings:
 - JNT_SENDER_NAME, JNT_SENDER_CONTACT, JNT_SENDER_PHONE, JNT_SENDER_ADDRESS: real approved warehouse identity/address. Never dummy values.
 - JNT_ENABLE_ORDER_CREATE=yes: only after safe tests and operational approval. Default no.
 - JNT_PRODUCTION_ORDER_APPROVED=yes: independent explicit gate when JNT_API_ENV=production. Default no.
+- JNT_PRODUCTION_API_APPROVED=yes: separate server authorization for **all four** outbound Production APIs, including tariffs and tracking. Default no. Saving/enabling credentials in the owner form never bypasses this gate.
 - JNT_ENABLE_CANCELLATION=yes: separate explicit action gate. Default no.
 - SHIPPING_PROVIDER=jnt: enable official tariffs only after successful mapping and validated measured product weights. Default remains manual.
 
@@ -49,3 +50,17 @@ Required for platform settings:
 
 ## Source of truth
 Official spec: https://developer.jet.co.id/documentation. The public Basic Order specification documents expresstype "1" for EZ; servicetype 1 = pickup and 6 = dropoff. Shipping weights use kg up to two decimal places and request timestamps are WIB. Carrier-specific Production endpoints/keys are taken from the owner's authenticated J&T dashboard and validated against the application allowlist.
+
+## Configuration-only release and regression gates (2026-10-31)
+
+The owner authorized preparing a configuration-only Production rollout. Keep `JNT_PRODUCTION_API_APPROVED=no`, `JNT_ENABLE_ORDER_CREATE=no`, `JNT_ENABLE_CANCELLATION=no`, `JNT_PRODUCTION_ORDER_APPROVED=no`, and `SHIPPING_PROVIDER=manual`. Do not stage/activate Production mapping or enter previously exposed carrier credentials. `LIVE_CONFIGURATION` and `LIVE_SHIPPING` must be reported separately; the latter remains blocked pending credential rotation, provider UAT, mapping approval, real weights and warehouse readiness.
+
+Owner identity must match the explicitly supplied active user and Super Admin role. A role grant requires separate explicit approval and an audit record. Configure only that verified user ID in the server allowlist. Generate the independent random encryption key on the server and back it up privately outside the VPS; never output it. Preserve the previous release image and test restore of a fresh PostgreSQL backup before migration. Rollback changes only the app image; additive tables remain.
+
+Review hardening: settings and redacted audit are one database transaction, with a per-environment advisory lock preserving concurrent key rotation. Responses are bounded while streaming even without Content-Length. Tracking rechecks staff authorization in the service. Uncertain carrier dispatch/cancellation blocks financial refund changes under the same Order lock. Mapping activation locks and verifies every staged source field, rather than trusting row counts; CSV LF/CRLF normalization makes the source version reproducible on Windows/Linux.
+
+`jnt-official.test.ts` exercises actual PostgreSQL upgrade from the existing V5 migrations, repeat deploy, preservation, mapping integrity, audit rollback, concurrent settings, paid/EZ/weight eligibility, exactly-once dispatch intent/replay, unknown timeout, refund race, physical handover and cancellation. `jnt-settings-browser.ts` tests the real HTTP/API/database at eight viewports, owner authorization, seller/anonymous denial, cross-origin rejection, secret redaction and form clearing. Only the carrier network is mocked; no J&T account is called. Both are required CI steps.
+
+The historical Product Editor failure on run 41167817478 was a synthetic pushState fixture racing hydration/Next refresh. HEAD 8c33bc7b waits for settled router state and preserves all dirty-state Back/Forward assertions. That exact run passed the Product Editor step; final merge must await the complete suite on the final SHA, including ten navigation runs.
+
+Local Windows full unit verification retains the POSIX mode/symlink assertions (two TLS mode failures and one symlink privilege failure on Windows). Linux CI must pass them; they are never skipped or weakened. Operational evidence is retained privately under `.release-evidence/118/` and in CI artifacts, with no database dump or secret committed.

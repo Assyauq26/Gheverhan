@@ -61,7 +61,10 @@ type Tx=Prisma.TransactionClient;
 /** Reserve intent transactionally BEFORE contacting J&T. Never automatically retry UNKNOWN. */
 export async function createJntAwb(orderId: string, actorId: string, input: {pickupStart:string;pickupEnd:string}) {
   requireFlag("JNT_ENABLE_ORDER_CREATE");
-  if(process.env.JNT_API_ENV==="production")requireFlag("JNT_PRODUCTION_ORDER_APPROVED");
+  if(process.env.JNT_API_ENV==="production") {
+    requireFlag("JNT_PRODUCTION_ORDER_APPROVED");
+    requireFlag("JNT_PRODUCTION_API_APPROVED");
+  }
   const window=pickupWindow(input.pickupStart,input.pickupEnd);
   const sender=warehouse();
   const prepared=await prisma.$transaction(async tx=>{
@@ -165,8 +168,7 @@ export async function handoverJntPackage(orderId:string,actorId:string) {
   },{timeout:18000});
 }
 export async function getJntTracking(orderId:string,actorId:string) {
-  const actor=await prisma.user.findUnique({where:{id:actorId},select:{isActive:true}});
-  if(!actor?.isActive)throw new HttpError("Akses tidak sah",403);
+  await assertStaffPermission(prisma,actorId,PERMISSIONS.SHIPPING_READ);
   const order=await prisma.order.findUnique({where:{id:orderId},include:{shipment:true,jntShipmentRequest:true}});
   if(!order?.shipment||order.shipment.provider!=="jnt"||order.jntShipmentRequest?.state!=="SUCCEEDED"||
      !order.shipment.trackingNumber||order.shipment.trackingNumber!==order.jntShipmentRequest.awb)
@@ -176,6 +178,7 @@ export async function getJntTracking(orderId:string,actorId:string) {
 }
 export async function cancelJntAwb(orderId:string,actorId:string) {
   requireFlag("JNT_ENABLE_CANCELLATION");
+  if(process.env.JNT_API_ENV==="production")requireFlag("JNT_PRODUCTION_API_APPROVED");
   const request=await prisma.$transaction(async tx=>{
     await assertStaffPermission(tx,actorId,PERMISSIONS.SHIPPING_UPDATE);
     await lockOrder(tx,orderId);

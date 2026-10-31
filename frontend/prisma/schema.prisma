@@ -436,6 +436,7 @@ model Order {
   history  OrderStatusHistory[]
   payment  Payment?
   shipment Shipment?
+  jntShipmentRequest JntShipmentRequest?
 
   @@index([userId])
   @@index([status])
@@ -570,6 +571,46 @@ model JntPlatformIntegration {
   enabled Boolean @default(false)
   updatedBy String? @db.VarChar(128)
   updatedAt DateTime @updatedAt
+}
+
+// Official J&T district reference, versioned and immutable per import.
+// Only exact Emsifa crosswalk rows explicitly activated by an operator may quote rates.
+model JntL3Mapping {
+  id String @id @db.VarChar(96)
+  version String @db.VarChar(64)
+  province String @db.VarChar(130)
+  city String @db.VarChar(130)
+  district String @db.VarChar(130)
+  jntProvince String @db.VarChar(130)
+  jntCity String @db.VarChar(130)
+  jntCityCode String @db.VarChar(10)
+  jntDistrict String @db.VarChar(130)
+  jntAreaCode String @db.VarChar(10)
+  emsifaDistrictCode String? @db.VarChar(12)
+  matchStatus String @db.VarChar(16)
+  sourceRow Int
+  approvedAt DateTime?
+  @@unique([version, jntAreaCode])
+  @@index([version, emsifaDistrictCode, approvedAt])
+}
+model JntMappingRelease {
+  key String @id @default("primary") @db.VarChar(16)
+  activeVersion String @db.VarChar(64)
+  approvedBy String @db.VarChar(128)
+  approvedAt DateTime @default(now())
+}
+// Reserve a stable carrier request before any network effect. Unknown results never auto-retry.
+model JntShipmentRequest {
+  orderId String @id
+  externalOrderId String @unique @db.VarChar(20)
+  payloadFingerprint String @db.VarChar(64)
+  state String @db.VarChar(16)
+  awb String? @db.VarChar(30)
+  requestedBy String @db.VarChar(128)
+  errorCode String? @db.VarChar(64)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
 }
 
 // ---------- Shipping ----------

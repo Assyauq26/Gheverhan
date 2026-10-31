@@ -8,7 +8,7 @@ import { assertNoActiveRefund } from "@/modules/payments/refund-state";
 import { writeAudit } from "@/modules/audit/audit.service";
 import { transitionOrderInTransaction } from "@/modules/orders/orders.service";
 import { getVerifiedJntDistrict } from "@/infrastructure/shipping/jnt/verified-mapping";
-import { createJntOrder, cancelJntOrder, trackJntOrder } from "@/infrastructure/shipping/jnt/official-transport";
+import { createJntOrder, cancelJntOrder, trackJntOrder, jntCreateOrderSchema } from "@/infrastructure/shipping/jnt/official-transport";
 import type { Prisma } from "@prisma/client";
 
 function requireFlag(name: string) {
@@ -103,6 +103,8 @@ export async function createJntAwb(orderId: string, actorId: string, input: {pic
       cod:0,sendstarttime:window.start,sendendtime:window.end,
       expresstype:"1" as const,goodsvalue:order.subtotal,
     };
+    // Reject all deterministic request errors BEFORE reserving an external dispatch intent.
+    if(!jntCreateOrderSchema.safeParse(values).success)throw new HttpError("Data penerima/paket tidak memenuhi format resmi Create Order J&T",422);
     // A unique DB row is the durable exactly-once *dispatch intent* (not exactly-once external effect).
     await tx.jntShipmentRequest.create({data:{
       orderId,externalOrderId:values.orderid,payloadFingerprint:payloadHash(values),

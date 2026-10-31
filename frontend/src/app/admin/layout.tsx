@@ -7,6 +7,7 @@ import { AdminMobileBottomNav, AdminNav } from "@/components/admin/admin-nav";
 import { LogoutButton } from "@/components/storefront/logout-button";
 import { RegistrationOtpCleanup } from "@/components/auth/registration-otp-cleanup";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { isJntPlatformOwner } from "@/infrastructure/shipping/jnt/official-config";
 import { Bell, ChevronDown, Search, Store } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin" className="font-display text-[27px] font-extrabold tracking-[-0.055em] text-black">Gheverhan</Link>
             <h1 className="mt-1 text-xs font-medium text-zinc-400">Dashboard toko</h1>
           </div>
-          <AdminNav permissions={user.permissions} />
+          <AdminNav permissions={user.permissions} platformOwner={isJntPlatformOwner(user)} />
         </div>
         {(user.permissions.includes(PERMISSIONS.PROMOTION_CREATE) || user.permissions.includes(PERMISSIONS.PROMOTION_UPDATE)) && (
           <Link href="/admin/marketing" prefetch={false} className="mx-4 mt-8 flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3.5 text-xs leading-relaxed text-zinc-600 transition hover:border-zinc-400 hover:bg-zinc-50">
@@ -88,7 +89,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <OperationNotice />
           {children}
         </main>
-        <div className="admin-bottom-nav"><AdminMobileBottomNav permissions={user.permissions}/></div>
+        <div className="admin-bottom-nav"><AdminMobileBottomNav permissions={user.permissions} platformOwner={isJntPlatformOwner(user)}/></div>
       </div>
     </div>
   );

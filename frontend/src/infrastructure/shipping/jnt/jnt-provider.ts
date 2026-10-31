@@ -13,7 +13,14 @@ export class JntProvider implements ShippingProvider {
   constructor(private readonly transport?: OfficialJntTransport) {}
   async getRates(input: ShippingInquiry): Promise<ShippingRate[]> {
     // L3 provider mapping belongs to the *district*, never a village-level guess.
-    const mapping = getJntAreaMappings().find(m => m.indonesiaCode === input.destination.districtCode);
+    // Isolated injected tests retain explicit test fixtures; real Production uses DB release only.
+    const mapping = this.transport
+      ? getJntAreaMappings().find(m => m.indonesiaCode === input.destination.districtCode)
+      : await (async () => {
+          const { getVerifiedJntDistrict } = await import("./verified-mapping");
+          const row = await getVerifiedJntDistrict(input.destination.districtCode);
+          return { areaCode: row.destinationArea };
+        })();
     if (!mapping) throw new HttpError("Kecamatan belum terpetakan secara resmi ke J&T.", 422);
     const originWarehouse = process.env.JNT_ORIGIN_WAREHOUSE || "";
     if (!originWarehouse) throw new HttpError("Gudang asal J&T belum dikonfigurasi.", 503);

@@ -64,6 +64,7 @@ export function JntIntegrationSettings() {
     setLoading(true);
     setNotice("");
     setStatus(null);
+    setEnabled(false);
     setSecrets({ ...emptySecrets });
     setEndpoints(defaults(environment));
     fetch("/api/v1/admin/integrations/jnt?environment=" + environment, { cache: "no-store", signal: controller.signal })

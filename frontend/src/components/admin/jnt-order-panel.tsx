@@ -59,6 +59,19 @@ export function JntOrderPanel(props:{
           <p key={i} className="py-1"><strong>{event.status}</strong> {event.time||""}{event.note?" — "+event.note:""}</p>
         ):<p>Belum ada detail tracking yang dikembalikan J&T.</p>}</div>}
       </div>}
+    {props.canUpdate && props.awb && props.requestState==="SUCCEEDED" &&
+      props.status==="SHIPPED" && ["SHIPPED","IN_TRANSIT"].includes(props.shipmentStatus||"") &&
+      <OperationForm
+        url={"/api/v1/admin/orders/"+props.orderId+"/jnt"}
+        label="Konfirmasi paket J&T diterima"
+        confirmation="Operator wajib memeriksa bukti pengantaran dari J&T (POD atau status resmi yang valid) sebelum mengonfirmasi. Tindakan ini mencatat audit dan mengubah pesanan menjadi Diterima. Jangan konfirmasi berdasarkan nomor resi saja."
+        fields={[
+          {name:"action",label:"Aksi",type:"hidden",value:"deliver"},
+          {name:"evidenceReference",label:"Nomor referensi bukti pengantaran J&T (tanpa data pribadi)",required:true,maxLength:120,
+            hint:"Masukkan ID bukti atau referensi pemeriksaan resmi, bukan nama/telepon/alamat penerima."},
+          {name:"attested",label:"Saya sudah memeriksa bukti dari J&T dan memastikan paket benar-benar diterima.",type:"checkbox",required:true},
+        ]}
+      />}
     {props.canUpdate&&props.awb&&props.requestState==="SUCCEEDED"&&props.shipmentStatus==="PENDING"&&props.status==="PACKED"&&
       <div className="space-y-4">
         <OperationForm

@@ -9,6 +9,7 @@ import { writeAudit } from "@/modules/audit/audit.service";
 import { transitionOrderInTransaction } from "@/modules/orders/orders.service";
 import { getVerifiedJntDistrict } from "@/infrastructure/shipping/jnt/verified-mapping";
 import { createJntOrder, cancelJntOrder, trackJntOrder, jntCreateOrderSchema } from "@/infrastructure/shipping/jnt/official-transport";
+import { activeJntConfig } from "@/infrastructure/shipping/jnt/official-config";
 import type { Prisma } from "@prisma/client";
 
 function requireFlag(name: string) {
@@ -67,6 +68,9 @@ export async function createJntAwb(orderId: string, actorId: string, input: {pic
   }
   const window=pickupWindow(input.pickupStart,input.pickupEnd);
   const sender=warehouse();
+  // Resolve deterministic configuration and decryption errors BEFORE persisting an
+  // intent. After commit, only a carrier/network outcome can make it UNKNOWN.
+  const approvedConfig = await activeJntConfig();
   const prepared=await prisma.$transaction(async tx=>{
     await assertStaffPermission(tx,actorId,PERMISSIONS.SHIPPING_CREATE);
     await lockOrder(tx,orderId);
@@ -119,7 +123,7 @@ export async function createJntAwb(orderId: string, actorId: string, input: {pic
   },{timeout:18000});
   if(prepared.existing)return {awb:prepared.awb,replayed:true};
   let result:{awb:string;orderId:string};
-  try {result=await createJntOrder(prepared.values);}
+  try {result=await createJntOrder(prepared.values, approvedConfig);}
   catch {
     await prisma.jntShipmentRequest.updateMany({
       where:{orderId,state:"DISPATCHED"},data:{state:"UNKNOWN",errorCode:"UNCONFIRMED"},
@@ -179,6 +183,9 @@ export async function getJntTracking(orderId:string,actorId:string) {
 export async function cancelJntAwb(orderId:string,actorId:string) {
   requireFlag("JNT_ENABLE_CANCELLATION");
   if(process.env.JNT_API_ENV==="production")requireFlag("JNT_PRODUCTION_API_APPROVED");
+  // Do not persist cancellation-pending when the operator has disabled J&T or
+  // the encrypted configuration is unavailable/unreadable.
+  const approvedConfig = await activeJntConfig();
   const request=await prisma.$transaction(async tx=>{
     await assertStaffPermission(tx,actorId,PERMISSIONS.SHIPPING_UPDATE);
     await lockOrder(tx,orderId);
@@ -193,7 +200,7 @@ export async function cancelJntAwb(orderId:string,actorId:string) {
   });
   if(request.existing)return {cancelled:true,replayed:true};
   let cancelled=false;
-  try {await cancelJntOrder(request.externalOrderId,"Cancelled by seller");cancelled=true;} catch {
+  try {await cancelJntOrder(request.externalOrderId,"Cancelled by seller",approvedConfig);cancelled=true;} catch {
     throw new HttpError("Status pembatalan J&T tidak pasti; jangan ulangi hingga rekonsiliasi",409);
   }
   if(cancelled){

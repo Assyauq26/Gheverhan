@@ -12,6 +12,7 @@ export class JntProvider implements ShippingProvider {
   readonly capabilities = ["rates"];
   constructor(private readonly transport?: OfficialJntTransport) {}
   async getRates(input: ShippingInquiry): Promise<ShippingRate[]> {
+    if (!this.transport && !process.env.JNT_API_ENV) throw new HttpError("Integrasi resmi J&T belum diaktifkan di server", 503);
     // L3 provider mapping belongs to the *district*, never a village-level guess.
     // Isolated injected tests retain explicit test fixtures; real Production uses DB release only.
     const mapping = this.transport

@@ -33,13 +33,13 @@ function wib(value: Date) {
   }).format(value);
 }
 function pickupWindow(start: string, end: string) {
-  const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+  // OperationForm serializes datetime-local to an absolute ISO instant.
+  const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
   if (!regex.test(start) || !regex.test(end)) throw new HttpError("Jadwal pickup tidak valid", 422);
-  const a = new Date(start + ":00+07:00"), b = new Date(end + ":00+07:00");
+  const a = new Date(start), b = new Date(end);
   const now = Date.now();
   if (!Number.isFinite(+a) || !Number.isFinite(+b) || +a < now + 60_000 ||
-      +a > now + 7 * 86400_000 || +b <= +a || +b - +a > 12 * 3600_000 ||
-      wib(a).slice(0,16) !== start.replace("T"," ") || wib(b).slice(0,16) !== end.replace("T"," ")) {
+      +a > now + 7 * 86400_000 || +b <= +a || +b - +a > 12 * 3600_000) {
     throw new HttpError("Jadwal pickup harus di masa depan (maks. 7 hari, durasi 12 jam)", 422);
   }
   return { start: wib(a), end: wib(b) };

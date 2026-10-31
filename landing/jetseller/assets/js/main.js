@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  document.documentElement.classList.add("js");
   // Footer year
   const year = document.getElementById("year");
   if (year) year.textContent = String(new Date().getFullYear());
@@ -25,6 +26,20 @@
     });
   }
 
+  if (toggle && nav) {
+    const close = () => { nav.classList.remove("open"); toggle.setAttribute("aria-expanded", "false"); toggle.setAttribute("aria-label", "Buka menu navigasi"); };
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && nav.classList.contains("open")) { close(); toggle.focus(); } });
+    nav.addEventListener("click", e => { if (e.target.closest("a")) close(); });
+    matchMedia("(min-width:901px)").addEventListener("change", close);
+  }
+  const header = document.querySelector(".site-header");
+  addEventListener("scroll", () => header?.classList.toggle("scrolled", scrollY > 12), { passive:true });
+  if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const reveal = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) { entry.target.classList.add("revealed"); reveal.unobserve(entry.target); }
+    }), { threshold:.15 });
+    document.querySelectorAll(".card,.step,.faq,.cta-banner").forEach(el => reveal.observe(el));
+  }
   // Active nav highlighting on scroll (progressive enhancement only)
   const links = Array.from(document.querySelectorAll(".nav-link[href^='#']"));
   const sections = links

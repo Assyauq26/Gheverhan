@@ -142,9 +142,12 @@ const createResult = z.object({
 }).passthrough();
 /** Call only from a verified, durable paid-order workflow with an idempotency lock.
  * Not exposed as an admin test endpoint: each call may create a real AWB. */
-export async function createJntOrder(value: z.input<typeof jntCreateOrderSchema>) {
+export async function createJntOrder(value: z.input<typeof jntCreateOrderSchema>, approvedConfig?: JntConfig) {
   const input = jntCreateOrderSchema.parse(value);
-  const cfg = await activeJntConfig();
+  // Fulfillment preflights credentials before creating a durable carrier intent.
+  // Passing that already-validated snapshot prevents a second deterministic
+  // configuration failure after the intent has been committed.
+  const cfg = approvedConfig ?? await activeJntConfig();
   const payload = JSON.stringify({ detail: [{ username: cfg.credentials.orderUsername, api_key: cfg.credentials.orderApiKey, ...input }] });
   const response = await postJnt(cfg.endpoints.order, signedForm("data_param", payload, cfg.credentials.orderKey));
   const result = createResult.safeParse(response);
@@ -157,11 +160,12 @@ const cancelResult = z.object({
   success: z.literal(true),
   detail: z.array(z.object({ orderid: z.string(), status: z.literal("Sukses") }).passthrough()).length(1),
 }).passthrough();
-export async function cancelJntOrder(orderId: string, remark: string) {
+export async function cancelJntOrder(orderId: string, remark: string, approvedConfig?: JntConfig) {
   if (!/^[A-Z0-9-]{1,20}$/.test(orderId) || remark.length < 1 || remark.length > 30) {
     throw new HttpError("Data pembatalan J&T tidak valid", 422);
   }
-  const cfg = await activeJntConfig();
+  // An approved snapshot is obtained before recording an in-flight cancellation.
+  const cfg = approvedConfig ?? await activeJntConfig();
   const payload = JSON.stringify({ detail: [{
     username: cfg.credentials.orderUsername, api_key: cfg.credentials.orderApiKey,
     orderid: orderId, remark,

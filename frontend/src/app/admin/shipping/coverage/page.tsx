@@ -1,21 +1,41 @@
 import { requireBackofficeUser } from "@/modules/admin/backoffice-access";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
-import { getJntAreaMappings, getManualJntConfig } from "@/infrastructure/shipping/jnt/jnt-config";
+import { getManualJntConfig } from "@/infrastructure/shipping/jnt/jnt-config";
+
 export const dynamic = "force-dynamic";
 export default async function ShippingCoveragePage() {
   await requireBackofficeUser(PERMISSIONS.SHIPPING_READ);
-  const mappings = getJntAreaMappings(), config = getManualJntConfig();
-  const recent = await prisma.orderAddress.findMany({ where: { villageCode: { not: null } }, orderBy: { order: { createdAt: "desc" } }, select: { villageCode: true, village: true, district: true }, distinct: ["villageCode"], take: 100 });
-  const missing = recent.filter(r => !mappings.some(m => m.indonesiaCode === r.villageCode));
-  return <div className="space-y-6">
-    <h1 className="font-display text-2xl font-bold">Kesiapan pengiriman J&T Express</h1>
-    <p>Tarif manual: {config ? `${config.rates.filter(r => Date.parse(r.validUntil) > Date.now()).length} aturan aktif yang dikonfigurasi` : "Belum dikonfigurasi; checkout menolak pesanan tanpa tarif valid."}</p>
-    <p>Mapping resmi: {mappings.length} wilayah. Adapter resmi menunggu spesifikasi akun dan UAT yang disetujui.</p>
-    <section className="space-y-3"><h2 className="text-lg font-semibold">Wilayah pesanan terbaru yang belum ter-mapping</h2>
-      <p className="text-sm text-ink-soft">Maksimal 100 wilayah unik. Alamat legacy tanpa kode tetap disimpan dan tidak diberi kode perkiraan. Tarif manual yang disetujui tidak memerlukan kode area API resmi.</p>
-      {missing.length ? <ul className="space-y-2">{missing.map(r => <li key={r.villageCode}>{r.villageCode} — {r.village}, {r.district}</li>)}</ul> : <p>Tidak ada wilayah berkode yang belum ter-mapping pada sampel ini.</p>}
+  const release=await prisma.jntMappingRelease.findUnique({where:{key:"primary"}});
+  const [manual,recent,total,verified,unmatched]=await Promise.all([
+    Promise.resolve(getManualJntConfig()),
+    prisma.orderAddress.findMany({
+      where:{districtCode:{not:null}},orderBy:{order:{createdAt:"desc"}},
+      select:{districtCode:true,district:true,city:true},distinct:["districtCode"],take:100,
+    }),
+    release?prisma.jntL3Mapping.count({where:{version:release.activeVersion}}):Promise.resolve(0),
+    release?prisma.jntL3Mapping.count({where:{version:release.activeVersion,matchStatus:"EXACT",approvedAt:{not:null}}}):Promise.resolve(0),
+    release?prisma.jntL3Mapping.count({where:{version:release.activeVersion,matchStatus:{not:"EXACT"}}}):Promise.resolve(0),
+  ]);
+  const codes=recent.flatMap(r=>r.districtCode?[r.districtCode]:[]);
+  const mapped=release&&codes.length?await prisma.jntL3Mapping.findMany({
+    where:{version:release.activeVersion,emsifaDistrictCode:{in:codes},matchStatus:"EXACT",approvedAt:{not:null}},
+    select:{emsifaDistrictCode:true},
+  }):[];
+  const matched=new Set(mapped.map(r=>r.emsifaDistrictCode));
+  const missing=recent.filter(r=>!r.districtCode||!matched.has(r.districtCode));
+  return <div className="space-y-5">
+    <h1 className="font-display text-2xl font-bold">Kesiapan J&T Express L3</h1>
+    <p className="text-sm text-zinc-600">Alamat pelanggan tetap memakai Emsifa sampai desa/kelurahan. Pengiriman menggunakan kecamatan dan kode resmi J&T yang telah divalidasi.</p>
+    <div className="grid gap-3 sm:grid-cols-3">
+      {[["Mapping rilis aktif",release?release.activeVersion.slice(0,12):"Belum ada"],["Kecamatan J&T",String(total)],["Kecamatan terverifikasi",String(verified)]].map(([label,value])=><div key={label} className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-xs text-zinc-500">{label}</p><p className="mt-1 break-all text-lg font-bold">{value}</p></div>)}
+    </div>
+    <p className="text-sm">Mapping yang belum cocok/ambigu dalam rilis: {unmatched}. Tarif manual yang disetujui: {manual?manual.rates.filter(r=>Date.parse(r.validUntil)>Date.now()).length:0} aturan aktif.</p>
+    <section className="space-y-3 rounded-2xl bg-white p-4">
+      <h2 className="font-semibold">Kecamatan dari 100 alamat terakhir yang belum tercakup</h2>
+      {missing.length?<ul className="space-y-1 text-sm">{missing.map(r=><li key={r.districtCode}>{r.district}, {r.city} ({r.districtCode})</li>)}</ul>:
+        <p className="text-sm text-zinc-500">Tidak ada kecamatan yang belum terpetakan pada sampel ini. Ini bukan bukti cakupan nasional lengkap.</p>}
+      <p className="text-xs text-zinc-500">Alamat legacy tanpa kode tetap dipertahankan. Verifikasi mapping dilakukan oleh pemilik platform melalui proses rilis terkontrol.</p>
     </section>
-    <p className="text-sm">Perubahan tarif dan mapping dilakukan oleh operator melalui konfigurasi server yang ditinjau dan dicatat. Gunakan hanya referensi serta konfirmasi resmi J&T untuk mapping.</p>
   </div>;
 }

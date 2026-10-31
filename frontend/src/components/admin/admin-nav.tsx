@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "@/components/ui/navigation";
 import {
   Boxes, ChevronRight, CreditCard,
-  Landmark, LayoutGrid, Megaphone, Menu, Package, ScrollText,
+  Landmark, LayoutGrid, Megaphone, Menu, Package, ScrollText, KeyRound,
   ShoppingBag, Store, Truck, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ const links = [
   { href: "/admin/categories", label: "Kategori", icon: LayoutGrid, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/payments", label: "Pembayaran", icon: CreditCard, permission: PERMISSIONS.PAYMENT_READ },
   { href: "/admin/shipping", label: "Pengiriman", icon: Truck, permission: PERMISSIONS.SHIPPING_READ },
+  { href: "/admin/shipping/integrations", label: "Integrasi J&T", icon: KeyRound, permission: PERMISSIONS.JNT_INTEGRATION_MANAGE },
   { href: "/admin/bank-accounts", label: "Rekening Bank", icon: Landmark, permission: PERMISSIONS.BANK_MANAGE },
   { href: "/admin/audit", label: "Audit Log", icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
 ] as const;

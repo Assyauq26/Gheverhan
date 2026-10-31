@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   SHIPPING_READ: "shipping.read",
   SHIPPING_CREATE: "shipping.create",
   SHIPPING_UPDATE: "shipping.update",
+  JNT_INTEGRATION_MANAGE: "jnt.integration.manage",
   CUSTOMER_READ: "customer.read",
   PROMOTION_CREATE: "promotion.create",
   PROMOTION_UPDATE: "promotion.update",

@@ -97,7 +97,14 @@ test("official upgrade from existing V5 via Prisma preserves legacy data", async
     assert.equal(await upgrade.jntShipmentRequest.count(), 0);
     const rows = await upgrade.$queryRaw<{ count: bigint }[]>`SELECT count(*) FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`;
     assert.equal(Number(rows[0].count), migrations.length);
-  } finally { await upgrade.$disconnect(); }
+  } finally {
+    const schema = url.searchParams.get("schema")!;
+    assert.match(schema, /^jnt_upgrade_[a-f0-9]{32}$/);
+    // Remove only this test-owned schema in the explicitly guarded local database.
+    // Later catalog/RLS suites must not observe duplicate fixture table names.
+    await upgrade.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);
+    await upgrade.$disconnect();
+  }
 });
 test("official mapping is unique, activated by exact version, and unresolved districts reject", async () => {
   const { getVerifiedJntDistrict } = await import("../../src/infrastructure/shipping/jnt/verified-mapping");

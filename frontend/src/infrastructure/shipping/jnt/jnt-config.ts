@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { locationSchema, regionCode } from "@/modules/regions/region.validation";
+import { locationSchema } from "@/modules/regions/region.validation";
 const service = z.enum(["EZ", "HBO", "JND", "ECO"]);
 const approval = { reference: z.string().min(4).max(200), approvedBy: z.string().min(2).max(100), validUntil: z.string().datetime() };
 /** Operator/admin supplied configuration, never sample rates or inferred carrier mappings. */
@@ -12,7 +12,17 @@ export const manualConfigSchema = z.object({
     ...approval,
   }).refine(r => r.maxWeightGram >= r.minWeightGram)).max(10000),
 }).strict();
-export const areaMappingSchema = z.array(z.object({ indonesiaCode: regionCode, areaCode: z.string().min(1).max(80), reference: z.string().min(4), confirmedAt: z.string().datetime() }).strict()).max(100000).refine(rows => new Set(rows.map(row => row.indonesiaCode)).size === rows.length, "Mapping wilayah duplikat");
+/** Official J&T L3 mapping is authoritative at district, not village, level.
+ * areaCode = official J&T district name for Tariff Check (destAreaCode).
+ * cityCode and receiverAreaCode are official codes reserved for Create Order. */
+export const areaMappingSchema = z.array(z.object({
+  indonesiaCode: z.string().regex(/^\d{2}\.\d{2}\.\d{2}$/),
+  areaCode: z.string().regex(/^[A-Z][A-Z0-9 -]{1,79}$/),
+  cityCode: z.string().regex(/^[A-Z0-9]{3}$/).optional(),
+  receiverAreaCode: z.string().regex(/^[A-Z0-9]{1,10}$/).optional(),
+  reference: z.string().min(4),
+  confirmedAt: z.string().datetime(),
+}).strict()).max(100000).refine(rows => new Set(rows.map(row => row.indonesiaCode)).size === rows.length, "Mapping wilayah duplikat");
 export function getManualJntConfig() {
   const raw = process.env.JNT_MANUAL_RATE_CONFIG;
   if (!raw) return null;

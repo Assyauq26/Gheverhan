@@ -916,3 +916,19 @@ model FlashSaleLegacy {
   capturedAt DateTime @default(now())
   resolvedCampaignId String? @db.Uuid
 }
+
+
+// Platform-level J&T credentials; never scoped to a seller tenant.
+// Master encryption key is stored outside this database.
+model JntApiSetting {
+  id                   String   @id @default(cuid())
+  environment          String
+  kind                 String
+  endpoint             String
+  encryptedCredentials String   @db.Text
+  lastModifiedBy       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([environment, kind])
+}

@@ -12,7 +12,7 @@ const PERMISSIONS = [
   "inventory.read", "inventory.adjust",
   "order.read", "order.update", "order.cancel",
   "payment.read", "payment.verify",
-  "shipping.read", "shipping.create", "shipping.update",
+  "shipping.read", "shipping.create", "shipping.update", "jnt.integration.manage",
   "customer.read",
   "promotion.create", "promotion.update",
   "bank.manage", "audit.read",

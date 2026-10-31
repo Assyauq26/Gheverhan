@@ -164,6 +164,57 @@ test("concurrent create/replay dispatches once and handover is explicit", async 
   await fulfillment.handoverJntPackage(f.id, actor); assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.id } })).status, "SHIPPED");
   await assert.rejects(fulfillment.cancelJntAwb(f.id, actor), { status: 409 }); assert.equal(calls(), 1);
 });
+test("disabled API fails before AWB reservation and permits later retry", async () => {
+  const f = await order(), calls = carrier();
+  await settings.saveJntSettings({ environment: "sandbox", enabled: false, endpoints, credentials: {} }, actor);
+  try {
+    await assert.rejects(fulfillment.createJntAwb(f.id, actor, input()), { status: 503 });
+    assert.equal(calls(), 0);
+    assert.equal(await db.jntShipmentRequest.count({ where: { orderId: f.id } }), 0);
+    // No phantom UNKNOWN ledger row must freeze this order's legitimate refund.
+  } finally {
+    await settings.saveJntSettings({ environment: "sandbox", enabled: true, endpoints, credentials: {} }, actor);
+  }
+  const result = await fulfillment.createJntAwb(f.id, actor, input());
+  assert.equal(result.replayed, false);
+  assert.equal(calls(), 1);
+  assert.equal((await db.jntShipmentRequest.findUniqueOrThrow({ where: { orderId: f.id } })).state, "SUCCEEDED");
+});
+
+test("disabled API cannot lock a pending cancellation into UNKNOWN", async () => {
+  const f = await order(), calls = carrier();
+  await fulfillment.createJntAwb(f.id, actor, input());
+  assert.equal(calls(), 1);
+  await settings.saveJntSettings({ environment: "sandbox", enabled: false, endpoints, credentials: {} }, actor);
+  try {
+    await assert.rejects(fulfillment.cancelJntAwb(f.id, actor), { status: 503 });
+    assert.equal(calls(), 1);
+    assert.equal((await db.jntShipmentRequest.findUniqueOrThrow({ where: { orderId: f.id } })).state, "SUCCEEDED");
+  } finally {
+    await settings.saveJntSettings({ environment: "sandbox", enabled: true, endpoints, credentials: {} }, actor);
+  }
+  await fulfillment.cancelJntAwb(f.id, actor);
+  assert.equal(calls(), 2);
+  assert.equal((await db.jntShipmentRequest.findUniqueOrThrow({ where: { orderId: f.id } })).state, "CANCELLED");
+});
+
+test("official J&T delivery requires staff, real AWB and attested proof before reaching DELIVERED", async () => {
+  const f = await order(), calls = carrier();
+  await fulfillment.createJntAwb(f.id, actor, input());
+  await fulfillment.handoverJntPackage(f.id, actor);
+  const proof = { evidenceReference: "JNT:POD-TEST-20261031", attested: true };
+  await assert.rejects(fulfillment.confirmJntDelivery(f.id, buyer, proof), { status: 403 });
+  await assert.rejects(fulfillment.confirmJntDelivery(f.id, actor, { ...proof, attested: false }), { status: 422 });
+  assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.id } })).status, "SHIPPED");
+  const delivered = await fulfillment.confirmJntDelivery(f.id, actor, proof);
+  assert.deepEqual(delivered, { delivered: true, replayed: false });
+  assert.equal((await db.order.findUniqueOrThrow({ where: { id: f.id } })).status, "DELIVERED");
+  assert.equal((await db.shipment.findUniqueOrThrow({ where: { orderId: f.id } })).status, "DELIVERED");
+  assert.deepEqual(await fulfillment.confirmJntDelivery(f.id, actor, proof), { delivered: true, replayed: true });
+  assert.equal(await db.shipmentEvent.count({ where: { shipment: { orderId: f.id }, status: "DELIVERED" } }), 1);
+  assert.equal(calls(), 1); // Confirmation does not create another AWB.
+});
+
 test("ambiguous timeout is durable UNKNOWN and never retries", async () => {
   const f = await order(); let calls = 0;
   globalThis.fetch = (async () => { calls++; throw new Error("Synthetic timeout with secret-like text"); }) as typeof fetch;

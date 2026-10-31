@@ -172,7 +172,7 @@ export async function getJntTracking(orderId:string,actorId:string) {
      !order.shipment.trackingNumber||order.shipment.trackingNumber!==order.jntShipmentRequest.awb)
     throw new HttpError("Resi J&T tidak tersedia untuk pesanan ini",404);
   // Transport already projects only non-PII status/time/city fields.
-  return trackJntOrder(order.shipment.trackingNumber);
+  return trackJntOrder(order.shipment.trackingNumber, order.jntShipmentRequest.externalOrderId);
 }
 export async function cancelJntAwb(orderId:string,actorId:string) {
   requireFlag("JNT_ENABLE_CANCELLATION");

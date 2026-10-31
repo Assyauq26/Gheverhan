@@ -25,6 +25,7 @@ test('read-only preflight accepts reviewed local schema and never outputs fixtur
     assert.equal(r.data.readOnly, true);
     assert.equal(r.data.ledgerMatches, true);
     assert.equal(r.data.schema.trusted, true);
+    assert.equal(r.data.schema.jntOfficial, true);
     for (const secret of Object.values(fixtures))
         assert.ok(!JSON.stringify(r.data).includes(secret));
 });
@@ -160,6 +161,10 @@ test('trusted role needs every required privilege, not only SELECT', async () =>
         assert.equal(missingDirect.status, 1);
         assert.equal(missingDirect.data.schema.directCheckout, false);
         await db.$executeRawUnsafe(`GRANT DELETE ON "CheckoutIntent", "Product", "ProductImage", "ProductVariant", "Inventory", "StagedProductMedia", "ProductEditorSave" TO "${role}"`);
+        const missingJnt = run(limited.toString());
+        assert.equal(missingJnt.status, 1);
+        assert.equal(missingJnt.data.schema.jntOfficial, false);
+        await db.$executeRawUnsafe(`GRANT DELETE ON "JntPlatformIntegration", "JntL3Mapping", "JntMappingRelease", "JntShipmentRequest" TO "${role}"`);
         const complete = run(limited.toString());
         assert.equal(complete.status, 0);
         assert.equal(complete.data.schema.trusted, true);

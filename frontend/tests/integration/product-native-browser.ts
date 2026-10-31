@@ -127,7 +127,12 @@ export async function verifyNativeProductEditor({ browser, admin, anonymous, db,
       await expect(page).toHaveURL(base + "/admin/products");
       // Forward traversal must return to the editor when the seller cancels,
       // not advance to another history entry or leave a stale restore flag.
-      await page.goto(base + "/admin/products/" + id);
+      // Wait for the editor's client-side hydration and Next router state to settle
+      // before creating a synthetic history entry. A pending app-router refresh can
+      // otherwise replace the URL immediately after pushState (intermittent CI flake).
+      await page.goto(base + "/admin/products/" + id, { waitUntil: "networkidle" });
+      await expect(page.getByTestId("product-status")).toHaveText("Draft");
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       await page.evaluate(() => {
         history.pushState({ ...history.state, nativeForwardCheck: true }, "", location.pathname + "?native-forward-check=1");
       });

@@ -79,6 +79,7 @@ async function main() {
           {
             productEditorV2: boolean;
             schemaUsage: boolean;
+            jntOfficial: boolean;
             catalogPrivileges: boolean;
             customOptions: boolean;
             directCheckout: boolean;
@@ -96,6 +97,12 @@ async function main() {
           }[]
         >`
         SELECT has_schema_privilege('public','USAGE') AS "schemaUsage",
+        (
+          (SELECT count(*)=4 AND bool_and(has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT') AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
+            FROM pg_class c WHERE c.oid IN (to_regclass('public."JntPlatformIntegration"'),to_regclass('public."JntL3Mapping"'),to_regclass('public."JntMappingRelease"'),to_regclass('public."JntShipmentRequest"')))
+          AND (SELECT count(*)=4 AND bool_and(convalidated) FROM pg_constraint WHERE conname IN ('JntPlatformIntegration_environment_check','JntL3Mapping_status_check','JntShipmentRequest_state_check','JntShipmentRequest_orderId_fkey') AND connamespace='public'::regnamespace)
+          AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='JntPlatformIntegration' AND column_name='encryptedConfig' AND data_type='text' AND is_nullable='NO')
+        ) AS "jntOfficial",
         (SELECT count(*)=4 AND bool_and(NOT pg_catalog.row_security_active(c.oid)
           AND has_table_privilege(c.oid,'SELECT') AND has_table_privilege(c.oid,'INSERT')
           AND has_table_privilege(c.oid,'UPDATE') AND has_table_privilege(c.oid,'DELETE'))
@@ -171,6 +178,7 @@ async function main() {
         (row) => expectedLedger.get(row.migration_name)?.has(row.checksum) === true,
       );
     const schemaReady =
+      facts.schema.jntOfficial &&
       facts.schema.schemaUsage &&
       facts.schema.catalogPrivileges &&
       facts.schema.productEditorV2 &&

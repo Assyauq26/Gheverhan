@@ -42,7 +42,7 @@ describe("J&T configured services and quote integrity", () => {
   it("has no dummy default tariff and official integration never invents a mapping", async () => {
     vi.stubEnv("JNT_MANUAL_RATE_CONFIG", ""); vi.stubEnv("JNT_OFFICIAL_AREA_MAPPING", "");
     expect(await new ManualShippingProvider().getRates(inquiry)).toEqual([]);
-    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/mapping resmi/);
+    await expect(new JntProvider().getRates(inquiry)).rejects.toThrow(/belum diaktifkan/);
   });
   it("serves only approved unexpired exact village/weight rules; other services are absent", async () => {
     vi.stubEnv("REGION_DATA_MODE", "snapshot");
@@ -62,7 +62,7 @@ describe("J&T configured services and quote integrity", () => {
     expect(() => verifyShippingQuote(quote.quoteToken, "fingerprint", rate)).toThrow(/kedaluwarsa/);
   });
   it("official contract exposes only returned services and requires an approved mapping/transport", async () => {
-    const mapping = { indonesiaCode: codes.villageCode, areaCode: "TEST-ONLY-OFFICIAL-DOUBLE", reference: "SYNTHETIC-UAT", confirmedAt: "2026-10-01T00:00:00.000Z" };
+    const mapping = { indonesiaCode: codes.districtCode, areaCode: "TEST-ONLY-OFFICIAL-DOUBLE", reference: "SYNTHETIC-UAT", confirmedAt: "2026-10-01T00:00:00.000Z" };
     expect(areaMappingSchema.safeParse([mapping, mapping]).success).toBe(false);
     expect(areaMappingSchema.safeParse([{ ...mapping, indonesiaCode: "31.1001" }]).success).toBe(false);
     vi.stubEnv("JNT_OFFICIAL_AREA_MAPPING", JSON.stringify([mapping]));

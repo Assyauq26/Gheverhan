@@ -5,7 +5,7 @@ import Link from "@/components/ui/navigation";
 import {
   Boxes, ChevronRight, CreditCard,
   Landmark, LayoutGrid, Megaphone, Menu, Package, ScrollText,
-  ShoppingBag, Store, Truck, Users,
+  ShoppingBag, Store, Truck, Users, PlugZap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PERMISSIONS } from "@/lib/auth/permissions";
@@ -22,11 +22,13 @@ const links = [
   { href: "/admin/categories", label: "Kategori", icon: LayoutGrid, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/payments", label: "Pembayaran", icon: CreditCard, permission: PERMISSIONS.PAYMENT_READ },
   { href: "/admin/shipping", label: "Pengiriman", icon: Truck, permission: PERMISSIONS.SHIPPING_READ },
+  { href: "/admin/integrations/jnt", label: "Integrasi J&T Express", icon: PlugZap, permission: null },
   { href: "/admin/bank-accounts", label: "Rekening Bank", icon: Landmark, permission: PERMISSIONS.BANK_MANAGE },
   { href: "/admin/audit", label: "Audit Log", icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
 ] as const;
 
-function allowed(permissions: string[], item: (typeof links)[number]) {
+function allowed(permissions: string[], item: (typeof links)[number], platformOwner: boolean) {
+  if (item.href === "/admin/integrations/jnt") return platformOwner;
   if (item.href === "/admin/marketing")
     return permissions.includes(PERMISSIONS.PROMOTION_CREATE) || permissions.includes(PERMISSIONS.PROMOTION_UPDATE);
   return !item.permission || permissions.includes(item.permission);
@@ -38,9 +40,9 @@ function activeLink(pathname: string, href: string, exact?: boolean) {
     : pathname === href || pathname.startsWith(href + "/");
 }
 
-export function AdminNav({ permissions }: { permissions: string[] }) {
+export function AdminNav({ permissions, platformOwner = false }: { permissions: string[]; platformOwner?: boolean }) {
   const pathname = usePathname();
-  const visible = links.filter(item => allowed(permissions, item));
+  const visible = links.filter(item => allowed(permissions, item, platformOwner));
   return (
     <nav aria-label="Navigasi admin" className="flex flex-col gap-1 px-4 py-2">
       {visible.map((item, index) => {
@@ -71,10 +73,10 @@ export function AdminNav({ permissions }: { permissions: string[] }) {
 }
 
 /** Five-icon mobile navigation shown in the supplied dashboard reference. */
-export function AdminMobileBottomNav({ permissions }: { permissions: string[] }) {
+export function AdminMobileBottomNav({ permissions, platformOwner = false }: { permissions: string[]; platformOwner?: boolean }) {
   const pathname = usePathname();
-  const pinned = links.filter(item => ["/admin", "/admin/products", "/admin/orders", "/admin/inventory"].includes(item.href) && allowed(permissions, item));
-  const extra = links.filter(item => !pinned.some(p => p.href === item.href) && allowed(permissions, item));
+  const pinned = links.filter(item => ["/admin", "/admin/products", "/admin/orders", "/admin/inventory"].includes(item.href) && allowed(permissions, item, platformOwner));
+  const extra = links.filter(item => !pinned.some(p => p.href === item.href) && allowed(permissions, item, platformOwner));
   return (
     <nav aria-label="Navigasi bawah admin" className="fixed inset-x-0 bottom-0 z-40 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgb(0_0_0_/_0.11)] backdrop-blur-lg md:hidden">
       <div className="mx-auto flex w-full max-w-xl items-end justify-between gap-1">

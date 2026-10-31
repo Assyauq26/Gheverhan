@@ -74,6 +74,24 @@ jobs:
           npx playwright install --with-deps chromium
           node -e 'const { chromium } = require("@playwright/test"); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "SPRINT1_CHROMIUM_PATH=" + chromium.executablePath() + "\n");'
 
+      - name: Reconcile official J&T L3 with bundled Emsifa snapshot (offline, no carrier calls)
+        run: |
+          node scripts/jnt/reconcile-l3.mjs --preview
+          JNT_MAPPING_IMPORT_APPROVED=yes node scripts/jnt/reconcile-l3.mjs --stage
+          JNT_MAPPING_IMPORT_APPROVED=yes \
+            JNT_MAPPING_APPROVED_VERSION="$(node -e 'const fs=require("fs"),crypto=require("crypto");console.log(crypto.createHash("sha256").update(fs.readFileSync("resources/jnt-l3-official.csv","utf8").replace(/^\uFEFF/,"")).digest("hex"))')" \
+            JNT_MAPPING_REVIEWER=isolated-ci-test \
+            node scripts/jnt/reconcile-l3.mjs --activate
+
+      - name: Retain J&T L3 reconciliation evidence for manual mismatch review
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jnt-l3-mapping-${{ github.run_id }}
+          path: frontend/.jnt-mapping-report/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Check types, ESLint and production build
         run: |
           npm run typecheck
@@ -131,6 +149,9 @@ jobs:
           node --disable-proto=throw --import tsx --test tests/integration/checkout-v5-migration.test.ts
           node --disable-proto=throw --import tsx --test tests/integration/checkout-v5.test.ts
 
+      - name: Official J&T migration, audited config, durable dispatch and refund race (no carrier calls)
+        run: node --disable-proto=throw --import tsx --test tests/integration/jnt-official.test.ts
+
       - name: Real PostgreSQL refunds, shipping and stock invariants
         run: npm run test:integration:refund-shipping
 
@@ -163,6 +184,11 @@ jobs:
       - name: Chromium product media, upload and RBAC test with loopback storage double
         id: product_browser
         run: npm run test:e2e:products
+
+      - name: Chromium official J&T owner settings and seller denial (no carrier calls)
+        env:
+          SPRINT1_ARTIFACT_DIR: /tmp/gheverhan-jnt-settings-${{ github.run_id }}
+        run: node --import tsx tests/integration/jnt-settings-browser.ts
 
       - name: Chromium operations/payment proof and RBAC test with loopback storage double
         id: operations_browser
@@ -220,5 +246,7 @@ jobs:
             /tmp/gheverhan-stability-*/navigation-stability-matrix.*
             /tmp/gheverhan-auth-ui-*/auth-ui-results.json
             /tmp/gheverhan-auth-ui-*/*.png
+            /tmp/gheverhan-jnt-settings-*/jnt-settings/*.json
+            /tmp/gheverhan-jnt-settings-*/jnt-settings/*.png
           if-no-files-found: error
           retention-days: 7

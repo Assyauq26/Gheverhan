@@ -112,6 +112,10 @@ async function main() {
   if(args[0]==="--preview"){
     mkdirSync(join(cwd,".jnt-mapping-report"),{recursive:true});
     writeFileSync(join(cwd,".jnt-mapping-report","report.json"),JSON.stringify(report,null,2));
+    writeFileSync(join(cwd,".jnt-mapping-report","unmatched.csv"),
+      "sourceRow,province,city,district,jntAreaCode,status\n" +
+      rows.filter(row=>row.matchStatus!=="EXACT")
+        .map(row=>[row.sourceRow,row.province,row.city,row.district,row.jntAreaCode,row.matchStatus].map(v=>'"'+String(v).replaceAll('"','""')+'"').join(",")).join("\n") + "\n");
     console.log(JSON.stringify(report,null,2));return;
   }
   // Stage/activate are explicit, protected write operations. Never run on Preview CI.

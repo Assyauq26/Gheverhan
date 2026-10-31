@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { OperationForm } from "@/components/admin/operation-form";
-type State="DISPATCHED"|"UNKNOWN"|"SUCCEEDED"|"CANCELLED"|"PREPARED"|null;
+type State=string|null;
 type Event={status:string;time:string|null;note:string|null};
 
 export function JntOrderPanel(props:{
@@ -45,8 +45,8 @@ export function JntOrderPanel(props:{
       confirmation="Anda akan mengirim request pembuatan resi ke sistem resmi J&T. Pastikan pesanan lunas, paket siap, alamat gudang dan penerima benar, serta jadwal pickup telah disetujui. Jika respons tidak pasti, jangan mengulangi."
       fields={[
         {name:"action",label:"Aksi",type:"hidden",value:"create"},
-        {name:"pickupStart",label:"Mulai pickup (WIB)",type:"datetime-local",required:true},
-        {name:"pickupEnd",label:"Selesai pickup (WIB)",type:"datetime-local",required:true},
+        {name:"pickupStart",label:"Mulai pickup (waktu perangkat)",type:"datetime-local",required:true},
+        {name:"pickupEnd",label:"Selesai pickup (waktu perangkat)",type:"datetime-local",required:true},
       ]}
     />}
     {props.canRead&&props.awb&&props.requestState==="SUCCEEDED"&&

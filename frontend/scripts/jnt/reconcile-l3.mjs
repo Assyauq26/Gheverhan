@@ -45,7 +45,7 @@ export function cityKey(value) {
   const n=normalize(value);
   if(n.startsWith("KABUPATEN "))return "KAB:"+n.slice(10);
   if(n.startsWith("KAB "))return "KAB:"+n.slice(4);
-  if(n.startsWith("KOTA ADMINISTRASI "))return "KOTA:"+n.slice(17);
+  if(n.startsWith("KOTA ADMINISTRASI "))return "KOTA:"+n.slice(18);
   if(n.startsWith("KOTA "))return "KOTA:"+n.slice(5);
   return "UNKNOWN:"+n;
 }

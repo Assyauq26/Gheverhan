@@ -562,6 +562,16 @@ model PaymentEvent {
   @@index([paymentId])
 }
 
+// Platform-owned carrier credentials. Always encrypted in the application layer.
+// No seller/tenant foreign key: seller administrators must not administer this row.
+model JntPlatformIntegration {
+  environment String @id @db.VarChar(16)
+  encryptedConfig String @db.Text
+  enabled Boolean @default(false)
+  updatedBy String? @db.VarChar(128)
+  updatedAt DateTime @updatedAt
+}
+
 // ---------- Shipping ----------
 model Shipment {
   id                String         @id @default(cuid())

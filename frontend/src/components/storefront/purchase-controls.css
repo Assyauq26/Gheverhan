@@ -205,12 +205,12 @@
   min-width: 0;
 }
 
-/* Purchase intent remains recognizable while incomplete. Derive the muted solid
-   from the published primary pair; never fade a pale disabled token to white.
+/* Purchase intent remains recognizable while incomplete. Anchor the published
+   primary to dark ink so red/light palettes cannot turn disabled CTAs pastel.
    Scoped to purchase CTAs so admin, fields and cart controls keep their states. */
 :is(.storefront-root,.storefront-checkout-root) :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit, .checkout-submit)[data-button-variant]:disabled,
 .storefront-root[data-theme-active="true"] :is(.pdp-buy-pill, .pdp-cart-pill, .purchase-submit, .checkout-submit)[data-button-variant]:disabled {
-  background:color-mix(in srgb, var(--store-primary, #171717) 65%, var(--store-primaryText, #fff));
+  background:color-mix(in srgb, var(--store-primary, #171717) 65%, #111418);
   color:var(--store-primaryText, #fff);
   border-color:transparent;
   opacity:1;

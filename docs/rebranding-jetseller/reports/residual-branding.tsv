@@ -40,19 +40,19 @@ C	frontend/src\components\storefront\cart-interaction-provider.tsx:110:      win
 C	frontend/src\components\storefront\flash-sale-timer.tsx:23:    window.addEventListener("gheverhan:campaign-clock", sync);
 C	frontend/src\components\storefront\flash-sale-timer.tsx:36:      window.removeEventListener("gheverhan:campaign-clock", sync);
 D	frontend/src\components\storefront\product-detail.css:1:/* Gheverhan PDP: editorial mobile layout, scoped to this route only. */
-D	frontend/src\config\legal.ts:3:  siteOrigin: "https://gheverhan.store",
-C	frontend/src\config\legal.ts:9:  operatorName: "Gheverhan",
-C	frontend/src\config\legal.ts:18:    "JetSeller Demo Store adalah layanan toko online fashion untuk melihat produk, membuat akun, dan memesan barang. Ketentuan ini mengatur penggunaan website serta hubungan pemesanan antara pelanggan dan pengelola Gheverhan. Identitas badan usaha, alamat, dan kontak resmi pengelola perlu dilengkapi sebelum draf ini ditetapkan sebagai ketentuan resmi. Ketentuan wajib dibaca bersama Kebijakan Privasi dan informasi pada pesanan.",
-C	frontend/src\config\legal.ts:74:    "Nama, tampilan, materi editorial, serta aset yang dimiliki atau dilisensikan kepada Gheverhan dilindungi ketentuan kekayaan intelektual yang berlaku. Anda boleh menggunakan website untuk berbelanja dan memperoleh informasi. Penggunaan ulang untuk tujuan lain memerlukan hak atau izin yang sesuai. Merek pihak ketiga tetap menjadi milik pemegangnya dan tidak menunjukkan adanya kerja sama yang tidak dinyatakan.",
+C (retained demo domain)	frontend/src\config\legal.ts:3:  siteOrigin: "https://gheverhan.store",
+A (legal operator review)	frontend/src\config\legal.ts:9:  operatorName: "Gheverhan",
+A (legal operator review)	frontend/src\config\legal.ts:18:    "JetSeller Demo Store adalah layanan toko online fashion untuk melihat produk, membuat akun, dan memesan barang. Ketentuan ini mengatur penggunaan website serta hubungan pemesanan antara pelanggan dan pengelola Gheverhan. Identitas badan usaha, alamat, dan kontak resmi pengelola perlu dilengkapi sebelum draf ini ditetapkan sebagai ketentuan resmi. Ketentuan wajib dibaca bersama Kebijakan Privasi dan informasi pada pesanan.",
+A (legal operator review)	frontend/src\config\legal.ts:74:    "Nama, tampilan, materi editorial, serta aset yang dimiliki atau dilisensikan kepada Gheverhan dilindungi ketentuan kekayaan intelektual yang berlaku. Anda boleh menggunakan website untuk berbelanja dan memperoleh informasi. Penggunaan ulang untuk tujuan lain memerlukan hak atau izin yang sesuai. Merek pihak ketiga tetap menjadi milik pemegangnya dan tidak menunjukkan adanya kerja sama yang tidak dinyatakan.",
 C	frontend/src\components\admin\operation-navigation.ts:1:export const OPERATION_NOTICE_KEY = "gheverhan:operation-saved";
 C	frontend/src\modules\auth\registration-contract.ts:4:export const REGISTRATION_OTP_STORAGE_KEY = "gheverhan.registration.otp.v1";
 C	frontend/src\modules\auth\registration-otp-email.ts:19:      process.env.GHEVERHAN_ISOLATED_TESTS === "1" &&
 C	frontend/src\modules\auth\registration-otp-email.ts:22:      db.pathname === "/gheverhan_sprint1_test" &&
 C	frontend/src\modules\auth\registration-otp-email.ts:46:      "User-Agent": "gheverhan-registration-otp/1.0",
 C	frontend/src\modules\auth\password-reset-email.ts:33:      "User-Agent": "gheverhan-password-reset/1.0",
-C	frontend/src\modules\appearance\schema.ts:306:      name: "Gheverhan",
-C	frontend/src\modules\appearance\schema.ts:307:      tagline: "Better Outfits, Brighter Days.",
-C	frontend/src\modules\appearance\schema.ts:343:      tagline: "Better Outfits, Brighter Days.",
+B (frozen legacy snapshot)	frontend/src\modules\appearance\schema.ts:306:      name: "Gheverhan",
+B (frozen legacy snapshot)	frontend/src\modules\appearance\schema.ts:307:      tagline: "Better Outfits, Brighter Days.",
+B (frozen legacy snapshot)	frontend/src\modules\appearance\schema.ts:343:      tagline: "Better Outfits, Brighter Days.",
 C	frontend/src\modules\catalog\product-management.service.ts:268:      await tx.$queryRaw`SELECT gheverhan_backfill_legacy_options(${p.id}::text)::text`;
 C	frontend/src\modules\catalog\product-management.service.ts:487:      await tx.$queryRaw`SELECT gheverhan_backfill_legacy_options(${id}::text)::text`;
 C	frontend/src\modules\catalog\catalog-cache.ts:1:export const CATALOG_CACHE_TAG = "gheverhan-catalog";

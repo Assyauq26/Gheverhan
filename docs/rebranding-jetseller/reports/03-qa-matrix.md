@@ -25,3 +25,5 @@ Residual inventory: residual-branding.tsv classifies every remaining source/scri
 Known advisories: detector found existing globals.css width transition; lint existing hero-editor image usage; existing ambiguous Tailwind easing warning. No safety check weakened.
 
 CI started on implementation commit 49b33ad: isolated integration/browser run 41295139828; containment run 41295139874; Helipod build-only PR run 41295139986. The existing PR workflow does not deploy on pull_request, and autodeploy variable remains disabled. Final CI outcomes will be recorded after completion.
+
+Follow-up review: red-on-red custom-header wordmark risk fixed by limiting the two-color mark to white demo surfaces. 39 focused Appearance/wordmark tests PASS under the unchanged hardened runner; typecheck PASS. OTP sink parsers and admin text assertions updated for new copy. Earlier Linux CI unit suite passed; final head checks remain authoritative.

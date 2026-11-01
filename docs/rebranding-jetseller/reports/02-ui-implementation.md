@@ -2,7 +2,7 @@
 
 Status: DONE source implementation; NOT DONE production publication.
 
-Shared JetSeller text wordmark (red Jet, black Seller; seller text follows configured palette in StoreLogo for dark presets), favicon, Apple icon, 1200×630 OG image. Self-authored SVG text with no scripts or external references; raster exports generated locally. Logo uses existing typed-asset renderer; existing custom identities/images are not replaced.
+Shared JetSeller text wordmark (red Jet, black Seller; StoreLogo uses validated inherited text for custom/non-white header/footer palettes), favicon, Apple icon, 1200×630 OG image. Self-authored SVG text with no scripts or external references; raster exports generated locally. Logo uses existing typed-asset renderer; existing custom identities/images are not replaced.
 
 New/reset draft and first preset use JetSeller Demo Store, #E1251B primary, #B3121A hover, #111418 text, #FFFFFF page, #F7F7F8 surface and #667085 muted. All 53 tokens/schema v1 preserved; disabled surface adjusted to meet existing contrast checker. Exact legacy serialization hash remains eb10463877f5f7e681610f9fdc696ed76395df6f79ed2597823890c86287b405. No-row published/read failure still uses the established legacy fallback: a save must not implicitly publish a new brand. New draft/reset/preset is explicitly published through admin.
 

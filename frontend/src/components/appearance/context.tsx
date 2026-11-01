@@ -40,6 +40,12 @@ export function StoreLogo() {
     i.logoAssetId &&
     !failed &&
     (!preview || Boolean(logoUrl));
+  // Keep the two-color mark on the white demo preset. Custom header/footer
+  // palettes retain their validated inherited foreground instead of a red-on-red mark.
+  const wordmark = i.name === "JetSeller" &&
+    config.colors.header.toUpperCase() === "#FFFFFF" &&
+    config.colors.footer.toUpperCase() === "#FFFFFF" &&
+    config.colors.pageBg.toUpperCase() === "#FFFFFF";
   return (
     <span
       className="inline-flex max-w-full items-center gap-2"
@@ -62,7 +68,7 @@ export function StoreLogo() {
           onError={() => setFailed(true)}
         />
       )}
-      {(i.mode !== "image" || !show) && <span>{i.name === "JetSeller" ? <JetSellerWordmark sellerColor={config.colors.text} /> : i.name}</span>}
+      {(i.mode !== "image" || !show) && <span>{wordmark ? <JetSellerWordmark sellerColor={config.colors.text} /> : i.name}</span>}
     </span>
   );
 }

@@ -45,7 +45,9 @@ export function StoreLogo() {
   const wordmark = i.name === "JetSeller" &&
     config.colors.header.toUpperCase() === "#FFFFFF" &&
     config.colors.footer.toUpperCase() === "#FFFFFF" &&
-    config.colors.pageBg.toUpperCase() === "#FFFFFF";
+    config.colors.pageBg.toUpperCase() === "#FFFFFF" &&
+    !config.gradients.header.enabled &&
+    !config.gradients.footer.enabled;
   return (
     <span
       className="inline-flex max-w-full items-center gap-2"

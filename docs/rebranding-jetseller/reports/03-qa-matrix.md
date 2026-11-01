@@ -1,9 +1,17 @@
 # 03 — Final QA matrix
 
-Verdict: source implementation PASS / READY FOR OWNER REVIEW. NOT MERGED, NOT DEPLOYED.
-Tested source commit: 21a95f4a8ed21ab15b51b616bed288168fa6b884. Frontend tree: 0029a2c30301640cdf0d16a135ac411823bd63a1. Final report-only commits preserve this exact frontend tree; any newly triggered check rerun must not be confused with a source change.
+Verdict: prior source validation PASS; gradient follow-up awaits current-HEAD CI. NOT MERGED, NOT DEPLOYED.
+Latest fully CI-verified source: 1a3fa9c6c85f33585b68f97202d0a5d94c206372. This follow-up changes StoreLogo gradient selection and adds two regression cases; historical source/tree equivalence does not apply to it. Before merge, verify every current-HEAD check against the exact proposed SHA.
 
-## Authoritative GitHub evidence
+## P2 follow-up verification
+
+- First-boot draft persistence: `locked()` creates `makeDefault()` for draft and retains `legacyDefault()` for published; existing rows remain untouched. PostgreSQL regression covers publish without save, revisions 0/1, rollback to legacy at v2, and preserved draft.
+- Contextual logo foreground: custom solid shells inherit text. Follow-up also excludes active header/footer gradients from the two-color wordmark, even when underlying solid tokens remain white. Two added tests use contrast-valid default dark gradients and ensure the logo does not override inherited foreground.
+- Local follow-up checks: six branding/wordmark tests PASS; TypeScript check PASS. Full Linux/current-HEAD CI remains the release gate.
+- On 1a3fa9c, all three workflows passed: [unit/containment](https://github.com/Assyauq26/Gheverhan/actions/runs/41312219727), [isolated PostgreSQL/browser](https://github.com/Assyauq26/Gheverhan/actions/runs/41312219724), [Helipod image build](https://github.com/Assyauq26/Gheverhan/actions/runs/41312219740). VPS SSH transfer and production health steps were skipped.
+- Final source review and resolution of both P2 threads must follow successful current-HEAD CI. Production backup recoverability and current image/appearance versions remain unverified release gates, not inferred from historical snapshots.
+
+## Historical source validation (21a95f4)
 
 | Gate | Result | Run |
 |---|---|---|

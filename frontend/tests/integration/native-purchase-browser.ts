@@ -697,13 +697,13 @@ export async function verifyNativePurchase({
               return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
             });
             const primary = rgb(config.colors.primary),
-              foreground = rgb(config.colors.primaryText);
+              disabledAnchor = rgb("#111418");
             disabledColor.forEach((channel, i) =>
               assert.ok(
                 Math.abs(
-                  channel - (primary[i] * 0.65 + foreground[i] * 0.35),
+                  channel - (primary[i] * 0.65 + disabledAnchor[i] * 0.35),
                 ) <= 2,
-                "Disabled purchase tone follows the published primary pair",
+                "Disabled purchase tone follows the published primary with a dark ink anchor",
               ),
             );
             const radius = { square: "0px", soft: "10px", pill: "9999px" }[

@@ -56,7 +56,8 @@ async function locked(tx: Tx) {
     where: { key: "primary" },
     create: {
       key: "primary",
-      draft: asJson(legacyDefault()),
+      // Match readDraft() on first boot; never implicitly change the published legacy storefront.
+      draft: asJson(makeDefault()),
       published: asJson(legacyDefault()),
     },
     update: {},

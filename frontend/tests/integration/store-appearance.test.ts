@@ -51,10 +51,76 @@ after(async () => {
   await rm(root, { recursive: true, force: true });
 });
 test("appearance lifecycle, transaction races, rollback and media privacy", async (t) => {
-  const { makeDefault } = await import("../../src/modules/appearance/schema");
+  const { makeDefault, legacyDefault } = await import("../../src/modules/appearance/schema");
   await t.test("public missing row is read-only", async () => {
     assert.equal((await svc.readPublishedUncached()).version, 0);
     assert.equal(await db.storeAppearance.count(), 0);
+  });
+  await t.test("first-boot editor draft matches persisted draft, then publish and baseline rollback", async () => {
+    const initial = await svc.readDraft();
+    assert.equal(initial.draftVersion, 0);
+    assert.equal(initial.publishedVersion, 0);
+    assert.deepEqual(initial.config, makeDefault());
+    assert.deepEqual(initial.publishedConfig, legacyDefault());
+    assert.equal(await db.storeAppearance.count(), 0, "read must not mutate production data");
+
+    try {
+      // Editor initially sees an unchanged, valid JetSeller draft. Publishing
+      // must persist precisely that draft, not legacyDefault() from locked().
+      const firstPublish = await svc.changeAppearance(
+        {
+          kind: "publish",
+          draftVersion: initial.draftVersion,
+          publishedVersion: initial.publishedVersion,
+        },
+        actor,
+        session,
+      );
+      assert.equal(firstPublish.draftVersion, 0);
+      assert.equal(firstPublish.publishedVersion, 1);
+      assert.deepEqual(firstPublish.config, initial.config);
+      assert.deepEqual(firstPublish.publishedConfig, makeDefault());
+
+      const stored = await db.storeAppearance.findUniqueOrThrow({
+        where: { key: "primary" },
+      });
+      assert.deepEqual(stored.draft, makeDefault());
+      assert.deepEqual(stored.published, makeDefault());
+      const baseline = await db.storeAppearanceRevision.findUniqueOrThrow({
+        where: { version: 0 },
+      });
+      assert.deepEqual(baseline.config, legacyDefault());
+      const newRevision = await db.storeAppearanceRevision.findUniqueOrThrow({
+        where: { version: 1 },
+      });
+      assert.deepEqual(newRevision.config, makeDefault());
+      const publicAfterPublish = await svc.readPublishedUncached();
+      assert.equal(publicAfterPublish.version, 1);
+      assert.equal(publicAfterPublish.legacy, false);
+      assert.deepEqual(publicAfterPublish.config, makeDefault());
+
+      const restored = await svc.changeAppearance(
+        { kind: "rollback", draftVersion: 0, publishedVersion: 1, revision: 0 },
+        actor,
+        session,
+      );
+      assert.equal(restored.draftVersion, 0);
+      assert.equal(restored.publishedVersion, 2);
+      assert.deepEqual(restored.config, makeDefault(), "rollback must preserve saved draft");
+      assert.deepEqual(restored.publishedConfig, legacyDefault());
+      const publicAfterRollback = await svc.readPublishedUncached();
+      assert.equal(publicAfterRollback.version, 2);
+      assert.equal(publicAfterRollback.legacy, true);
+      assert.deepEqual(publicAfterRollback.config, legacyDefault());
+      assert.equal(await db.storeAppearanceRevision.count(), 3);
+      assert.deepEqual((await svc.readDraft()).config, makeDefault());
+    } finally {
+      // Restore this disposable database to the empty baseline for the
+      // existing lifecycle/media concurrency tests below.
+      await db.storeAppearanceRevision.deleteMany();
+      await db.storeAppearance.deleteMany();
+    }
+    assert.equal((await svc.readPublishedUncached()).version, 0);
   });
   let state = await svc.readDraft();
   const command = (

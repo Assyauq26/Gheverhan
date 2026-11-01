@@ -700,10 +700,10 @@ export async function verifyStorefrontV4({
             return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3);
           });
           const primary = rgb(config.colors.primary),
-            foreground = rgb(config.colors.primaryText);
+            disabledAnchor = rgb("#111418");
           background.forEach((channel, i) =>
             assert.ok(
-              Math.abs(channel - primary[i] * 0.65 - foreground[i] * 0.35) <= 2,
+              Math.abs(channel - primary[i] * 0.65 - disabledAnchor[i] * 0.35) <= 2,
             ),
           );
           assert.equal(

@@ -4,16 +4,15 @@
 body#beranda { --red:#E1251B; --red-dark:#bd1712; --ink:#131722; --muted:#5e6876; --line:#e9edf1; }
 body#beranda .site-header { background:rgba(255,255,255,.92); border-bottom:1px solid rgba(19,23,34,.035); }
 body#beranda .header-inner { min-height:76px; }
-body#beranda .brand { position:relative; letter-spacing:-.063em; font-size:1.7rem; padding-bottom:13px; }
-body#beranda .brand::after { content:"J&T Express X Seller"; position:absolute; font-size:8px; letter-spacing:.06em; bottom:2px; right:0; font-weight:700; color:#6f7683; white-space:nowrap; }
+body#beranda .brand { position:relative; letter-spacing:-.063em; font-size:1.7rem; }
 body#beranda .hero { padding:75px 0 65px; isolation:isolate; }
-body#beranda .hero::before { inset:0; width:100%; height:100%; background-image:linear-gradient(to right,rgba(49,66,80,.052) 1px,transparent 1px),linear-gradient(to bottom,rgba(49,66,80,.052) 1px,transparent 1px); background-size:36px 36px; background-position:center top; pointer-events:none; mask-image:linear-gradient(to bottom,#000 18%,rgba(0,0,0,.78) 72%,transparent 100%); z-index:-2; }
+body#beranda .hero::before { inset:0; width:100%; height:100%; background-image:linear-gradient(to right,rgba(49,66,80,.052) 1px,transparent 1px),linear-gradient(to bottom,rgba(49,66,80,.052) 1px,transparent 1px); background-size:36px 36px; background-position:center top; pointer-events:none; -webkit-mask-image:radial-gradient(ellipse 64% 64% at center,#000 10%,transparent 78%); mask-image:radial-gradient(ellipse 64% 64% at center,#000 10%,transparent 78%); z-index:-2; }
 body#beranda .hero::after { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 48% 52% at 82% 49%,rgba(225,37,27,.095),transparent 85%); pointer-events:none; z-index:-1; }
 body#beranda .hero-grid { grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); gap:12px; min-height:570px; align-items:center; }
 body#beranda .hero-copy { position:relative; z-index:4; }
 body#beranda .hero h1 { font-size:clamp(2.35rem,4.25vw,3.62rem); max-width:590px; letter-spacing:-.052em; line-height:1.12; }
 body#beranda .lead { color:#626c79; max-width:510px; font-size:1.04rem; }
-body#beranda .pill { padding:8px 15px; background:#fff0f1; }
+body#beranda .pill { padding:8px 0; background:transparent; }
 body#beranda .btn { border-radius:12px; }
 body#beranda .btn-primary { background:linear-gradient(145deg,#f22626,#de0813); box-shadow:0 9px 22px rgba(225,37,27,.18); }
 body#beranda .btn-outline { border-color:#dce0e7; box-shadow:0 3px 12px rgba(19,23,34,.045); }
@@ -21,140 +20,39 @@ body#beranda .btn-play { background:rgba(255,255,255,.94); }
 body#beranda .ticks { gap:15px; font-size:.84rem; color:#353d49; }
 body#beranda .ticks svg { width:18px; height:18px; }
 
-/* Layered product illustration; all screenshots are HTML/SVG UI elements,
-   not a bitmap pretending to be an interactive application. */
-body#beranda .hero-visual { position:relative; width:100%; min-height:565px; padding:0; isolation:isolate; }
-body#beranda .hero-visual::before { content:""; position:absolute; width:92%; height:72%; right:-6%; top:18%; border-radius:48% 52% 40% 60% / 45% 38% 62% 55%; background:linear-gradient(135deg,#fff1f1,#f9d7d8); opacity:.86; transform:rotate(-14deg); z-index:-1; }
-body#beranda .mockup-glow { position:absolute; inset:20% -6% 6% 12%; background:radial-gradient(ellipse,#fff 5%,rgba(225,37,27,.06) 68%,transparent 79%); filter:blur(22px); z-index:-1; }
-body#beranda .delivery-scene { position:absolute; top:0; right:-1%; width:73%; height:150px; z-index:1; }
-body#beranda .shipping-truck { position:absolute; right:0; top:20px; width:270px; height:96px; filter:drop-shadow(0 13px 9px rgba(47,29,29,.17)); }
-body#beranda .truck-container { position:absolute; left:0; top:8px; height:72px; width:194px; display:flex; justify-content:center; align-items:center; gap:3px; color:#fff; background:linear-gradient(150deg,#ef3038,#c30a16 72%); border:2px solid rgba(110,8,13,.16); border-radius:3px 3px 1px 1px; box-shadow:inset 4px 0 rgba(255,255,255,.16),inset -3px 0 rgba(70,6,12,.13); transform:skewY(-1deg); }
-body#beranda .truck-container strong { font-size:25px; font-style:italic; font-weight:800; letter-spacing:-.09em; }
-body#beranda .truck-container small { font-size:10px; font-style:italic; font-weight:800; letter-spacing:-.05em; }
-body#beranda .truck-cabin { position:absolute; right:0; top:24px; width:82px; height:60px; border-radius:11px 19px 6px 4px; background:linear-gradient(145deg,#f43338,#ac0812); border-bottom:6px solid #36373c; box-shadow:inset -8px 0 rgba(60,0,8,.16); }
-body#beranda .truck-window { position:absolute; right:11px; top:8px; width:45px; height:26px; background:linear-gradient(135deg,#bce1ed,#384d5c); transform:skew(-8deg); border:3px solid #27323b; border-radius:5px 9px 3px 2px; }
-body#beranda .truck-light { position:absolute; right:2px; bottom:7px; width:8px; height:9px; border-radius:3px; background:#ffe7aa; }
-body#beranda .truck-wheel { position:absolute; bottom:0; width:30px; height:30px; background:#242b31; border-radius:50%; border:6px solid #3d464f; box-shadow:inset 0 0 0 5px #b8c1c9; }
-body#beranda .wheel-one { left:44px; } body#beranda .wheel-two { right:19px; }
-body#beranda .parcel { position:absolute; width:44px; height:42px; background:linear-gradient(135deg,#e4c39c,#ae865c); border:1px solid #b48b63; box-shadow:3px 7px 7px rgba(71,47,25,.08); }
-body#beranda .parcel::after { content:""; position:absolute; height:100%; left:44%; border-left:8px solid rgba(245,225,193,.75); }
-body#beranda .parcel-one { left:0; top:56px; transform:rotate(-7deg); }
-body#beranda .parcel-two { left:32px; top:90px; }
-body#beranda .parcel-three { left:5px; top:105px; width:39px; height:33px; }
-
-/* The laptop has an actual dashboard shell: navigation, KPIs, chart and orders. */
-body#beranda .laptop { left:9%; top:126px; right:auto; width:91%; z-index:2; transform:perspective(1400px) rotateY(-7deg) rotateX(1.5deg); transform-origin:70% 90%; }
-body#beranda .laptop-screen { padding:9px 9px 12px; border-radius:17px 17px 3px 3px; background:linear-gradient(160deg,#2a2d33,#101114); border:2px solid #42444a; box-shadow:0 32px 70px rgba(21,28,41,.22),0 9px 16px rgba(21,28,41,.14); }
-body#beranda .laptop-hinge { height:5px; width:95%; margin:0 auto; background:linear-gradient(#8c949e,#d8dfe4); }
-body#beranda .laptop-base { height:15px; margin:0 -22px; border-radius:2px 2px 18px 18px; background:linear-gradient(#eff1f3 0%,#a5adb7 58%,#d9dfe5 86%,#929aa3 100%); box-shadow:0 15px 17px rgba(21,28,41,.13); }
-body#beranda .dash { display:grid; grid-template-columns:90px minmax(0,1fr); gap:0; padding:0; border-radius:7px; background:#f6f7f9; font-size:9px; min-height:287px; overflow:hidden; }
-body#beranda .dash-side { display:flex; gap:5px; flex-direction:column; border-right:1px solid #edf0f3; padding:13px 7px; border-radius:0; background:#fff; }
-body#beranda .dash-logo { font-size:12px; margin-bottom:12px; letter-spacing:-.055em; }
-body#beranda .dash-link { display:flex; gap:5px; align-items:center; border-radius:5px; padding:5px 4px; font-weight:700; white-space:nowrap; font-size:8px; }
-body#beranda .dash-link svg { width:11px; height:11px; flex:none; }
-body#beranda .dash-link.on { color:#E1251B; background:#fff0f0; }
-body#beranda .dash-count { margin-left:auto; color:#fff; background:#e1251b; font-size:7px; padding:0 3px; border-radius:3px; }
-body#beranda .dash-content { min-width:0; padding:11px 12px; }
-body#beranda .dash-toolbar { display:flex; justify-content:space-between; align-items:center; color:#8c929b; font-size:7px; margin-bottom:13px; }
-body#beranda .dash-toolbar b { font-weight:500; color:#c0c4ca; }
-body#beranda .dash-avatar { display:inline-grid; place-items:center; border-radius:50%; width:19px; height:19px; background:#f9dbd3; color:#9e342f; font-size:8px; font-weight:800; }
-body#beranda .dash-welcome { display:flex; flex-direction:column; line-height:1.4; gap:1px; margin-bottom:11px; }
-body#beranda .dash-welcome small { color:#8c929b; font-size:8px; }
-body#beranda .dash-welcome strong { font-size:14px; color:#262b33; }
-body#beranda .dash-welcome span { color:#e1251b; }
-body#beranda .dash-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; margin-bottom:9px; }
-body#beranda .dash-stats > div,body#beranda .dash-stats > div:last-child { display:flex; flex-direction:column; border-radius:7px; background:#fff; padding:8px 8px 7px; border:1px solid #f0f1f3; min-width:0; }
-body#beranda .dash-stats small { color:#87919e; font-weight:600; font-size:7px; }
-body#beranda .dash-stats strong { color:#252a32; font-size:12px; white-space:nowrap; letter-spacing:-.03em; }
-body#beranda .dash-stats .up { font-size:7px; color:#1b9d58; white-space:nowrap; }
-body#beranda .dash-widgets { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:7px; }
-body#beranda .dash-chart,body#beranda .dash-orders { min-width:0; display:block; border:1px solid #f0f1f3; padding:9px; border-radius:7px; background:#fff; }
-body#beranda .widget-title { display:flex; justify-content:space-between; align-items:center; gap:4px; white-space:nowrap; font-size:8px; margin-bottom:9px; color:#343941; }
-body#beranda .widget-title span { font-size:7px; color:#929aa4; }
-body#beranda .widget-title .link-red { color:var(--red); }
-body#beranda .dash-chart svg { display:block; width:100%; height:97px; }
-body#beranda .dash-months { margin-top:5px; font-size:6px; color:#a1a8b2; }
-body#beranda .dash-orders ul { gap:8px; }
-body#beranda .dash-orders li { grid-template-columns:23px minmax(0,1fr) auto; gap:4px; font-size:7px; }
-body#beranda .order-thumbnail { display:grid; place-items:center; width:23px; height:25px; background:#f6e9db; border-radius:4px; font-size:15px; color:#ae805b; }
-body#beranda .order-thumbnail.tshirt { background:#f1e6e5; color:#c69e9d; }
-body#beranda .order-name,body#beranda .order-value { display:flex; flex-direction:column; white-space:nowrap; }
-body#beranda .order-name b,body#beranda .order-value strong { color:#3c444d; font-size:7px; }
-body#beranda .order-name small { color:#9a9fa9; font-size:6px; }
-body#beranda .order-value { text-align:right; align-items:flex-end; gap:3px; }
-body#beranda .st { font-size:6px; padding:1px 5px; border-radius:4px; font-weight:700; }
-body#beranda .st.ok { color:#178c4b; background:#e7f9ed; }
-body#beranda .st.warn { color:#b16a0a; background:#fff3d5; }
-body#beranda .st.done { color:#2c72bc; background:#eaf2ff; }
-
-/* Storefront is a faithful mini mobile app screen rather than placeholder circles. */
-body#beranda .phone { top:190px; left:0; right:auto; width:175px; height:357px; padding:11px 9px 9px; border:4px solid #202328; border-radius:28px; overflow:hidden; background:#fff; transform:rotate(-6deg); box-shadow:13px 30px 55px rgba(20,27,41,.25),inset 0 0 0 1px #b7bcc4; z-index:3; }
-body#beranda .phone-notch { position:absolute; z-index:3; top:6px; left:50%; transform:translateX(-50%); width:55px; height:9px; background:#17181a; border-radius:9px; margin:0; }
-body#beranda .phone-status { display:flex; justify-content:space-between; padding:0 4px 6px; font-size:7px; font-weight:800; line-height:1; color:#23262d; }
-body#beranda .status-signals { letter-spacing:-1px; }
-body#beranda .phone-store-header { display:flex; align-items:center; gap:5px; margin:6px 0 8px; }
-body#beranda .store-icon { width:19px; height:19px; display:grid; place-items:center; border-radius:6px; background:var(--red); color:#fff; }
-body#beranda .store-icon svg { width:12px; height:12px; }
-body#beranda .phone-store-name { display:flex; flex:1; flex-direction:column; line-height:1.15; }
-body#beranda .phone-store-name strong { font-size:10px; }
-body#beranda .phone-store-name small { color:#9399a2; font-size:6px; margin-top:2px; }
-body#beranda .phone-cart { color:#39414b; }
-body#beranda .phone-cart svg { width:14px; height:14px; }
-body#beranda .phone-search { display:flex; align-items:center; gap:5px; border-radius:6px; background:#f5f6f8; color:#9097a3; font-size:7px; padding:7px 5px; margin-bottom:8px; }
-body#beranda .phone-search svg { width:10px; height:10px; }
-body#beranda .phone-banner { display:grid; grid-template-columns:1.15fr .85fr; height:75px; padding:8px 7px; border-radius:8px; background:linear-gradient(115deg,#fee3e2,#f2b5b6); margin-bottom:9px; }
-body#beranda .phone-banner-copy { display:flex; flex-direction:column; gap:3px; color:#742b2c; min-width:0; }
-body#beranda .phone-banner-copy small { font-size:5px; letter-spacing:.04em; font-weight:800; }
-body#beranda .phone-banner-copy strong { font-size:9px; line-height:1.13; }
-body#beranda .phone-banner-copy span { align-self:start; padding:3px 5px; border-radius:4px; color:#fff; background:var(--red); font-size:6px; font-weight:800; }
-body#beranda .fashion-display { align-self:end; justify-self:center; height:63px; width:54px; filter:drop-shadow(1px 3px 3px #ac7c7c55); }
-body#beranda .fashion-display svg { width:100%; height:100%; }
-body#beranda .phone-cats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:3px; margin-bottom:10px; text-align:center; }
-body#beranda .phone-cats>div { display:flex; flex-direction:column; align-items:center; gap:3px; }
-body#beranda .phone-cats span { width:21px; height:21px; display:grid; place-items:center; border-radius:7px; background:#fff1f0; color:#df2b2d; }
-body#beranda .phone-cats svg { width:13px; height:13px; }
-body#beranda .phone-cats small { color:#606a76; font-size:6px; font-weight:700; }
-body#beranda .phone-section-head { display:flex; justify-content:space-between; align-items:center; margin:0 0 5px; }
-body#beranda .phone-section-head strong { font-size:8px; color:#252a32; }
-body#beranda .phone-section-head span { font-size:6px; color:var(--red); }
-body#beranda .phone-products { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
-body#beranda .phone-products .product-mini { display:flex; flex-direction:column; min-width:0; gap:2px; padding:0; background:#fff; }
-body#beranda .product-photo { display:grid; place-items:center; width:100%; height:53px; border-radius:6px; overflow:hidden; }
-body#beranda .product-photo.handbag { background:#f4eadd; }
-body#beranda .product-photo.shirt { background:#f0eded; }
-body#beranda .product-photo svg { width:45px; height:51px; }
-body#beranda .phone-products small { font-size:6px; white-space:nowrap; color:#727b87; overflow:hidden; text-overflow:ellipsis; }
-body#beranda .phone-products strong { font-size:7px; color:#202630; }
-body#beranda .phone-bottom-nav { position:absolute; display:grid; grid-template-columns:repeat(4,1fr); bottom:0; left:0; right:0; padding:7px 6px 6px; background:#fff; border-top:1px solid #f2f2f4; box-shadow:0 -3px 8px #00000005; }
-body#beranda .phone-bottom-nav div { display:flex; align-items:center; flex-direction:column; gap:1px; color:#7b838f; font-size:6px; }
-body#beranda .phone-bottom-nav svg { width:12px; height:12px; }
-body#beranda .phone-bottom-nav .selected { color:var(--red); font-weight:800; }
-body#beranda .shipping-note { top:auto; bottom:43px; right:-4px; border:1px solid rgba(50,77,65,.07); padding:12px 15px; z-index:4; box-shadow:0 12px 25px #141d2b19; animation:float 7s ease-in-out infinite; }
-body#beranda .shipping-note span { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; margin-right:5px; color:#fff; background:#20a86c; }
-body#beranda .shipping-note strong { font-size:11px; }
-body#beranda .shipping-note small { margin:3px 0 0 29px; font-size:9px; }
-body#beranda .mockup-disclaimer { position:absolute; right:2%; bottom:11px; font-size:10px; color:#88909a; z-index:4; }
+/* Supplied artwork retains its original composition and alpha channel. */
+body#beranda .hero-visual { position:relative; width:100%; min-width:0; min-height:0; padding:0; }
+body#beranda .hero-artwork { display:block; width:100%; }
+body#beranda .hero-artwork img { display:block; width:100%; height:auto; object-fit:contain; }
+body#beranda .pill { display:inline-flex; align-items:center; gap:12px; max-width:100%; }
+body#beranda .pill img { display:block; width:auto; height:26px; object-fit:contain; }
+body#beranda .pill span { font-size:30px; line-height:1; color:#000; }
+body#beranda .pill img,body#beranda .step-icon img { filter:brightness(0) saturate(100%) invert(22%) sepia(91%) saturate(3649%) hue-rotate(350deg) brightness(92%) contrast(94%); }
 
 /* Content blocks and the original red/white icon vocabulary. */
-body#beranda #fitur { position:relative; padding:27px 0 65px; }
+body#beranda #fitur { position:relative; padding:27px 0 18px; }
 body#beranda .cards-3 { gap:15px; }
 body#beranda .card { background:linear-gradient(150deg,#fff,#fffbfb); border-color:#f1e6e6; padding:25px 25px 23px; box-shadow:0 9px 25px rgba(73,22,22,.035); }
 body#beranda .card h2 { margin:17px 0 7px; font-size:1.15rem; color:#d61d1d; }
 body#beranda .card p { font-size:.9rem; line-height:1.58; }
 body#beranda .icon-tile { background:#ffe8e9; border-radius:15px; }
 body#beranda .icon-tile svg { stroke-width:2.2; }
+body#beranda #cara-kerja { padding-top:20px; }
 body#beranda .steps-section { background:linear-gradient(#fff,#fffafa); }
 body#beranda .steps-section .eyebrow,body#beranda .steps-section .section-sub,body#beranda .steps-section .section-title { justify-content:center; text-align:center; }
 body#beranda .steps { gap:38px; }
 body#beranda .step { position:relative; flex-direction:column; align-items:center; text-align:center; justify-content:center; gap:10px; padding:30px 24px 25px; min-height:210px; box-shadow:0 8px 26px rgba(27,30,41,.025); }
-body#beranda .step-num { position:absolute; top:17px; left:19px; width:36px; height:36px; font-size:1rem; }
-body#beranda .step-icon svg { width:40px; height:40px; stroke:var(--red); stroke-width:1.8; }
+body#beranda .step-num { position:absolute; top:17px; left:19px; width:26px; height:26px; font-size:.8rem; }
+body#beranda .step-icon { flex-shrink:0; }
+body#beranda .step-icon img { display:block; width:52px; height:52px; }
+body#beranda .step-icon svg { width:52px; height:52px; stroke:var(--red); stroke-width:1.8; }
 body#beranda .step h3 { margin:0 0 6px; font-size:1.08rem; }
 body#beranda .step p { max-width:250px; font-size:.87rem; }
 body#beranda .step:not(:last-child)::after { content:"→"; position:absolute; top:43%; right:-32px; font-size:32px; color:var(--red); font-weight:600; line-height:1; }
 body#beranda .cta-banner { background:linear-gradient(120deg,#ec0b17,#c70918); border-radius:18px; box-shadow:0 12px 28px rgba(221,19,30,.13); }
-body#beranda .cta-banner::before { background:rgba(255,255,255,.06); transform:skew(-32deg); border-radius:22px; }
-body#beranda .cta-banner::after { background:rgba(255,255,255,.05); transform:skew(-24deg); border-radius:18px; }
+body#beranda .cta-banner::before { inset:0; width:100%; height:100%; border-radius:inherit; background-image:linear-gradient(to right,rgba(255,255,255,.16) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.16) 1px,transparent 1px); background-size:36px 36px; -webkit-mask-image:linear-gradient(to bottom,#000,transparent); mask-image:linear-gradient(to bottom,#000,transparent); transform:none; pointer-events:none; }
+body#beranda .cta-banner::after { display:none; }
+body#beranda .cta-text { position:relative; }
 body#beranda .cta-banner .btn-light { min-width:175px; position:relative; }
 body#beranda .faq { border-color:#e9ebef; }
 
@@ -162,12 +60,6 @@ body#beranda .faq { border-color:#e9ebef; }
 @media (max-width:1100px) {
   body#beranda .hero-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:4px; }
   body#beranda .hero h1 { font-size:clamp(2.1rem,4.15vw,3.05rem); }
-  body#beranda .dash { grid-template-columns:77px minmax(0,1fr); }
-  body#beranda .dash-side { padding-inline:4px; }
-  body#beranda .dash-content { padding:8px; }
-  body#beranda .laptop { left:8%; width:92%; }
-  body#beranda .shipping-truck { transform:scale(.83); transform-origin:top right; }
-  body#beranda .dash-stats strong { font-size:10px; }
 }
 @media (max-width:900px) {
   body#beranda .site-header .header-inner { min-height:69px; }
@@ -176,10 +68,7 @@ body#beranda .faq { border-color:#e9ebef; }
   body#beranda .hero-copy { max-width:640px; margin:0 auto; text-align:center; }
   body#beranda .lead { margin-inline:auto; }
   body#beranda .hero-cta,body#beranda .ticks { justify-content:center; }
-  body#beranda .hero-visual { min-height:550px; width:min(100%,580px); margin:35px auto 0; }
-  body#beranda .delivery-scene { right:1%; }
-  body#beranda .laptop { left:10%; width:90%; top:125px; }
-  body#beranda .phone { top:188px; }
+  body#beranda .hero-visual { min-height:0; width:min(100%,580px); margin:35px auto 0; }
   body#beranda .cards-3 { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
   body#beranda .card { padding:18px 15px; }
   body#beranda .card h2 { font-size:1rem; }
@@ -194,51 +83,15 @@ body#beranda .faq { border-color:#e9ebef; }
   body#beranda .lead { font-size:.97rem; }
   body#beranda .hero-cta,body#beranda .ticks { justify-content:flex-start; }
   body#beranda .hero-cta .btn { flex:0 1 auto; font-size:.91rem; padding:12px 17px; }
-  body#beranda .hero-visual { min-height:435px; width:100%; margin:13px auto 0; }
-  body#beranda .delivery-scene { top:3px; right:0; transform:scale(.7); transform-origin:top right; width:90%; }
-  body#beranda .laptop { left:11%; top:114px; width:88%; }
-  body#beranda .laptop-screen { padding:6px 6px 8px; }
-  body#beranda .dash { grid-template-columns:59px minmax(0,1fr); min-height:220px; font-size:7px; }
-  body#beranda .dash-logo { font-size:9px; }
-  body#beranda .dash-link { padding:4px 2px; font-size:6px; gap:2px; }
-  body#beranda .dash-link svg { width:9px; height:9px; }
-  body#beranda .dash-count { display:none; }
-  body#beranda .dash-content { padding:7px 6px; }
-  body#beranda .dash-toolbar { margin-bottom:7px; }
-  body#beranda .dash-welcome { margin-bottom:7px; }
-  body#beranda .dash-welcome strong { font-size:10px; }
-  body#beranda .dash-stats { gap:4px; margin-bottom:5px; }
-  body#beranda .dash-stats > div,body#beranda .dash-stats > div:last-child { padding:4px; }
-  body#beranda .dash-stats small { font-size:6px; }
-  body#beranda .dash-stats strong { font-size:7.5px; }
-  body#beranda .dash-stats .up { font-size:5px; }
-  body#beranda .dash-widgets { grid-template-columns:minmax(0,1fr); }
-  body#beranda .dash-chart { padding:6px; }
-  body#beranda .dash-chart svg { height:62px; }
-  body#beranda .dash-orders { display:none; }
-  body#beranda .phone { top:172px; width:141px; height:289px; padding:8px 7px; border-width:3px; border-radius:24px; }
-  body#beranda .phone-notch { width:43px; height:7px; top:4px; }
-  body#beranda .phone-status { font-size:6px; padding-bottom:4px; }
-  body#beranda .phone-store-header { margin:4px 0; }
-  body#beranda .phone-banner { height:59px; padding:5px; }
-  body#beranda .phone-banner-copy small { font-size:4px; }
-  body#beranda .phone-banner-copy strong { font-size:7px; }
-  body#beranda .phone-banner-copy span { font-size:5px; }
-  body#beranda .fashion-display { height:50px; width:42px; }
-  body#beranda .phone-cats { margin-bottom:5px; }
-  body#beranda .phone-cats span { width:17px; height:17px; }
-  body#beranda .phone-cats svg { width:10px; height:10px; }
-  body#beranda .phone-cats small { font-size:5px; }
-  body#beranda .product-photo { height:37px; }
-  body#beranda .product-photo svg { height:35px; width:35px; }
-  body#beranda .phone-bottom-nav { padding:5px 4px; }
-  body#beranda .phone-bottom-nav svg { width:10px; height:10px; }
-  body#beranda .phone-bottom-nav span { font-size:5px; }
-  body#beranda .shipping-note { right:0; bottom:3px; padding:8px 10px; }
-  body#beranda .shipping-note strong { font-size:9px; }
-  body#beranda .shipping-note small { font-size:7px; }
-  body#beranda .mockup-disclaimer { bottom:-16px; font-size:8px; }
-  body#beranda #fitur { padding-top:8px; }
+  body#beranda .hero-visual { min-height:0; width:100%; margin:13px auto 0; }
+  body#beranda #fitur { padding-top:8px; padding-bottom:16px; }
+  body#beranda #cara-kerja { padding-top:12px; }
+  body#beranda .site-footer { text-align:center; }
+  body#beranda .footer-inner { flex-direction:column; align-items:center; justify-content:center; }
+  body#beranda .footer-nav { justify-content:center; flex-wrap:wrap; margin-inline:auto; }
+  body#beranda .pill img { height:21px; }
+  body#beranda .pill { gap:10px; }
+  body#beranda .pill span { font-size:24px; }
   body#beranda .cards-3 { grid-template-columns:1fr; gap:10px; }
   body#beranda .card { display:grid; grid-template-columns:51px minmax(0,1fr); gap:0 15px; align-items:center; }
   body#beranda .card .icon-tile { grid-row:span 2; width:49px; height:49px; }
@@ -246,8 +99,9 @@ body#beranda .faq { border-color:#e9ebef; }
   body#beranda .card p { font-size:.82rem; }
   body#beranda .steps-section .eyebrow,body#beranda .steps-section .section-sub,body#beranda .steps-section .section-title { justify-content:flex-start; text-align:left; }
   body#beranda .step { flex-direction:row; text-align:left; justify-content:flex-start; align-items:center; padding:20px 15px 20px 54px; min-height:105px; }
-  body#beranda .step-num { top:18px; left:11px; width:31px; height:31px; }
-  body#beranda .step-icon svg { width:31px; height:31px; }
+  body#beranda .step-num { top:18px; left:11px; width:23px; height:23px; }
+  body#beranda .step-icon img { width:40px; height:40px; }
+  body#beranda .step-icon svg { width:40px; height:40px; }
   body#beranda .step p { max-width:none; }
   body#beranda .cta-banner { padding:28px 22px; }
   body#beranda .cta-banner .btn { width:100%; }
@@ -255,13 +109,9 @@ body#beranda .faq { border-color:#e9ebef; }
 @media (max-width:375px) {
   body#beranda .hero h1 { font-size:2rem; }
   body#beranda .hero-cta .btn { padding:11px 13px; font-size:.86rem; }
-  body#beranda .phone { left:-1%; width:132px; }
-  body#beranda .laptop { width:92%; left:7%; }
-  body#beranda .dash { grid-template-columns:50px minmax(0,1fr); }
-  body#beranda .dash-side { padding-inline:2px; }
-  body#beranda .dash-link { font-size:5.5px; }
-  body#beranda .dash-stats strong { font-size:6.5px; }
 }
 @media (prefers-reduced-motion:reduce) {
   body#beranda *,body#beranda *::before,body#beranda *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
 }
+
+@media (max-width:768px) { body#beranda .hero-artwork { max-width:420px; margin-inline:auto; } }

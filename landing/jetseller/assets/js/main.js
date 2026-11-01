@@ -40,6 +40,16 @@
     }), { threshold:.15 });
     document.querySelectorAll(".card,.step,.faq,.cta-banner").forEach(el => reveal.observe(el));
   }
+  if ("IntersectionObserver" in window) {
+    const steps = [...document.querySelectorAll(".step")];
+    const timeline = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) {
+        const current = steps.indexOf(entry.target);
+        steps.forEach((step, index) => { if (index <= current) step.classList.add("reached"); });
+      }});
+    }, { threshold:.6 });
+    steps.forEach(step => timeline.observe(step));
+  }
   // Active nav highlighting on scroll (progressive enhancement only)
   const links = Array.from(document.querySelectorAll(".nav-link[href^='#']"));
   const sections = links

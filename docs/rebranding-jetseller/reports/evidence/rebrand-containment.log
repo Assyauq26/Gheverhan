@@ -1,0 +1,134 @@
+
+> gheverhan@1.0.0 test:containment
+> node --test tests/security/containment.test.mjs
+
+TAP version 13
+# Subtest: run and watch profiles resolve with all privileged test servers disabled
+ok 1 - run and watch profiles resolve with all privileged test servers disabled
+  ---
+  duration_ms: 33.8395
+  type: 'test'
+  ...
+# Subtest: legitimate unit-file and test-name filters remain usable
+ok 2 - legitimate unit-file and test-name filters remain usable
+  ---
+  duration_ms: 0.5986
+  type: 'test'
+  ...
+# Subtest: rejects --api before starting Vitest
+ok 3 - rejects --api before starting Vitest
+  ---
+  duration_ms: 259.0682
+  type: 'test'
+  ...
+# Subtest: rejects --api.host=0.0.0.0 before starting Vitest
+ok 4 - rejects --api.host=0.0.0.0 before starting Vitest
+  ---
+  duration_ms: 100.0319
+  type: 'test'
+  ...
+# Subtest: rejects --api.test.ts before starting Vitest
+ok 5 - rejects --api.test.ts before starting Vitest
+  ---
+  duration_ms: 98.8674
+  type: 'test'
+  ...
+# Subtest: rejects --ui.test.ts before starting Vitest
+ok 6 - rejects --ui.test.ts before starting Vitest
+  ---
+  duration_ms: 125.7887
+  type: 'test'
+  ...
+# Subtest: rejects --browser.enabled.test.ts before starting Vitest
+ok 7 - rejects --browser.enabled.test.ts before starting Vitest
+  ---
+  duration_ms: 125.2596
+  type: 'test'
+  ...
+# Subtest: rejects --ui before starting Vitest
+ok 8 - rejects --ui before starting Vitest
+  ---
+  duration_ms: 113.5693
+  type: 'test'
+  ...
+# Subtest: rejects --browser before starting Vitest
+ok 9 - rejects --browser before starting Vitest
+  ---
+  duration_ms: 119.0908
+  type: 'test'
+  ...
+# Subtest: rejects --browser.enabled before starting Vitest
+ok 10 - rejects --browser.enabled before starting Vitest
+  ---
+  duration_ms: 111.0514
+  type: 'test'
+  ...
+# Subtest: rejects --inspect before starting Vitest
+ok 11 - rejects --inspect before starting Vitest
+  ---
+  duration_ms: 125.7277
+  type: 'test'
+  ...
+# Subtest: rejects --poolOptions.forks.execArgv=--inspect=0.0.0.0 before starting Vitest
+ok 12 - rejects --poolOptions.forks.execArgv=--inspect=0.0.0.0 before starting Vitest
+  ---
+  duration_ms: 129.9387
+  type: 'test'
+  ...
+# Subtest: rejects --config=other.ts before starting Vitest
+ok 13 - rejects --config=other.ts before starting Vitest
+  ---
+  duration_ms: 149.9066
+  type: 'test'
+  ...
+# Subtest: rejects --workspace=other.ts before starting Vitest
+ok 14 - rejects --workspace=other.ts before starting Vitest
+  ---
+  duration_ms: 125.2046
+  type: 'test'
+  ...
+# Subtest: rejects --root=/tmp before starting Vitest
+ok 15 - rejects --root=/tmp before starting Vitest
+  ---
+  duration_ms: 164.877
+  type: 'test'
+  ...
+# Subtest: rejects --host=0.0.0.0 before starting Vitest
+ok 16 - rejects --host=0.0.0.0 before starting Vitest
+  ---
+  duration_ms: 152.5844
+  type: 'test'
+  ...
+# Subtest: rejects --reporter=attacker.mjs before starting Vitest
+ok 17 - rejects --reporter=attacker.mjs before starting Vitest
+  ---
+  duration_ms: 117.521
+  type: 'test'
+  ...
+# Subtest: rejects -- before starting Vitest
+ok 18 - rejects -- before starting Vitest
+  ---
+  duration_ms: 98.9584
+  type: 'test'
+  ...
+# Subtest: CI cannot filter away tests or enter watch mode
+ok 19 - CI cannot filter away tests or enter watch mode
+  ---
+  duration_ms: 202.2086
+  type: 'test'
+  ...
+# Subtest: the Node flag blocks the __proto__ pollution primitive
+ok 20 - the Node flag blocks the __proto__ pollution primitive
+  ---
+  duration_ms: 72.5231
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3026.2228

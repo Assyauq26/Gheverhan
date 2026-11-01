@@ -1,3 +1,4 @@
+import { JetSellerWordmark } from "@/components/brand/wordmark";
 import Link from "next/link";
 import "@/components/legal/legal.css";
 export default function LegalLayout({
@@ -9,7 +10,7 @@ export default function LegalLayout({
     <div className="legal-page">
       <header className="legal-site-header">
         <Link href="/" className="legal-wordmark">
-          Gheverhan
+          <JetSellerWordmark />
         </Link>
         <Link href="/" className="legal-back">
           Kembali ke website <span aria-hidden="true">↗</span>

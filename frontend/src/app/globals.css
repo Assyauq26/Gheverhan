@@ -66,9 +66,9 @@
   .storefront-root a:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
   .storefront-root a.text-white:is(:hover, :focus-visible, [aria-current="page"], [data-active="true"]) {
     color: #fff;
-    background-color: #1f2937;
+    background-color: #B3121A;
   }
-  .storefront-root a.text-white:active { color: #fff; background-color: #111827; }
+  .storefront-root a.text-white:active { color: #fff; background-color: #931017; }
   a[data-pending="true"] { opacity: 0.6; }
   a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 }
@@ -143,3 +143,7 @@
   :is(input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]):focus {
   border-color: var(--store-error, #b91c1c);
 }
+
+/* JetSeller mark keeps the landing's red Jet / black Seller identity. */
+.jetseller-wordmark { display: inline-flex; white-space: nowrap; font-weight: 800; letter-spacing: -.04em; line-height: 1.15; }
+.admin-shell { background: #FFFFFF; color: #111418; }

@@ -1,3 +1,4 @@
+import { JetSellerWordmark } from "@/components/brand/wordmark";
 import "@/components/admin/variation-editor.css";
 import { OperationNotice } from "@/components/admin/operation-notice";
 import Link from "@/components/ui/navigation";
@@ -15,7 +16,7 @@ export const metadata = { title: "Admin", robots: { index: false } };
 
 function Initials({ name }: { name: string }) {
   const letters = name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || "").join("").toUpperCase();
-  return <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-zinc-950 text-xs font-semibold text-white">{letters || "GH"}</span>;
+  return <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-zinc-950 text-xs font-semibold text-white">{letters || "JS"}</span>;
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <aside className="sticky top-0 hidden h-screen w-[238px] shrink-0 flex-col justify-between overflow-y-auto border-r border-zinc-200 bg-white pb-5 md:flex" aria-label="Sidebar admin">
         <div>
           <div className="px-7 pb-7 pt-6">
-            <Link href="/admin" className="font-display text-[27px] font-extrabold tracking-[-0.055em] text-black">Gheverhan</Link>
+            <Link href="/admin" className="font-display text-[27px] font-extrabold tracking-[-0.055em] text-black"><JetSellerWordmark /></Link>
             <h1 className="mt-1 text-xs font-medium text-zinc-400">Dashboard toko</h1>
           </div>
           <AdminNav permissions={user.permissions} platformOwner={isJntPlatformOwner(user)} />
@@ -53,7 +54,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <div className="ml-auto flex items-center gap-5">
               <span aria-label="Pusat notifikasi belum tersedia" title="Pusat notifikasi belum tersedia" className="text-zinc-700"><Bell size={21}/></span>
               <Link href="/" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3 text-xs font-medium transition hover:bg-zinc-50">
-                <Store size={18} /> Toko Gheverhan <ChevronDown size={15}/>
+                <Store size={18} /> JetSeller Demo Store <ChevronDown size={15}/>
               </Link>
               <details className="relative">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2.5 rounded-xl [&::-webkit-details-marker]:hidden" aria-label="Menu akun admin">
@@ -70,7 +71,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </div>
           <div className="flex min-h-[88px] items-center justify-between gap-3 px-5 py-4 md:hidden">
-            <div><Link href="/admin" className="font-display text-[29px] font-extrabold leading-none tracking-[-0.06em]">Gheverhan</Link><h1 className="mt-1 text-xs font-medium text-zinc-400">Dashboard toko</h1></div>
+            <div><Link href="/admin" className="font-display text-[29px] font-extrabold leading-none tracking-[-0.06em]"><JetSellerWordmark /></Link><h1 className="mt-1 text-xs font-medium text-zinc-400">Dashboard toko</h1></div>
             <div className="flex items-center gap-2">
               <span className="grid size-11 place-items-center rounded-full bg-zinc-100 text-zinc-700" title="Notifikasi belum tersedia"><Bell size={22}/></span>
               <details className="relative">

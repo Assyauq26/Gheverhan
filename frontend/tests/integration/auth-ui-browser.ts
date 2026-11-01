@@ -62,7 +62,7 @@ async function main() {
       to: string[];
       text: string;
     };
-    const code = body.text.match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
+    const code = body.text.match(/pendaftaran JetSeller Demo Store: (\d{6})/)?.[1];
     assert.ok(code, "OTP sent only to isolated local sink");
     capturedOtp.set(body.to[0], code);
     mailCounts.set(body.to[0], (mailCounts.get(body.to[0]) || 0) + 1);
@@ -1446,9 +1446,9 @@ async function main() {
           });
         }
         await p.goto(base + "/cart");
-        const darkLink = p.locator("a.bg-black.text-white").first();
+        const darkLink = p.locator('main a[href="/login?redirectTo=/cart"]');
         await darkLink.hover();
-        await expect(darkLink).toHaveCSS("background-color", "rgb(31, 41, 55)");
+        await expect(darkLink).toHaveCSS("background-color", "rgb(179, 18, 26)");
         assert.equal(
           await darkLink.evaluate((el) => getComputedStyle(el).color),
           "rgb(255, 255, 255)",

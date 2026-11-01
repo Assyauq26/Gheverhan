@@ -4,7 +4,7 @@ import { legalProfile, privacySections } from "@/config/legal";
 export const metadata: Metadata = {
   title: "Kebijakan Privasi",
   description:
-    "Draf kebijakan privasi Gheverhan: data akun dan transaksi, bukti pembayaran, sesi, penyedia layanan, retensi, dan hak pemilik data.",
+    "Draf kebijakan privasi JetSeller Demo Store: data akun dan transaksi, bukti pembayaran, sesi, penyedia layanan, retensi, dan hak pemilik data.",
   alternates: { canonical: `${legalProfile.siteOrigin}/kebijakan-privasi` },
   robots: { index: legalProfile.status === "approved", follow: true },
 };
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <LegalDocument
       title="Kebijakan Privasi"
-      intro="Ketahui data yang diproses, tujuannya, dan pilihan yang Anda miliki saat menggunakan Gheverhan."
+      intro="Ketahui data yang diproses, tujuannya, dan pilihan yang Anda miliki saat menggunakan JetSeller Demo Store."
       sections={privacySections}
     />
   );

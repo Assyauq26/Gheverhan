@@ -1,0 +1,59 @@
+Class	Source:line:excerpt
+D	frontend/scripts\assert-safe-db-operation.mjs:4: * Gheverhan is temporarily sharing its DUMMY-DATA Supabase development DB
+C	frontend/scripts\security\stringify.patch:9:+    if (depth > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');
+C	frontend/scripts\run-private-storage-drill.mjs:11:const id = 'gheverhan-storage-' + randomUUID();
+C	frontend/scripts\run-private-storage-drill.mjs:13:const directory = await mkdtemp(path.join(tmpdir(), 'gheverhan-storage-'));
+C	frontend/scripts\run-private-storage-drill.mjs:64:    env: { ...process.env, GHEVERHAN_ISOLATED_TESTS: '1', GHEVERHAN_PRIVATE_STORAGE_ORIGIN: origin, GHEVERHAN_PRIVATE_STORAGE_SERVICE_KEY: service }, timeout: 60000,
+C	frontend/scripts\security\prepare-braces.mjs:26:        patched = source.replaceAll('      stack.push(block);', "      stack.push(block);\n      if (stack.length > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');");
+C	frontend/scripts\security\prepare-braces.mjs:29:        patched = source.replace(`const ${fn} = (node, parent = {}) => {`, `const ${fn} = (node, parent = {}, depth = 0) => {\n    if (depth > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');`);
+C	frontend/scripts\security\parse.patch:7:+      if (stack.length > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');
+C	frontend/scripts\security\parse.patch:15:+      if (stack.length > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');
+C	frontend/scripts\promotions\legacy-cutover.ts:60:    process.env.GHEVERHAN_FLASH_CUTOVER_APPROVED !==
+C	frontend/scripts\security\expand.patch:9:+    if (depth > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');
+C	frontend/scripts\security\compile.patch:9:+    if (depth > 128) throw new SyntaxError('GHEVERHAN_BRACES_DEPTH: maximum nesting exceeded');
+C	frontend/scripts\release\prisma-transport.mjs:46:  const directory = mkdtempSync(path.join(tmpdir(), 'gheverhan-prisma-ca-'));
+D	frontend/scripts\release\helipod-preflight.mjs:5:  if (env.GHEVERHAN_DEPLOYMENT_TARGET !== 'helipod' || env.GHEVERHAN_ALLOW_VPS_READ_ONLY !== '1' || env.STORAGE_PROVIDER !== 'local' || env.STORAGE_LOCAL_ROOT !== '/data/media' || env.APP_ORIGIN !== 'https://gheverhan.store' || env.GHEVERHAN_ISOLATED_TESTS === '1') return false;
+C	frontend/scripts\release\helipod-preflight.mjs:9:      return ['postgres:', 'postgresql:'].includes(u.protocol) && u.hostname === 'db' && (u.port || '5432') === '5432' && u.pathname === '/gheverhan' && (u.searchParams.get('schema') || 'public') === 'public' && u.username === (key === 'PREFLIGHT_LEDGER_DATABASE_URL' ? 'gheverhan' : 'gheverhan_runtime') && Boolean(u.password);
+C	frontend/scripts\release\helipod-preflight.mjs:22:    if (!mounts.split('\n').some(line => { const f = line.split(' '); return f[3] === '/opt/gheverhan/media' && f[4] === root && f[5].split(',').includes('rw'); })) throw new Error();
+C	frontend/scripts\release\preflight.ts:48:      ? env.GHEVERHAN_ISOLATED_TESTS === "1"
+C	frontend/scripts\release\preflight.ts:127:          AND EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=to_regnamespace('public') AND proname='gheverhan_backfill_legacy_options' AND NOT prosecdef AND has_function_privilege(oid,'EXECUTE'))
+C	frontend/src\lib\storage.ts:12:export const STORAGE_APP = process.env.STORAGE_APP_NAME || "gheverhan";
+D	frontend/src\components\auth\lumen\PROVENANCE.md:5:The published React adapter requires React>=19 (including older0.4/1.8/3 releases) and4.1 adds motion14. Gheverhan uses React18.3.1. Rather than upgrade React/Next or force peer dependencies, this auth-only registry adoption retains the upstream Button/Input/Label/Checkbox markup/classes and native props, with forwardRef for React18 and a static existing-Lucide Icon mapping. It intentionally exposes only the primitives used here, not asChild or the full Lumen runtime. No dependency or backend change.
+D	frontend/src\lib\prisma.ts:6:// Reject any Vercel Preview using Gheverhan's Production Supabase project.
+C	frontend/src\lib\prisma-runtime-tls.ts:72:  const ref = preview ? env.GHEVERHAN_PREVIEW_SUPABASE_REF?.trim() || "" : PROJECT_REF;
+C	frontend/src\lib\prisma-runtime-tls.ts:73:  if (preview && (ref === PROJECT_REF || env.GHEVERHAN_SHARED_DEV_DATABASE === "true")) return failure();
+C	frontend/src\lib\prisma-runtime-tls.ts:76:  const dir = mkdtempSync(path.join(tmpdir(), "gheverhan-prisma-runtime-ca-"));
+D	frontend/src\modules\shipping\shipping.service.ts:42:    // Gheverhan business rule: saving a tracking number for a PACKED order
+D	frontend/src\lib\preview-db-guard.ts:2: * A Vercel Preview must never connect to Gheverhan's Production Supabase DB.
+D	frontend/src\lib\preview-db-guard.ts:3: * Legacy GHEVERHAN_SHARED_DEV_DATABASE=true is intentionally NOT an override.
+C	frontend/src\lib\preview-db-guard.ts:47:  const ref = env.GHEVERHAN_PREVIEW_SUPABASE_REF?.trim() || "";
+C	frontend/src\lib\preview-db-guard.ts:49:      env.GHEVERHAN_SHARED_DEV_DATABASE === "true" ||
+C	frontend/src\app\api\v1\health\route.ts:4:  return NextResponse.json({ success: true, data: { status: "ok", app: "gheverhan" } });
+D	frontend/src\components\appearance\theme.css:635: * Original Gheverhan storefront: interactive controls still use the
+C	frontend/src\lib\auth\rate-limit.ts:47:    (env.GHEVERHAN_ISOLATED_TESTS === "1"
+C	frontend/src\components\storefront\campaign-sync.tsx:58:          new CustomEvent("gheverhan:campaign-clock", { detail: c }),
+C	frontend/src\components\storefront\campaign-sync.tsx:63:          window.dispatchEvent(new Event("gheverhan:campaign-changed"));
+C	frontend/src\lib\auth\jwt.ts:22:    ? { issuer: "gheverhan-preview", audience: "gheverhan-web-preview" }
+C	frontend/src\lib\auth\jwt.ts:23:    : { issuer: "gheverhan", audience: "gheverhan-web" };
+C	frontend/src\components\storefront\cart-interaction-provider.tsx:105:    window.addEventListener("gheverhan:campaign-changed", update);
+C	frontend/src\components\storefront\cart-interaction-provider.tsx:110:      window.removeEventListener("gheverhan:campaign-changed", update);
+C	frontend/src\components\storefront\flash-sale-timer.tsx:23:    window.addEventListener("gheverhan:campaign-clock", sync);
+C	frontend/src\components\storefront\flash-sale-timer.tsx:36:      window.removeEventListener("gheverhan:campaign-clock", sync);
+D	frontend/src\components\storefront\product-detail.css:1:/* Gheverhan PDP: editorial mobile layout, scoped to this route only. */
+C (retained demo domain)	frontend/src\config\legal.ts:3:  siteOrigin: "https://gheverhan.store",
+A (legal operator review)	frontend/src\config\legal.ts:9:  operatorName: "Gheverhan",
+A (legal operator review)	frontend/src\config\legal.ts:18:    "JetSeller Demo Store adalah layanan toko online fashion untuk melihat produk, membuat akun, dan memesan barang. Ketentuan ini mengatur penggunaan website serta hubungan pemesanan antara pelanggan dan pengelola Gheverhan. Identitas badan usaha, alamat, dan kontak resmi pengelola perlu dilengkapi sebelum draf ini ditetapkan sebagai ketentuan resmi. Ketentuan wajib dibaca bersama Kebijakan Privasi dan informasi pada pesanan.",
+A (legal operator review)	frontend/src\config\legal.ts:74:    "Nama, tampilan, materi editorial, serta aset yang dimiliki atau dilisensikan kepada Gheverhan dilindungi ketentuan kekayaan intelektual yang berlaku. Anda boleh menggunakan website untuk berbelanja dan memperoleh informasi. Penggunaan ulang untuk tujuan lain memerlukan hak atau izin yang sesuai. Merek pihak ketiga tetap menjadi milik pemegangnya dan tidak menunjukkan adanya kerja sama yang tidak dinyatakan.",
+C	frontend/src\components\admin\operation-navigation.ts:1:export const OPERATION_NOTICE_KEY = "gheverhan:operation-saved";
+C	frontend/src\modules\auth\registration-contract.ts:4:export const REGISTRATION_OTP_STORAGE_KEY = "gheverhan.registration.otp.v1";
+C	frontend/src\modules\auth\registration-otp-email.ts:19:      process.env.GHEVERHAN_ISOLATED_TESTS === "1" &&
+C	frontend/src\modules\auth\registration-otp-email.ts:22:      db.pathname === "/gheverhan_sprint1_test" &&
+C	frontend/src\modules\auth\registration-otp-email.ts:46:      "User-Agent": "gheverhan-registration-otp/1.0",
+C	frontend/src\modules\auth\password-reset-email.ts:33:      "User-Agent": "gheverhan-password-reset/1.0",
+B (frozen legacy snapshot)	frontend/src\modules\appearance\schema.ts:306:      name: "Gheverhan",
+B (frozen legacy snapshot)	frontend/src\modules\appearance\schema.ts:307:      tagline: "Better Outfits, Brighter Days.",
+B (frozen legacy snapshot)	frontend/src\modules\appearance\schema.ts:343:      tagline: "Better Outfits, Brighter Days.",
+C	frontend/src\modules\catalog\product-management.service.ts:268:      await tx.$queryRaw`SELECT gheverhan_backfill_legacy_options(${p.id}::text)::text`;
+C	frontend/src\modules\catalog\product-management.service.ts:487:      await tx.$queryRaw`SELECT gheverhan_backfill_legacy_options(${id}::text)::text`;
+C	frontend/src\modules\catalog\catalog-cache.ts:1:export const CATALOG_CACHE_TAG = "gheverhan-catalog";
+C	frontend/src\modules\cart\cart-events.ts:1:export const CART_COUNT_EVENT = "gheverhan:cart-count";

@@ -79,7 +79,7 @@ before(async () => {
   globalThis.fetch = async (input, init) => {
     assert.equal(String(input), "https://api.resend.com/emails");
     const body = JSON.parse(String(init?.body));
-    const otp = String(body.text).match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
+    const otp = String(body.text).match(/pendaftaran JetSeller Demo Store: (\d{6})/)?.[1];
     assert.ok(otp);
     codes.set(body.to[0], otp);
     return new Response("{}", { status: 200 });

@@ -116,10 +116,10 @@ async function DashboardContent({ user }: { user: AuthUser }) {
         <div className="relative z-10 max-w-[68%] sm:max-w-[62%] lg:max-w-[65%]">
           <p className="text-base font-medium tracking-tight sm:text-lg">Selamat datang kembali,</p>
           <h1 className="mt-1 break-words text-[23px] font-extrabold leading-tight tracking-[-0.04em] sm:text-3xl">{user.name}</h1>
-          <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 sm:text-sm">Kelola toko dan tingkatkan penjualan Gheverhan hari ini.</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 sm:text-sm">Kelola toko dan tingkatkan penjualan JetSeller hari ini.</p>
         </div>
         <p className="absolute bottom-4 right-5 z-10 hidden text-right text-[11px] font-medium leading-normal text-zinc-600 lg:block">Fashion minimalis<br/>untuk hari yang lebih baik.</p>
-        <Link href="/" aria-label="Lihat toko Gheverhan" className="absolute bottom-4 right-4 z-20 grid size-10 place-items-center rounded-full bg-white text-zinc-900 shadow-md md:hidden"><ChevronRight size={19}/></Link>
+        <Link href="/" aria-label="Lihat JetSeller Demo Store" className="absolute bottom-4 right-4 z-20 grid size-10 place-items-center rounded-full bg-white text-zinc-900 shadow-md md:hidden"><ChevronRight size={19}/></Link>
       </section>
 
       <section aria-labelledby="dashboard-summary">

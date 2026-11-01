@@ -41,9 +41,9 @@ export default async function StorefrontLayout({
         <div className="container grid grid-cols-2 gap-6 py-8 md:grid-cols-4">
           {(theme.footer.trustFeatures ? [
             { icon: Truck, t: "Pengiriman Cepat", s: "ke seluruh Indonesia" },
-            { icon: ShieldCheck, t: "Belanja Aman", s: "100% transaksi aman" },
+            { icon: ShieldCheck, t: "Belanja Aman", s: "Informasi pesanan jelas" },
             { icon: Headphones, t: "CS Responsif", s: "Siap membantu kamu" },
-            { icon: Star, t: "100K+ Pelanggan", s: `Sudah percaya ${theme.identity.name}` },
+            { icon: Star, t: "Demo Store", s: `Kenali ${theme.identity.name}` },
           ] : []).map((f, i) => (
             <div key={i} className="flex items-center gap-3">
               <f.icon size={24} className="text-ink" />
@@ -57,7 +57,7 @@ export default async function StorefrontLayout({
         <div className="pt-2 md:pt-4">
           <div className="container flex flex-col items-center justify-between gap-2 py-6 text-xs text-ink-muted md:flex-row">
             <span className="font-display text-lg font-extrabold text-ink">{theme.footer.showLogo && <StoreLogo />}</span>
-            {isLegacy(theme) ? <span>© {new Date().getFullYear()} Gheverhan. Better Outfits, Brighter Days.</span> : <span>© {new Date().getFullYear()} {theme.identity.name}. {theme.footer.tagline}</span>}
+            {isLegacy(theme) ? <span>© {new Date().getFullYear()} JetSeller Demo Store.</span> : <span>© {new Date().getFullYear()} {theme.identity.name}. {theme.footer.tagline}</span>}
             <nav aria-label="Informasi website" className="flex flex-wrap justify-center gap-4"><Link href="/syarat-ketentuan" className="hover:text-ink">Syarat &amp; Ketentuan</Link><Link href="/kebijakan-privasi" className="hover:text-ink">Kebijakan Privasi</Link><Link href="/admin" className="hover:text-ink">Admin</Link></nav>
           </div>
         </div>

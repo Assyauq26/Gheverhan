@@ -15,7 +15,7 @@ export const legalProfile = {
 export const termsSections = [
   [
     "Pendahuluan dan ruang lingkup",
-    "Gheverhan adalah layanan toko online fashion untuk melihat produk, membuat akun, dan memesan barang. Ketentuan ini mengatur penggunaan website serta hubungan pemesanan antara pelanggan dan pengelola Gheverhan. Identitas badan usaha, alamat, dan kontak resmi pengelola perlu dilengkapi sebelum draf ini ditetapkan sebagai ketentuan resmi. Ketentuan wajib dibaca bersama Kebijakan Privasi dan informasi pada pesanan.",
+    "JetSeller Demo Store adalah layanan toko online fashion untuk melihat produk, membuat akun, dan memesan barang. Ketentuan ini mengatur penggunaan website serta hubungan pemesanan antara pelanggan dan pengelola Gheverhan. Identitas badan usaha, alamat, dan kontak resmi pengelola perlu dilengkapi sebelum draf ini ditetapkan sebagai ketentuan resmi. Ketentuan wajib dibaca bersama Kebijakan Privasi dan informasi pada pesanan.",
   ],
   [
     "Persetujuan penggunaan layanan",
@@ -93,7 +93,7 @@ export const termsSections = [
 export const privacySections = [
   [
     "Pendahuluan dan pengelola layanan",
-    "Kebijakan ini menjelaskan pemrosesan data dalam penggunaan toko online Gheverhan. Pengelola bertanggung jawab atas tujuan dan penggunaan data untuk layanan toko. Identitas badan usaha dan kontak perlu dilengkapi sebelum pengesahan. Draf ini disusun dengan mempertimbangkan UU Nomor 27 Tahun 2022 tentang Perlindungan Data Pribadi dan ketentuan terkait; bukan pernyataan bahwa kepatuhan hukum telah diaudit atau dijamin.",
+    "Kebijakan ini menjelaskan pemrosesan data dalam penggunaan JetSeller Demo Store. Pengelola bertanggung jawab atas tujuan dan penggunaan data untuk layanan toko. Identitas badan usaha dan kontak perlu dilengkapi sebelum pengesahan. Draf ini disusun dengan mempertimbangkan UU Nomor 27 Tahun 2022 tentang Perlindungan Data Pribadi dan ketentuan terkait; bukan pernyataan bahwa kepatuhan hukum telah diaudit atau dijamin.",
   ],
   [
     "Kategori data yang dikumpulkan",

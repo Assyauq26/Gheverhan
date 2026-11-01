@@ -1,0 +1,14 @@
+{
+  "rulesets": [
+    {
+      "name": "Protect Main Branch",
+      "enforcement": "active",
+      "target": "branch"
+    }
+  ],
+  "target": {
+    "ok": false,
+    "error": "gh: Not Found (HTTP 404)"
+  },
+  "vpsSource": "https://github.com/Assyauq26/Gheverhan.git\nae7d6cf3da5377c5c1124d8dfdfce9150a40ec0c"
+}

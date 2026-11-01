@@ -1,0 +1,86 @@
+[
+  {
+    "width": 390,
+    "route": "/",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/",
+    "title": "Jetseller — Better Outfits, Brighter Days. | Gheverhan"
+  },
+  {
+    "width": 390,
+    "route": "/login",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/login",
+    "title": "Masuk | Gheverhan"
+  },
+  {
+    "width": 390,
+    "route": "/register",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/register",
+    "title": "Daftar | Gheverhan"
+  },
+  {
+    "width": 390,
+    "route": "/cart",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/cart",
+    "title": "Keranjang | Jetseller"
+  },
+  {
+    "width": 390,
+    "route": "/checkout",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/login?redirectTo=%2Fcheckout",
+    "title": "Masuk | Gheverhan"
+  },
+  {
+    "width": 390,
+    "route": "/admin",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/login?redirectTo=/admin",
+    "title": "Masuk | Gheverhan"
+  },
+  {
+    "width": 1440,
+    "route": "/",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/",
+    "title": "Jetseller — Better Outfits, Brighter Days. | Gheverhan"
+  },
+  {
+    "width": 1440,
+    "route": "/login",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/login",
+    "title": "Masuk | Gheverhan"
+  },
+  {
+    "width": 1440,
+    "route": "/register",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/register",
+    "title": "Daftar | Gheverhan"
+  },
+  {
+    "width": 1440,
+    "route": "/cart",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/cart",
+    "title": "Keranjang | Jetseller"
+  },
+  {
+    "width": 1440,
+    "route": "/checkout",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/login?redirectTo=%2Fcheckout",
+    "title": "Masuk | Gheverhan"
+  },
+  {
+    "width": 1440,
+    "route": "/admin",
+    "status": 200,
+    "finalUrl": "https://gheverhan.store/login?redirectTo=/admin",
+    "title": "Masuk | Gheverhan"
+  }
+]

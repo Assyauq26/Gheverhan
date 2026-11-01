@@ -1,0 +1,74 @@
+
+> gheverhan@1.0.0 test
+> node scripts/run-tests.mjs run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 C:/Users/HYPE AI/Documents/ChatGPT/Gheverhan 2/Gheverhan-fix/frontend
+
+ ❯ tests/unit/prisma-runtime-tls.test.ts (19 tests | 2 failed) 29ms
+     × injects a private root CA file only into the Prisma datasource URL 10ms
+     × requires a reviewed CA for Preview, and accepts only its own explicitly isolated project 5ms
+ ❯ tests/unit/storage-local.test.ts (3 tests | 1 failed) 40ms
+     × refuses symlink directories and files 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/prisma-runtime-tls.test.ts > Prisma 5 production and isolated Preview TLS trust binding > injects a private root CA file only into the Prisma datasource URL
+AssertionError: expected 438 to be 384 // Object.is equality
+
+- Expected
++ Received
+
+- 384
++ 438
+
+ ❯ tests/unit/prisma-runtime-tls.test.ts:32:41
+     30|     created.push(file);
+     31|     expect(readFileSync(file, "utf8")).toBe(ca.trim() + "\n");
+     32|     expect(statSync(file).mode & 0o777).toBe(0o600);
+       |                                         ^
+     33|     expect(url.searchParams.get("sslmode")).toBe("require");
+     34|     expect(url.searchParams.get("sslaccept")).toBe("strict");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/unit/prisma-runtime-tls.test.ts > Prisma 5 production and isolated Preview TLS trust binding > requires a reviewed CA for Preview, and accepts only its own explicitly isolated project
+AssertionError: expected 438 to be 384 // Object.is equality
+
+- Expected
++ Received
+
+- 384
++ 438
+
+ ❯ tests/unit/prisma-runtime-tls.test.ts:48:41
+     46|     const file = url.searchParams.get("sslcert")!;
+     47|     created.push(file);
+     48|     expect(statSync(file).mode & 0o777).toBe(0o600);
+       |                                         ^
+     49|     expect(readFileSync(file, "utf8")).toBe(ca.trim() + "\n");
+     50|     expect(url.username).toBe("postgres." + previewRef);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/unit/storage-local.test.ts > private local storage > refuses symlink directories and files
+Error: EPERM: operation not permitted, symlink 'C:\Users\HYPEAI~1\AppData\Local\Temp' -> 'C:\Users\HYPEAI~1\AppData\Local\Temp\storage-test-00hdyd\gheverhan'
+ ❯ tests/unit/storage-local.test.ts:27:5
+
+     25|   });
+     26|   it("refuses symlink directories and files",async()=>{
+     27|     await symlink(tmpdir(),path.join(root,"gheverhan"));
+       |     ^
+     28|     await expect(putLocalObject(object,"gheverhan",new Uint8Array([1])…
+     29|     await rm(path.join(root,"gheverhan"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+ Test Files  2 failed | 74 passed (76)
+      Tests  3 failed | 573 passed (576)
+   Start at  16:47:29
+   Duration  21.58s (transform 2.45s, setup 0ms, import 12.76s, tests 9.40s, environment 8.01s)
+

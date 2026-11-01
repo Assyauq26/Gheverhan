@@ -700,7 +700,7 @@ export function ProductEditor({
           </p>
         </div>
         <div className="hidden items-center gap-2 rounded-xl bg-white px-4 py-3 text-xs text-zinc-500 shadow-sm sm:flex">
-          <Package size={17} className="text-zinc-700" /> Panel Seller Gheverhan
+          <Package size={17} className="text-zinc-700" /> Panel Seller JetSeller
         </div>
       </header>
       <div

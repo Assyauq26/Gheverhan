@@ -19,7 +19,7 @@ export async function generateMetadata({
   const cat = await getCategoryBySlug(slug);
   return {
     title: cat ? `Kategori ${cat.name}` : "Kategori",
-    description: cat ? `Belanja produk kategori ${cat.name} di Gheverhan.` : undefined,
+    description: cat ? `Belanja produk kategori ${cat.name} di JetSeller Demo Store.` : undefined,
     alternates: { canonical: `/category/${slug}` },
   };
 }

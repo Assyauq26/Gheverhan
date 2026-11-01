@@ -1,0 +1,24 @@
+{
+  "sourceCommit": "21a95f4a8ed21ab15b51b616bed288168fa6b884",
+  "frontendTree": "0029a2c30301640cdf0d16a135ac411823bd63a1",
+  "unit": {
+    "run": 41308532224,
+    "conclusion": "success",
+    "files": 77,
+    "tests": 577
+  },
+  "buildOnly": {
+    "run": 41308532215,
+    "conclusion": "success",
+    "deployed": false
+  },
+  "isolatedIntegrationBrowser": {
+    "run": 41308532159,
+    "conclusion": "success",
+    "attempt": 1,
+    "duration": "29m8s",
+    "navigationIterations": 10
+  },
+  "screenshotsArtifact": 13084792799,
+  "productionMutation": false
+}

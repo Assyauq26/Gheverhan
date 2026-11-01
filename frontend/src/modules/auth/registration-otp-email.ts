@@ -48,9 +48,9 @@ export async function sendRegistrationOtpEmail(
     body: JSON.stringify({
       from: config.from,
       to: [email],
-      subject: "Kode verifikasi email Gheverhan",
+      subject: "Kode verifikasi email JetSeller",
       text:
-        "Kode OTP pendaftaran Gheverhan: " +
+        "Kode OTP pendaftaran JetSeller Demo Store: " +
         code +
         "\nBerlaku selama 10 menit, maksimal 5 percobaan. Jangan berikan kode ini kepada siapa pun. Jika Anda tidak mendaftar, abaikan email ini.",
     }),

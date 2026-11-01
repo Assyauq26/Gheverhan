@@ -1,0 +1,20 @@
+
+> gheverhan@1.0.0 lint
+> npm run security:prepare && next lint
+
+
+> gheverhan@1.0.0 security:prepare
+> node scripts/security/prepare-braces.mjs
+
+Braces depth mitigation: { packages: 1, changedFiles: 0 }
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+Braces depth mitigation: { packages: 1, changedFiles: 0 }
+
+./src/components/admin/hero-editor.tsx
+175:31  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

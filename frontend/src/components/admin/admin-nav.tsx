@@ -58,7 +58,7 @@ export function AdminNav({ permissions, platformOwner = false }: { permissions: 
               className={cn(
                 "group flex min-h-11 items-center gap-3 whitespace-nowrap rounded-xl text-sm font-medium transition-colors",
                 "px-4 py-3",
-                active ? "bg-black font-semibold text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 hover:text-black",
+                active ? "bg-primary font-semibold text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 hover:text-black",
               )}
             >
               <Icon size={19} strokeWidth={active ? 2.25 : 1.9} aria-hidden="true" />
@@ -86,7 +86,7 @@ export function AdminMobileBottomNav({ permissions, platformOwner = false }: { p
           return <Link key={item.href} href={item.href} prefetch={false}
             data-testid={`adminnav-${item.label.toLowerCase()}`}
             aria-current={active ? "page" : undefined}
-            className={cn("flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium transition-[background-color,color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none", active ? "bg-black text-white shadow-sm" : "text-zinc-500 hover:bg-zinc-100")}>
+            className={cn("flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium transition-[background-color,color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none", active ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:bg-zinc-100")}>
             <Icon size={23} strokeWidth={active ? 2.2 : 1.9} aria-hidden="true" />
             <span>{item.label}</span>
           </Link>;

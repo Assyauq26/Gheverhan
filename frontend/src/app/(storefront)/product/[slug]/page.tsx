@@ -113,7 +113,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
     name: product.name,
     image: product.images.map((i) => i.url),
     description: product.description,
-    brand: { "@type": "Brand", name: product.brand?.name ?? "Gheverhan" },
+    brand: { "@type": "Brand", name: product.brand?.name ?? "JetSeller" },
     aggregateRating: {
       "@type": "AggregateRating",
       ratingValue: product.ratingAvg,
@@ -178,7 +178,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
           <ProductInformationSheet>
             <div className="pdp-info">
               <div className="mb-1.5 text-sm font-medium text-zinc-400">
-                {product.brand?.name ?? "Gheverhan"}
+                {product.brand?.name ?? "JetSeller"}
               </div>
               <h1 className="pdp-heading text-[1.75rem] font-extrabold leading-tight text-zinc-950 sm:text-[2rem]">
                 {product.name}

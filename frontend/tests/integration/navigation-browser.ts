@@ -207,7 +207,7 @@ async function main() {
         await page.getByRole('button', { name: 'Cari', exact: true }).click();
         await expect(page.locator('main').getByRole('search')).toHaveAttribute('aria-busy', 'true');
         await expect(page.locator('main').getByRole('search').getByRole('button', { name: 'Cari', exact: true })).toBeDisabled();
-        await expect(page.getByText('25 produk · kelola katalog toko Gheverhan.')).toBeVisible();
+        await expect(page.getByText('25 produk · kelola katalog JetSeller Demo Store.')).toBeVisible();
         await expect(page.getByTestId('navigation-pending')).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Berikutnya' })).toHaveAttribute('href', new RegExp(`q=${prefix}.*page=2`));
         await page.getByRole('link', { name: 'Berikutnya' }).click();

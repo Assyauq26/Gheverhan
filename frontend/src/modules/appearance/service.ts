@@ -44,7 +44,7 @@ export async function readDraft() {
     where: { key: "primary" },
   });
   return {
-    config: row ? parseAppearance(row.draft) : legacyDefault(),
+    config: row ? parseAppearance(row.draft) : makeDefault(),
     publishedConfig: row ? parseAppearance(row.published) : legacyDefault(),
     draftVersion: row?.draftVersion ?? 0,
     publishedVersion: row?.publishedVersion ?? 0,
@@ -56,7 +56,8 @@ async function locked(tx: Tx) {
     where: { key: "primary" },
     create: {
       key: "primary",
-      draft: asJson(legacyDefault()),
+      // Match readDraft() on first boot; never implicitly change the published legacy storefront.
+      draft: asJson(makeDefault()),
       published: asJson(legacyDefault()),
     },
     update: {},

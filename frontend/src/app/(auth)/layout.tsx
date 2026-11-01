@@ -1,3 +1,4 @@
+import { JetSellerWordmark } from "@/components/brand/wordmark";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import "@/components/auth/lumen/styles.css";
@@ -13,10 +14,10 @@ export default function AuthLayout({
         <Link href="/" className="auth-back-home"><ArrowLeft size={19} strokeWidth={1.8} />Kembali ke Beranda</Link>
         <Link
           href="/"
-          aria-label="Gheverhan — beranda"
+          aria-label="JetSeller Demo Store — beranda"
           className="auth-wordmark"
         >
-          Gheverhan
+          <JetSellerWordmark />
         </Link>
       </header>
       <main className="auth-main">{children}</main>

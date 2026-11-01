@@ -1,7 +1,7 @@
 import { makeDefault, parseAppearance } from "./schema";
 import { foreground, mix } from "./contrast";
 const seeds = [
-  ["Gheverhan Monochrome", "#111111", "#FFFFFF"],
+  ["JetSeller Demo Store", "#111111", "#FFFFFF"],
   ["Midnight Ink", "#D6E4FF", "#101827"],
   ["Sage Studio", "#294D3A", "#F5F8F3"],
   ["Terracotta", "#833F2B", "#FFF8F4"],
@@ -12,7 +12,8 @@ const seeds = [
   ["Ocean Teal", "#155956", "#F1FAF8"],
   ["Champagne Noir", "#E8D7AF", "#151411"],
 ];
-export const PRESETS = seeds.map(([name, primary, bg]) => {
+export const PRESETS = seeds.map(([name, primary, bg], index) => {
+  if (index === 0) return { name, config: makeDefault() };
   const v = makeDefault(),
     dark = foreground(bg) === "#FFFFFF",
     text = dark ? "#FFFFFF" : "#111111";

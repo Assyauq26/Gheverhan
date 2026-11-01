@@ -1,0 +1,152 @@
+name: JetSeller V3 one-time static release
+
+on:
+  push:
+    branches: [ops/jetseller-v3-release-20261101]
+    paths: [.github/workflows/jetseller-v3-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jetseller-static-v3-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.head_commit.message == 'ops(jetseller): release V3 once'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TARGET_SHA: b82b190da2e9842cfa1b213df8ae56e97d09ee73
+      VPS_HOST: 43.173.21.197
+      DEPLOY_KEY_B64: ${{ secrets.HELI_POD_DEPLOY_KEY_B64 }}
+      PINNED_HOST_KEY: ${{ vars.HELI_POD_SSH_KNOWN_HOSTS }}
+
+    steps:
+      - name: Checkout exact merged and reviewed production revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: b82b190da2e9842cfa1b213df8ae56e97d09ee73
+          persist-credentials: false
+
+      - name: Verify static content before touching VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          node landing/jetseller/tests/refactor.test.cjs
+          grep -Fq '/assets/css/refactor.css' landing/jetseller/index.html
+          test -f landing/jetseller/assets/img/favicon.svg
+          test -f landing/jetseller/daftar/index.html
+          test -f landing/jetseller/masuk/index.html
+          tar -czf "$RUNNER_TEMP/jetseller-v3.tgz" --exclude='./deploy' --exclude='./tests' -C landing/jetseller .
+          (cd "$RUNNER_TEMP" && sha256sum jetseller-v3.tgz > jetseller-v3.tgz.sha256)
+
+      - name: Verify existing deployment credentials and pinned SSH host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_KEY_B64" || { echo "BLOCKED: HELI_POD_DEPLOY_KEY_B64 not configured"; exit 1; }
+          test -n "$PINNED_HOST_KEY" || { echo "BLOCKED: HELI_POD_SSH_KNOWN_HOSTS not configured"; exit 1; }
+          umask 077
+          printf '%s' "$DEPLOY_KEY_B64" | base64 --decode > "$RUNNER_TEMP/jetseller-ssh.key"
+          ssh-keygen -y -f "$RUNNER_TEMP/jetseller-ssh.key" >/dev/null
+          printf '%s\n' "$PINNED_HOST_KEY" > "$RUNNER_TEMP/known_hosts"
+          ssh-keygen -F "$VPS_HOST" -f "$RUNNER_TEMP/known_hosts" >/dev/null
+          echo "DEPLOY_IDENTITY=$RUNNER_TEMP/jetseller-ssh.key" >> "$GITHUB_ENV"
+          echo "DEPLOY_KNOWN_HOSTS=$RUNNER_TEMP/known_hosts" >> "$GITHUB_ENV"
+
+      - name: Read-only VPS preflight, including Gheverhan health
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -i "$DEPLOY_IDENTITY" -p 22 -o BatchMode=yes -o IdentitiesOnly=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o ConnectTimeout=15 ubuntu@"$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          sudo -n true
+          sudo -n test -f /opt/gheverhan/deploy/Caddyfile
+          sudo -n grep -Fq 'jetseller.web.id' /opt/gheverhan/deploy/Caddyfile
+          sudo -n grep -Fq '/data/landing/jetseller' /opt/gheverhan/deploy/Caddyfile
+          data="$(sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}')"
+          test -n "$data" && test -d "$data" || { echo "BLOCKED: unknown Caddy data mount"; exit 1; }
+          case "$data" in /|/opt|/opt/gheverhan|/opt/gheverhan/deploy) exit 1;; esac
+          sudo -n test -f "$data/landing/jetseller/index.html"
+          sudo -n docker exec deploy_proxy_1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          curl -fsSL --max-time 20 -o /dev/null https://gheverhan.store/api/v1/health
+          curl -fsSL --max-time 20 -o /dev/null https://jetseller.web.id/
+          echo "Read-only VPS preflight PASS"
+          REMOTE
+
+      - name: Transfer audited JetSeller assets to isolated temporary location
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -q -i "$DEPLOY_IDENTITY" -P 22 -o BatchMode=yes -o IdentitiesOnly=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o ConnectTimeout=15 "$RUNNER_TEMP/jetseller-v3.tgz" "$RUNNER_TEMP/jetseller-v3.tgz.sha256" ubuntu@"$VPS_HOST":/tmp/
+
+      - name: Backup and swap static assets with automatic rollback on failed smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -i "$DEPLOY_IDENTITY" -p 22 -o BatchMode=yes -o IdentitiesOnly=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o ConnectTimeout=15 ubuntu@"$VPS_HOST" 'sudo -n flock -n /run/lock/jetseller-static-deploy.lock bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /tmp
+          sha256sum -c jetseller-v3.tgz.sha256
+          data="$(docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}')"
+          test -n "$data" && test -d "$data" || exit 1
+          case "$data" in /|/opt|/opt/gheverhan|/opt/gheverhan/deploy) exit 1;; esac
+          active="$data/landing/jetseller"
+          test -d "$active" && test ! -L "$active" && test -f "$active/index.html" || exit 1
+          docker exec deploy_proxy_1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          staged="$data/landing/jetseller.new-$ts"
+          previous="$data/landing/jetseller.prev-$ts"
+          backup="/opt/gheverhan/deploy/jetseller-landing-backup-$ts.tgz"
+          test ! -e "$staged" && test ! -e "$previous" && test ! -e "$backup"
+          mkdir -p "$staged"
+          tar -xzf /tmp/jetseller-v3.tgz -C "$staged" --no-same-owner
+          test -f "$staged/index.html"
+          test -f "$staged/assets/css/main.css"
+          test -f "$staged/assets/css/refactor.css"
+          test -f "$staged/assets/js/main.js"
+          test -f "$staged/assets/img/favicon.svg"
+          test -f "$staged/daftar/index.html"
+          test -f "$staged/masuk/index.html"
+          grep -Fq '/assets/css/refactor.css' "$staged/index.html"
+          chown -R root:root "$staged"
+          find "$staged" -type d -exec chmod 755 {} +
+          find "$staged" -type f -exec chmod 644 {} +
+          tar -czf "$backup" -C "$data/landing" jetseller
+          test -s "$backup"
+          tar -tzf "$backup" >/dev/null
+          echo "Verified asset backup exists. Performing two-directory rename."
+          mv "$active" "$previous"
+          if ! mv "$staged" "$active"; then
+            mv "$previous" "$active"
+            echo "RESTORED original assets after failed stage activation" >&2
+            exit 1
+          fi
+          if ! (curl -fsSL --max-time 25 -H 'Cache-Control: no-cache' -o /tmp/jetseller-v3-smoke.html https://jetseller.web.id/ &&
+                 grep -Fq '/assets/css/refactor.css' /tmp/jetseller-v3-smoke.html &&
+                 curl -fsSL --max-time 25 -H 'Cache-Control: no-cache' -o /tmp/jetseller-v3-smoke.css https://jetseller.web.id/assets/css/refactor.css &&
+                 grep -Fq 'background-size:36px 36px' /tmp/jetseller-v3-smoke.css &&
+                 curl -fsSL --max-time 25 -o /dev/null https://gheverhan.store/api/v1/health); then
+            echo "FAILED smoke; rolling back static assets" >&2
+            failed="$data/landing/jetseller.failed-$ts"
+            mv "$active" "$failed"
+            mv "$previous" "$active"
+            echo "ROLLBACK COMPLETE" >&2
+            exit 1
+          fi
+          rm -f /tmp/jetseller-v3.tgz /tmp/jetseller-v3.tgz.sha256 /tmp/jetseller-v3-smoke.html /tmp/jetseller-v3-smoke.css
+          echo "RELEASE SUCCESS: JetSeller V3 static assets active; old version retained for rollback."
+          REMOTE
+
+      - name: External public HTTPS smoke from GitHub runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 --retry 3 -H 'Cache-Control: no-cache' https://jetseller.web.id/ | grep -F '/assets/css/refactor.css' >/dev/null
+          curl -fsSL --max-time 30 --retry 3 -H 'Cache-Control: no-cache' -o "$RUNNER_TEMP/deployed-refactor.css" https://jetseller.web.id/assets/css/refactor.css
+          grep -Fq 'background-size:36px 36px' "$RUNNER_TEMP/deployed-refactor.css"
+          curl -fsSL --max-time 30 --retry 3 -o /dev/null https://gheverhan.store/api/v1/health
+          echo "PUBLIC HTTPS VERIFIED: JetSeller V3 & Gheverhan healthy"

@@ -20,6 +20,8 @@ assert.match(html, /href="https:\/\/gheverhan\.store" target="_blank" rel="noope
 assert.match(html, /href="\/daftar\/"/);
 assert.match(html, /href="\/masuk\/"/);
 assert.match(html, /id="faq"/);
+assert.doesNotMatch(html, /Apakah JetSeller sama dengan Gheverhan\?/);
+assert.equal((html.match(/<summary>/g) || []).length, 5, 'Only five FAQ entries should remain');
 assert.match(css, /prefers-reduced-motion:reduce/);
 assert.doesNotMatch(css, /url\(https?:/);
 assert.doesNotMatch(html, /<script[^>]+src="https?:/);

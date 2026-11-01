@@ -114,4 +114,8 @@ body#beranda .faq { border-color:#e9ebef; }
   body#beranda *,body#beranda *::before,body#beranda *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
 }
 
-@media (max-width:768px) { body#beranda .hero-artwork { max-width:420px; margin-inline:auto; } }
+/* The landscape original includes the whole laptop, phone and truck.
+   Extend only the artwork beyond the copy gutter; retain its intrinsic ratio. */
+@media (max-width:768px) {
+  body#beranda .hero-visual { width:calc(100vw - 8px); max-width:none; margin-inline:0; justify-self:center; }
+}

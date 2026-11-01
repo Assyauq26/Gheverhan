@@ -1,37 +1,41 @@
-# 03 — QA matrix
+# 03 — Final QA matrix
 
-Status: local checks DONE with explicit Windows/DB limitations; CI PENDING at initial PR creation.
-Baseline a54a6d8; implementation SHA recorded in PR commits. Node 22.23.4, locked dependencies; no dependency/lockfile changes.
+Verdict: source implementation PASS / READY FOR OWNER REVIEW. NOT MERGED, NOT DEPLOYED.
+Tested source commit: 21a95f4a8ed21ab15b51b616bed288168fa6b884. Frontend tree: 0029a2c30301640cdf0d16a135ac411823bd63a1. Final report-only commits preserve this exact frontend tree; any newly triggered check rerun must not be confused with a source change.
 
-| Check | Result / evidence |
-|---|---|
-| security:prepare / security:verify | PASS; existing braces mitigation retained |
-| lint | PASS with existing hero-editor img warning |
-| typecheck | PASS |
-| build | PASS initial and final local build (exit 0); build logs include expected missing DATABASE_URL fallback diagnostics because no DB was configured. This is build evidence, not database-flow evidence |
-| npm test | 573 PASS, 3 FAIL / 576; failures are Windows chmod semantics (2 Prisma TLS cases) and symlink permission (storage-local); do not suppress these security tests. Linux CI required |
-| test:containment | 20 PASS |
-| braces-mitigation Node tests | 9 PASS |
-| JetSeller/Appearance | Red default contrast and exact legacy hash tests PASS; initial disabled-color defect fixed |
-| Browser | 30 cases PASS at 360/390/428/768/1024/1440; real local auth/legal and component fixtures, no overflow/page errors |
-| Integration DB / actual commerce | NOT RUN locally: no local Postgres/Docker available. Existing isolated PostgreSQL/browser CI runs on this PR and is authoritative for transaction/auth/appearance lifecycle tests |
-| Physical devices | NOT VERIFIED (browser emulation only) |
-| Production publish/deploy | NOT DONE / not authorized |
+## Authoritative GitHub evidence
 
-Existing Linux CI includes disposable PostgreSQL, migrations, auth/session/OTP, cart, checkout/transactions/refunds/stock, J&T offline boundaries, Customize lifecycle/media/concurrency and browser regression. Do not mistake mock UI fixtures for these tests. CI results must be reviewed at the final source SHA.
+| Gate | Result | Run |
+|---|---|---|
+| Unit + containment/security policy | PASS — 77 files, 577 unit tests; hardened runner and offline container intact | [41308532224](https://github.com/Assyauq26/Gheverhan/actions/runs/41308532224) |
+| Helipod PR image builds | PASS — build only; no deployment on PR | [41308532215](https://github.com/Assyauq26/Gheverhan/actions/runs/41308532215) |
+| Disposable PostgreSQL + integration + Chromium | PASS — full workflow, 29m8s | [41308532159](https://github.com/Assyauq26/Gheverhan/actions/runs/41308532159) |
 
-Residual inventory: residual-branding.tsv classifies every remaining source/script/public match. C compatibility and D history remain intentionally. B legacy snapshot and current published DB require explicit appearance publish. Legal operator/rights references require separate owner review. Historical product media were not rewritten.
+[CI screenshots/diagnostics artifact](https://github.com/Assyauq26/Gheverhan/actions/runs/41308532159/artifacts/13084792799) (38.7 MB, retention follows workflow policy). Machine-readable summary: evidence/ci-source-summary.json.
 
-Known advisories: detector found existing globals.css width transition; lint existing hero-editor image usage; existing ambiguous Tailwind easing warning. No safety check weakened.
+The isolated workflow passed lint, typecheck and production build; private storage contracts; auth/session/reset/rate limits; migrations/recovery; cart concurrency; product/variation lifecycle; checkout/pricing/inventory/refund/shipping; J&T boundaries without carrier calls; appearance schema/lifecycle/media/concurrency; hero and verified-review boundaries; product/editor/RBAC browser flows; payment-proof operations; registration OTP/conflicts; auth/legal; hydration replay; and 10 navigation/mobile regression iterations across four viewport configurations. No production DB, real customer email, payment or AWB was used.
 
-CI started on implementation commit 49b33ad: isolated integration/browser run 41295139828; containment run 41295139874; Helipod build-only PR run 41295139986. The existing PR workflow does not deploy on pull_request, and autodeploy variable remains disabled. Final CI outcomes will be recorded after completion.
+## Branding and appearance acceptance
 
-Follow-up review: red-on-red custom-header wordmark risk fixed by limiting the two-color mark to white demo surfaces. 39 focused Appearance/wordmark tests PASS under the unchanged hardened runner; typecheck PASS. OTP sink parsers and admin text assertions updated for new copy. Earlier Linux CI unit suite passed; final head checks remain authoritative.
+- New JetSeller preset/schema has all 53 tokens and passes AA contrast checks. Exact pre-rebrand legacy serialization is pinned by regression hash.
+- Browser tests pass for all ten presets, draft-vs-published separation, private logo ownership/modes, publish/cache refresh, two-tab version conflict and append-only rollback.
+- Local 30-case browser matrix covers 360/390/428/768/1024/1440: real local auth/legal plus explicitly labelled synthetic storefront/admin previews. No overflow/page errors. Evidence: evidence/browser.json and linked screenshots in report 02.
+- CI artifacts add real app/browser tests on disposable PostgreSQL. Synthetic preview screenshots are not represented as production or transaction proof.
+- Disabled purchase CTAs retain opaque dark state across light/red/dark palettes. Exact per-channel mix tolerance, no-gradient and disabled-state assertions remain.
+- Custom non-white headers/footers use inherited logo foreground so red-on-red wordmarks are avoided. Existing custom identities/assets remain authoritative.
 
-CI review on d16b944: 577 unit tests PASS; build-only Helipod PASS; isolated database suites and Customize publish/cache/version-conflict/rollback browser tests PASS before a native-purchase disabled-color assertion failed. Cause: legacy CSS mixed the primary with white, producing pastel red under the new preset. Fixed the purchase-CTA-only disabled mix to anchor the selected primary to #111418; opacity remains 1 and gradients are removed. Local Chromium preview confirms a dark red solid state. The unchanged integration assertion must pass on the new head; no test threshold was relaxed.
+## Findings resolved without weakening checks
 
-Follow-up CI assertion alignment: native-purchase theme tests also asserted the exact old primary+white numeric mix. Updated the expected numeric formula to primary×0.65 + dark ink×0.35, retaining the same per-channel tolerance (2), disabled state, and the separate strict dark/opaque/no-gradient checks. This checks the deliberate style change rather than suppressing the regression.
+1. New muted text against the old disabled surface failed contrast: disabled surface adjusted; full contrast contract now passes.
+2. Primary+white disabled purchase mix became pastel under the red preset: changed only purchase CTA styling to primary × .65 + dark ink × .35. Numerical expectations updated with unchanged tolerance; strict dark/opaque/no-gradient checks pass.
+3. OTP email sink parsers and an admin text expectation still targeted old branding: aligned expected copy without changing OTP semantics.
+4. Auth/legal test selected a hidden bottom-nav item via a.bg-black after primary CTAs changed class: replaced with exact main cart-login destination; hover/white foreground/focus still asserted.
+5. One prior run had a read-only appearance GET socket reset. That GET permits one ECONNRESET retry only; HTTP response assertions and all mutation requests are unchanged. Full final run passed.
 
-Attempt 2 on 04c05c5 passed the full product/media/RBAC suite, J&T settings, operations/payment proof, registration OTP and conflicts. Auth/legal browser then found a stale a.bg-black selector selecting hidden desktop bottom-nav instead of the new primary CTA. Replaced it with the semantic cart-login destination selector and aligned primary CTA hover/pressed fallback with JetSeller red. Existing visibility, white foreground and focus assertions remain. No auth/commerce logic changed.
+## Local evidence and limits
 
-Test transport hardening: the read-only appearance GET between long browser suites allows one Playwright maxRetries retry (documented to retry ECONNRESET only). HTTP status/payload assertions are unchanged; no publish/rollback/commerce POST is retried. This bounds the observed socket-hang-up failure without concealing server or HTTP errors.
+Node 22.23.4, locked dependencies, no package/lockfile version changes. Local lint/typecheck/build passed; build without a configured DB printed fallback diagnostics, so local build was never claimed as DB-flow proof. Local containment 20 and braces 9 tests passed. Three Windows filesystem failures (chmod semantics and symlink privileges) were retained; Linux CI passed all 577 unit tests. Existing hero-editor image/easing/width-transition advisories were not refactored outside scope.
+
+Physical devices: NOT VERIFIED (emulation only). Production source/appearance: NOT CHANGED. Current production appearance summary is read-only evidence, not a publish. Legal operator/rights references remain for owner review. Rename/private readiness remains NOT READY pending phase-C gates.
+
+Residual source inventory: residual-branding.tsv classifies legal-owner references, frozen legacy snapshots, compatibility identifiers and historical comments. Product records/historical media are not mass-rewritten.

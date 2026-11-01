@@ -1,0 +1,52 @@
+name: JetSeller landing UI
+
+on:
+  pull_request:
+    paths:
+      - "landing/jetseller/**"
+      - ".github/workflows/jetseller-landing-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout landing page
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Static integrity checks
+        run: node landing/jetseller/tests/refactor.test.cjs
+
+      - name: Install standalone browser test dependencies
+        run: |
+          npm install --no-save --ignore-scripts --prefix /tmp/jetseller-test playwright@1.63.0
+          /tmp/jetseller-test/node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Start static landing preview
+        run: |
+          python3 -m http.server 8765 --directory landing/jetseller >/tmp/jetseller-http.log 2>&1 &
+          echo $! > /tmp/jetseller-http.pid
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8765/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/jetseller-http.log
+          exit 1
+
+      - name: Chromium responsive & interaction tests
+        env:
+          PLAYWRIGHT_MODULE: /tmp/jetseller-test/node_modules/playwright
+        run: node landing/jetseller/tests/browser.cjs
+
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jetseller-grid-refactor-screenshots
+          path: landing/jetseller/tests/evidence/v2-*.png
+          if-no-files-found: ignore
+          retention-days: 7

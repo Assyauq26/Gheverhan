@@ -1,0 +1,25 @@
+// Dependency-free integrity checks for the standalone JetSeller marketing page.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const base = path.resolve(__dirname, '..');
+const html = fs.readFileSync(path.join(base, 'index.html'), 'utf8');
+const css = fs.readFileSync(path.join(base, 'assets/css/refactor.css'), 'utf8');
+assert.match(html, /<html lang="id">/);
+assert.match(html, /assets\/css\/refactor\.css/);
+assert.match(css, /background-size:36px 36px/);
+assert.match(css, /linear-gradient\(to right/);
+assert.match(html, /class="dash-widgets"/);
+assert.match(html, /class="phone-bottom-nav"/);
+assert.match(html, /class="shipping-truck"/);
+assert.match(html, /class="product-photo handbag"/);
+assert.match(html, /class="product-photo shirt"/);
+assert.match(html, /aria-label="Mockup ilustratif/);
+assert.match(html, /href="https:\/\/gheverhan\.store" target="_blank" rel="noopener noreferrer"/);
+assert.match(html, /href="\/daftar\/"/);
+assert.match(html, /href="\/masuk\/"/);
+assert.match(html, /id="faq"/);
+assert.match(css, /prefers-reduced-motion:reduce/);
+assert.doesNotMatch(css, /url\(https?:/);
+assert.doesNotMatch(html, /<script[^>]+src="https?:/);
+console.log('JetSeller V3 static page integrity: PASS');

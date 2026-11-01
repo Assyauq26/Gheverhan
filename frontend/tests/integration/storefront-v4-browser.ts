@@ -139,6 +139,9 @@ export async function verifyStorefrontV4({
   const readTheme = async () => {
     const response = await admin.request.get(
       `${base}/api/v1/admin/store-appearance`,
+      // A stale keep-alive socket may reset between long browser suites.
+      // Retry this read once for ECONNRESET only; HTTP failures still fail below.
+      { maxRetries: 1 },
     );
     assert.equal(response.status(), 200);
     return (await response.json()).data;

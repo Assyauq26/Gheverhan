@@ -29,141 +29,141 @@ warn - If this is content and not a class, replace it with `ease-&lsqb;cubic-bez
    Checking validity of types ...
    Collecting page data ...
    Generating static pages (0/16) ...
-   Generating static pages (4/16) 
-prisma:error 
+   Generating static pages (4/16)
+prisma:error
 Invalid `prisma.flashSaleCampaign.findFirst()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.flashSaleCampaign.findFirst()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.flashSaleCampaign.findFirst()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.flashSaleCampaign.findFirst()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.category.findMany()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.product.findMany()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.product.findMany()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.storeAppearance.findUnique()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.storeAppearance.findUnique()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.storeAppearance.findUnique()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-prisma:error 
+prisma:error
 Invalid `prisma.storeHero.findUnique()` invocation:
 
 
 error: Environment variable not found: DATABASE_URL.
   -->  schema.prisma:7
-   | 
+   |
  6 |   provider  = "postgresql"
  7 |   url       = env("DATABASE_URL")
-   | 
+   |
 
 Validation Error Count: 1
-   Generating static pages (8/16) 
-   Generating static pages (12/16) 
+   Generating static pages (8/16)
+   Generating static pages (12/16)
  ✓ Generating static pages (16/16)
    Finalizing page optimization ...
    Collecting build traces ...

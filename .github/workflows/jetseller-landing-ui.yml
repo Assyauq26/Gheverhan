@@ -21,6 +21,9 @@ jobs:
       - name: Static integrity checks
         run: node landing/jetseller/tests/refactor.test.cjs
 
+      - name: Validate static-only VPS release script syntax
+        run: bash -n landing/jetseller/deploy/release-v3-from-vps.sh
+
       - name: Install standalone browser test dependencies
         run: |
           npm install --no-save --ignore-scripts --prefix /tmp/jetseller-test playwright@1.63.0

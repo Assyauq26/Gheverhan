@@ -4,7 +4,7 @@ import { legalProfile, termsSections } from "@/config/legal";
 export const metadata: Metadata = {
   title: "Syarat & Ketentuan",
   description:
-    "Draf syarat penggunaan Gheverhan: akun, pembelian fashion, pembayaran transfer bank manual, pengiriman, dan penyelesaian keluhan.",
+    "Draf syarat penggunaan JetSeller Demo Store: akun, pembelian fashion, pembayaran transfer bank manual, pengiriman, dan penyelesaian keluhan.",
   alternates: { canonical: `${legalProfile.siteOrigin}/syarat-ketentuan` },
   robots: { index: legalProfile.status === "approved", follow: true },
 };
@@ -12,7 +12,7 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="Syarat & Ketentuan"
-      intro="Pahami penggunaan layanan, proses pemesanan, dan hak Anda saat berbelanja di Gheverhan."
+      intro="Pahami penggunaan layanan, proses pemesanan, dan hak Anda saat berbelanja di JetSeller Demo Store."
       sections={termsSections}
     />
   );

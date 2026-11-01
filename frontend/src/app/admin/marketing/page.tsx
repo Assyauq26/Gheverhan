@@ -12,7 +12,7 @@ import { MarketingManager } from "@/components/admin/marketing-manager";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Marketing | Gheverhan",
+  title: "Marketing | JetSeller",
   robots: { index: false },
 };
 

@@ -289,7 +289,7 @@ export type StoreAppearanceV1 = z.infer<typeof appearanceSchema>;
 export function parseAppearance(value: unknown): StoreAppearanceV1 {
   return appearanceSchema.parse(value);
 }
-export function makeDefault(): StoreAppearanceV1 {
+function monochromeDefault(): StoreAppearanceV1 {
   const gradient = {
     enabled: false,
     angle: 90,
@@ -353,7 +353,7 @@ export function makeDefault(): StoreAppearanceV1 {
 }
 /** Compatibility is a read fallback, never an implicit publishable preset. */
 export function legacyDefault(): StoreAppearanceV1 {
-  const v = makeDefault();
+  const v = monochromeDefault();
   Object.assign(v.colors, {
     secondaryText: "#666666",
     disabledText: "#999999",
@@ -364,4 +364,21 @@ export function legacyDefault(): StoreAppearanceV1 {
     primaryHover: "#111111",
   });
   return v;
+}
+
+/** New/reset drafts only. Never rewrite an existing published config or legacy revision. */
+export function makeDefault(): StoreAppearanceV1 {
+  const v = monochromeDefault();
+  v.identity = { ...v.identity, name: "JetSeller", tagline: "JetSeller Demo Store", logoAssetId: null, mode: "text" };
+  v.footer.tagline = "JetSeller Demo Store";
+  Object.assign(v.colors, {
+    surface: "#F7F7F8", disabled: "#F7F7F8", text: "#111418", secondaryText: "#667085", disabledText: "#667085",
+    primary: "#E1251B", primaryHover: "#B3121A", primaryPressed: "#931017",
+    accent: "#E1251B", accentHover: "#B3121A", accentPressed: "#931017",
+    headerText: "#111418", footerText: "#111418", navText: "#111418",
+    navActive: "#E1251B", badge: "#E1251B", selected: "#E1251B",
+    fieldText: "#111418", modalText: "#111418", outlineText: "#111418", price: "#111418",
+    link: "#B3121A", linkHover: "#931017", linkPressed: "#931017", focus: "#B3121A"
+  });
+  return parseAppearance(v);
 }

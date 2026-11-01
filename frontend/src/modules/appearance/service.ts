@@ -44,7 +44,7 @@ export async function readDraft() {
     where: { key: "primary" },
   });
   return {
-    config: row ? parseAppearance(row.draft) : legacyDefault(),
+    config: row ? parseAppearance(row.draft) : makeDefault(),
     publishedConfig: row ? parseAppearance(row.published) : legacyDefault(),
     draftVersion: row?.draftVersion ?? 0,
     publishedVersion: row?.publishedVersion ?? 0,

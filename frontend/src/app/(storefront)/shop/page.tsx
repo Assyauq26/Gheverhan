@@ -7,7 +7,7 @@ import { wishlistProductIds } from "@/modules/wishlist/wishlist.service";
 
 export const metadata = {
   title: "Shop",
-  description: "Jelajahi seluruh koleksi Gheverhan.",
+  description: "Jelajahi seluruh koleksi JetSeller Demo Store.",
 };
 
 type ShopPageProps = {

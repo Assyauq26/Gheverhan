@@ -37,6 +37,6 @@ export const emptyHero = (): HeroConfig => ({
 });
 export const parseHero = (input: unknown): HeroConfig => heroSchema.parse(input);
 export const fallbackHeroSlides = [
-  { image: "https://images.unsplash.com/photo-1603189343302-e603f7add05a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400", alt: "Gheverhan New Season collection" },
-  { image: "https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400", alt: "Gheverhan fashion collection" },
+  { image: "https://images.unsplash.com/photo-1603189343302-e603f7add05a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400", alt: "Koleksi musim terbaru" },
+  { image: "https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400", alt: "Koleksi fashion" },
 ];

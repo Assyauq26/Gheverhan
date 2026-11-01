@@ -35,7 +35,7 @@ export async function sendPasswordResetEmail(email: string, token: string, confi
     body: JSON.stringify({
       from: config.from,
       to: [email],
-      subject: "Atur ulang password Gheverhan",
+      subject: "Atur ulang password JetSeller",
       text: `Gunakan tautan berikut untuk membuat password baru (berlaku 1 jam): ${link}\nJika Anda tidak meminta reset, abaikan email ini.`,
     }),
     cache: "no-store",

@@ -143,3 +143,7 @@
   :is(input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]):focus {
   border-color: var(--store-error, #b91c1c);
 }
+
+/* JetSeller mark keeps the landing's red Jet / black Seller identity. */
+.jetseller-wordmark { display: inline-flex; white-space: nowrap; font-weight: 800; letter-spacing: -.04em; line-height: 1.15; }
+.admin-shell { background: #FFFFFF; color: #111418; }

@@ -43,7 +43,7 @@ export function BankAccountManager({
         <div><Label>Nama Bank</Label><Input name="bankName" placeholder="BCA" required /></div>
         <div><Label>Nomor Rekening</Label><Input name="accountNumber" required /></div>
         <div><Label>Atas Nama</Label><Input name="accountHolder" required /></div>
-        <div><Label>Nama Tampilan</Label><Input name="displayName" placeholder="BCA - Gheverhan" required /></div>
+        <div><Label>Nama Tampilan</Label><Input name="displayName" placeholder="BCA - Nama Pemilik Rekening" required /></div>
         {state?.ok === false && state?.error && <p className="text-sm text-destructive">{state.error}</p>}
         {state?.ok && <p className="text-sm text-success">Rekening ditambahkan.</p>}
         <Submit />

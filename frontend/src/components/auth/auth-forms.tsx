@@ -201,7 +201,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   );
   return (
     <div className="auth-content">
-      <Heading title="Masuk">Selamat datang kembali di Gheverhan.</Heading>
+      <Heading title="Masuk">Selamat datang kembali di JetSeller Demo Store.</Heading>
       <form
         action={action}
         className="auth-form"
@@ -382,7 +382,7 @@ function RegistrationForm({
   return (
     <div className="auth-content">
       <Heading title="Daftar akun">
-        Buat akun baru untuk mulai belanja di Gheverhan.
+        Buat akun baru untuk mulai belanja di JetSeller Demo Store.
       </Heading>
       <form
         action={action}

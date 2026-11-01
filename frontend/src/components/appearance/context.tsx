@@ -1,16 +1,17 @@
 "use client";
 import Image from "next/image";
+import { JetSellerWordmark } from "@/components/brand/wordmark";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  legacyDefault,
+  makeDefault,
   type StoreAppearanceV1,
 } from "@/modules/appearance/schema";
 const Context = createContext<{
   config: StoreAppearanceV1;
   preview: boolean;
   logoUrl?: string;
-}>({ config: legacyDefault(), preview: false });
+}>({ config: makeDefault(), preview: false });
 export function AppearanceProvider({
   config,
   preview = false,
@@ -61,7 +62,7 @@ export function StoreLogo() {
           onError={() => setFailed(true)}
         />
       )}
-      {(i.mode !== "image" || !show) && <span>{i.name}</span>}
+      {(i.mode !== "image" || !show) && <span>{i.name === "JetSeller" ? <JetSellerWordmark sellerColor={config.colors.text} /> : i.name}</span>}
     </span>
   );
 }

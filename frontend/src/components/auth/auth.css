@@ -2,12 +2,12 @@
   --canvas: 0 0% 100%;
   --surface: 0 0% 100%;
   --surface-muted: 0 0% 97%;
-  --ink: 0 0% 5%;
+  --ink: 214 18% 8%;
   --ink-soft: 220 4% 36%;
   --ink-muted: 220 4% 46%;
   --line: 220 12% 87%;
-  --brand: 0 0% 5%;
-  --brand-solid: 0 0% 5%;
+  --brand: 3 79% 49%;
+  --brand-solid: 3 79% 49%;
   --on-brand: 0 0% 100%;
   --danger: 0 72% 38%;
   --success: 142 65% 28%;
@@ -153,10 +153,10 @@
   width: 100%;
   min-height: 44px;
   box-shadow: none;
-  border: 1px solid hsl(var(--brand));
+  border: 1px solid #E1251B;
   border-radius: 20px;
   padding: 10px 20px;
-  background: hsl(var(--brand));
+  background: #E1251B;
   color: hsl(var(--on-brand));
   font:
     500 14px/1.5 Arial,

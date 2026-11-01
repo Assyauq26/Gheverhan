@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: parse rejects deeply nested patterns with a controlled depth error
+ok 1 - parse rejects deeply nested patterns with a controlled depth error
+  ---
+  duration_ms: 3.6716
+  type: 'test'
+  ...
+# Subtest: compile rejects deeply nested patterns with a controlled depth error
+ok 2 - compile rejects deeply nested patterns with a controlled depth error
+  ---
+  duration_ms: 0.8836
+  type: 'test'
+  ...
+# Subtest: expand rejects deeply nested patterns with a controlled depth error
+ok 3 - expand rejects deeply nested patterns with a controlled depth error
+  ---
+  duration_ms: 0.5774
+  type: 'test'
+  ...
+# Subtest: stringify rejects deeply nested patterns with a controlled depth error
+ok 4 - stringify rejects deeply nested patterns with a controlled depth error
+  ---
+  duration_ms: 0.4799
+  type: 'test'
+  ...
+# Subtest: compile also bounds caller-supplied AST traversal
+ok 5 - compile also bounds caller-supplied AST traversal
+  ---
+  duration_ms: 3.4899
+  type: 'test'
+  ...
+# Subtest: expand also bounds caller-supplied AST traversal
+ok 6 - expand also bounds caller-supplied AST traversal
+  ---
+  duration_ms: 1.6493
+  type: 'test'
+  ...
+# Subtest: stringify also bounds caller-supplied AST traversal
+ok 7 - stringify also bounds caller-supplied AST traversal
+  ---
+  duration_ms: 4.2185
+  type: 'test'
+  ...
+# Subtest: normal nested globs, ranges, escaping and micromatch retain behavior
+ok 8 - normal nested globs, ranges, escaping and micromatch retain behavior
+  ---
+  duration_ms: 25.5986
+  type: 'test'
+  ...
+# Subtest: all installed brace copies are guarded and unknown source fails closed
+ok 9 - all installed brace copies are guarded and unknown source fails closed
+  ---
+  duration_ms: 225.296
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 483.0707

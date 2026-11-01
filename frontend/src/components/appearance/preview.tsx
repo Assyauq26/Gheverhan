@@ -87,7 +87,7 @@ export function AppearancePreview() {
           >
             <p className="text-sm">Koleksi pilihan</p>
             <h1 className="mb-4 text-3xl font-bold">
-              Better Outfits, Brighter Days.
+              JetSeller Demo Store
             </h1>
             <Button>Lihat koleksi</Button>
           </section>

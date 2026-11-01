@@ -1,0 +1,182 @@
+[
+  {
+    "width": 360,
+    "route": "http://127.0.0.1:3112/",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 360,
+    "route": "http://127.0.0.1:3112/admin",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 360,
+    "route": "http://127.0.0.1:3111/login",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 360,
+    "route": "http://127.0.0.1:3111/register",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 360,
+    "route": "http://127.0.0.1:3111/syarat-ketentuan",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "http://127.0.0.1:3112/",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "http://127.0.0.1:3112/admin",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "http://127.0.0.1:3111/login",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "http://127.0.0.1:3111/register",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "route": "http://127.0.0.1:3111/syarat-ketentuan",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 428,
+    "route": "http://127.0.0.1:3112/",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 428,
+    "route": "http://127.0.0.1:3112/admin",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 428,
+    "route": "http://127.0.0.1:3111/login",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 428,
+    "route": "http://127.0.0.1:3111/register",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 428,
+    "route": "http://127.0.0.1:3111/syarat-ketentuan",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 768,
+    "route": "http://127.0.0.1:3112/",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 768,
+    "route": "http://127.0.0.1:3112/admin",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 768,
+    "route": "http://127.0.0.1:3111/login",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 768,
+    "route": "http://127.0.0.1:3111/register",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 768,
+    "route": "http://127.0.0.1:3111/syarat-ketentuan",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "route": "http://127.0.0.1:3112/",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "route": "http://127.0.0.1:3112/admin",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "route": "http://127.0.0.1:3111/login",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "route": "http://127.0.0.1:3111/register",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "route": "http://127.0.0.1:3111/syarat-ketentuan",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "http://127.0.0.1:3112/",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "http://127.0.0.1:3112/admin",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "http://127.0.0.1:3111/login",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "http://127.0.0.1:3111/register",
+    "status": "PASS",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "route": "http://127.0.0.1:3111/syarat-ketentuan",
+    "status": "PASS",
+    "errors": []
+  }
+]

@@ -24,6 +24,11 @@ jobs:
       - name: Validate static-only VPS release script syntax
         run: bash -n landing/jetseller/deploy/release-v3-from-vps.sh
 
+      - name: Parse Docker Go templates and simulate static release failures
+        run: |
+          go test -v landing/jetseller/tests/release_templates_test.go
+          node --test landing/jetseller/tests/release.test.cjs
+
       - name: Install standalone browser test dependencies
         run: |
           npm install --no-save --ignore-scripts --prefix /tmp/jetseller-test playwright@1.63.0

@@ -16,7 +16,7 @@ flock -n 9 || { echo "BLOCKED: deployment lock busy"; exit 1; }
 test -f /opt/gheverhan/deploy/Caddyfile || { echo "BLOCKED: Caddyfile not found"; exit 1; }
 grep -Fq 'jetseller.web.id' /opt/gheverhan/deploy/Caddyfile
 grep -Fq '/data/landing/jetseller' /opt/gheverhan/deploy/Caddyfile
-CADDY_DATA="$(docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}')"
+CADDY_DATA="$(docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}')"
 test -n "$CADDY_DATA" && test -d "$CADDY_DATA" || { echo "BLOCKED: /data mount not found"; exit 1; }
 case "$CADDY_DATA" in /|/opt|/opt/gheverhan|/opt/gheverhan/deploy) echo "BLOCKED: unsafe mount"; exit 1;; esac
 ACTIVE="$CADDY_DATA/landing/jetseller"
@@ -32,25 +32,36 @@ STAGED="$CADDY_DATA/landing/jetseller.new-$STAMP"
 PREVIOUS="$CADDY_DATA/landing/jetseller.prev-$STAMP"
 FAILED="$CADDY_DATA/landing/jetseller.failed-$STAMP"
 BACKUP="/opt/gheverhan/deploy/jetseller-landing-backup-$STAMP.tgz"
-ACTIVATED=0
+SWAP_STARTED=0
 FINISHED=0
 cleanup() {
   local status=$?
-  trap - EXIT
-  if [[ "$ACTIVATED" -eq 1 && "$FINISHED" -eq 0 ]]; then
-    echo "Verification failure: restoring previous JetSeller assets." >&2
-    if [[ -d "$ACTIVE" && -d "$PREVIOUS" ]]; then
-      mv "$ACTIVE" "$FAILED" && mv "$PREVIOUS" "$ACTIVE" || {
-        echo "CRITICAL: rollback incomplete. Backup: $BACKUP" >&2
+  trap - EXIT INT TERM
+  if [[ "$SWAP_STARTED" -eq 1 && "$FINISHED" -eq 0 ]]; then
+    status=1
+    echo "Release interrupted or failed: restoring previous JetSeller assets." >&2
+    if [[ -d "$PREVIOUS" && ! -L "$PREVIOUS" ]]; then
+      if [[ -e "$ACTIVE" || -L "$ACTIVE" ]]; then
+        mv -T -- "$ACTIVE" "$FAILED" || {
+          echo "CRITICAL: cannot preserve failed assets. Previous: $PREVIOUS; backup: $BACKUP" >&2
+          exit 1
+        }
+      fi
+      mv -T -- "$PREVIOUS" "$ACTIVE" || {
+        echo "CRITICAL: rollback incomplete. Previous: $PREVIOUS; backup: $BACKUP" >&2
         exit 1
       }
-      echo "ROLLBACK COMPLETED" >&2
+      echo "ROLLBACK COMPLETED (assets restored; check public health)." >&2
+    else
+      echo "CRITICAL: previous assets unavailable. Inspect $ACTIVE; backup: $BACKUP" >&2
     fi
   fi
   rm -rf -- "$DOWNLOAD_DIR"
   exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Fetch *data assets only* from the pinned, reviewed main commit.
 for relative in $FILES; do
@@ -64,7 +75,9 @@ grep -Fq 'background-size:36px 36px' "$DOWNLOAD_DIR/assets/css/refactor.css"
 grep -Fq 'https://gheverhan.store' "$DOWNLOAD_DIR/index.html"
 echo "Pinned static files verified."
 
-test ! -e "$STAGED" && test ! -e "$PREVIOUS" && test ! -e "$BACKUP"
+for reserved in "$STAGED" "$PREVIOUS" "$FAILED" "$BACKUP"; do
+  test ! -e "$reserved" && test ! -L "$reserved" || { echo "BLOCKED: release path exists: $reserved"; exit 1; }
+done
 mkdir -p "$STAGED"
 for relative in $FILES; do
   mkdir -p "$STAGED/$(dirname "$relative")"
@@ -79,13 +92,9 @@ tar -czf "$BACKUP" -C "$CADDY_DATA/landing" jetseller
 test -s "$BACKUP"
 tar -tzf "$BACKUP" >/dev/null
 echo "Backup verified: $BACKUP"
-mv "$ACTIVE" "$PREVIOUS"
-if ! mv "$STAGED" "$ACTIVE"; then
-  mv "$PREVIOUS" "$ACTIVE"
-  echo "Activation failed, original assets restored." >&2
-  exit 1
-fi
-ACTIVATED=1
+SWAP_STARTED=1
+mv -T -- "$ACTIVE" "$PREVIOUS"
+mv -T -- "$STAGED" "$ACTIVE"
 
 curl -fLsS --max-time 25 -H 'Cache-Control: no-cache' \
   -o "$DOWNLOAD_DIR/verify-index.html" https://jetseller.web.id/

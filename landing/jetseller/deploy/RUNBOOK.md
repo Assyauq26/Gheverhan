@@ -1,5 +1,8 @@
 # RUNBOOK — JetSeller landing page (Opsi B, draft)
 
+Untuk rilis V3 pada Caddy yang sudah melayani JetSeller, gunakan
+[petunjuk rilis V3](RELEASE-V3.md). Prosedur draft di bawah mencakup setup routing awal.
+
 Status: **DRAFT ONLY**. Jalankan hanya setelah persetujuan deployment terpisah.
 Target: static `file_server` pada Caddy existing, tanpa container baru, tanpa app/db.
 
@@ -45,13 +48,13 @@ Di dalam terminal Ubuntu, jalankan:
 
 ```bash
 sudo -n docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
-sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}} ({{.Mode}}){{println}}'
+sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{.Source}} -> {{.Destination}} ({{.Mode}}){{println}}{{end}}'
 ```
 
 Catat `Source` pada baris dengan `Destination` persis `/data`. Tetapkan variabel hanya dari nilai yang benar-benar terbaca, lalu verifikasi tidak kosong:
 
 ```bash
-CADDY_DATA=$(sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}')
+CADDY_DATA=$(sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}')
 
 if [ -z "$CADDY_DATA" ] || [ ! -d "$CADDY_DATA" ]; then
   echo "FATAL: CADDY_DATA kosong atau tidak ada: '$CADDY_DATA'" >&2
@@ -73,7 +76,7 @@ Bootstrap konteks wajib untuk sesi VPS baru:
 
 ```bash
 set -u
-CADDY_DATA=$(sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}')
+CADDY_DATA=$(sudo -n docker inspect deploy_proxy_1 --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}')
 if [ -z "$CADDY_DATA" ] || [ ! -d "$CADDY_DATA" ]; then echo "FATAL: CADDY_DATA kosong/tidak ada" >&2; exit 1; fi
 TS=${TS:-$(date +%Y%m%d-%H%M%S)}
 ACTIVE="$CADDY_DATA/landing/jetseller"

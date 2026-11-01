@@ -209,7 +209,7 @@ a { color: var(--red); }
 /* ---------- CTA banner ---------- */
 .cta-banner {
   position: relative; overflow: clip;
-  background: var(--ink);
+  background: var(--red);
   color: #fff; border-radius: 22px; padding: 44px 48px;
   display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap;
   box-shadow: none;
@@ -308,3 +308,36 @@ button:focus-visible { outline:3px solid var(--red); outline-offset:4px; }
 .hero-visual { animation-delay:.4s; }
 .revealed { animation:enter .65s ease both; }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+
+/* Premium motion: all core content remains visible without scripting. */
+.hero-line { display:block; animation:line-arrive .65s cubic-bezier(.2,.7,.2,1) both; }
+.hero-line:nth-child(2) { animation-delay:.09s; }
+.hero h1 { max-width:12ch; font-size:clamp(2.4rem,4.4vw,4.3rem); letter-spacing:-.055em; }
+.hero-copy > h1 { animation:none; }
+.header-inner { animation:enter .5s ease both; }
+.hero-cta { animation:cta-arrive .6s .28s both; }
+.parcel { position:absolute; width:76px; height:68px; bottom:24px; left:16%; background:#E1251B; border-radius:8px; transform:rotate(-8deg); box-shadow:0 14px 24px #11141815; pointer-events:none; }
+.parcel span { display:block; width:15px; height:100%; margin:auto; background:#ffffff55; }
+.laptop { animation:device-arrive .7s .2s both; }
+.phone { animation:device-arrive .7s .35s both, float 7s 1.1s ease-in-out infinite; }
+.card:nth-child(2).revealed,.step:nth-child(2).revealed { animation-delay:.08s; }
+.card:nth-child(3).revealed,.step:nth-child(3).revealed { animation-delay:.16s; }
+.icon-tile svg { transition:transform .25s ease; }
+.steps { position:relative; }
+.step { position:relative; transition:box-shadow .3s ease; }
+.step::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--red); transform:scaleX(0); transform-origin:left; transition:transform .65s ease; }
+.step.reached::before { transform:scaleX(1); }
+.step.reached .step-num { background:var(--red); color:white; }
+.store-live { display:block; margin-top:12px; font-size:.8rem; color:var(--red); font-weight:700; }
+.cta-banner::after { animation:float 8s ease-in-out infinite; }
+.btn span { transition:transform .2s ease; }
+.faq summary::after { transition:transform .25s ease; }
+.faq[open] summary::after { transform:rotate(180deg); }
+.faq[open] p { animation:enter .25s ease both; }
+@media(hover:hover) { .card:hover .icon-tile svg { transform:scale(1.07); } .btn:hover span { transform:translateX(3px); } }
+@media(hover:none) { .btn:active,.card:active { transform:scale(.985); } }
+@media(max-width:900px) { .hero h1 { max-width:18ch; } .step::before { width:3px; height:auto; right:auto; bottom:0; transform:scaleY(0); transform-origin:top; } .step.reached::before { transform:scaleY(1); } }
+@keyframes line-arrive { from { transform:translateY(12px); } to { transform:none; } }
+@keyframes device-arrive { from { opacity:.4; transform:translateY(18px) scale(.98); } to { opacity:1; transform:none; } }
+@keyframes cta-arrive { from { opacity:.5; transform:scale(.97); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }

@@ -1,5 +1,28 @@
 # Precision revision V4 — 2026-11-01
 
+## Follow-up revision on PR #127
+
+Four requested adjustments only: transparent hero badge, black larger X Seller
+(30px desktop / 24px mobile); step icons 52px / 40px and numbers 26px / 23px;
+remove brand pseudo-element subtext and its reserved padding; add `waktu` to
+the visible hero description. Hero PNGs, icon assets, hrefs, JS and deployment
+files unchanged. The original V4 evidence below remains as historical comparison.
+
+Re-executed integrity, existing browser interactions, and `visual-v4.cjs`: PASS.
+Visual assertions cover 360, 390, 428, 768, 1024, 1440, 1920px and now check
+transparent badge, black text, exact icon/number sizes, missing brand subtext,
+and hero copy. Existing V4 gap remains 38px desktop / 28px mobile. No overflow,
+missing images or page errors in capture results. `git diff --check`: PASS.
+
+Latest screenshots:
+- [Desktop top](evidence/v4/revision-1440-top.png) / [full page](evidence/v4/revision-1440.png)
+- [Mobile top](evidence/v4/revision-390-top.png) / [full page](evidence/v4/revision-390.png)
+- [Desktop steps](evidence/v4/revision-1440-steps.png) / [mobile steps](evidence/v4/revision-390-steps.png)
+- [Measurements](evidence/v4/revision.json)
+
+Only `index.html`, `refactor.css`, `visual-v4.cjs`, this report and new revision
+evidence changed in this follow-up. No merge or deploy performed.
+
 Baseline: clean `origin/main` at `4e7af7e77407a420241b1492daf30bc6b3175437`.
 Branch: `fix/jetseller-landing-visual-v4`.
 

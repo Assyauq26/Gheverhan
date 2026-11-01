@@ -1,0 +1,58 @@
+[
+  {
+    "width": 360,
+    "gap": 28,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-mobile.png",
+    "broken": [],
+    "errors": []
+  },
+  {
+    "width": 390,
+    "gap": 28,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-mobile.png",
+    "broken": [],
+    "errors": []
+  },
+  {
+    "width": 428,
+    "gap": 28,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-mobile.png",
+    "broken": [],
+    "errors": []
+  },
+  {
+    "width": 768,
+    "gap": 38,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-mobile.png",
+    "broken": [],
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "gap": 38,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-desktop.png",
+    "broken": [],
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "gap": 38,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-desktop.png",
+    "broken": [],
+    "errors": []
+  },
+  {
+    "width": 1920,
+    "gap": 38,
+    "overflow": false,
+    "src": "http://127.0.0.1:8765/assets/img/hero-desktop.png",
+    "broken": [],
+    "errors": []
+  }
+]

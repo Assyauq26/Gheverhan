@@ -1,0 +1,5 @@
+BEGIN
+SET
+{"key" : "primary", "draftVersion" : 18, "publishedVersion" : 14, "draftName" : "Jetseller", "publishedName" : "Jetseller", "publishedTagline" : "Better Outfits, Brighter Days.", "publishedLogoMode" : "text", "publishedHasLogoAsset" : false, "publishedPrimary" : "#111111", "publishedBackground" : "#FFFFFF"}
+{"revisionCount" : 15, "latestVersion" : 14}
+ROLLBACK

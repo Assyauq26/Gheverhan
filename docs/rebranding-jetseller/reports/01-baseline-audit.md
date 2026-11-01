@@ -1,6 +1,6 @@
 # 01 — Baseline audit
 
-Status: DONE source audit; NOT VERIFIED production database/admin session.
+Status: DONE source audit; production appearance summary verified read-only; authenticated admin session NOT VERIFIED.
 Baseline main: a54a6d8 (docs plan #129); implementation branch feat/jetseller-demo-brand-ui. Clean starting tree. No AGENTS.md found.
 
 ## Inventory and boundaries
@@ -27,10 +27,12 @@ GitHub variable HELI_POD_AUTODEPLOY observed `disabled`; no changes made. Open P
 
 ## Risks / gates
 
-- Production appearance row/revisions/logo IDs: NOT VERIFIED directly; require authorized admin review/export in phase B.
+- Production appearance summary verified via READ ONLY transaction: draftVersion 18, publishedVersion 14, name Jetseller, text logo/no logo asset, primary #111111, background #FFFFFF, 15 revisions (latest 14). Full secure export/admin session still required in phase B.
 - Existing published identity/theme must remain authoritative until explicit publish.
 - Legal entity and historical receipts must not be renamed as generic UI copy.
 - Node host is 26; supported application toolchain requires Node 22. Provision isolated Node 22 locally without changing dependency versions.
 - No local Docker/Postgres command detected. Determine isolated integration DB availability; never substitute production DB.
 - No real mobile device access; screenshots/browser tests are emulation.
 - Rename/private readiness is a report only; anonymous raw GitHub static-release downloads are an identified blocker.
+
+Read-only DB evidence: [sanitized appearance summary](evidence/production-appearance-readonly.txt). Executed BEGIN READ ONLY, 5s statement timeout, two aggregate/config-only SELECTs, ROLLBACK; no customer/order/secret fields or data mutations. Existing DB branding/palette therefore needs explicit publish after an approved source release.

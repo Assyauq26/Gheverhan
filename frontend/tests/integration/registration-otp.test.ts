@@ -79,7 +79,7 @@ before(async () => {
   globalThis.fetch = async (input, init) => {
     assert.equal(String(input), "https://api.resend.com/emails");
     const body = JSON.parse(String(init?.body));
-    const otp = String(body.text).match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
+    const otp = String(body.text).match(/pendaftaran JetSeller Demo Store: (\d{6})/)?.[1];
     assert.ok(otp);
     codes.set(body.to[0], otp);
     return new Response("{}", { status: 200 });
@@ -231,7 +231,7 @@ test("failed email delivery leaves no usable pending challenge", async () => {
       assert.equal(String(input), "https://api.resend.com/emails");
       const body = JSON.parse(String(init?.body));
       const otp = String(body.text).match(
-        /pendaftaran Gheverhan: (\d{6})/,
+        /pendaftaran JetSeller Demo Store: (\d{6})/,
       )?.[1];
       assert.ok(otp);
       codes.set(body.to[0], otp);
@@ -339,7 +339,7 @@ test("OTP cannot be verified while failed delivery is in flight, including resen
       let code = "";
       globalThis.fetch = async (_url, init) => {
         const body = JSON.parse(String(init?.body));
-        code = body.text.match(/pendaftaran Gheverhan: (\d{6})/)[1];
+        code = body.text.match(/pendaftaran JetSeller Demo Store: (\d{6})/)[1];
         received();
         await blocked;
         return new Response("{}", { status: 503 });

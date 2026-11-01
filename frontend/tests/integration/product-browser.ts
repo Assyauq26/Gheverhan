@@ -87,7 +87,7 @@ async function main() {
       if (url.pathname === "/emails" && req.method === "POST") {
         const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
         const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { to: string[]; text: string };
-        const otp = body.text.match(/pendaftaran Gheverhan: (\d{6})/)?.[1];
+        const otp = body.text.match(/pendaftaran JetSeller Demo Store: (\d{6})/)?.[1];
         assert.ok(otp);
         emailCodes.set(body.to[0], otp);
         res.writeHead(200, { "Content-Type": "application/json" }).end("{}"); return;

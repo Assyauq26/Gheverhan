@@ -85,7 +85,7 @@ try {
       assert.match(response.headers()["cache-control"],/no-store/);
       const stored=await db.jntPlatformIntegration.findUniqueOrThrow({where:{environment:"sandbox"}});
       for(const secret of secrets)assert.ok(!stored.encryptedConfig.includes(secret));
-      assert.equal(await db.auditLog.count({where:{userId:users[0].id,action:"jnt.integration.updated"}}),1);
+      assert.equal(await db.auditLog.count({where:{userId:users[localStore ? 1 : 0].id,action:"jnt.integration.updated"}}),1);
       results.push("browser saves actual encrypted DB settings with audit, clears inputs and redacts GET");
     }
     if([320,390,1440].includes(width))await page.screenshot({path:path.join(artifact,`settings-${width}.png`),fullPage:true});

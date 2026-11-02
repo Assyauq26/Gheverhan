@@ -12,10 +12,11 @@ import { createPool, migrate } from '../../installer/src/db.mjs';
 import { createControlServer } from '../../installer/src/server.mjs';
 import { hash } from '../../installer/src/common.mjs';
 import { serveDashboard } from '../dashboard.mjs';
+import { startPairingCli } from './cli-fixture.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const { generateKeyPair, exportJWK, SignJWT } = createRequire(new URL('../../installer/package.json', import.meta.url))('jose');
+const { generateKeyPair, exportJWK, SignJWT, jwtVerify } = createRequire(new URL('../../installer/package.json', import.meta.url))('jose');
 
 /** Genuine HTTPS transport with the test certificate explicitly trusted. No
  * global TLS bypass and no substituted API/auth response handler. */
@@ -31,7 +32,8 @@ function trustedFetch(cert) {
   });
 }
 
-test('HTTPS browser OIDC login, durable PostgreSQL intent and device pairing through real same-origin UI', { timeout: 90000 }, async t => {
+const realCli = process.env.JETSELLER_PAIRING_E2E === '1';
+test(realCli ? 'real Go CLI preflight, HTTPS OIDC browser consent and durable PostgreSQL key-bound pairing' : 'HTTPS browser OIDC login, durable PostgreSQL intent and device pairing through real same-origin UI', { timeout: 150000 }, async t => {
   const connection = process.env.JETSELLER_CONTROL_TEST_DATABASE_URL;
   if (process.env.JETSELLER_CONTROL_TEST_CONFIRM !== 'isolated-control-fixture' || !connection) throw new Error('Explicit isolated control fixture required');
   const database = new URL(connection);
@@ -103,21 +105,35 @@ test('HTTPS browser OIDC login, durable PostgreSQL intent and device pairing thr
   const stored = (await pool.query('SELECT display_name,status,domain FROM installer.installations WHERE id=$1', [installationId])).rows[0];
   assert.deepEqual(stored, { display_name: displayName, status: 'DRAFT', domain });
   await page.reload(); await page.getByRole('button', { name: new RegExp(displayName) }).click();
-  const agent = await generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true });
-  const deviceResponse = await context.request.post(origin + '/api/installer/v1/agent/pairing/device', { data: {
-    installation_hint: installationId, public_key: await exportJWK(agent.publicKey), protocol_version: '1', os: 'ubuntu-24.04', arch: 'amd64', agent_version: '0.1.0',
-  } });
-  assert.equal(deviceResponse.status(), 201); const device = await deviceResponse.json();
+  let cli, device;
+  if (realCli) {
+    cli = await startPairingCli(t, { directory, origin, installationId }); device = cli;
+  } else {
+    const agent = await generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true });
+    const deviceResponse = await context.request.post(origin + '/api/installer/v1/agent/pairing/device', { data: {
+      installation_hint: installationId, public_key: await exportJWK(agent.publicKey), protocol_version: '1', os: 'ubuntu-24.04', arch: 'amd64', agent_version: '0.1.0',
+    } });
+    assert.equal(deviceResponse.status(), 201); device = await deviceResponse.json();
+  }
   // Follow the exact verification URI printed by the Go installer, not a test-only root URL.
   assert.equal(new URL(device.verification_uri).pathname,'/hubungkan-server');
   const verification=await page.goto(device.verification_uri);assert.equal(verification.status(),200);
   await page.getByRole('button',{name:new RegExp(displayName)}).click();
   await page.getByLabel('Kode dari terminal VPS').fill(device.user_code); await page.getByRole('button', { name: 'Periksa kode' }).click();
   await page.locator('#pairing-confirm:not([hidden])').waitFor();
+  if (realCli) assert.equal(await page.locator('#device-fingerprint').textContent(), cli.thumbprint);
   assert.equal((await page.content()).includes(device.device_code), false);
   await page.getByLabel(/Saya mengenali VPS/).check(); await page.getByRole('button', { name: 'Setujui penghubungan VPS' }).click();
   await page.locator('#detail-status').filter({ hasText: 'VPS terhubung' }).waitFor();
   assert.equal((await pool.query('SELECT status FROM installer.installations WHERE id=$1', [installationId])).rows[0].status, 'PAIRED');
+  if (realCli) {
+    const completed=await cli.complete();
+    const bound=(await pool.query('SELECT id,thumbprint FROM installer.devices WHERE installation_id=$1 AND revoked_at IS NULL',[installationId])).rows;
+    assert.equal(bound.length,1);assert.equal(bound[0].id,completed.credential.device_id);assert.equal(bound[0].thumbprint,cli.thumbprint);
+    const verified=await jwtVerify(completed.credential.credential,deviceSigner.publicKey,{issuer:origin,audience:'jetseller-agent-management'});
+    assert.equal(verified.payload.installation_id,installationId);assert.equal(verified.payload.cnf.jkt,cli.thumbprint);
+    assert.equal((await page.content()).includes(completed.credential.credential),false);
+  }
   assert.equal(await page.locator('#detail-version').textContent(), 'Belum terpasang');
   assert.equal(await page.locator('code').count(), 0);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

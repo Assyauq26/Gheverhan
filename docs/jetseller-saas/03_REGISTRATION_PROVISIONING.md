@@ -1,5 +1,7 @@
 # 03 — Seller Registration, Onboarding & Provisioning
 
+> **CURRENT IMPLEMENTATION PRIORITY:** Jadikan form `landing/jetseller/daftar/index.html` yang saat ini masih placeholder sebagai form nyata setelah tersedia backend aman, lalu pastikan OTP→provisioning otomatis→storefront+seller dashboard benar-benar berfungsi. Kriteria terinci pada [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). Integrasi API J&T hanya konfigurasi **per seller di dashboard pada fase berikutnya**, bukan bagian dari form pendaftaran.
+
 ## 1. UX kontrak
 
 Landing `jetseller.web.id` memiliki CTA **Buat Toko Gratis** → 4 layar pendek:
@@ -8,7 +10,7 @@ B. Verifikasi email OTP (kode 6 digit, TTL, max attempts, resend cooldown).
 C. Identitas toko: brand, slug dan kategori, pilihan template starter; bisa dikoreksi setelah login.
 D. Status pembuatan toko: progres terverifikasi, retry yang aman dan tombol Buka Dashboard setelah `TENANT_READY`.
 
-Seller otomatis diberi storefront dan dashboard tenant lebih dulu. **Pilihan paket hosting dan domain ada di dashboard seller**, dengan trial 30 hari. Gudang, pembayaran dan setup J&T selanjutnya melalui wizard dashboard. Tidak boleh memaksa upload foto/nomor rekening/domains sebelum owner dapat dashboard.
+Seller otomatis diberi storefront dan dashboard tenant lebih dulu. **Pilihan paket hosting dan domain ada di dashboard seller**, dengan trial 30 hari. Gudang, pembayaran dan setup **akun API resmi J&T milik seller masing-masing** dilakukan selanjutnya melalui wizard dashboard, bukan di signup. Tidak boleh memaksa upload foto/nomor rekening/domain/kredensial J&T sebelum owner dapat dashboard.
 
 ## 2. State machine eksplisit
 

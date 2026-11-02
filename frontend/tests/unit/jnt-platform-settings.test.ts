@@ -41,7 +41,8 @@ const seller = { warehouse: { name: "Fixture", contact: "Fixture", phone: "+6281
   originSite: "JAKARTA", originCityCode: "JKT" }, services: [{ code: "EZ" as const, verificationReference: "synthetic-agreement", validUntil: "2030-01-01T00:00:00.000Z" }] };
 function localMode() {
   vi.stubEnv("JNT_CONFIG_SCOPE", "local_store");
-  vi.stubEnv("JNT_INSTALLATION_ID", "synthetic-installation-a");
+  vi.stubEnv("JETSELLER_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
+  vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   vi.stubEnv("JNT_INTEGRATION_ENCRYPTION_KEY", Buffer.alloc(32, 6).toString("base64"));
 }
 describe("JNT-SH-01 local isolation", () => {
@@ -54,6 +55,15 @@ describe("JNT-SH-01 local isolation", () => {
     expect(isJntSettingsAdministrator(null)).toBe(false);
     vi.stubEnv("JNT_CONFIG_SCOPE", "typo");
     expect(isJntSettingsAdministrator(user)).toBe(false);
+    vi.stubEnv("JNT_CONFIG_SCOPE", "local_store");
+    vi.stubEnv("JETSELLER_STORE_PROFILE", "legacy");
+    expect(isJntSettingsAdministrator(user)).toBe(false);
+    vi.stubEnv("JETSELLER_STORE_PROFILE", "");
+    vi.stubEnv("JNT_INSTALLATION_ID", "c6b147ca-dcaf-4a06-82ce-671cdaedb8ed");
+    expect(isJntSettingsAdministrator(user)).toBe(false);
+    vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
+    vi.stubEnv("JETSELLER_INSTALLATION_ID", "");
+    expect(isJntSettingsAdministrator(user)).toBe(false);
   });
   it("binds ciphertext to installation/environment, redacts credentials and preserves/rotates without plaintext", async () => {
     localMode();
@@ -65,7 +75,8 @@ describe("JNT-SH-01 local isolation", () => {
     expect((await readJntSettings("sandbox"))?.config.credentials).toMatchObject({ orderKey: "ROTATED-SYNTHETIC", trackingPassword: credentials.trackingPassword });
     state.rows.set("production", state.rows.get("sandbox"));
     await expect(readJntSettings("production")).rejects.toThrow(/dekripsi/);
-    vi.stubEnv("JNT_INSTALLATION_ID", "synthetic-installation-b");
+    vi.stubEnv("JETSELLER_INSTALLATION_ID", "c6b147ca-dcaf-4a06-82ce-671cdaedb8ed");
+    vi.stubEnv("JNT_INSTALLATION_ID", "c6b147ca-dcaf-4a06-82ce-671cdaedb8ed");
     await expect(readJntSettings("sandbox")).rejects.toThrow(/dekripsi/);
   });
   it("cannot open checkout or read legacy ciphertext implicitly", async () => {
@@ -74,7 +85,7 @@ describe("JNT-SH-01 local isolation", () => {
     localMode();
     await expect(readJntSettings("sandbox")).rejects.toThrow(/dekripsi/);
     await expect(activeJntConfig()).rejects.toThrow(/JNT-SH-02/);
-    state.rows.clear(); vi.stubEnv("JNT_INSTALLATION_ID", "");
+    state.rows.clear(); vi.stubEnv("JETSELLER_INSTALLATION_ID", "");
     await expect(saveJntSettings({ environment: "sandbox", enabled: true, endpoints, credentials, seller }, "admin")).rejects.toThrow(/Identitas/);
   });
 });

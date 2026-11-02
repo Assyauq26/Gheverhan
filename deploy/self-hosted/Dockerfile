@@ -11,6 +11,8 @@ RUN node node_modules/typescript/bin/tsc src/lib/self-hosted/config.ts src/lib/s
 # Keep Prisma CLI only in the one-shot migration target.
 FROM build AS migration
 COPY --from=build /compiled ./self-hosted
+COPY --from=build /app/self-hosted/launch.mjs ./self-hosted/launch.mjs
+RUN test -f /app/self-hosted/launch.mjs && test -f /app/self-hosted/config.mjs
 USER node
 ENTRYPOINT ["node", "self-hosted/launch.mjs", "migrate"]
 FROM build AS dependencies

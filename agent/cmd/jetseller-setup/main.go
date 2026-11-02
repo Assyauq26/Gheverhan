@@ -1,0 +1,113 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
+	"os"
+	"os/signal"
+	"time"
+)
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, "JetSeller setup blocked; no store deployment performed.")
+		os.Exit(1)
+	}
+}
+func run() error {
+	if len(os.Args) < 2 {
+		return fmt.Errorf("command required")
+	}
+	flags := flag.NewFlagSet("jetseller-setup", flag.ContinueOnError)
+	directory := flags.String("state", "/var/lib/jetseller-agent", "private local state directory (parent must exist)")
+	installation := flags.String("installation-id", "", "existing seller installation intent UUID")
+	origin := flags.String("control-origin", "https://jetseller.web.id", "HTTPS control origin")
+	artifact := flags.String("artifact", "", "local artifact path")
+	bundle := flags.String("bundle", "", "local Sigstore bundle")
+	digest := flags.String("sha256", "", "approved artifact SHA256")
+	verifier := flags.String("cosign", "", "pretrusted absolute Cosign path")
+	verifierHash := flags.String("cosign-sha256", "", "independently approved Cosign SHA256")
+	identity := flags.String("signer-identity", "", "exact authorized certificate identity")
+	issuer := flags.String("signer-issuer", "", "exact authorized OIDC issuer")
+	if flags.Parse(os.Args[2:]) != nil || flags.NArg() != 0 {
+		return fmt.Errorf("invalid arguments")
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	if os.Args[1] == "verify-artifact" {
+		err := bootstrap.VerifyArtifact(ctx, bootstrap.VerifyPolicy{VerifierPath: *verifier, VerifierSHA256: *verifierHash, CertificateIdentity: *identity, OIDCIssuer: *issuer}, *artifact, *bundle, *digest)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Artifact signature and digest verified. Not executed; release freshness and install gates remain closed.")
+		return nil
+	}
+	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" {
+		return fmt.Errorf("unsupported command")
+	}
+	state, err := bootstrap.OpenState(*directory, *installation)
+	if err != nil {
+		return err
+	}
+	defer state.Close()
+	facts, err := bootstrap.InspectHost(*directory)
+	if err != nil {
+		return err
+	}
+	if state.Journal.Phase == "INITIALIZED" {
+		if err = state.Record("PREFLIGHT_OK"); err != nil {
+			return err
+		}
+	}
+	if os.Args[1] == "preflight" {
+		return json.NewEncoder(os.Stdout).Encode(struct {
+			Status string              `json:"status"`
+			Host   bootstrap.HostFacts `json:"host"`
+		}{"preflight_ok", facts})
+	}
+	client, err := bootstrap.NewPairingClient(*origin)
+	if err != nil {
+		return err
+	}
+	var session bootstrap.DeviceSession
+	if os.Args[1] == "resume-pairing" {
+		session, err = client.Resume(state)
+	} else {
+		session, err = client.Start(ctx, state)
+	}
+	if errors.Is(err, bootstrap.ErrAlreadyPaired) {
+		fmt.Println("Device binding recorded locally; credential refresh may be required. No store deployment performed.")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Open %s and enter %s. Confirm device fingerprint %s.\n", session.VerificationURI, session.UserCode, bootstrap.Thumbprint(state.PrivateKey()))
+	interval := time.Duration(session.Interval) * time.Second
+	for time.Now().Before(session.ExpiresAt) {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(interval):
+		}
+		paired, err := client.Poll(ctx, state, session)
+		if err != nil {
+			return err
+		}
+		if paired {
+			fmt.Println("Device paired; local store deployment remains gated.")
+			return nil
+		}
+		if interval < 60*time.Second {
+			interval += 5 * time.Second
+		}
+		if client.RetryAfter() > interval {
+			interval = client.RetryAfter()
+		}
+	}
+	return fmt.Errorf("pairing expired")
+}

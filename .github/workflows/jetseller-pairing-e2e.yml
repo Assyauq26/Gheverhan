@@ -1,0 +1,74 @@
+name: JetSeller CLI and browser pairing E2E
+on:
+  pull_request:
+    paths:
+      - agent/**
+      - platform/installer/**
+      - platform/installer-web/**
+      - .github/workflows/jetseller-pairing-e2e.yml
+permissions:
+  contents: read
+concurrency:
+  group: jetseller-pairing-e2e-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  cli-browser-pairing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_DB: js_control_fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-pairing-e2e-only
+        ports: ['127.0.0.1:5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U fixture -d js_control_fixture"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Build actual CLI and prefetch a pinned fresh Ubuntu namespace
+        run: |
+          set -euo pipefail
+          (cd agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /tmp/jetseller-setup-pairing-e2e ./cmd/jetseller-setup)
+          docker --host unix:///var/run/docker.sock pull ubuntu@sha256:78d4744ead1f5b19b04d0df558ab182a5300903900755e515b2ca4d10eb2044d
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer-web
+      - run: npx playwright install --with-deps chromium
+        working-directory: platform/installer-web
+      - name: Verify a real upstream signed artifact with this CLI (not a JetSeller release)
+        run: |
+          set -euo pipefail
+          fixture=$(mktemp -d /tmp/jetseller-e2e-sigstore.XXXXXXXX)
+          cd "$fixture"
+          for file in cosign-linux-amd64 cosign_checksums.txt cosign_checksums.txt.sigstore.json; do
+            curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 120 --retry 2 --output "$file" "https://github.com/sigstore/cosign/releases/download/v3.1.4/$file"
+          done
+          sha256sum --check <<'HASHES'
+          424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa  cosign-linux-amd64
+          e70e59b328d52949b3a9ae3e0d04721ea8f380c4e91c28197aa91df02afbf4c0  cosign_checksums.txt
+          8fc87b5562359b0414655ee281b80eb3752f58c4e137d5f0e4881f095bc26309  cosign_checksums.txt.sigstore.json
+          HASHES
+          chmod 700 cosign-linux-amd64
+          /tmp/jetseller-setup-pairing-e2e verify-artifact --cosign "$fixture/cosign-linux-amd64" --cosign-sha256 424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa --artifact "$fixture/cosign_checksums.txt" --bundle "$fixture/cosign_checksums.txt.sigstore.json" --sha256 e70e59b328d52949b3a9ae3e0d04721ea8f380c4e91c28197aa91df02afbf4c0 --signer-identity keyless@projectsigstore.iam.gserviceaccount.com --signer-issuer https://accounts.google.com
+      - name: Real CLI preflight, provider/browser consent, token delivery and private restart
+        run: npm run test:integration
+        working-directory: platform/installer-web
+        env:
+          JETSELLER_CONTROL_TEST_DATABASE_URL: postgresql://fixture:synthetic-pairing-e2e-only@127.0.0.1:5432/js_control_fixture
+          JETSELLER_CONTROL_TEST_CONFIRM: isolated-control-fixture
+          JETSELLER_PAIRING_E2E: '1'
+          JETSELLER_PAIRING_CLI_BINARY: /tmp/jetseller-setup-pairing-e2e
+          JETSELLER_PAIRING_CLI_IMAGE: ubuntu@sha256:78d4744ead1f5b19b04d0df558ab182a5300903900755e515b2ca4d10eb2044d

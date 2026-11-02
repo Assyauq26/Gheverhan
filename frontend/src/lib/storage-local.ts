@@ -2,7 +2,8 @@ import { constants } from "node:fs";
 import { mkdir, realpath, lstat, open, unlink } from "node:fs/promises";
 import path from "node:path";
 import { resolveStorageObject } from "./storage-path";
-import { assertExistingLocalStorageRoot, getStoreProfile } from "./self-hosted/config";
+import { getStoreProfile } from "./self-hosted/config";
+import { assertExistingLocalStorageRoot } from "./self-hosted/storage-root";
 
 const MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" };
 

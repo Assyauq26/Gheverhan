@@ -49,6 +49,7 @@ dc exec -T db sh /opt/jetseller/grant-runtime.sh
 project=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env)
 installation_id=$(sed -n 's/^JETSELLER_INSTALLATION_ID=//p' .env)
 docker run --rm --user 0 --entrypoint node -v "${project}_media:/media" "$app_image" -e "const fs=require('fs');fs.chownSync('/media',1000,1000);fs.chmodSync('/media',0o700);fs.writeFileSync('/media/.jetseller-installation-id',process.argv[1]+'\\n',{mode:0o600,flag:'wx'});fs.chownSync('/media/.jetseller-installation-id',1000,1000)" "$installation_id"
+startup_started=$SECONDS
 dc up -d --wait app
 dc up -d caddy
 for attempt in $(seq 1 40); do
@@ -58,6 +59,7 @@ done
 for route in / /admin /api/v1/health /api/v1/ready; do
  curl --noproxy '*' --silent --show-error --fail --cacert "$fixture_root/ca.pem" --resolve store.fixture.example:443:127.0.0.1 "https://store.fixture.example$route" > /dev/null
 done
+echo "Fixture app plus internal-CA HTTPS startup seconds=$((SECONDS-startup_started))"
 # A live process is not a ready database-backed application. Probe actual local
 # PostgreSQL failure, then restore it before persistence/recovery scenarios.
 dc stop db >/dev/null
@@ -89,6 +91,7 @@ dc restart db app
 dc up -d --wait app
 dc exec -T app node -e "if(require('fs').readFileSync('/var/lib/jetseller/media/persistence-fixture','utf8')!=='synthetic-media')process.exit(1)"
 test "$(dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' .env)" -Atc 'SELECT count(*) FROM fixture_persistence')" = 1
+docker stats --no-stream --format 'Fixture service={{.Name}} memory={{.MemUsage}} cpu={{.CPUPerc}}' $(dc ps -q app db caddy)
 bash "$repo/deploy/self-hosted/recovery/test-stack.sh" "$fixture_root/stack"
 # Ensure every saved layer, not just the final filesystem, excludes the sentinel.
 for image in "$app_image" "$migration_image"; do
@@ -107,4 +110,4 @@ done
 docker image inspect "$app_image" --format 'App image bytes={{.Size}} user={{.Config.User}}'
 df -h "$fixture_root"
 free -m
-echo 'Disposable container/TLS/persistence/secret-layer checks PASS; public ACME, VPS reboot, restore and signing not established here'
+echo 'Disposable container/TLS/persistence/secret-layer checks PASS; separate encrypted restore PASS; VPS reboot/public HTTPS PENDING_DISPOSABLE_VPS; signing/installer release remain gated'

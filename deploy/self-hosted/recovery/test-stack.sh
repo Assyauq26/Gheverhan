@@ -51,6 +51,7 @@ sudo chown -R "$(id -u):$(id -g)" "$snapshot_source"
 chmod -R go-rwx "$snapshot_source"
 node "$snapshot_tool" verify "$snapshot_source" > "$workspace/source-checksums.json"
 node "$snapshot_tool" backup "$snapshot_source" "$workspace/archives/snapshot.enc" "$workspace/recovery.key" > "$workspace/backup-summary.json"
+restore_started=$SECONDS
 node "$snapshot_tool" restore "$workspace/archives/snapshot.enc" "$snapshot_target" "$workspace/recovery.key" > "$workspace/restore-summary.json"
 node "$snapshot_tool" verify "$snapshot_target" > "$workspace/restored-checksums.json"
 cmp "$workspace/source-checksums.json" "$workspace/restored-checksums.json"
@@ -94,6 +95,7 @@ test "$source_rows" = '1:synthetic'
 test "$restore_rows" = "$source_rows"
 test "$(sha256sum "$snapshot_source/media/persistence-fixture" | cut -d' ' -f1)" = "$(sha256sum "$snapshot_target/media/persistence-fixture" | cut -d' ' -f1)"
 test -z "$(docker inspect "$restore_container" --format '{{range $p,$v := .HostConfig.PortBindings}}{{$p}}{{end}}')"
+echo "Fixture restore plus independent database initialization/import seconds=$((SECONDS-restore_started))"
 cat "$workspace/backup-summary.json" "$workspace/restore-summary.json"
 echo 'Separate PostgreSQL restore, synthetic record equality and encrypted media/config checksum verification PASS'
 echo 'No source data removed; destination stopped only. Host reboot, off-VPS durability, signing and browser restore remain separate gates.'

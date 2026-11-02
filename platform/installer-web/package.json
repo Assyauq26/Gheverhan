@@ -1,0 +1,9 @@
+{
+  "name": "jetseller-installer-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22 <23" },
+  "scripts": { "test": "node --test test/*.test.mjs", "test:integration": "node --test test/browser-integration.mjs" },
+  "devDependencies": { "jsdom": "25.0.1", "playwright": "1.63.0" }
+}

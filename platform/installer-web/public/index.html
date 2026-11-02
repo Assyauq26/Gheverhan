@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Instalasi toko — JetSeller</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Lewati ke instalasi</a>
+  <header class="topbar">
+    <a class="wordmark" href="/" aria-label="JetSeller, instalasi toko">Jet<span>Seller</span></a>
+    <span class="workspace-label">Instalasi mandiri</span>
+    <span id="account-state" class="account-state">Memeriksa sesi…</span>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="page-heading"><div><h1>Instalasi toko</h1><p>Hubungkan VPS milik Anda. Data toko dan kredensial tetap berada di server Anda.</p></div><button id="refresh" class="button secondary" type="button">Muat ulang</button></div>
+    <section id="service-notice" class="notice" role="status" aria-live="polite"><p id="notice-message">Memeriksa layanan instalasi…</p><a id="sign-in" class="button primary" href="/auth/login" hidden>Masuk ke akun seller</a></section>
+    <noscript><p class="notice">Aktifkan JavaScript untuk memakai registry dan pairing. Tidak ada instalasi yang dijalankan dari halaman ini tanpa konfirmasi.</p></noscript>
+    <div id="workspace" class="workspace" hidden>
+      <div class="registry-column">
+        <section aria-labelledby="registry-heading" class="surface registry">
+          <div class="section-heading"><h2 id="registry-heading">Toko Anda</h2><span id="registry-count" class="muted"></span></div>
+          <p id="registry-loading" class="muted">Memuat instalasi…</p>
+          <ul id="installation-list" class="installation-list" aria-label="Daftar instalasi"></ul>
+          <div id="empty-state" class="empty-state" hidden><h3>Mulai dari satu toko</h3><p>Daftarkan nama dan domain untuk membuat rencana instalasi. Langkah ini belum memasang aplikasi di VPS.</p><button type="button" id="focus-create" class="button secondary">Daftarkan toko</button></div>
+        </section>
+        <section class="surface" aria-labelledby="create-heading">
+          <h2 id="create-heading">Daftarkan instalasi</h2>
+          <p class="muted">Siapkan VPS Ubuntu 24.04 LTS dan domain yang Anda miliki.</p>
+          <form id="create-form">
+            <label for="store-name">Nama toko</label><input id="store-name" name="display_name" required maxlength="100" autocomplete="organization" placeholder="Nama yang mudah dikenali">
+            <label for="store-domain">Domain toko</label><input id="store-domain" name="domain" required maxlength="253" inputmode="url" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="tokoanda.id" aria-describedby="domain-help"><p id="domain-help" class="field-help">Tulis domain tanpa https:// atau alamat halaman.</p>
+            <p id="create-error" class="form-error" role="alert" hidden></p>
+            <button class="button primary" type="submit">Buat rencana instalasi</button>
+          </form>
+        </section>
+      </div>
+      <section id="detail" class="surface detail" aria-labelledby="detail-heading">
+        <h2 id="detail-heading" tabindex="-1">Langkah berikutnya</h2>
+        <p id="detail-placeholder" class="muted">Pilih toko untuk melihat status dan menghubungkan VPS.</p>
+        <div id="installation-detail" hidden>
+          <div class="detail-title"><h3 id="detail-name"></h3><span id="detail-status" class="badge"></span></div>
+          <p id="detail-domain" class="domain"></p>
+          <dl class="facts"><div><dt>ID instalasi</dt><dd id="detail-id" class="technical"></dd></div><div><dt>Versi aplikasi</dt><dd id="detail-version"></dd></div><div><dt>Kontak terakhir</dt><dd id="detail-contact"></dd></div></dl>
+          <p id="detail-explanation" class="state-explanation"></p>
+          <section class="step" aria-labelledby="bootstrap-heading"><h3 id="bootstrap-heading">Pasang installer di VPS</h3><p>Perintah bootstrap belum tersedia. Distribusi installer dan verifikasi tanda tangan harus dikonfigurasi sebelum perintah dapat ditampilkan.</p><p class="field-help">Jangan jalankan script yang tidak terverifikasi. Portal tidak meminta password SSH atau database Anda.</p></section>
+          <section class="step" aria-labelledby="pairing-heading"><h3 id="pairing-heading">Hubungkan VPS dengan kode</h3><p>Jika installer terverifikasi sudah menampilkan kode di terminal VPS, masukkan kode tersebut di sini.</p>
+            <form id="pairing-form"><label for="pairing-code">Kode dari terminal VPS</label><div class="input-action"><input id="pairing-code" name="user_code" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"><button class="button secondary" type="submit">Periksa kode</button></div></form>
+            <p id="pairing-error" class="form-error" role="alert" hidden></p>
+            <form id="pairing-confirm" class="pairing-confirm" hidden><h4>Periksa identitas VPS</h4><dl class="facts"><div><dt>Sidik kunci perangkat</dt><dd id="device-fingerprint" class="technical"></dd></div><div><dt>Izin yang diminta</dt><dd id="device-scopes"></dd></div><div><dt>Berlaku hingga</dt><dd id="device-expiry"></dd></div></dl><p class="field-help">Cocokkan sidik kunci ini dengan yang ditampilkan installer pada VPS Anda.</p><label class="checkbox-label"><input id="confirm-device" type="checkbox" required> Saya mengenali VPS ini dan menyetujui penghubungannya ke toko yang dipilih.</label><button class="button primary" type="submit">Setujui penghubungan VPS</button></form>
+          </section>
+        </div>
+        <p class="readiness-note"><strong>Aplikasi terpasang ≠ toko siap berjualan.</strong> Produk, pembayaran, pengiriman, dan pengaturan admin lokal tetap perlu diverifikasi sebelum checkout diaktifkan.</p>
+      </section>
+    </div>
+    <p id="action-announcement" class="sr-only" role="status" aria-live="polite"></p>
+  </main>
+  <footer>JetSeller mengelola instalasi dan versi aplikasi. VPS, domain, dan data toko tetap milik Anda.</footer>
+</body>
+</html>

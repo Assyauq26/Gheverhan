@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 
 async function owner() {
   const user = await getCurrentUser(false);
-  if (!user) throw new HttpError("Harap login sebagai pemilik platform", 401);
-  if (!isJntPlatformOwner(user)) throw new HttpError("Hanya Super Admin pemilik SaaS yang dapat mengubah integrasi", 403);
+  if (!user) throw new HttpError("Harap login sebagai administrator toko", 401);
+  if (!isJntPlatformOwner(user)) throw new HttpError("Hanya pemilik toko atau operator platform yang berwenang dapat mengubah integrasi", 403);
   return user;
 }
 function privateResponse(data: unknown) {

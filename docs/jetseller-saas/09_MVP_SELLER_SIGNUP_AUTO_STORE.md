@@ -1,6 +1,8 @@
-# 09 — **CURRENT PRIORITY**: Seller Signup → Automatic Storefront + Seller Dashboard
+# 09 — TARGET MVP SETELAH FRONTEND: Seller Signup → Automatic Storefront + Seller Dashboard
 
-**Product decision 2026-11-02 (overrides prior roadmap when sequencing differs).**
+> **Urutan kerja baru 2026-11-02:** PR pertama **hanya frontend** signup JetSeller (form, stepper, validasi, preview OTP/status tanpa backend). Lihat [10](10_FRONTEND_REGISTRATION_FIRST.md). Dokumen 09 ini tetap spesifikasi tujuan **end-to-end tahap kedua**, jangan meminta Codex membuat backend, database tenant, provisioning, storefront atau dashboard pada PR frontend pertama.
+
+**Product decision 2026-11-02 (overrides prior roadmap when sequencing differs, tetapi tidak mengesampingkan urutan frontend-first pada dokumen 10).**
 **Status:** IMPLEMENTATION SPEC / not implemented. Read with 01–08; the MVP defined here precedes hosting billing, custom-domain purchase and J&T integration. Only approved development PRs may follow it.
 
 ## 1. Goal and hard product contract

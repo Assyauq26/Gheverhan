@@ -1,0 +1,26 @@
+name: JetSeller self-hosted disposable runtime
+on:
+  pull_request:
+    paths:
+      - deploy/self-hosted/**
+      - frontend/src/lib/self-hosted/**
+      - .github/workflows/jetseller-selfhost-runtime.yml
+permissions:
+  contents: read
+concurrency:
+  group: jetseller-runtime-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  disposable-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node --test deploy/self-hosted/tests/packaging.test.mjs
+      - name: Build and verify synthetic isolated stack
+        run: bash deploy/self-hosted/tests/runtime.sh

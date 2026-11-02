@@ -1,0 +1,20 @@
+{
+  "node": {
+    "tag": "22-bookworm-slim",
+    "index": "sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da",
+    "amd64": "sha256:9f0dde62d10e7ff7a310ecaebd66225f6b46c17e6cb778449a77b05d3541bea2",
+    "image": "node@sha256:9f0dde62d10e7ff7a310ecaebd66225f6b46c17e6cb778449a77b05d3541bea2"
+  },
+  "postgres": {
+    "tag": "17-bookworm",
+    "index": "sha256:839fbb5a4942a7758dd93e18b42ea5649807491a0545b5eeeb8f0b8bb11857a5",
+    "amd64": "sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416",
+    "image": "postgres@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416"
+  },
+  "caddy": {
+    "tag": "2-alpine",
+    "index": "sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5",
+    "amd64": "sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a",
+    "image": "caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a"
+  }
+}

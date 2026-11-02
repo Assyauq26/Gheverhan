@@ -1,5 +1,6 @@
 # 08 — Sprint Roadmap, Work Packages, Release Gates & Risks
 
+> **Gate FE-0 mendahului semua sprint di bawah:** implementasikan frontend form `landing/jetseller/daftar/index.html` saja sebagai Draft PR, dengan validasi, stepper, dan OTP/provisioning preview lokal yang jujur; **tanpa backend atau tenant**. Gunakan [10](10_FRONTEND_REGISTRATION_FIRST.md) dan [Prompt Codex](CODEX_IMPLEMENTATION_PROMPT.md). Setelah FE-0 direview, lanjutkan S0/S1/S2.
 > **Roadmap terbaru (2026-11-02):** Semua pekerjaan diarahkan lebih dulu pada **seller signup real form/OTP → automatic isolated database, storefront dan seller dashboard**. Detail acceptance/urutan PR [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). **J&T tenant-managed/BYOK only**, dikerjakan setelah MVP toko otomatis terbukti. Hosting berbayar, pembelian custom domain, full commerce dan Super Admin advanced dipindahkan ke fase lanjut; jangan membuat pendaftaran tergantung J&T atau pembayaran.
 
 ## 1. Execution order: do not start with visual dashboard alone

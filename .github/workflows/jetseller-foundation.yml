@@ -1,0 +1,47 @@
+name: JetSeller foundation policy
+on:
+  pull_request:
+    paths:
+      - 'platform/**'
+      - 'docs/jetseller/**'
+      - '.github/workflows/jetseller-foundation.yml'
+permissions:
+  contents: read
+jobs:
+  boundaries:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node --test platform/tests/*.test.mjs
+  central-database:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_USER: jetseller_test
+          POSTGRES_PASSWORD: isolated-only
+          POSTGRES_DB: gheverhan_sprint1_test
+        ports:
+          - 127.0.0.1:5432:5432
+        options: --health-cmd "pg_isready -U jetseller_test -d gheverhan_sprint1_test" --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      JETSELLER_ISOLATED_TESTS: '1'
+      JETSELLER_TEST_ADMIN_URL: postgresql://jetseller_test:isolated-only@127.0.0.1:5432/gheverhan_sprint1_test
+      PLATFORM_DATABASE_URL: postgresql://jetseller_test:isolated-only@127.0.0.1:5432/jetseller_platform_test
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm --prefix frontend ci --ignore-scripts --no-audit --no-fund
+      - run: node frontend/node_modules/@prisma/engines/scripts/postinstall.js
+      - run: node frontend/node_modules/prisma/build/index.js generate --schema frontend/prisma/schema.prisma
+      - run: node --test platform/tests/integration/control-plane.test.mjs

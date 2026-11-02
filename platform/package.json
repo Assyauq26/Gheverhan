@@ -1,0 +1,7 @@
+{
+  "name": "jetseller-control-plane-foundation",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22 <23" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}

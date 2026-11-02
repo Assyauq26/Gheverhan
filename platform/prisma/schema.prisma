@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+  output = "../generated/control-plane"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("PLATFORM_DATABASE_URL")
+}
+enum PlatformRole {
+  PLATFORM_OWNER
+  SELLER
+}
+enum TenantStatus {
+  PROVISIONING
+  ACTIVE
+  SUSPENDED
+  FAILED
+}
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  ACTIVE
+  DISABLED
+}
+enum ProvisioningStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  NEEDS_REVIEW
+}
+model PlatformAccount {
+  id String @id @default(uuid())
+  email String @unique
+  passwordHash String
+  role PlatformRole @default(SELLER)
+  active Boolean @default(false)
+  sessionVersion Int @default(0)
+  emailVerifiedAt DateTime?
+  createdAt DateTime @default(now())
+  seller Seller?
+  sessions PlatformSession[]
+}
+model PlatformSession {
+  id String @id @default(uuid())
+  accountId String
+  tokenHash String @unique @db.VarChar(64)
+  audience String @db.VarChar(64)
+  version Int
+  expiresAt DateTime
+  revokedAt DateTime?
+  account PlatformAccount @relation(fields:[accountId],references:[id],onDelete:Restrict)
+  @@index([accountId, expiresAt])
+}
+model Seller {
+  id String @id @default(uuid())
+  accountId String @unique
+  account PlatformAccount @relation(fields:[accountId],references:[id],onDelete:Restrict)
+  tenant Tenant?
+}
+model Tenant {
+  id String @id
+  sellerId String @unique
+  slug String @unique
+  status TenantStatus @default(PROVISIONING)
+  databaseSecretRef String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  seller Seller @relation(fields:[sellerId],references:[id],onDelete:Restrict)
+  domains TenantDomain[]
+  subscription Subscription?
+  jobs ProvisioningJob[]
+}
+model TenantDomain {
+  hostname String @id
+  tenantId String
+  status DomainStatus @default(PENDING)
+  challengeHash String @db.VarChar(64)
+  challengeExpiresAt DateTime
+  verifiedAt DateTime?
+  tlsReadyAt DateTime?
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Restrict)
+  @@index([tenantId])
+}
+model Subscription {
+  id String @id @default(uuid())
+  tenantId String @unique
+  planCode String
+  status String @default("PENDING")
+  trialEndsAt DateTime?
+  paidUntil DateTime?
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Restrict)
+}
+model ProvisioningJob {
+  id String @id @default(uuid())
+  tenantId String
+  idempotencyKey String @unique
+  payloadHash String @db.VarChar(64)
+  status ProvisioningStatus @default(QUEUED)
+  step String @default("ALLOCATE")
+  version Int @default(0)
+  attempts Int @default(0)
+  leaseExpiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Restrict)
+  @@index([status, leaseExpiresAt])
+}
+model GlobalIntegration {
+  environment String @id @db.VarChar(16)
+  ciphertext String
+  keyVersion String
+  enabled Boolean @default(false)
+  updatedBy String
+  updatedAt DateTime @updatedAt
+}
+model PlatformAuditEvent {
+  id String @id @default(uuid())
+  actorId String?
+  tenantId String?
+  action String
+  metadata Json?
+  createdAt DateTime @default(now())
+  @@index([tenantId, createdAt])
+}

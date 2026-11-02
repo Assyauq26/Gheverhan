@@ -247,7 +247,8 @@ test("self-hosted credentials bind installation/environment, rotate concurrently
   const legacy = await settings.readJntSettings("sandbox");
   const before = await db.jntPlatformIntegration.findUniqueOrThrow({ where: { environment: "sandbox" } });
   process.env.JNT_CONFIG_SCOPE = "local_store";
-  process.env.JNT_INSTALLATION_ID = "isolated-selfhost-jnt-installation";
+  process.env.JETSELLER_INSTALLATION_ID = "550e8400-e29b-41d4-a716-446655440000";
+  process.env.JNT_INSTALLATION_ID = process.env.JETSELLER_INSTALLATION_ID;
   const seller = { warehouse: { name: "Synthetic", contact: "Synthetic", phone: "+6281234567890", address: "Synthetic warehouse",
     originSite: "JAKARTA", originCityCode: "JKT" }, services: [] };
   const prod = Object.fromEntries(Object.entries(endpoints).map(([k,v]) => [k, v.replace("demo-ecommerce.inuat-jntexpress.id", "api.jet.co.id").replace("demo-general.inuat-jntexpress.id", "partner-track.jet.co.id")])) as typeof endpoints;
@@ -265,10 +266,11 @@ test("self-hosted credentials bind installation/environment, rotate concurrently
     assert.ok(!JSON.stringify(audit.meta).includes("SELFHOST-ROTATED"));
     assert.equal((await settings.readJntPublicStatus("production") as any).shippingReady, false);
     await assert.rejects(settings.activeJntConfig(), { status: 503 });
-    process.env.JNT_INSTALLATION_ID = "different-selfhost-jnt-installation";
+    process.env.JETSELLER_INSTALLATION_ID = "c6b147ca-dcaf-4a06-82ce-671cdaedb8ed";
+    process.env.JNT_INSTALLATION_ID = process.env.JETSELLER_INSTALLATION_ID;
     await assert.rejects(settings.readJntSettings("production"), { status: 503 });
   } finally {
-    delete process.env.JNT_CONFIG_SCOPE; delete process.env.JNT_INSTALLATION_ID;
+    delete process.env.JNT_CONFIG_SCOPE; delete process.env.JNT_INSTALLATION_ID; delete process.env.JETSELLER_INSTALLATION_ID;
     await db.jntPlatformIntegration.deleteMany({ where: { environment: "production" } });
   }
   assert.deepEqual(await db.jntPlatformIntegration.findUniqueOrThrow({ where: { environment: "sandbox" } }), before);

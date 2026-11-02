@@ -1,5 +1,7 @@
 # 02 — Architecture & ADR: Control Plane + Tenant Data Plane
 
+> **Prioritas saat ini:** implementasi seller OTP → tenant provisioned → storefront + seller dashboard, lihat [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). Pengiriman J&T merupakan koneksi eksternal per-tenant yang dikonfigurasi seller, bukan koneksi global Super Admin.
+
 ## 1. Keputusan dan batas
 
 **ADR-001: satu codebase Next.js, satu deployment aplikasi multi-tenant logis, satu control-plane DB, dan DB tenant terpisah per toko.** Pekerjaan awal adalah melakukan spike migrasi Prisma/runtime dan uji batas pool; tidak menganggap kode `frontend/src/lib/prisma.ts` yang sekarang tenant-aware. Jika operational cost pool/per-tenant Prisma melebihi target VPS, ajukan ADR alternatif dengan benchmark; **jangan diam-diam mengganti keputusan isolasi data**.
@@ -29,14 +31,14 @@ Browser -> TLS proxy / trusted Host routing
              ├── Tenant B PostgreSQL DB (own users/catalog/orders/appearance)
              ├── Tenant N PostgreSQL DB
              ├── Tenant-scoped object media prefixes/buckets and signed URLs
-             └── External J&T official, email provider, billing PSP, DNS/registrar (approved only)
+             └── J&T official API via each tenant's own credentials (later phase), email provider, billing PSP, DNS/registrar (approved only)
 ```
 
 Aplikasi tenant wajib menerima `tenantId` dari trusted routing (DB domain registry), bukan dari body/query/header `X-Tenant` yang dapat diubah pengguna. Misalnya `Host` dinormalisasi dan diverifikasi terhadap proxy trusted list, canonical domain ownership dan status domain ACTIVE. Unknown host harus 404, bukan fallback ke tenant pertama.
 
 ## 3. Data boundary
 
-**Control plane:** `PlatformUser`, `PlatformRole`, `SellerAccount`, `Tenant`, `TenantMembership`, `TenantDatabase` (encrypted secret reference, bukan DSN plaintext), `TenantProvisioningJob`, `Domain`, `Plan`, `Subscription`, `Invoice`, `BillingPayment`, `TenantEntitlement`, `CarrierContract` (metadata only), `CarrierCredentialRef`, `AdminAudit`, `OutboxEvent`, `IdempotencyKey`. Model ini usulan, belum ada dalam schema saat ini; tulis migration dan review sebelum membuat tabel.
+**Control plane:** `PlatformUser`, `PlatformRole`, `SellerAccount`, `Tenant`, `TenantMembership`, `TenantDatabase` (encrypted secret reference, bukan DSN plaintext), `TenantProvisioningJob`, `Domain`, `Plan`, `Subscription`, `Invoice`, `BillingPayment`, `TenantEntitlement`, `AdminAudit`, `OutboxEvent`, `IdempotencyKey`. **J&T credential references disimpan dalam tenant-scoped vault/data plane**, bukan kredensial operasional global control plane. Super Admin hanya dapat melihat metadata status koneksi teredaksi dan mengamankan platform. Model ini usulan, belum ada dalam schema saat ini; tulis migration dan review sebelum membuat tabel.
 
 **Tenant DB:** `User`, `UserRole`, `PendingRegistration` customer, Product/Variant/Inventory/Cart/Order/Payment/Shipment/StoreAppearance dan seterusnya. Seller owner/staff identities disimpan tenant DB dengan platform `SellerAccount` mapping terotorisasi. Sesi owner bisa memakai control plane identity tetapi authorization per tenant harus dievaluasi dengan membership & role yang sah; jangan membuat satu JWT bebas memilih tenant.
 

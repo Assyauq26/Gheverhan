@@ -37,6 +37,7 @@ export function prepareBuildContext(target) {
   const frontend = path.resolve(here,'../../frontend');
   cpSync(frontend,target,{recursive:true,filter(source) {
     const relative = path.relative(frontend,source), segments=relative.split(path.sep);
+    if (relative.replaceAll(path.sep,'/').startsWith('src/app/admin/shipping/coverage')) return true;
     return !segments.some(s => ['node_modules','.next','.git','coverage','playwright-report','test-results'].includes(s) || s.startsWith('.env') || /\.(pem|key|p12|pfx)$/.test(s) || s === '.npmrc' || s === 'credentials.json');
   }});
   mkdirSync(path.join(target,'self-hosted'), {mode:0o755});

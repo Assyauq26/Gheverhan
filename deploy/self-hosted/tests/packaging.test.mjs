@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync,readFileSync,rmSync,writeFileSync,symlinkSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { prepareFixture } from '../prepare.mjs';
+import { prepareFixture, prepareBuildContext } from '../prepare.mjs';
 import { loadPrivateConfig } from '../launch.mjs';
 
 const digest='sha256:'+'a'.repeat(64);
@@ -27,5 +27,14 @@ test('invalid domains, mutable images and malformed runtime secrets fail closed'
     assert.throws(()=>prepareFixture(path.join(tmp,'bad'),{domain:'store.example',appImage:'app:latest',migrationImage:digest}));
     const file=path.join(tmp,'secret');writeFileSync(file,JSON.stringify({NODE_OPTIONS:'--require bad'}),{mode:0o600});assert.throws(()=>loadPrivateConfig(file));
     writeFileSync(file,'{broken');assert.throws(()=>loadPrivateConfig(file));
+  } finally {rmSync(tmp,{recursive:true,force:true});}
+});
+
+test('filtered build context preserves shipping coverage source route and excludes generated dependencies',()=>{
+  const tmp=mkdtempSync(path.join(os.tmpdir(),'js-context-'));
+  try {
+    const context=path.join(tmp,'context'); prepareBuildContext(context);
+    assert.ok(readFileSync(path.join(context,'src/app/admin/shipping/coverage/page.tsx')).length>0);
+    assert.throws(()=>readFileSync(path.join(context,'node_modules/next/package.json')));
   } finally {rmSync(tmp,{recursive:true,force:true});}
 });

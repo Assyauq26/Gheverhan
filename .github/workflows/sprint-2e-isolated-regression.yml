@@ -194,6 +194,12 @@ jobs:
         id: operations_browser
         run: npm run test:e2e:operations
 
+      - name: Chromium local seller J&T settings and authorization (no carrier calls)
+        env:
+          JNT_SELF_HOSTED_TESTS: '1'
+          SPRINT1_ARTIFACT_DIR: /tmp/gheverhan-jnt-settings-${{ github.run_id }}
+        run: node --import tsx tests/integration/jnt-settings-browser.ts
+
       - name: Registration email OTP lifecycle on disposable PostgreSQL
         run: node --import tsx --test tests/integration/registration-otp.test.ts
 
@@ -248,5 +254,7 @@ jobs:
             /tmp/gheverhan-auth-ui-*/*.png
             /tmp/gheverhan-jnt-settings-*/jnt-settings/*.json
             /tmp/gheverhan-jnt-settings-*/jnt-settings/*.png
+            /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.json
+            /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.png
           if-no-files-found: error
           retention-days: 7

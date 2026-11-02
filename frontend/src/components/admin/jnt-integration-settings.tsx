@@ -50,7 +50,7 @@ const groups: Array<{ name: string; endpoint: Endpoint; description: string; fie
     description: "POST data_param dan data_sign. Menggunakan kredensial Order yang sama; pembatalan hanya boleh dijalankan dari pesanan milik toko yang masih memenuhi syarat.",
     fields: [] },
 ];
-export function JntIntegrationSettings() {
+export function JntIntegrationSettings({ ownershipMode = "platform" }: { ownershipMode?: "store" | "platform" }) {
   const [environment, setEnvironment] = useState<Env>("sandbox");
   const [endpoints, setEndpoints] = useState<Endpoints>(defaults("sandbox"));
   const [secrets, setSecrets] = useState<Secrets>({ ...emptySecrets });
@@ -116,7 +116,7 @@ export function JntIntegrationSettings() {
       <div>
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-zinc-500"><Truck size={16}/> INTEGRASI PENGIRIMAN</div>
         <h1 className="font-display text-2xl font-bold tracking-tight">J&T Express API</h1>
-        <p className="mt-1 text-sm text-zinc-500">Konfigurasi global pemilik SaaS, terpisah dari pengaturan toko seller.</p>
+        <p className="mt-1 text-sm text-zinc-500">{ownershipMode === "store" ? "Akun J&T milik toko ini. Kredensial disimpan terenkripsi pada database toko sendiri." : "Konfigurasi global pemilik SaaS, terpisah dari pengaturan toko seller."}</p>
       </div>
       <div className="rounded-full bg-zinc-100 p-1" role="group" aria-label="Lingkungan J&T">
         {(["sandbox", "production"] as const).map(env => <button key={env} type="button"
@@ -168,7 +168,7 @@ export function JntIntegrationSettings() {
       </section>)}
       {notice && <p role="status" className="rounded-xl bg-zinc-100 px-4 py-3 text-sm">{notice}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="max-w-lg text-xs text-zinc-500">Akses terbatas ke Super Admin yang ID akunnya tercantum di allowlist platform pada server. Semua perubahan dicatat pada Audit Log.</span>
+        <span className="max-w-lg text-xs text-zinc-500">{ownershipMode === "store" ? "Hanya Super Admin toko lokal yang dapat mengelola kredensial J&T. Setiap perubahan dicatat pada Audit Log toko." : "Akses terbatas ke Super Admin yang ID akunnya tercantum di allowlist platform pada server. Semua perubahan dicatat pada Audit Log."}</span>
         <button type="submit" disabled={loading || saving} className="min-h-11 rounded-xl bg-black px-6 py-3 text-sm font-semibold text-white disabled:opacity-50">
           {saving ? "Menyimpan..." : "Simpan konfigurasi"}
         </button>

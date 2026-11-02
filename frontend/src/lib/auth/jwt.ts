@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { createHash, randomUUID } from "node:crypto";
+import { getStoreProfile, parseSelfHostedConfig } from "../self-hosted/config";
 
 function getSecret(): Uint8Array {
   const value = process.env.JWT_SECRET;
@@ -18,6 +19,11 @@ function getSecret(): Uint8Array {
  * Vercel production and preview MUST use independently generated secrets.
  */
 function sessionIdentity() {
+  // Unique issuer/audience on self-hosted installations; existing Gheverhan claims stay intact.
+  if (getStoreProfile(process.env) === "self-hosted") {
+    const store = parseSelfHostedConfig(process.env);
+    return { issuer: store.sessionIssuer, audience: store.sessionAudience };
+  }
   return process.env.VERCEL_ENV === "preview"
     ? { issuer: "gheverhan-preview", audience: "gheverhan-web-preview" }
     : { issuer: "gheverhan", audience: "gheverhan-web" };

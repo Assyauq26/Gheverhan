@@ -66,7 +66,7 @@ PENDING_VERIFICATION
 
 Use control-plane transactional unique constraints + outbox + stable idempotency key. Worker background provision with step checkpoint/lease/retry, secret refs and compensation; DB-per-tenant; migrate/seed with no demo customer data. DNS pending must not report public storefront live; can offer a verified authenticated preview/status until platform wildcard DNS and TLS ready.
 
-**Domain choice:** existing agreement's default tenant subdomain is planned `<slug>.gheverhan.store` until final platform-domain ADR; **do not assume wildcard DNS/TLS is already available**. Preserve standalone `gheverhan.store` demo.
+**Domain choice:** default storefront/seller-dashboard tenant is `<slug>.jetseller.web.id` and `<slug>.jetseller.web.id/admin`. Reserve `jetseller.web.id` for marketing, `dashboard.jetseller.web.id` for Super Admin, plus `api`, `www`, `admin` and other sensitive labels; block slug collisions and all unknown hosts. **Do not assume wildcard DNS/TLS/Caddy routing is already available**. Preserve standalone `gheverhan.store` demo.
 
 ## 5. Narrow vertical-slice work packages (execute in order)
 

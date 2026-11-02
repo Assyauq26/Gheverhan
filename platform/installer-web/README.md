@@ -1,0 +1,9 @@
+# Seller installation workspace
+
+An independent static UI for the installer control plane. Serve it **from the same HTTPS origin** as `platform/installer`; no store session, commerce data, CORS bypass, localStorage token or mock authentication is used. The UI requires a real verified seller session and CSRF token from `GET /api/installer/v1/session`. If identity configuration is absent or the session is invalid, actions remain hidden and the page explains the blocker.
+
+Integrate `serveDashboard(req, res)` from `dashboard.mjs` into the control-plane HTTP server before its final 404, after handling `/api/installer/v1/*`. Only `/`, `/assets/app.js` and `/assets/styles.css` are served. The helper applies no-store, same-origin CSP, no-referrer, frame denial and nosniff headers; never proxy arbitrary filesystem paths. TLS/session configuration remains the backend's responsibility.
+
+The seller can list/create a real installation intent, inspect details, look up a one-use device code, compare the device public-key thumbprint, consent and approve pairing. Mutations carry the actual session CSRF token and create requests keep an in-memory idempotency key across uncertain retries. A selected installation must match the pairing session before confirmation is shown. No `device_code`, private key, admin password or registry credential is requested. No bootstrap command is displayed because verified distribution is not configured by this component. Pairing success is never shown as application installation or checkout readiness.
+
+`npm ci --ignore-scripts && npm test` runs DOM/HTTP and failure-state tests. DOM fixtures are explicitly synthetic contract tests; they do not establish a deployed identity provider, real VPS pairing or installer readiness. A real backend session/authorization test remains part of the stacked control-plane integration. Local preview must bind loopback and be clearly development-only; no deployment is performed by this package.

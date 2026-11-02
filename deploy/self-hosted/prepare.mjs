@@ -27,7 +27,7 @@ export function prepareFixture(target, { domain, appImage, migrationImage }) {
     writeFileSync(path.join(privateDir, name), data + '\n', { mode: 0o600, flag: 'wx' });
   }
   for (const name of ['compose.yml','Caddyfile','init-db.sh','grant-runtime.sh']) copyFileSync(path.join(here,name),path.join(target,name));
-  writeFileSync(path.join(target,'.env'), `COMPOSE_PROJECT_NAME=jsfixture_${id.slice(0,8)}\nJETSELLER_DATABASE_NAME=${database}\nJETSELLER_STORE_DOMAIN=${domain}\nJETSELLER_APP_IMAGE=${appImage}\nJETSELLER_MIGRATION_IMAGE=${migrationImage}\n`, {mode:0o600,flag:'wx'});
+  writeFileSync(path.join(target,'.env'), `COMPOSE_PROJECT_NAME=jsfixture_${id.slice(0,8)}\nJETSELLER_DATABASE_NAME=${database}\nJETSELLER_INSTALLATION_ID=${id}\nJETSELLER_STORE_DOMAIN=${domain}\nJETSELLER_APP_IMAGE=${appImage}\nJETSELLER_MIGRATION_IMAGE=${migrationImage}\n`, {mode:0o600,flag:'wx'});
   writeFileSync(path.join(target,'.jetseller-disposable'),JSON.stringify({ version:1,installation:id,production:false })+'\n',{mode:0o600,flag:'wx'});
   return { installationId:id, databaseName:database };
 }

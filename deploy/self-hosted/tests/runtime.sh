@@ -41,7 +41,8 @@ dc run --rm migrate
 dc exec -T db sh /opt/jetseller/grant-runtime.sh
 # Volume initialization is an explicit local operation; no arbitrary host mount.
 project=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env)
-docker run --rm --user 0 --entrypoint node -v "${project}_media:/media" "$app_image" -e "require('fs').chownSync('/media',1000,1000);require('fs').chmodSync('/media',0o700)"
+installation_id=$(sed -n 's/^JETSELLER_INSTALLATION_ID=//p' .env)
+docker run --rm --user 0 --entrypoint node -v "${project}_media:/media" "$app_image" -e "const fs=require('fs');fs.chownSync('/media',1000,1000);fs.chmodSync('/media',0o700);fs.writeFileSync('/media/.jetseller-installation-id',process.argv[1]+'\\n',{mode:0o600,flag:'wx'});fs.chownSync('/media/.jetseller-installation-id',1000,1000)" "$installation_id"
 dc up -d --wait app
 dc up -d caddy
 for attempt in $(seq 1 40); do

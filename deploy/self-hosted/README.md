@@ -7,7 +7,7 @@
 - `JETSELLER_STORE_PROFILE=self-hosted` is the sole activation switch.
 - The parser checks a canonical HTTPS store domain/origin, v4 installation ID and new-install-only flag.
 - Each installation uses a distinct PostgreSQL database identity, runtime and migration principals, media namespace, session issuer/audience, random JWT secret and session cookie.
-- The media root must exist as a real directory without symlink components; no paths such as `/etc`, `/root`, system dirs or path traversal are allowed.
+- The media root is checked when local storage is initialized: it must exist as a real directory without symlink components; no paths such as `/etc`, `/root`, system dirs or path traversal are allowed.
 - PostgreSQL must be reachable by a private Compose service name (`db` or `postgres`), not a public hostname. Unknown/unsafe connection-string parameters are rejected.
 - Only local storage is permitted, no Supabase service key or Vercel environment binding is accepted.
 - Initial J&T production order submission stays disabled pending seller-owned J&T integration.
@@ -35,6 +35,6 @@ Run from `frontend/`: `npm run typecheck`, `npm test`, `npm run lint` and `npm r
 
 No production migration, DNS change, seller registration page, SSH access, Go agent, signed artifact or deployment takes place here. A **separate reviewed CI/autodeploy boundary is mandatory before merging frontend changes into main** because current `helipod-autodeploy.yml` triggers on `frontend/**`. Never set the opt-in flag on production Gheverhan.
 
-The follow-up M1-02 adds a separately built immutable Docker image, private Compose PostgreSQL, durable media, Caddy templates and an explicit prestart validator. M1-03 adds independent readiness checks; M1-04 adds disposable Ubuntu recovery evidence. Verified bootstrap and install-time signature enforcement remain security gates before any seller installation.
+The follow-up M1-02 must add a separately built immutable Docker image, private Compose PostgreSQL, durable media, Caddy templates and an explicit **Node-only prestart validator**, so malformed standalone configuration is rejected before Next serves traffic. The generic Next instrumentation hook was intentionally not added because existing multi-target bundling requires a separate compatibility review. M1-03 adds independent readiness checks; M1-04 adds disposable Ubuntu recovery evidence. Verified bootstrap and install-time signature enforcement remain security gates before any seller installation.
 
 Authoritative design: `docs/self-hosted/PRD.md`, `docs/self-hosted/adr/`, and `docs/self-hosted/m1-pr-plan.md`.

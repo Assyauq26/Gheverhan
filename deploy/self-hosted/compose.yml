@@ -33,7 +33,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     secrets: [migration_config]
-    tmpfs: [/tmp:rw,noexec,nosuid,size=64m,uid=1000,gid=1000]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,uid=1000,gid=1000']
     networks: [database]
     depends_on:
       db: {condition: service_healthy}

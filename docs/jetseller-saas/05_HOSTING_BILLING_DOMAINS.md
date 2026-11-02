@@ -43,7 +43,7 @@ Definisi policy saat trial habis perlu persetujuan bisnis, usulan aman: owner ma
 
 ## 5. Domain routing dan provisioning
 
-**Default:** subdomain otomatis seperti `<slug>.gheverhan.store` hanya bila wildcard DNS/TLS dan izin domain memang tersedia; domain platform final untuk SaaS perlu ADR. `gheverhan.store` tetap demo dan tidak otomatis berubah. `jetseller.web.id` tetap landing marketing.
+**Default SaaS:** `<slug>.jetseller.web.id` untuk setiap toko setelah verified wildcard DNS/TLS dan route registry; `dashboard.jetseller.web.id` reserved untuk Super Admin, `jetseller.web.id` untuk landing, dan `gheverhan.store` tetap demo. Jika wildcard DNS/TLS belum tersedia, tampilkan status `DOMAIN_PENDING`, jangan mengklaim URL live atau beralih diam-diam ke domain lain.
 
 **Custom domain — connect existing:**
 1. Seller mengisi domain dan menerima token verifikasi terikat tenant + expiry.

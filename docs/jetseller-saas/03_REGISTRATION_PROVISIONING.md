@@ -1,5 +1,6 @@
 # 03 — Seller Registration, Onboarding & Provisioning
 
+> **Catatan prioritas:** implementasi pertama hanya frontend wizard form (lihat [10](10_FRONTEND_REGISTRATION_FIRST.md)). Seluruh API, OTP server, database tenant dan provisioning di dokumen ini adalah fase setelah PR frontend disetujui.
 > **CURRENT IMPLEMENTATION PRIORITY:** Jadikan form `landing/jetseller/daftar/index.html` yang saat ini masih placeholder sebagai form nyata setelah tersedia backend aman, lalu pastikan OTP→provisioning otomatis→storefront+seller dashboard benar-benar berfungsi. Kriteria terinci pada [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). Integrasi API J&T hanya konfigurasi **per seller di dashboard pada fase berikutnya**, bukan bagian dari form pendaftaran.
 
 ## 1. UX kontrak

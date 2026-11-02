@@ -12,7 +12,7 @@ RUN node node_modules/typescript/bin/tsc src/lib/self-hosted/config.ts src/lib/s
 FROM build AS migration
 COPY --from=build /compiled ./self-hosted
 COPY --from=build /app/self-hosted/launch.mjs ./self-hosted/launch.mjs
-RUN test -f /app/self-hosted/launch.mjs && test -f /app/self-hosted/config.mjs
+RUN chmod 755 /app && chown -R node:node /app/self-hosted && chmod -R u+rX /app/self-hosted && test -f /app/self-hosted/launch.mjs && test -f /app/self-hosted/config.mjs
 USER node
 ENTRYPOINT ["node", "self-hosted/launch.mjs", "migrate"]
 FROM build AS dependencies
@@ -31,6 +31,7 @@ COPY --from=build --chown=node:node /app/scripts/webpack ./scripts/webpack
 COPY --from=build --chown=node:node /app/next.config.js /app/package.json /app/package-lock.json ./
 COPY --from=build --chown=node:node /compiled ./self-hosted
 COPY --from=build --chown=node:node /app/self-hosted/launch.mjs ./self-hosted/launch.mjs
+RUN chmod 755 /app && chown -R node:node /app/self-hosted && chmod -R u+rX /app/self-hosted
 USER node
 EXPOSE 3000
 ENTRYPOINT ["node", "self-hosted/launch.mjs"]

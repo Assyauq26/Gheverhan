@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, copyFileSync, cpSync, existsSync, lstatSync } from 'node:fs';
+import { mkdirSync, writeFileSync, copyFileSync, cpSync, existsSync, lstatSync, chmodSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -39,7 +39,8 @@ export function prepareBuildContext(target) {
     const relative = path.relative(frontend,source), segments=relative.split(path.sep);
     return !segments.some(s => ['node_modules','.next','.git','coverage','playwright-report','test-results'].includes(s) || s.startsWith('.env') || /\.(pem|key|p12|pfx)$/.test(s) || s === '.npmrc' || s === 'credentials.json');
   }});
-  mkdirSync(path.join(target,'self-hosted'));
+  mkdirSync(path.join(target,'self-hosted'), {mode:0o755});
+  chmodSync(path.join(target,'self-hosted'),0o755);
   copyFileSync(path.join(here,'launch.mjs'),path.join(target,'self-hosted/launch.mjs'));
   copyFileSync(path.join(here,'Dockerfile'),path.join(target,'Dockerfile'));
 }

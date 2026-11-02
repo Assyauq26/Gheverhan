@@ -1,6 +1,7 @@
 import "server-only";
 import { putLocalObject, getLocalObject, removeLocalObject } from "./storage-local";
-import { assertExistingLocalStorageRoot, getStoreProfile, parseSelfHostedConfig } from "./self-hosted/config";
+import { getStoreProfile, parseSelfHostedConfig } from "./self-hosted/config";
+import { assertExistingLocalStorageRoot } from "./self-hosted/storage-root";
 
 // Existing store remains unchanged. Self-hosted is explicit, validated and local-only.
 const SELF_HOSTED = getStoreProfile(process.env) === "self-hosted"

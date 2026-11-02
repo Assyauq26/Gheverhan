@@ -9,15 +9,26 @@ export function assertLocalSetupRequest(request: Request, mutation: boolean) {
   return config;
 }
 
-export async function readSetupInput(request: Request) {
+export async function readSetupInput(request: Request, timeoutMs = 3000) {
   const type = request.headers.get('content-type')?.split(';')[0];
   if (type !== 'application/x-www-form-urlencoded') throw new LocalSetupError('INVALID_REQUEST', 400);
   if (Number(request.headers.get('content-length') || 0) > 4096) throw new LocalSetupError('INVALID_REQUEST', 413);
   const reader = request.body?.getReader();
   if (!reader) throw new LocalSetupError('INVALID_REQUEST', 400);
   let size = 0; const chunks: Uint8Array[] = [];
+  const deadline = Date.now() + Math.min(timeoutMs, 3000);
   while (true) {
-    const {done, value} = await reader.read(); if (done) break;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) { void reader.cancel().catch(() => undefined); throw new LocalSetupError('BODY_TIMEOUT', 408); }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const {done, value} = await Promise.race([
+      reader.read(),
+      new Promise<never>((_resolve, reject) => { timer = setTimeout(() => {
+        reject(new LocalSetupError('BODY_TIMEOUT', 408));
+        void reader.cancel().catch(() => undefined);
+      }, remaining); }),
+    ]).finally(() => clearTimeout(timer));
+    if (done) break;
     size += value.length;
     if (size > 4096) { await reader.cancel(); throw new LocalSetupError('INVALID_REQUEST', 413); }
     chunks.push(value);

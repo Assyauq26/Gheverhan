@@ -11,7 +11,8 @@ work=$(mktemp -d /tmp/jetseller-admin-claim.XXXXXXXX)
 dc exec -T app node -e "require('fs').mkdirSync('/tmp/admin-setup-private',{mode:0o700})"
 issue() {
  dc exec -T app node self-hosted/issue-admin.mjs --config /run/secrets/runtime_config --out "/tmp/admin-setup-private/$1.json" >/dev/null
- docker cp "$(dc ps -q app):/tmp/admin-setup-private/$1.json" "$work/claim.json"
+ # Docker archive/cp does not expose tmpfs; transfer locally into a private file, never logs.
+ dc exec -T app node -e "process.stdout.write(require('fs').readFileSync(process.argv[1]))" "/tmp/admin-setup-private/$1.json" > "$work/claim.json"
  python3 - "$work" <<'PY'
 import json,sys,urllib.parse,pathlib
 p=pathlib.Path(sys.argv[1]); claim=json.loads((p/'claim.json').read_text())['claim']

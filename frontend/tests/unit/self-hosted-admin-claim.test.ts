@@ -11,6 +11,14 @@ describe('local first administrator claim boundaries',()=>{
     expect(validateLocalAdminInput(valid())).toEqual(valid());
     for(const input of [null,[],{}, {...valid(),installationId:'foreign'}, {...valid(),claim:'short'}, {...valid(),name:' x'}, {...valid(),email:'invalid'}, {...valid(),password:'short'}, {...valid(),password:'ü'.repeat(37)}])expect(()=>validateLocalAdminInput(input)).toThrow('INVALID_REQUEST');
   });
+  it('times out and cancels a stalled streaming form without consuming a claim',async()=>{
+    let cancelled=false;
+    const body=new ReadableStream<Uint8Array>({cancel(){cancelled=true;}});
+    const request=new Request('https://store.example/admin/setup',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body,duplex:'half'} as RequestInit & {duplex:'half'});
+    const started=Date.now();
+    await expect(readSetupInput(request,25)).rejects.toThrow('BODY_TIMEOUT');
+    expect(cancelled).toBe(true); expect(Date.now()-started).toBeLessThan(2000);
+  });
   it('parses form bodies and refuses duplicates, oversized bodies and password mismatch',async()=>{
     const request=(body:string,contentType='application/x-www-form-urlencoded')=>new Request('https://store.example/admin/setup',{method:'POST',headers:{'content-type':contentType},body});
     const body=new URLSearchParams({...valid(),confirmation:valid().password}).toString();

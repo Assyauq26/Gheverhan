@@ -108,6 +108,10 @@ test('HTTPS browser OIDC login, durable PostgreSQL intent and device pairing thr
     installation_hint: installationId, public_key: await exportJWK(agent.publicKey), protocol_version: '1', os: 'ubuntu-24.04', arch: 'amd64', agent_version: '0.1.0',
   } });
   assert.equal(deviceResponse.status(), 201); const device = await deviceResponse.json();
+  // Follow the exact verification URI printed by the Go installer, not a test-only root URL.
+  assert.equal(new URL(device.verification_uri).pathname,'/hubungkan-server');
+  const verification=await page.goto(device.verification_uri);assert.equal(verification.status(),200);
+  await page.getByRole('button',{name:new RegExp(displayName)}).click();
   await page.getByLabel('Kode dari terminal VPS').fill(device.user_code); await page.getByRole('button', { name: 'Periksa kode' }).click();
   await page.locator('#pairing-confirm:not([hidden])').waitFor();
   assert.equal((await page.content()).includes(device.device_code), false);

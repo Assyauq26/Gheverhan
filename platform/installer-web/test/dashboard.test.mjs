@@ -122,6 +122,7 @@ test('static HTTP handler has fixed allowlist and same-origin CSP', async t => {
   const page = await fetch(origin); assert.equal(page.status, 200);
   assert.match(page.headers.get('content-security-policy'), /connect-src 'self'/);
   assert.equal(page.headers.get('cache-control'), 'no-store');
+  const pairingPage=await fetch(origin+'/hubungkan-server');assert.equal(pairingPage.status,200);assert.equal(await pairingPage.text(),html);
   assert.equal((await fetch(origin + '/PRODUCT.md')).status, 404);
   assert.equal((await fetch(origin + '/api/installer/v1/session')).status, 404);
 });

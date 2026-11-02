@@ -42,8 +42,13 @@ export async function POST(req: Request) {
       if (!cfg.seller || !service || !value.destinationDistrictCode || !value.weightGram) throw new HttpError("Lengkapi gudang, persetujuan EZ yang berlaku, kecamatan tujuan dan berat uji", 422);
       const mapping = await getVerifiedJntDistrict(value.destinationDistrictCode);
       // Read-only Check Fee only. Never import Create Order or Cancellation here.
-      await checkJntRate({ originSite: cfg.seller.warehouse.originSite, destinationArea: mapping.destinationArea,
+      const rates = await checkJntRate({ originSite: cfg.seller.warehouse.originSite, destinationArea: mapping.destinationArea,
         weightGram: value.weightGram, productType: "EZ" }, cfg);
+      // HTTP 200 with no matching tariff is NOT proof that Check Fee works.
+      if (rates.length !== 1 || rates[0].courier !== "J&T Express" || rates[0].service !== "EZ" ||
+          !Number.isSafeInteger(rates[0].cost) || rates[0].cost < 0) {
+        throw new HttpError("J&T belum mengembalikan tarif EZ yang valid", 502);
+      }
       status = "CONNECTED";
     }
     await writeAudit({ userId: user.id, action: "jnt.integration.tested", entity: "JntPlatformIntegration",

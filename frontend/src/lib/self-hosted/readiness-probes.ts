@@ -84,7 +84,7 @@ export async function probeStorage(config: SelfHostedStoreConfig, signal: AbortS
     // Access checks under root can otherwise mask a read-only-permission fixture.
     if (!info.isDirectory() || !(info.mode & 0o444) || !(info.mode & 0o222) || !(info.mode & 0o111)) throw new Error("Storage unavailable");
     signal.throwIfAborted();
-    const marker = await open(`/proc/self/fd/${directory.fd}/.jetseller-installation-id`, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const marker = await open(`/proc/self/fd/${directory.fd}/.jetseller-installation-id`, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     try {
       const info = await marker.stat();
       if (!info.isFile() || info.size !== config.installationId.length + 1 || (info.mode & 0o077)) throw new Error("Storage unavailable");

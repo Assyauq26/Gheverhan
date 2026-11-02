@@ -5,6 +5,7 @@ import { parseSelfHostedConfig } from "@/lib/self-hosted/config";
 import { chmod, mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const id = "550e8400-e29b-41d4-a716-446655440000";
 const db = "js_" + id.replace(/-/g, "");
@@ -132,6 +133,17 @@ describe.skipIf(process.platform !== "linux")("real Linux media mount probe", ()
       await rm(marker); await writeFile(path.join(root, "other"), id + "\n", { mode: 0o600 });
       await symlink(path.join(root, "other"), marker);
       await expect(probeStorage(config, new AbortController().signal)).rejects.toThrow();
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+  it("rejects a FIFO marker immediately and recovers after valid marker replacement", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "jetseller-ready-"));
+    const marker = path.join(root, ".jetseller-installation-id");
+    const config = { ...parseSelfHostedConfig(valid()), storageRoot: root };
+    try {
+      execFileSync("mkfifo", ["-m", "600", marker]);
+      await expect(probeStorage(config, new AbortController().signal)).rejects.toThrow();
+      await rm(marker); await writeFile(marker, id + "\n", { mode: 0o600 });
+      await expect(probeStorage(config, new AbortController().signal)).resolves.toBeUndefined();
     } finally { await rm(root, { recursive: true, force: true }); }
   });
   it("honors cancellation without touching the mount", async () => {

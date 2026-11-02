@@ -1,5 +1,7 @@
 # JetSeller SaaS — Master Development Plan
 
+> **URUTAN IMPLEMENTASI TERBARU — 2026-11-02:** **PR PERTAMA hanya frontend form pendaftaran seller** (UI/UX/validasi/client-side preview), sebelum membuat backend OTP, tenant, storefront maupun dashboard. Lihat **[10 — Frontend Registration First](10_FRONTEND_REGISTRATION_FIRST.md)** dan [Prompt Codex frontend-only](CODEX_IMPLEMENTATION_PROMPT.md). Target end-to-end yang lebih besar tetap ada di [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md), tetapi dikerjakan **SETELAH frontend disetujui**.
+
 > **CURRENT PRIORITY — 2026-11-02:** implementasi nyata **form pendaftaran seller + OTP → generate tenant/database, storefront dan dashboard seller otomatis**. Mulai dari [09 — MVP Seller Signup & Auto Store](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). **Integrasi J&T dimiliki dan dikelola masing-masing tenant** melalui dashboard seller; tidak ada kredensial API J&T operasional global milik Super Admin. Billing lanjutan, pembelian custom domain, dan integrasi J&T adalah fase berikutnya.
 
 **Status:** PLANNING / docs only. **Tanggal:** 2026-11-02. **Baseline diaudit:** `Assyauq26/Gheverhan` pada `main` commit `fdf8d18ba90450fa1fe3d9c9392f1fc0eeefd96a`. Semua kode dan konfigurasi wajib diaudit ulang pada HEAD saat implementasi.
@@ -23,8 +25,9 @@
 6. [06 — J&T API resmi, order dan tracking](06_JNT_OFFICIAL_INTEGRATION.md)
 7. [07 — Data contract, API, security & QA](07_DATA_API_SECURITY_TESTS.md)
 8. [08 — Sprint backlog, gates, rollback dan risiko](08_ROADMAP_RELEASE.md)
-9. **[09 — CURRENT MVP: Seller signup → auto storefront + dashboard](09_MVP_SELLER_SIGNUP_AUTO_STORE.md)**
-10. [CODEX_IMPLEMENTATION_PROMPT — prompt siap salin](CODEX_IMPLEMENTATION_PROMPT.md)
+9. [09 — Target MVP end-to-end setelah frontend](09_MVP_SELLER_SIGNUP_AUTO_STORE.md)
+10. **[10 — FIRST PR: Frontend form pendaftaran seller](10_FRONTEND_REGISTRATION_FIRST.md)**
+11. **[CODEX_IMPLEMENTATION_PROMPT — prompt Codex frontend dulu](CODEX_IMPLEMENTATION_PROMPT.md)**
 
 **Prioritas bila ada konflik:** keamanan/izin produksi dan kontrak eksternal > kode aktual pada HEAD > keputusan produk dalam dokumen ini > catatan repo historis. Jangan mengasumsikan rencana = fitur yang sudah ada.
 

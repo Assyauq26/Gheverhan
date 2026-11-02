@@ -23,9 +23,10 @@ COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/.next ./.next
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/src/modules/regions/data ./src/modules/regions/data
 COPY --from=build --chown=node:node /app/scripts/security ./scripts/security
 COPY --from=build --chown=node:node /app/scripts/webpack ./scripts/webpack
-COPY --from=build --chown=node:node /app/next.config.js /app/package.json ./
+COPY --from=build --chown=node:node /app/next.config.js /app/package.json /app/package-lock.json ./
 COPY --from=build --chown=node:node /compiled ./self-hosted
 COPY --from=build --chown=node:node /app/self-hosted/launch.mjs ./self-hosted/launch.mjs
 USER node

@@ -16,6 +16,9 @@ cd "$fixture_root/stack"
 test -f .jetseller-disposable
 # Bind-backed Compose secrets use host ownership; grant only the container UID.
 sudo chown 1000:1000 private/runtime.json private/migration.json
+pg_image=$(node -p "JSON.parse(require('fs').readFileSync('$repo/deploy/self-hosted/images.lock.json','utf8')).postgres.image")
+pg_uid=$(docker run --rm --entrypoint id "$pg_image" -u postgres)
+sudo chown "$pg_uid:$pg_uid" private/bootstrap_password private/migration_password private/runtime_password
 cat > Caddyfile <<'CADDY'
 {
  admin off

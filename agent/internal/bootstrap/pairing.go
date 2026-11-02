@@ -14,12 +14,15 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
 )
 
 var ErrPairing = errors.New("pairing unavailable, expired or denied")
+var ErrAlreadyPaired = errors.New("device binding already recorded locally")
+var errPairingExpired = errors.New("persisted pairing session expired")
 var codePattern = regexp.MustCompile(`^[A-HJ-NP-Z2-9]{5}-[A-HJ-NP-Z2-9]{5}$`)
 var secretPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{20,512}$`)
 
@@ -51,6 +54,7 @@ type DeviceSession struct {
 	ControlOrigin   string    `json:"local_control_origin,omitempty"`
 }
 type Credential struct {
+	ControlOrigin   string   `json:"local_control_origin,omitempty"`
 	ManagementNonce string   `json:"management_nonce,omitempty"`
 	InstallationID  string   `json:"installation_id"`
 	DeviceID        string   `json:"device_id"`
@@ -124,7 +128,21 @@ func (c *PairingClient) request(ctx context.Context, endpoint string, body any, 
 func (c *PairingClient) RetryAfter() time.Duration { return c.retryAfter }
 func (c *PairingClient) Start(ctx context.Context, state *State) (DeviceSession, error) {
 	var session DeviceSession
-	if state.Journal.Phase != "PREFLIGHT_OK" {
+	if e := c.reconcileCredential(state); e != nil {
+		return session, e
+	}
+	if _, e := state.root.Lstat("pairing.json"); e == nil {
+		pending, resumeErr := c.Resume(state)
+		if resumeErr == nil {
+			return pending, nil
+		}
+		if !errors.Is(resumeErr, errPairingExpired) {
+			return session, resumeErr
+		}
+	} else if !os.IsNotExist(e) {
+		return session, ErrState
+	}
+	if state.Journal.Phase != "PREFLIGHT_OK" && state.Journal.Phase != "PAIR_EXPIRED" {
 		return session, ErrPairing
 	}
 	body := struct {
@@ -154,16 +172,93 @@ func (c *PairingClient) Start(ctx context.Context, state *State) (DeviceSession,
 	}
 	return session, nil
 }
+
+// reconcileCredential handles the durable boundary after credential write and
+// before journal finalization. This records an existing binding only; it does
+// not renew or claim that an expired credential is currently authorized.
+func (c *PairingClient) reconcileCredential(state *State) error {
+	raw, err := state.readPrivate("credential.json", 16384)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return ErrState
+	}
+	var credential Credential
+	if json.Unmarshal(raw, &credential) != nil || c.validateCredential(state, credential, false) != nil {
+		return ErrState
+	}
+	// Upgrade only the interrupted old checkpoint whose origin remains bound
+	// in its private pairing file. Never infer an absent origin from CLI input.
+	if credential.ControlOrigin == "" {
+		pending, err := state.readPrivate("pairing.json", 8192)
+		var saved DeviceSession
+		if err != nil || json.Unmarshal(pending, &saved) != nil || saved.ControlOrigin != c.origin {
+			return ErrState
+		}
+		credential.ControlOrigin = saved.ControlOrigin
+		if state.writePrivate("credential.json", credential) != nil {
+			return ErrState
+		}
+	}
+	if credential.ControlOrigin != c.origin {
+		return ErrState
+	}
+	if state.Journal.Phase == "PREFLIGHT_OK" {
+		var session DeviceSession
+		pending, err := state.readPrivate("pairing.json", 8192)
+		if err != nil || json.Unmarshal(pending, &session) != nil || session.ControlOrigin != c.origin {
+			return ErrState
+		}
+		if state.Record("PAIR_PENDING") != nil {
+			return ErrState
+		}
+	}
+	if state.Journal.Phase == "PAIR_PENDING" && state.Record("PAIRED") != nil {
+		return ErrState
+	}
+	if state.Journal.Phase != "PAIRED" {
+		return ErrState
+	}
+	if err := state.root.Remove("pairing.json"); err != nil && !os.IsNotExist(err) {
+		return ErrState
+	}
+	return ErrAlreadyPaired
+}
 func (c *PairingClient) Resume(state *State) (DeviceSession, error) {
 	var session DeviceSession
+	if err := c.reconcileCredential(state); err != nil {
+		return session, err
+	}
 	raw, err := state.readPrivate("pairing.json", 8192)
-	if err != nil || json.Unmarshal(raw, &session) != nil || session.ControlOrigin != c.origin || time.Now().After(session.ExpiresAt) || !secretPattern.MatchString(session.DeviceCode) || !secretPattern.MatchString(session.Nonce) || session.Interval < 5 || session.Interval > 60 {
+	if err != nil || json.Unmarshal(raw, &session) != nil || session.ControlOrigin != c.origin || session.SessionID == "" || !codePattern.MatchString(session.UserCode) || !secretPattern.MatchString(session.DeviceCode) || !secretPattern.MatchString(session.Nonce) || session.Interval < 5 || session.Interval > 60 || session.ExpiresAt.IsZero() || session.ExpiresAt.After(time.Now().Add(10*time.Minute)) {
+		return session, ErrPairing
+	}
+	if state.Journal.Phase == "PREFLIGHT_OK" || (state.Journal.Phase == "PAIR_EXPIRED" && time.Now().Before(session.ExpiresAt)) {
+		if state.Record("PAIR_PENDING") != nil {
+			return session, ErrState
+		}
+	}
+	if state.Journal.Phase != "PAIR_PENDING" && state.Journal.Phase != "PAIR_EXPIRED" {
+		return session, ErrPairing
+	}
+	if !time.Now().Before(session.ExpiresAt) {
+		if state.Journal.Phase == "PAIR_PENDING" && state.Record("PAIR_EXPIRED") != nil {
+			return session, ErrState
+		}
+		return session, errPairingExpired
+	}
+	if state.Journal.Phase != "PAIR_PENDING" {
 		return session, ErrPairing
 	}
 	return session, nil
 }
 func (c *PairingClient) Poll(ctx context.Context, state *State, session DeviceSession) (bool, error) {
-	if !time.Now().Before(session.ExpiresAt) {
+	saved, err := c.Resume(state)
+	if errors.Is(err, ErrAlreadyPaired) {
+		return true, nil
+	}
+	if err != nil || saved.DeviceCode != session.DeviceCode || saved.Nonce != session.Nonce || saved.SessionID != session.SessionID {
 		return false, ErrPairing
 	}
 	proof, err := PairingProof(state.PrivateKey(), c.origin, session.DeviceCode, session.Nonce, time.Now())
@@ -184,20 +279,10 @@ func (c *PairingClient) Poll(ctx context.Context, state *State, session DeviceSe
 	if status != 200 {
 		return false, ErrPairing
 	}
-	expiry, err := time.Parse(time.RFC3339, credential.ExpiresAt)
-	if err != nil || !expiry.After(time.Now()) || expiry.After(time.Now().Add(10*time.Minute)) || credential.InstallationID != state.Identity.InstallationID || credential.Thumbprint != Thumbprint(state.PrivateKey()) || credential.TokenType != "jetseller-pop" || credential.DeviceID == "" || len(credential.Token) < 32 || len(credential.Token) > 8192 {
+	if c.validateCredential(state, credential, true) != nil {
 		return false, ErrPairing
 	}
-	allowed := map[string]bool{"report:heartbeat": true, "install:progress": true, "release:read": true}
-	if len(credential.Scopes) == 0 || len(credential.Scopes) > 3 {
-		return false, ErrPairing
-	}
-	for _, scope := range credential.Scopes {
-		if !allowed[scope] {
-			return false, ErrPairing
-		}
-		delete(allowed, scope)
-	}
+	credential.ControlOrigin = c.origin
 	if state.writePrivate("credential.json", credential) != nil || state.Record("PAIRED") != nil {
 		return false, ErrState
 	}
@@ -205,6 +290,24 @@ func (c *PairingClient) Poll(ctx context.Context, state *State, session DeviceSe
 		return false, ErrState
 	}
 	return true, nil
+}
+
+func (c *PairingClient) validateCredential(state *State, credential Credential, current bool) error {
+	expiry, err := time.Parse(time.RFC3339, credential.ExpiresAt)
+	if err != nil || (current && !expiry.After(time.Now())) || expiry.After(time.Now().Add(10*time.Minute)) || credential.InstallationID != state.Identity.InstallationID || credential.Thumbprint != Thumbprint(state.PrivateKey()) || credential.TokenType != "jetseller-pop" || credential.DeviceID == "" || len(credential.Token) < 32 || len(credential.Token) > 8192 {
+		return ErrPairing
+	}
+	allowed := map[string]bool{"report:heartbeat": true, "install:progress": true, "release:read": true}
+	if len(credential.Scopes) == 0 || len(credential.Scopes) > 3 {
+		return ErrPairing
+	}
+	for _, scope := range credential.Scopes {
+		if !allowed[scope] {
+			return ErrPairing
+		}
+		delete(allowed, scope)
+	}
+	return nil
 }
 
 // This fixed pairing proof profile uses standard Ed25519 JOSE signing. It is

@@ -27,3 +27,9 @@ Independent initial verifier/root distribution, approved signing custody and key
 Requirements: FR-02/03/04, NFR-03/04/05; partial A03-A12/A21/A28 groundwork only. Store Installed is not Store Ready to Sell. Rollback: remove this optional CLI/tooling; preserve private state and all seller data. No production rollout or public release is authorized by this branch.
 
 References: [Cosign verification](https://docs.sigstore.dev/cosign/verifying/verify/), [Go os.Root](https://pkg.go.dev/os#Root), [RFC8628](https://www.rfc-editor.org/rfc/rfc8628), [RFC9449](https://www.rfc-editor.org/rfc/rfc9449).
+
+## Interrupted pairing recovery
+
+A valid private pending session is resumed rather than replaced. Expired pending sessions checkpoint PAIR_EXPIRED and may restart with the same installation identity/key and original control origin. A saved session written before its journal checkpoint is reconciled before polling. A saved validated credential written before PAIRED is finalized locally without a second token exchange; an expired saved credential records only the historical binding and does not claim current authorization or renew it.
+
+Older interrupted credentials without the new local origin field can be recovered only when a matching private pending-session origin remains available. An older completed credential lacking both origin and pending session fails closed for explicit recovery; the CLI never guesses its origin or silently generates a new key.

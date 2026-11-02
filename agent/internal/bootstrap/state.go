@@ -137,8 +137,8 @@ func (s *State) PrivateKey() ed25519.PrivateKey {
 	return ed25519.NewKeyFromSeed(seed)
 }
 func (s *State) Record(phase string) error {
-	allowed := map[string]string{"INITIALIZED": "PREFLIGHT_OK", "PREFLIGHT_OK": "PAIR_PENDING", "PAIR_PENDING": "PAIRED"}
-	if !(s.Journal.Phase == "" && phase == "INITIALIZED") && allowed[s.Journal.Phase] != phase {
+	allowed := map[string]map[string]bool{"INITIALIZED": {"PREFLIGHT_OK": true}, "PREFLIGHT_OK": {"PAIR_PENDING": true}, "PAIR_PENDING": {"PAIRED": true, "PAIR_EXPIRED": true}, "PAIR_EXPIRED": {"PAIR_PENDING": true}}
+	if !(s.Journal.Phase == "" && phase == "INITIALIZED") && !allowed[s.Journal.Phase][phase] {
 		return ErrState
 	}
 

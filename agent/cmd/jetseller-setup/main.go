@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
@@ -77,6 +78,10 @@ func run() error {
 		session, err = client.Resume(state)
 	} else {
 		session, err = client.Start(ctx, state)
+	}
+	if errors.Is(err, bootstrap.ErrAlreadyPaired) {
+		fmt.Println("Device binding recorded locally; credential refresh may be required. No store deployment performed.")
+		return nil
 	}
 	if err != nil {
 		return err

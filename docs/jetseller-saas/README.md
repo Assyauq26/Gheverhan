@@ -6,7 +6,7 @@
 
 ## Kontrak produk yang sudah diputuskan
 
-1. `jetseller.web.id` adalah landing dan form pendaftaran publik **seller platform**. Hanya tim JetSeller/Super Admin yang boleh mengakses **dashboard platform**, rencana host `dashboard.jetseller.web.id` (host final perlu verifikasi DNS).
+1. `jetseller.web.id` adalah landing dan form pendaftaran publik **seller platform**. Hanya tim JetSeller/Super Admin yang boleh mengakses **dashboard platform**, host reserved `dashboard.jetseller.web.id`. Default tenant storefront adalah `<slug>.jetseller.web.id`, dan dashboard sellernya `<slug>.jetseller.web.id/admin`; semuanya harus diverifikasi DNS/TLS sebelum dinyatakan live.
 2. Seller bukan Super Admin JetSeller. Setelah OTP seller diverifikasi, sistem **otomatis membuat tenant**, identitas owner, **storefront** dan **dashboard seller** dari satu aplikasi/kode terpusat.
 3. Dashboard seller mempunyai menu Hosting & Domain: trial hosting 30 hari, upgrade/perpanjangan paket, subdomain platform, sambungkan/beli domain sendiri. Pemilihan paket **setelah** tenant dibuat; tidak menjadi penghalang signup. Pembelian domain pihak ketiga tidak boleh diklaim otomatis sebelum registrar dan pembayaran terintegrasi.
 4. Setiap seller memiliki data/pengguna/konfigurasi sendiri dan target **database PostgreSQL tenant terpisah**. Sistem manajemen (control plane) terpisah dari database seller; satu sumber kode Next.js memperbarui seluruh tenant melalui rilis terkoordinasi.

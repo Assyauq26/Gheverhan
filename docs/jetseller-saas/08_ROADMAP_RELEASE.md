@@ -1,13 +1,18 @@
 # 08 — Sprint Roadmap, Work Packages, Release Gates & Risks
 
+> **Roadmap terbaru (2026-11-02):** Semua pekerjaan diarahkan lebih dulu pada **seller signup real form/OTP → automatic isolated database, storefront dan seller dashboard**. Detail acceptance/urutan PR [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). **J&T tenant-managed/BYOK only**, dikerjakan setelah MVP toko otomatis terbukti. Hosting berbayar, pembelian custom domain, full commerce dan Super Admin advanced dipindahkan ke fase lanjut; jangan membuat pendaftaran tergantung J&T atau pembayaran.
+
 ## 1. Execution order: do not start with visual dashboard alone
 
 Workstream dependencies:
 ```text
-Inventory/baseline -> Architecture spike -> Control plane + auth -> Provisioning
-   -> Tenant routing -> Seller Dashboard + legacy feature adaptation
-   -> Hosting/trial/billing/domain -> J&T multi-tenant adaptation
-   -> End-to-end hardening + phased SaaS release
+Inventory/baseline -> architecture/2 disposable-DB spike
+   -> minimal control plane + seller OTP auth -> idempotent provisioning
+   -> trusted host/domain + isolated storefront and seller-dashboard shell
+   -> connect real /daftar/ form to backend -> E2E seller signup + store (MVP FIRST)
+   -> seller catalog/Appearance adaptation
+   -> hosting paid billing / custom domains / tenant-owned J&T (LATER)
+   -> advanced Super Admin operations -> phased SaaS release
 ```
 Parallelization is possible only for isolated design/contract tasks; no conflicting schema changes in multiple branches.
 
@@ -24,15 +29,16 @@ Parallelization is possible only for isolated design/contract tasks; no conflict
 | S2 Signup | S2-A | Seller registration + OTP isolated from customer signup | OTP replay/rate limit/concurrency test |
 | S2 Worker | S2-B | Provisioning jobs/outbox/leases/idempotent DB+schema+seed | kill/retry 3 points, no duplicates, trace |
 | S2 Trial | S2-C | Trial 30d on tenant ready + status/notifications | fixed-clock boundary, never reset |
-| S2 Routing | S2-D | Wildcard subdomain + tenant SSR/API/storage context | tenant A/B + demo smoke, DNS/TLS review |
-| S3 Seller | S3-A | Seller dashboard shell, onboarding steps + setup checklist | responsive nav, owner/staff/customer isolation |
+| S2 Routing | S2-D | Trusted host/subdomain + tenant SSR/API/storage **and initial storefront + authenticated seller-dashboard shell** | tenant A/B own brand and empty-state storefront, owner dashboard access, demo smoke, DNS/TLS review |
+| S2 Signup UI | S2-E | Connect real `jetseller.web.id/daftar/` form, OTP, status UI and redirect to generated storefront/dashboard | E2E landing→OTP→provision→seller `/admin` + public store; no placeholder/fake signup |
+| S3 Seller | S3-A | Expand seller dashboard onboarding wizard + store-profile editor; initial seller shell is already delivered in S2-D | responsive nav, owner/staff/customer isolation |
 | S3 Commerce | S3-B | Per-tenant product, appearance, cart, checkout, order core adaptation | DB isolation + commerce concurrency |
 | S3 Staff | S3-C | Staff roles, orders, warehouse, merchant payment configuration | server permission tests and audit |
 | S4 Plans | S4-A | Super Admin plan catalog, entitlement, storage/resource quota | quota concurrency and upgrade tests |
 | S4 Billing | S4-B | Billing invoices, trial expiration/grace, verified PSP sandbox | signed webhook replay and duplicate check |
 | S4 Domains | S4-C | Domain connect: challenge, routing, TLS/renewal and recovery | domain takeover/rollback tests |
 | S4 Registrar | S4-D | **Optional/gated:** Buy domain official registrar contract | only after agreements, pricing and E2E sandbox |
-| S5 Carrier | S5-A | J&T account resolver managed/BYOK ADR + tenant vault refs | no shared secret leakage, platform permission |
+| S5 Carrier | S5-A | **Seller-owned official J&T account only**: credential form in seller dashboard, per-tenant vault refs and secure resolver, no shared platform API credentials | tenant owner-only configuration, seller A/B credential isolation, no global J&T fallback |
 | S5 Shipping | S5-B | Tenant-specific area mapping, tariff quote and weight validation | EZ only unless vendor UAT, 2-tenant tests |
 | S5 Fulfillment | S5-C | Durable create AWB, UNKNOWN reconciliation, tracking/cancel per tenant | no duplicate AWB, refund/stock safety |
 | S5 UAT | S5-D | Carrier official sandbox/UAT package and operator signoff | no live order without separate authorization |
@@ -59,7 +65,7 @@ Sprint numbers are **dependency groups**, not commitments to a calendar or fixed
 
 **Gate G1 Foundation staging**: approve control-plane schema, 2-tenant DB prototype, migrations/backup, threat-model tests.
 
-**Gate G2 Seller signup**: staging E2E OTP→tenant job→dashboard→storefront (disabled checkout) with no duplicate tenant.
+**Gate G2 Seller signup (PRIMARY MILESTONE)**: staging E2E REAL landing registration form `/daftar/` → email OTP → isolated tenant DB/job → tenant-owned storefront on verified subdomain + authenticated seller-dashboard shell, correct tenant brand, no cross-tenant leakage, no duplicate tenant; checkout disabled until independently ready. **Do not start paid billing or live J&T before G2 evidence passes.**
 
 **Gate G3 Commercial operations**: isolated commerce/payment/stock, hosting trial/billing/domain, webhook validation and entitlement.
 
@@ -88,7 +94,7 @@ No gate can be inferred from a single CI success. Mark facts with `PASS`, `FAIL`
 | Prisma connection explosion per tenant DB on 1 VPS | Critical | S0 benchmark + bounded pools, DB connection gateway, review topology |
 | Cross-tenant data leakage in SSR/cache/API | Critical | deny-by-default tenant context, 2 DB isolation tests, security signoff |
 | Legacy demo breaks during routing/auth migration | Critical | compatibility bridge, auth/cookie migration & independent smoke |
-| J&T platform shared credential not contractually allowed | Critical | legal/vendor agreement, BYOK fallback, feature gate |
+| J&T tenant credentials cross-contamination or missing official per-seller permission | Critical | **tenant-owned only**, no global fallback, vault isolation, per-seller vendor approval/UAT, checkout disabled by default |
 | Billing events cause duplicate entitlement/invoices | High | verified webhook, idempotent ledger, reconciliation |
 | Domain hijack/SSL mismatch | High | DNS challenge+reverification, host allowlist, cert lifecycle |
 | Automatic AWB retry creates duplicates | Critical | durable intent, UNKNOWN state, manual reconciliation |

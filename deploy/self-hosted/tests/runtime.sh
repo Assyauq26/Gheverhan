@@ -57,6 +57,17 @@ for route in / /admin /api/v1/health; do
 done
 dc exec -T app node -e "const fs=require('fs');fs.writeFileSync('/var/lib/jetseller/media/persistence-fixture','synthetic-media');if(fs.existsSync('/run/secrets/migration_config'))process.exit(1)"
 dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' .env)" -v ON_ERROR_STOP=1 -c "CREATE TABLE fixture_persistence (id integer primary key, label text); INSERT INTO fixture_persistence VALUES (1,'synthetic');" >/dev/null
+dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' .env)" -v ON_ERROR_STOP=1 -c 'GRANT SELECT,INSERT,UPDATE,DELETE ON fixture_persistence TO js_runtime' >/dev/null
+dc exec -T db sh -s <<'ROLECHECK'
+set -eu
+export PGPASSWORD=$(cat /run/secrets/runtime_password)
+psql -h 127.0.0.1 -U js_runtime -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "UPDATE fixture_persistence SET label='synthetic' WHERE id=1; SELECT count(*) FROM _prisma_migrations;" >/dev/null
+for sql in 'CREATE TABLE must_not_exist(id int)' 'CREATE ROLE must_not_exist' 'DELETE FROM _prisma_migrations'; do
+ if psql -h 127.0.0.1 -U js_runtime -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "$sql" >/dev/null 2>&1; then
+  echo 'Runtime privilege separation failed'; exit 1
+ fi
+done
+ROLECHECK
 dc restart db app
 dc up -d --wait app
 dc exec -T app node -e "if(require('fs').readFileSync('/var/lib/jetseller/media/persistence-fixture','utf8')!=='synthetic-media')process.exit(1)"

@@ -60,6 +60,7 @@ for route in / /admin /api/v1/health /api/v1/ready; do
  curl --noproxy '*' --silent --show-error --fail --cacert "$fixture_root/ca.pem" --resolve store.fixture.example:443:127.0.0.1 "https://store.fixture.example$route" > /dev/null
 done
 echo "Fixture app plus internal-CA HTTPS startup seconds=$((SECONDS-startup_started))"
+bash "$repo/deploy/self-hosted/tests/admin-setup.sh" "$fixture_root/stack"
 # A live process is not a ready database-backed application. Probe actual local
 # PostgreSQL failure, then restore it before persistence/recovery scenarios.
 dc stop db >/dev/null

@@ -3,7 +3,8 @@ import { register } from "@/instrumentation";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { assertExistingLocalStorageRoot, getStoreProfile, parseSelfHostedConfig } from "@/lib/self-hosted/config";
+import { getStoreProfile, parseSelfHostedConfig } from "@/lib/self-hosted/config";
+import { assertExistingLocalStorageRoot } from "@/lib/self-hosted/storage-root";
 
 const id = "550e8400-e29b-41d4-a716-446655440000";
 const db = "js_" + id.replace(/-/g, "");

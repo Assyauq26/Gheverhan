@@ -2,6 +2,7 @@ import { constants } from "node:fs";
 import { mkdir, realpath, lstat, open, unlink } from "node:fs/promises";
 import path from "node:path";
 import { resolveStorageObject } from "./storage-path";
+import { assertExistingLocalStorageRoot, getStoreProfile } from "./self-hosted/config";
 
 const MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" };
 
@@ -9,6 +10,7 @@ async function location(reference: string, app: string, create: boolean) {
   const object = resolveStorageObject(reference, app);
   const configured = process.env.STORAGE_LOCAL_ROOT;
   if (!configured || !path.isAbsolute(configured)) throw new Error("Local storage root must be absolute");
+  if (getStoreProfile(process.env) === "self-hosted") assertExistingLocalStorageRoot(configured);
   const root = await realpath(configured);
   const segments = object.key.split("/");
   const name = segments.pop()!;

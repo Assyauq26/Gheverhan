@@ -18,7 +18,7 @@ function setup() {
   s.user = { id: "local-admin", roles: ["Admin"], permissions: ["shipping.update"] };
   s.state = { enabled: true, config: { seller: { warehouse: { originSite: "SYNTHETIC CITY" },
     services: [{ code: "EZ", validUntil: "2030-01-01T00:00:00Z" }] }, credentials: { orderKey: "NEVER-RETURN-THIS-KEY" } } };
-  s.rate.mockResolvedValue([{ service: "EZ", cost: 10000 }]);
+  s.rate.mockResolvedValue([{ courier: "J&T Express", service: "EZ", cost: 10000 }]);
 }
 function request(body: unknown, origin = "https://store.example") {
   return new Request("https://store.example/api/v1/admin/integrations/jnt/test", {
@@ -49,6 +49,23 @@ describe("local seller connection probes", () => {
     const text = await result.text(); expect(result.status).toBe(200); expect(text).toContain("CONNECTED"); expect(text).not.toContain("NEVER-RETURN");
     expect(s.rate).toHaveBeenCalledWith(expect.objectContaining({ originSite: "SYNTHETIC CITY", destinationArea: "SYNTHETIC DISTRICT" }), s.state.config);
   });
+  it("does not report CONNECTED on empty, mismatched or invalid Check Fee results", async () => {
+    setup();
+    const req = () => request({ environment: "sandbox", endpoint: "tariff", destinationDistrictCode: "31.71.01", weightGram: 1000 });
+    for (const result of [
+      [],
+      [{ courier: "J&T Express", service: "HBO", cost: 10000 }],
+      [{ courier: "J&T Express", service: "EZ", cost: -1 }],
+      [{ courier: "J&T Express", service: "EZ", cost: 10000 }, { courier: "J&T Express", service: "EZ", cost: 12000 }],
+    ]) {
+      s.rate.mockResolvedValueOnce(result);
+      const response = await POST(req());
+      expect(response.status).toBe(502);
+      expect(await response.text()).not.toContain("CONNECTED");
+    }
+    expect(s.audit).not.toHaveBeenCalled();
+  });
+
   it("rejects ID/credential injection and Production calls without server approval", async () => {
     setup();
     expect((await POST(request({ environment: "sandbox", endpoint: "tariff", installationId: "other-install" }))).status).toBe(422);

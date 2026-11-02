@@ -71,6 +71,6 @@ AC-P10: Demo `gheverhan.store` dan landing `jetseller.web.id` lolos regresi sete
 
 ## 7. Dependensi/persetujuan belum final
 
-- Host final control-plane/dashboard seller dan domain root subdomain platform (saat ini usulan `<slug>.gheverhan.store`; evaluasi migrasi ke domain JetSeller).
+- **Domain tenant default:** `<slug>.jetseller.web.id` sesuai keputusan platform; `jetseller.web.id` adalah landing dan `dashboard.jetseller.web.id` khusus Super Admin. Wajib reservasi slug/host platform (`dashboard`, `www`, `api`, `admin`, dll.), verifikasi wildcard DNS/TLS/Caddy routing sebelum dinyatakan live. `gheverhan.store` tetap demo sendiri.
 - Registrar/domain reseller, jenis pembayaran billing SaaS, harga plan, pajak, dispute/refund, persyaratan akun/API resmi J&T **per seller**, jenis database-per-tenant dan backup/storage budget. **Model credential tenant-managed/BYOK sudah diputuskan; tidak perlu ADR memilih shared platform credential.**
 - Super Admin harus menyetujui desain kontrol, UX dan harga sebelum go-live. Detail tersebut **OPEN DECISION**, bukan scope yang diam-diam dianggap selesai.

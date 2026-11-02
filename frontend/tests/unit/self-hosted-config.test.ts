@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getStoreProfile, parseSelfHostedConfig } from "@/lib/self-hosted/config";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { assertExistingLocalStorageRoot, getStoreProfile, parseSelfHostedConfig } from "@/lib/self-hosted/config";
 
 const id = "550e8400-e29b-41d4-a716-446655440000";
 const db = "js_" + id.replace(/-/g, "");
@@ -114,6 +117,21 @@ describe("self-hosted opt-in configuration", () => {
     expect(() => parseSelfHostedConfig({ ...env, DIRECT_URL: env.DATABASE_URL })).toThrow("database role separation");
     const samePassword = env.DIRECT_URL.replace("migration-fixture", "runtime-fixture");
     expect(() => parseSelfHostedConfig({ ...env, DIRECT_URL: samePassword })).toThrow("database role separation");
+  });
+
+  it("validates an existing local mount and refuses symlinks, files or missing roots", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "jetseller-m1-"));
+    try {
+      const media = path.join(root, "media");
+      mkdirSync(media, { mode: 0o700 });
+      expect(() => assertExistingLocalStorageRoot(media)).not.toThrow();
+      expect(() => assertExistingLocalStorageRoot(path.join(root, "absent"))).toThrow("STORAGE_LOCAL_ROOT");
+      const link = path.join(root, "linked-media");
+      symlinkSync(media, link);
+      expect(() => assertExistingLocalStorageRoot(link)).toThrow("STORAGE_LOCAL_ROOT");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("separates issuer, audience, database and cookie between installations", () => {

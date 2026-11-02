@@ -4,13 +4,14 @@ import { createPool } from './db.mjs';
 import { runtimeConfig } from './runtime.mjs';
 import { createOidcHandler } from './oidc.mjs';
 import { pathToFileURL } from 'node:url';
+import { serveDashboard } from '../../installer-web/dashboard.mjs';
 
 export function createControlServer(config,pool,{oidcFetch,dashboard}={}) {
   const handle=createHandler({pool,...config});
   const oidc=createOidcHandler({pool,controlOrigin:config.controlOrigin,config:config.oidc,...(oidcFetch?{fetchImpl:oidcFetch}:{})});
   const server=createServer(async (req,res)=>{
     try {
-      if(dashboard && !req.url?.startsWith('/api/') && !req.url?.startsWith('/auth/') && dashboard(req,res))return;
+      if(dashboard && !req.url?.startsWith('/api/') && !req.url?.startsWith('/auth/') && await dashboard(req,res))return;
       const chunks=[];let bytes=0;
       for await(const chunk of req){bytes+=chunk.length;if(bytes>16384){res.writeHead(413,{'Cache-Control':'no-store'}).end();req.destroy();return;}chunks.push(chunk);}
       const method=req.method??'GET';
@@ -34,7 +35,7 @@ async function main() {
   const pool=createPool(config.databaseUrl);
   const version=await pool.query('SELECT version FROM installer.schema_version');
   if(version.rows.length!==1||version.rows[0].version!==1) throw new Error('Schema unavailable');
-  const server=createControlServer(config,pool);
+  const server=createControlServer(config,pool,{dashboard:serveDashboard});
   server.listen(config.port,'127.0.0.1',()=>console.log('Installer control API listening on loopback; deployment approval remains required'));
   const stop=()=>server.close(()=>{void pool.end();});
   process.on('SIGTERM',stop);process.on('SIGINT',stop);

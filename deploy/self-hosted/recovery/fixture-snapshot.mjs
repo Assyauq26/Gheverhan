@@ -134,9 +134,10 @@ function decodePayload(bytes) {
   let total = 0;
   for (const file of payload.files) {
     if (!validName(file.name) || names.has(file.name) || typeof file.data !== 'string' ||
-        !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.data)) throw safeError();
+        file.data.length > Math.ceil(MAX_BYTES / 3) * 4) throw safeError();
     names.add(file.name);
     const data = Buffer.from(file.data, 'base64');
+    if (data.toString('base64') !== file.data) throw safeError();
     total += data.length;
     if (total > MAX_BYTES || hash(data) !== file.sha256) throw safeError();
   }

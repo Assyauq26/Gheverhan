@@ -132,3 +132,12 @@ test('symlink media entry or parent is refused', { skip: process.platform === 'w
   const alias = path.join(f.root, 'alias'); await fs.symlink(f.source, alias);
   await assert.rejects(backupFixture(alias, f.archive, f.key));
 });
+
+test('multi-megabyte media roundtrip stays below bounded-stack validation limits', async t => {
+  const f = await fixture(t);
+  await fs.writeFile(path.join(f.source, 'media', 'large.bin'), randomBytes(4 * 1024 * 1024));
+  const expected = await verifyFixture(f.source);
+  await backupFixture(f.source, f.archive, f.key);
+  await restoreFixture(f.archive, f.target, f.key);
+  assert.deepEqual(await verifyFixture(f.target), expected);
+});

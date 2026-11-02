@@ -1,5 +1,7 @@
 # 07 — Data Model, API Contracts, Security and QA
 
+> **Build now:** seller OTP → control-plane tenant record/job → isolated DB → storefront + dashboard seller, tested with 2 dummy tenants and legacy demo. J&T tenant credential API, paid billing and custom-domain purchase are **deferred**; see [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md).
+
 ## 1. Existing baseline vs proposed data
 
 Existing `frontend/prisma/schema.prisma` contains ecommerce single-store model: `User`, `Role`, `Permission`, `PendingRegistration`, `Product`, `Inventory`, `Order`, `Payment`, `Shipment`, `StoreAppearance`, dll. `frontend/src/lib/prisma.ts` menginisialisasi satu `PrismaClient`. **Tidak ada bukti multi-tenant provisioning/tenant DB routing produksi** dalam audit terbatas ini. Codex wajib menjalankan pencarian kode, tes dan schema scan ulang.
@@ -18,7 +20,7 @@ Existing `frontend/prisma/schema.prisma` contains ecommerce single-store model: 
 | Plan & PlanLimit | price version, recurringPeriod, entitlements, quota unit |
 | Subscription | tenantId unique active subscription, planId, state, trialStartedAt, trialEndsAt, periodEnd |
 | Invoice & BillingPayment | globally unique invoiceNumber, providerEventId unique, amount, currency, status |
-| CarrierAccountRef | tenantId scoped, environment, managed/BYOK mode, encrypted secret reference, enabled |
+| TenantCarrierCredentialRef (later phase) | tenantId scoped, seller-owned official J&T account, environment, encrypted vault secret reference, connection status, enabled; **no shared platform operational credential** |
 | OutboxEvent & AuditEvent | eventId unique, tenantId nullable, eventType, payloadVersion, state, correlationId |
 | IdempotencyRecord | scope, actorId, key, requestHash, resultRef, expiration, unique(scope, actorId, key) |
 
@@ -40,7 +42,7 @@ Tenant DB retains existing commerce schema and versioned legacy data migration; 
 - Existing `/api/v1/admin/**`, `/api/v1/**`, `/admin/**` must be reviewed and adapted to resolved tenant route, not copied and mounted twice.
 - `GET /api/tenant/hosting` and `POST /api/tenant/hosting/change-plan` validate owner on server and forward to control plane business service.
 - `GET/POST /api/tenant/domains/**` authenticated seller owner only.
-- `GET/POST /api/tenant/shipping/jnt/**` tenant owner or approved staff, with service availability and official credential contract.
+- `GET/POST /api/tenant/shipping/jnt/**` **future phase**, tenant owner authorizes and manages own official J&T credentials, warehouse and services; seller staff may operate AWB with explicit permission but never read raw keys. No shared Super Admin credential.
 
 Routes are **design proposals**; check Next.js filesystem route collisions, CSRF/cookie policies, and existing versioning before implementation. API handlers require Zod validation, response contracts, server-side RBAC, rate limits, tenant scope, immutable audit, and business invariants.
 

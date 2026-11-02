@@ -6,6 +6,7 @@ import { HttpError } from "@/lib/response";
 import type { AuthUser } from "@/lib/auth/session";
 import { writeAudit } from "@/modules/audit/audit.service";
 import type { Prisma } from "@prisma/client";
+import { getStoreProfile, parseSelfHostedConfig } from "@/lib/self-hosted/config";
 
 export const jntEnvironment = z.enum(["sandbox", "production"]);
 export type JntEnvironment = z.infer<typeof jntEnvironment>;
@@ -107,10 +108,26 @@ function decrypt(value: string): JntConfig {
     throw new HttpError("Konfigurasi J&T tidak dapat didekripsi; rotasi kunci memerlukan migrasi aman", 503);
   }
 }
+/**
+ * Separate the existing Gheverhan platform owner from a seller-hosted local owner.
+ *
+ * Every self-hosted installation has its own database and trusted admin realm.
+ * Validate the complete installation profile before accepting local Super Admin.
+ * Legacy Gheverhan keeps its existing explicit platform-owner allowlist.
+ */
 export function isJntPlatformOwner(user: Pick<AuthUser, "id" | "roles"> | null) {
+  if (!user?.id || !user.roles.includes("Super Admin")) return false;
+  try {
+    if (getStoreProfile(process.env) === "self-hosted") {
+      parseSelfHostedConfig(process.env);
+      return true;
+    }
+  } catch {
+    // Invalid/malformed profile must never grant integration administration.
+    return false;
+  }
   const approved = (process.env.JNT_PLATFORM_OWNER_USER_IDS || "").split(",").map(s => s.trim()).filter(Boolean);
-  // Fail closed without an explicit owner ID; seller's own Super Admin role is insufficient.
-  return !!user && user.roles.includes("Super Admin") && approved.includes(user.id);
+  return approved.includes(user.id);
 }
 export async function readJntSettings(environment: JntEnvironment, db: Prisma.TransactionClient = prisma) {
   const row = await db.jntPlatformIntegration.findUnique({ where: { environment } });

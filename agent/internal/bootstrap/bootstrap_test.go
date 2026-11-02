@@ -122,9 +122,19 @@ func TestVerificationFailsClosedWithoutTrustOrWithTampering(t *testing.T) {
 	}
 }
 func TestRateLimitBackoffAndBoundedJSON(t *testing.T) {
- server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request) { w.Header().Set("Retry-After","120"); w.WriteHeader(429) })); defer server.Close()
- client,_:=pairingClient(server.URL,server.Client()); status,e:=client.request(context.Background(),"/agent/pairing/token",map[string]string{},new(any)); if e!=nil||status!=429||client.RetryAfter()!=120*time.Second { t.Fatal("server backoff not honored") }
- huge:=httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.Write([]byte(strings.Repeat("x",32769)))}));defer huge.Close();client,_=pairingClient(huge.URL,huge.Client());if _,e=client.request(context.Background(),"/agent/pairing/token",map[string]string{},new(any));e==nil{t.Fatal("oversized response accepted")}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Header().Set("Retry-After", "120"); w.WriteHeader(429) }))
+	defer server.Close()
+	client, _ := pairingClient(server.URL, server.Client())
+	status, e := client.request(context.Background(), "/agent/pairing/token", map[string]string{}, new(any))
+	if e != nil || status != 429 || client.RetryAfter() != 120*time.Second {
+		t.Fatal("server backoff not honored")
+	}
+	huge := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(strings.Repeat("x", 32769))) }))
+	defer huge.Close()
+	client, _ = pairingClient(huge.URL, huge.Client())
+	if _, e = client.request(context.Background(), "/agent/pairing/token", map[string]string{}, new(any)); e == nil {
+		t.Fatal("oversized response accepted")
+	}
 }
 func TestStateLockIdentityAndResume(t *testing.T) {
 	if runtime.GOOS != "linux" {

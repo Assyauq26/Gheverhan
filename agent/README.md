@@ -18,7 +18,7 @@ Targets `/api/installer/v1/agent/pairing/device` and `/agent/pairing/token` on t
 
 Go formatting, vet, portable unit tests and Linux cross-build are local checks. Ubuntu CI executes race-enabled Linux state/concurrency/resume and TLS pairing fixtures. The dedicated integration test uses the actual Cosign v3.1.4 signed upstream checksum bundle, pinned binary/artifact/bundle hashes, exact public signer and issuer, then rejects modified bytes even with their matching SHA256 and rejects a wrong signer. This is real upstream signature validation, not a mocked verifier or a JetSeller release-signing proof.
 
-Local Windows result: five portable tests PASS; two Linux-only fixtures skipped; actual upstream Cosign signed/tamper/wrong-signer integration PASS. Linux workflow results are reported on the PR. No live VPS, production secret, database, DNS or deployment access is involved.
+Local Windows result: six portable tests PASS; two Linux-only fixtures skipped; actual upstream Cosign signed/tamper/wrong-signer integration PASS. Linux workflow results are reported on the PR. No live VPS, production secret, database, DNS or deployment access is involved.
 
 ## Remaining release gates
 

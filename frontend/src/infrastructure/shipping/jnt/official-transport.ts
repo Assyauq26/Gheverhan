@@ -68,8 +68,8 @@ export interface JntRateRequest {
   weightGram: number;
   productType: "EZ" | "HBO" | "JND" | "ECO";
 }
-export async function checkJntRate(input: JntRateRequest): Promise<ShippingRate[]> {
-  const cfg = await activeJntConfig();
+export async function checkJntRate(input: JntRateRequest, approvedConfig?: JntConfig): Promise<ShippingRate[]> {
+  const cfg = approvedConfig ?? await activeJntConfig();
   if (!/^[A-Z][A-Z0-9 -]{1,79}$/.test(input.originSite) ||
       !/^[A-Z][A-Z0-9 -]{1,79}$/.test(input.destinationArea) ||
       !Number.isSafeInteger(input.weightGram) || input.weightGram <= 0) {

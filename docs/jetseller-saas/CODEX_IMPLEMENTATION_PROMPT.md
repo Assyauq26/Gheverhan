@@ -15,7 +15,7 @@ JetSeller adalah platform SaaS pembuat toko online bagi seller/UMKM, bukan hanya
 **PERAN DAN PEMISAHAN AKSES**
 - `jetseller.web.id` tetap landing JetSeller dan menyediakan **form pendaftaran seller publik**.
 - **Dashboard utama JetSeller khusus Super Admin platform**. Seller tidak boleh mempunyai akses ke akun/platform dashboard Super Admin.
-- Ketika seller mendaftar dan OTP email berhasil, sistem **OTOMATIS** membuat 1 tenant, 1 storefront baru, 1 dashboard seller, 1 owner account, template toko serta subdomain sementara bila DNS siap; user tidak perlu membeli paket dulu.
+- Ketika seller mendaftar dan OTP email berhasil, sistem **OTOMATIS** membuat 1 tenant, 1 storefront baru di `<slug>.jetseller.web.id`, 1 dashboard seller di `<slug>.jetseller.web.id/admin`, 1 owner account, template toko serta subdomain setelah DNS/TLS terverifikasi; user tidak perlu membeli paket dulu. **Reserve `dashboard.jetseller.web.id` untuk Super Admin**, bukan slug seller.
 - Seller masuk ke dashboard tokonya sendiri dan di dalamnya tersedia **Hosting & Domain**: trial gratis 30 hari, status paket, pilih/upgrade/perpanjang hosting, subdomain platform, menghubungkan domain custom, dan membeli domain **hanya setelah** registrar resmi benar-benar tersedia.
 - Seller dashboard juga mengelola produk/varian/stok, order, payment, Appearance/dekorasi, gudang, marketing, pengiriman resmi J&T, role staff, analytics.
 - Satu source code Next.js terpusat meng-upgrade seluruh seller. Data dan user tenant **terisolasi**, target tiap tenant database PostgreSQL terpisah; control-plane DB dan superadmin terpisah. **Jangan** buat copy repo/app per seller.

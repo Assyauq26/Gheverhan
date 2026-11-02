@@ -21,6 +21,9 @@ jobs:
       - name: Static integrity checks
         run: node landing/jetseller/tests/refactor.test.cjs
 
+      - name: Seller registration static safety checks
+        run: node --test landing/jetseller/tests/registration-static.test.cjs
+
       - name: Validate static-only VPS release script syntax
         run: bash -n landing/jetseller/deploy/release-v3-from-vps.sh
 
@@ -50,11 +53,19 @@ jobs:
           PLAYWRIGHT_MODULE: /tmp/jetseller-test/node_modules/playwright
         run: node landing/jetseller/tests/browser.cjs
 
+      - name: Seller registration responsive and simulated-state tests
+        env:
+          PLAYWRIGHT_MODULE: /tmp/jetseller-test/node_modules/playwright
+        run: node landing/jetseller/tests/registration-browser.cjs
+
       - name: Upload browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jetseller-grid-refactor-screenshots
-          path: landing/jetseller/tests/evidence/v2-*.png
+          path: |
+            landing/jetseller/tests/evidence/v2-*.png
+            landing/jetseller/tests/evidence/registration/*.png
+            landing/jetseller/tests/evidence/registration/results.json
           if-no-files-found: ignore
           retention-days: 7

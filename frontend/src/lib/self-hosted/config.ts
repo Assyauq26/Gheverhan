@@ -4,9 +4,6 @@
  * No provider calls, network requests, schema mutations, or secret logging.
  * Legacy Gheverhan is unchanged unless JETSELLER_STORE_PROFILE=self-hosted.
  */
-import path from "node:path";
-import { lstatSync } from "node:fs";
-
 type Env = Readonly<Record<string, string | undefined>>;
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -76,39 +73,12 @@ function origin(env: Env): { appOrigin: string; domain: string } {
 function safeStorageRoot(env: Env): string {
   const root = required(env, "STORAGE_LOCAL_ROOT");
   if (
-    !path.posix.isAbsolute(root) || root === "/" ||
+    !root.startsWith("/") || root === "/" || root.endsWith("/") ||
     root.includes("\\") || root.includes("//") ||
     root.split("/").some(part => part === "." || part === "..") ||
-    path.posix.normalize(root) !== root ||
     BAD_ROOT.some(prefix => root === prefix || root.startsWith(prefix + "/"))
   ) throw new Error("Invalid STORAGE_LOCAL_ROOT");
   return root;
-}
-
-/**
- * Runtime-only preflight. Reject missing mounts and any symlink component,
- * including a symlink at the storage root. Never reveal the path in errors.
- * The installer must provision the private volume before starting Next.
- */
-export function assertExistingLocalStorageRoot(root: string): void {
-  if (
-    !path.posix.isAbsolute(root) || path.posix.normalize(root) !== root ||
-    root === "/" || root.includes("//") ||
-    root.split("/").some(part => part === "." || part === "..") ||
-    BAD_ROOT.some(prefix => root === prefix || root.startsWith(prefix + "/"))
-  ) throw new Error("Invalid STORAGE_LOCAL_ROOT");
-  let current = "/";
-  for (const segment of root.split("/").filter(Boolean)) {
-    current = path.posix.join(current, segment);
-    try {
-      const stat = lstatSync(current);
-      if (stat.isSymbolicLink() || !stat.isDirectory()) {
-        throw new Error("Invalid directory");
-      }
-    } catch {
-      throw new Error("Invalid STORAGE_LOCAL_ROOT");
-    }
-  }
 }
 
 interface DatabaseIdentity {

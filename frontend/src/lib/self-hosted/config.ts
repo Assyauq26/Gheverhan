@@ -5,6 +5,7 @@
  * Legacy Gheverhan is unchanged unless JETSELLER_STORE_PROFILE=self-hosted.
  */
 import path from "node:path";
+import { lstatSync } from "node:fs";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -82,6 +83,32 @@ function safeStorageRoot(env: Env): string {
     BAD_ROOT.some(prefix => root === prefix || root.startsWith(prefix + "/"))
   ) throw new Error("Invalid STORAGE_LOCAL_ROOT");
   return root;
+}
+
+/**
+ * Runtime-only preflight. Reject missing mounts and any symlink component,
+ * including a symlink at the storage root. Never reveal the path in errors.
+ * The installer must provision the private volume before starting Next.
+ */
+export function assertExistingLocalStorageRoot(root: string): void {
+  if (
+    !path.posix.isAbsolute(root) || path.posix.normalize(root) !== root ||
+    root === "/" || root.includes("//") ||
+    root.split("/").some(part => part === "." || part === "..") ||
+    BAD_ROOT.some(prefix => root === prefix || root.startsWith(prefix + "/"))
+  ) throw new Error("Invalid STORAGE_LOCAL_ROOT");
+  let current = "/";
+  for (const segment of root.split("/").filter(Boolean)) {
+    current = path.posix.join(current, segment);
+    try {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("Invalid directory");
+      }
+    } catch {
+      throw new Error("Invalid STORAGE_LOCAL_ROOT");
+    }
+  }
 }
 
 interface DatabaseIdentity {

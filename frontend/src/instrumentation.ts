@@ -6,8 +6,8 @@
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { getStoreProfile, parseSelfHostedConfig, assertExistingLocalStorageRoot } =
-    await import("./lib/self-hosted/config");
+  const { getStoreProfile, parseSelfHostedConfig } = await import("./lib/self-hosted/config");
+  const { assertExistingLocalStorageRoot } = await import("./lib/self-hosted/storage-root");
   if (getStoreProfile(process.env) !== "self-hosted") return;
   const store = parseSelfHostedConfig(process.env);
   assertExistingLocalStorageRoot(store.storageRoot);

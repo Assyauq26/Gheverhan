@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 function failure(error: unknown) {
   const status = error instanceof LocalSetupError ? error.status : 503;
   if (status === 404) return new Response(null,{status:404,headers});
+  if (status === 503 || error instanceof LocalSetupError && ['HTTPS_REQUIRED','ORIGIN_DENIED'].includes(error.code)) return new Response('Penyiapan hanya tersedia pada koneksi HTTPS toko yang terkonfigurasi dengan benar.',{status,headers:{...headers,'Content-Type':'text/plain; charset=utf-8'}});
   return page(status === 429 ? 'Percobaan dibatasi. Minta operator membuat kode penyiapan baru.' : status === 400 || status === 413 ? 'Periksa isian dan pastikan kedua kata sandi sama.' : 'Penyiapan tidak dapat dilanjutkan. Periksa kode, masa berlaku, dan koneksi HTTPS Anda. Akun yang sudah ada tidak akan diubah.',status);
 }
 export async function GET(request: Request) {

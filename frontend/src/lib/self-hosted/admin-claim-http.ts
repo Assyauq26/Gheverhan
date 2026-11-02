@@ -30,7 +30,7 @@ export async function readSetupInput(request: Request, timeoutMs = 3000) {
     ]).finally(() => clearTimeout(timer));
     if (done) break;
     size += value.length;
-    if (size > 4096) { await reader.cancel(); throw new LocalSetupError('INVALID_REQUEST', 413); }
+    if (size > 4096) { void reader.cancel().catch(() => undefined); throw new LocalSetupError('INVALID_REQUEST', 413); }
     chunks.push(value);
   }
   const params = new URLSearchParams(Buffer.concat(chunks).toString('utf8'));

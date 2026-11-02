@@ -1,7 +1,14 @@
 import "server-only";
 import { putLocalObject, getLocalObject, removeLocalObject } from "./storage-local";
+import { getStoreProfile, parseSelfHostedConfig } from "./self-hosted/config";
+
+// Existing store remains unchanged. Self-hosted is explicit, validated and local-only.
+const SELF_HOSTED = getStoreProfile(process.env) === "self-hosted"
+  ? parseSelfHostedConfig(process.env)
+  : null;
 
 function localProvider(): boolean {
+  if (SELF_HOSTED) return true;
   const provider = process.env.STORAGE_PROVIDER || "supabase";
   if (!["supabase", "local"].includes(provider)) throw new Error("Invalid storage provider");
   return provider === "local";
@@ -9,7 +16,7 @@ function localProvider(): boolean {
 import { resolveStorageObject, type StorageBucket } from "./storage-path";
 import { storageAuthHeaders } from "./storage-auth-headers";
 
-export const STORAGE_APP = process.env.STORAGE_APP_NAME || "gheverhan";
+export const STORAGE_APP = SELF_HOSTED?.storageApp || process.env.STORAGE_APP_NAME || "gheverhan";
 
 function config() {
   const origin = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");

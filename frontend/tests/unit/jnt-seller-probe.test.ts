@@ -15,6 +15,8 @@ import { POST } from "@/app/api/v1/admin/integrations/jnt/test/route";
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); s.user = null; s.state = null; });
 function setup() {
   vi.stubEnv("APP_ORIGIN", "https://store.example"); vi.stubEnv("JNT_CONFIG_SCOPE", "local_store");
+  vi.stubEnv("JETSELLER_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
+  vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   s.user = { id: "local-admin", roles: ["Admin"], permissions: ["shipping.update"] };
   s.state = { enabled: true, config: { seller: { warehouse: { originSite: "SYNTHETIC CITY" },
     services: [{ code: "EZ", validUntil: "2030-01-01T00:00:00Z" }] }, credentials: { orderKey: "NEVER-RETURN-THIS-KEY" } } };
@@ -34,6 +36,16 @@ describe("local seller connection probes", () => {
     expect((await POST(request({}, "https://attacker.example"))).status).toBe(403);
     expect(s.rate).not.toHaveBeenCalled();
   });
+  it("rejects a mismatched or missing canonical installation identity before carrier activity", async () => {
+    setup();
+    vi.stubEnv("JNT_INSTALLATION_ID", "c6b147ca-dcaf-4a06-82ce-671cdaedb8ed");
+    expect((await POST(request({ environment: "sandbox", endpoint: "tariff" }))).status).toBe(403);
+    vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
+    vi.stubEnv("JETSELLER_INSTALLATION_ID", "");
+    expect((await POST(request({ environment: "sandbox", endpoint: "tariff" }))).status).toBe(403);
+    expect(s.rate).not.toHaveBeenCalled();
+  });
+
   it("does not invent safe Order/Cancel/Tracking probes or dispatch any request", async () => {
     setup();
     for (const endpoint of ["order", "cancellation", "tracking"]) {

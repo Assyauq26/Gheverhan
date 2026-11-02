@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "checks": 389,
+  "viewports": [
+    360,
+    390,
+    428,
+    768,
+    1024,
+    1440
+  ],
+  "chromium": "153.0.8010.12",
+  "node": "v26.12.1",
+  "fontLoaded": false,
+  "scope": "static frontend only; no backend/email/tenant/domain",
+  "screenshots": [
+    "account-1024.png",
+    "account-1440.png",
+    "account-360.png",
+    "account-390.png",
+    "account-428.png",
+    "account-768.png",
+    "account-error-1440.png",
+    "account-error-390.png",
+    "before-1440.png",
+    "before-390.png",
+    "otp-expired-1440.png",
+    "otp-expired-390.png",
+    "otp-invalid-1440.png",
+    "otp-invalid-390.png",
+    "otp-pending-1440.png",
+    "otp-pending-390.png",
+    "provision-error-1440.png",
+    "provision-error-390.png",
+    "provision-loading-1440.png",
+    "provision-loading-390.png",
+    "provision-success-1440.png",
+    "provision-success-390.png",
+    "store-1440.png",
+    "store-390.png"
+  ]
+}

@@ -1,0 +1,41 @@
+name: JetSeller installer control registry
+on:
+  pull_request:
+    paths: ['platform/installer/**', '.github/workflows/jetseller-installer-control.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: installer-control-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  registry-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_DB: js_control_fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-control-ci-only
+        ports: ['127.0.0.1:5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U fixture -d js_control_fixture'
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer
+      - run: npm test
+        working-directory: platform/installer
+      - run: npm run test:integration
+        working-directory: platform/installer
+        env:
+          JETSELLER_CONTROL_TEST_DATABASE_URL: postgresql://fixture:synthetic-control-ci-only@127.0.0.1:5432/js_control_fixture
+          JETSELLER_CONTROL_TEST_CONFIRM: isolated-control-fixture

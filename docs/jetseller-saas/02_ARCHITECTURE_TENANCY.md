@@ -18,7 +18,7 @@
 Browser -> TLS proxy / trusted Host routing
            ├── jetseller.web.id         [Marketing & signup seller]
            ├── dashboard.jetseller.web.id [Platform Super Admin; proposed]
-           ├── slug.PLATFORM_DOMAIN      [Tenant storefront + /admin seller]
+           ├── slug.jetseller.web.id    [Tenant storefront + /admin seller, once DNS/TLS active]
            ├── custom-domain.example     [Tenant storefront + /admin seller]
            └── gheverhan.store          [Legacy demo; preserve compatibility]
                          |

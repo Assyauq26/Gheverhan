@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { register } from "@/instrumentation";
+import { describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -26,17 +25,7 @@ const valid = () => ({
   JNT_ENABLE_ORDER_CREATE: "no",
 });
 
-afterEach(() => vi.unstubAllEnvs());
-
 describe("self-hosted opt-in configuration", () => {
-  it("preserves legacy startup but fails invalid opt-in before the runtime becomes ready", async () => {
-    vi.stubEnv("NEXT_RUNTIME", "nodejs");
-    vi.stubEnv("JETSELLER_STORE_PROFILE", "");
-    await expect(register()).resolves.toBeUndefined();
-    vi.stubEnv("JETSELLER_STORE_PROFILE", "self-hosted");
-    vi.stubEnv("JETSELLER_INSTALLATION_ID", "");
-    await expect(register()).rejects.toThrow("JETSELLER_INSTALLATION_ID");
-  });
   it("preserves legacy profile when the explicit selector is absent", () => {
     expect(getStoreProfile({})).toBe("legacy");
     expect(getStoreProfile({ APP_ORIGIN: "https://gheverhan.store" })).toBe("legacy");

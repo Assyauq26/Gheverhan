@@ -71,10 +71,10 @@ export async function agentIdentity(request, client, verificationKey, controlOri
   let proof;
   try { ({payload:proof}=await jwtVerify(text(request.headers.get('dpop'),30,4096),key,{algorithms:['EdDSA'],typ:'dpop+jwt',requiredClaims:['htm','htu','ath','nonce','iat','jti'],maxTokenAge:'60s',clockTolerance:5})); }
   catch { fail(401,'INVALID_DEVICE_PROOF'); }
-  if(proof.htm!==request.method||proof.htu!==request.url||proof.nonce!==device.nonce||proof.ath!==Buffer.from(hash(token),'hex').toString('base64url')||proof.iat>Math.floor(Date.now()/1000)+5) fail(401,'INVALID_DEVICE_PROOF');
+  if(!Number.isSafeInteger(proof.iat)||proof.htm!==request.method||proof.htu!==request.url||proof.nonce!==device.nonce||proof.ath!==Buffer.from(hash(token),'hex').toString('base64url')||proof.iat>Math.floor(Date.now()/1000)+5) fail(401,'INVALID_DEVICE_PROOF');
   uuid(proof.jti);
   await client.query('DELETE FROM installer.proof_replays WHERE expires_at<now()');
-  const inserted=await client.query('INSERT INTO installer.proof_replays(thumbprint,jti_hash,expires_at) VALUES($1,$2,now()+interval \'65 seconds\') ON CONFLICT DO NOTHING RETURNING jti_hash',[device.thumbprint,hash(proof.jti)]);
+  const inserted=await client.query('INSERT INTO installer.proof_replays(thumbprint,jti_hash,expires_at) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING jti_hash',[device.thumbprint,hash(proof.jti),new Date((proof.iat+65)*1000)]);
   if(!inserted.rowCount)fail(409,'PROOF_REPLAY');
   return {installation_id:device.installation_id,device_id:device.id,scopes:payload.scopes};
 }

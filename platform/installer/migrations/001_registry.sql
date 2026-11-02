@@ -31,9 +31,10 @@ CREATE TABLE IF NOT EXISTS installer.pairing_sessions (
  public_jwk jsonb NOT NULL, thumbprint text NOT NULL, nonce text NOT NULL,
  agent_version text NOT NULL, os text NOT NULL, arch text NOT NULL,
  status text NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','APPROVED','CONSUMED','CANCELLED')),
- expires_at timestamptz NOT NULL, last_poll_at timestamptz, device_id uuid,
+ expires_at timestamptz NOT NULL, last_poll_at timestamptz, device_id uuid, credential_issued_at timestamptz,
  created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE installer.pairing_sessions ADD COLUMN IF NOT EXISTS credential_issued_at timestamptz;
 CREATE INDEX IF NOT EXISTS pairing_install ON installer.pairing_sessions(installation_id);
 CREATE TABLE IF NOT EXISTS installer.devices (
  id uuid PRIMARY KEY, installation_id uuid NOT NULL REFERENCES installer.installations(id),

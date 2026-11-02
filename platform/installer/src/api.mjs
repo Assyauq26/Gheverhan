@@ -22,7 +22,7 @@ function json(status, value) {
   return Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'5'}:{})}});
 }
 async function own(client, id, seller, lock = false) {
-  const result = await client.query(`SELECT * FROM installer.installations WHERE id=$1 AND seller_id=$2${lock?' FOR UPDATE':''}`,[id,seller]);
+  const result = await client.query(`SELECT i.*,d.id AS device_id FROM installer.installations i LEFT JOIN installer.devices d ON d.installation_id=i.id AND d.revoked_at IS NULL WHERE i.id=$1 AND i.seller_id=$2${lock?' FOR UPDATE OF i':''}`,[id,seller]);
   if (!result.rows[0]) fail(404,'NOT_FOUND');
   return result.rows[0];
 }
@@ -86,7 +86,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(pairing.status==='CANCELLED') return {error:403,code:'PAIR_DENIED'};
           // Bounded same-key retry allows recovery from a lost issuance response.
           if(pairing.status==='CONSUMED') {
-            const active=(await c.query('SELECT id FROM installer.devices WHERE id=$1 AND revoked_at IS NULL AND created_at>now()-interval \'2 minutes\'',[pairing.device_id])).rows[0];
+            const active=(await c.query('SELECT id FROM installer.devices WHERE id=$1 AND revoked_at IS NULL AND $2::timestamptz>now()-interval \'2 minutes\'',[pairing.device_id,pairing.credential_issued_at])).rows[0];
             if(!active) return {error:409,code:'PAIR_ALREADY_USED'};
             return {pairing,device:active.id};
           }
@@ -97,7 +97,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(installation.status!=='PAIRED') return {error:409,code:'PAIR_DENIED'};
           const active=(await c.query('SELECT id FROM installer.devices WHERE installation_id=$1 AND revoked_at IS NULL',[pairing.installation_id])).rows[0];
           if(!active || active.id!==pairing.device_id) return {error:403,code:'PAIR_DENIED'};
-          await c.query("UPDATE installer.pairing_sessions SET status='CONSUMED' WHERE id=$1",[pairing.id]);
+          await c.query("UPDATE installer.pairing_sessions SET status='CONSUMED',credential_issued_at=now() WHERE id=$1",[pairing.id]);
           return {pairing,device:active.id};
         });
         if(outcome.error) fail(outcome.error,outcome.code);
@@ -121,7 +121,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
         const input=installationInput(await body(request)),requestId=uuid(request.headers.get('idempotency-key'));
         const digest=hash(JSON.stringify(input));
         const installation=await transaction(pool,async c=>{
-          await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[seller.seller_id+requestId]);
+          await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['seller-create:'+seller.seller_id]);
           const existing=(await c.query('SELECT * FROM installer.installations WHERE seller_id=$1 AND client_request_id=$2',[seller.seller_id,requestId])).rows[0];
           if(existing){if(existing.request_hash!==digest)fail(409,'IDEMPOTENCY_CONFLICT');return existing;}
           const count=(await c.query("SELECT count(*)::int AS n FROM installer.installations WHERE seller_id=$1 AND status<>'CANCELLED'",[seller.seller_id])).rows[0].n;

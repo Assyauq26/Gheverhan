@@ -68,16 +68,32 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   assert.deepEqual(approvals.map(x=>x.status).sort(),[200,409]);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM installer.devices WHERE installation_id=$1',[installation.installation_id])).rows[0].n,1);
   await pool.query("UPDATE installer.pairing_sessions SET last_poll_at=now()-interval '6 seconds' WHERE id=$1",[session.pairing_session_id]);
+  // Seller consent may precede first credential delivery by several minutes.
+  // The lost-response retry window must begin at issuance, not approval time.
+  await pool.query("UPDATE installer.devices SET created_at=now()-interval '3 minutes' WHERE installation_id=$1",[installation.installation_id]);
   const bound=await poll();assert.equal(bound.status,200);const issued=bound.body;
   const verified=await jwtVerify(issued.credential,agentSigner.publicKey,{issuer:controlOrigin,audience:'jetseller-agent-management'});
   assert.equal(verified.payload.cnf.jkt,thumbprint);assert.equal(issued.installation_id,installation.installation_id);
   assert.equal((await poll()).body.device_id,issued.device_id); // Lost-response recovery cannot create another device.
+  const issuedAt=(await pool.query('SELECT credential_issued_at FROM installer.pairing_sessions WHERE id=$1',[session.pairing_session_id])).rows[0].credential_issued_at;
+  assert.ok(new Date(issuedAt).getTime()>Date.now()-30000);
+  const detail=(await call('GET','/installations/'+installation.installation_id)).body.installation;
+  const listed=(await call('GET','/installations')).body.installations.find(row=>row.installation_id===installation.installation_id);
+  assert.equal(detail.device_id,issued.device_id);assert.equal(detail.device_id,listed.device_id);
+  await pool.query("UPDATE installer.pairing_sessions SET credential_issued_at=now()-interval '3 minutes' WHERE id=$1",[session.pairing_session_id]);
+  assert.equal((await poll()).body.error.code,'PAIR_ALREADY_USED');
   const identityPath=controlOrigin+'/api/installer/v1/agent/identity';
   const dpop=async(privateKey=keys.privateKey)=>new SignJWT({htm:'GET',htu:identityPath,ath:Buffer.from(hash(issued.credential),'hex').toString('base64url'),nonce:issued.management_nonce}).setProtectedHeader({alg:'EdDSA',typ:'dpop+jwt'}).setIssuedAt().setJti(randomUUID()).sign(privateKey);
   const identity=async(p)=>call('GET','/agent/identity',undefined,null,{authorization:'DPoP '+issued.credential,...(p?{dpop:p}:{})});
   assert.equal((await identity()).status,401); // Token alone never authenticates.
   assert.equal((await identity(await dpop(wrong.privateKey))).status,401);
   const requestProof=await dpop();assert.equal((await identity(requestProof)).status,200);assert.equal((await identity(requestProof)).status,409);
+  const futureIat=Math.floor(Date.now()/1000)+5,futureJti=randomUUID();
+  const futureProof=await new SignJWT({htm:'GET',htu:identityPath,ath:Buffer.from(hash(issued.credential),'hex').toString('base64url'),nonce:issued.management_nonce}).setProtectedHeader({alg:'EdDSA',typ:'dpop+jwt'}).setIssuedAt(futureIat).setJti(futureJti).sign(keys.privateKey);
+  assert.equal((await identity(futureProof)).status,200);
+  const replay=(await pool.query('SELECT expires_at FROM installer.proof_replays WHERE thumbprint=$1 AND jti_hash=$2',[thumbprint,hash(futureJti)])).rows[0];
+  assert.ok(new Date(replay.expires_at).getTime()>=(futureIat+65)*1000,'Replay record must cover complete accepted proof lifetime including future clock tolerance');
+  assert.equal((await identity(futureProof)).status,409);
   assert.equal((await call('POST','/installations/'+installation.installation_id+'/unpair',{})).status,200);
   assert.equal((await identity(await dpop())).status,401);assert.equal((await poll()).status,403);
   const expired=await call('POST','/agent/pairing/device',deviceRequest,null);assert.equal(expired.status,201);
@@ -123,6 +139,13 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
    authNonce=deniedAuthorization.searchParams.get('nonce');challenge=deniedAuthorization.searchParams.get('code_challenge');
    const denied=await fetch(base+'/auth/callback?code=synthetic-denied&state='+deniedAuthorization.searchParams.get('state'),{redirect:'manual',headers:{cookie:deniedLogin.headers.getSetCookie()[0].split(';')[0]}});assert.equal(denied.status,403);
   }finally{await new Promise(resolve=>server.close(resolve));}
+  handler=createHandler(options);
+  // Different domains/idempotency keys must still share a seller-scoped limit lock.
+  for(let n=0;n<19;n++)assert.equal((await call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})).status,201);
+  const limitRace=await Promise.all([0,1].map(()=>call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})));
+  assert.deepEqual(limitRace.map(r=>r.status).sort(),[201,409]);
+  assert.equal(limitRace.find(r=>r.status===409).body.error.code,'INSTALLATION_LIMIT');
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM installer.installations WHERE seller_id=$1 AND status<>'CANCELLED'",[b.seller])).rows[0].n,20);
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('User','Order','Product')")).rows[0].n,0);
  }finally{await pool.end();}
 });

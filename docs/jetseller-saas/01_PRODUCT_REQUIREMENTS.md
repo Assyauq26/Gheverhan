@@ -1,5 +1,6 @@
 # 01 — PRD JetSeller SaaS
 
+> **Urutan implementasi frontend-first:** per 2026-11-02, PR pertama hanya UI form pendaftaran seller, validasi dan layar preview (tanpa OTP backend/provisioning); lihat [10](10_FRONTEND_REGISTRATION_FIRST.md). Kebutuhan produk end-to-end di bawah tetap berlaku untuk fase berikutnya.
 > **Prioritas 2026-11-02:** First vertical slice adalah pendaftaran seller OTP yang secara otomatis menghasilkan storefront + dashboard seller pada tenant/database terisolasi. Lihat [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). J&T resmi dikelola **per seller**, bukan kredensial Super Admin global. Billing/custom domain/J&T diposisikan setelah alur signup→toko terbukti.
 
 ## 1. Visi, masalah dan definisi pengguna

@@ -26,6 +26,16 @@ const valid = () => ({
 });
 
 describe("self-hosted opt-in configuration", () => {
+  it("accepts public migration role identity without mounting migration credentials into runtime", () => {
+    const full = valid();
+    const { DIRECT_URL: _unused, ...runtime } = full;
+    expect(parseSelfHostedConfig({ ...runtime, JETSELLER_MIGRATION_IDENTITY: "js_migrate" }).databaseMigrationUser).toBe("js_migrate");
+    expect(() => parseSelfHostedConfig({ ...runtime, JETSELLER_MIGRATION_IDENTITY: "js_runtime" })).toThrow("role separation");
+    expect(() => parseSelfHostedConfig({ ...runtime, JETSELLER_MIGRATION_IDENTITY: "x;sql" })).toThrow("DIRECT_URL");
+    expect(() => parseSelfHostedConfig(runtime)).toThrow("DIRECT_URL");
+    expect(() => parseSelfHostedConfig({ ...full, DIRECT_URL: "invalid", JETSELLER_MIGRATION_IDENTITY: "js_migrate" })).toThrow("DIRECT_URL");
+  });
+
   it("preserves legacy profile when the explicit selector is absent", () => {
     expect(getStoreProfile({})).toBe("legacy");
     expect(getStoreProfile({ APP_ORIGIN: "https://gheverhan.store" })).toBe("legacy");

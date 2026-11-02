@@ -1,5 +1,7 @@
 # 04 — UI/UX, Routing, Roles and Dashboards
 
+> **Build now:** seller signup OTP → starter storefront and **authenticated seller dashboard shell**, first login and onboarding. Full commerce, hosting checkout and seller-owned J&T integration follow after this works on 2 isolated tenants. See [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md).
+
 ## 1. Empat permukaan berbeda
 
 | Surface | Host (usulan/eksisting) | Role |
@@ -17,7 +19,7 @@ Control-plane dashboard tidak memakai tenant admin route atau claim admin umum. 
 - **Beranda:** ringkasan order/GMV yang benar, checklist setup (alamat gudang, produk, payment, J&T), alert stok, status domain, trial.
 - **Produk:** catalog, variasi, SKU, harga, sale, stok, images, size chart, CSV bulk di fase terpisah.
 - **Pesanan:** create/manage shipment, refund sesuai policy, status payment, print packing/label hanya jika diizinkan.
-- **Pengiriman:** gudang, pemetaan rute, konfigurasi akun J&T jika model BYOK disetujui, tarif resmi, pickup/dropoff, create/cancel AWB, status/tracking, discrepancy.
+- **Pengiriman (fase lanjutan):** tiap seller owner memasukkan **akun/kredensial API resmi J&T miliknya sendiri**, alamat gudang, layanan yang disetujui, pemetaan rute, tarif resmi, pickup/dropoff, create/cancel AWB, status/tracking, discrepancy. Tidak ada kredensial operasional bersama dari Super Admin.
 - **Marketing:** voucher, flash sale dari modul existing (per-tenant), anti cross-store promos.
 - **Dekorasi:** Appearance tokens, hero, asset, preview, save draft/publish, version guards/rollback per tenant.
 - **Pelanggan:** per-store customers, masks for PII, controlled exports.
@@ -30,7 +32,7 @@ Mobile-first (360/390/428 px), desktop (1024/1440), clean white/red JetSeller ac
 
 ## 3. Super Admin platform dashboard
 
-Menu: overview SaaS (tenants activated, provisioning failures, plan metrics), seller directory/status, provisioning queue, plans/quotas/trial, subscriptions/invoices/refunds, DNS/domains/SSL health, tenant DB versions/backups/storage, external J&T credential contract config (strict operator-only), delivery incidents, security/audit, customer support, platform settings/feature flags/release health.
+Menu: overview SaaS (tenants activated, provisioning failures, plan metrics), seller directory/status, provisioning queue, plans/quotas/trial, subscriptions/invoices/refunds, DNS/domains/SSL health, tenant DB versions/backups/storage, **J&T per-tenant connection health metadata teredaksi (tanpa melihat/menyetel secret seller)**, delivery incidents, security/audit, customer support, platform settings/feature flags/release health.
 
 **Tidak** boleh secara default membaca isi pesanan, password, OTP, alamat pelanggan dan secret milik toko. Impersonation/support harus opt-in/approved, time-bound, fully audited, dengan banner, scoped read-only dan alasan akses. Tidak boleh memungkinkan perubahan tenant via query id tanpa policy check.
 
@@ -39,7 +41,7 @@ Menu: overview SaaS (tenants activated, provisioning failures, plan metrics), se
 | Aksi | Super Admin | Seller Owner | Seller Staff | Customer |
 | --- | --- | --- | --- | --- |
 | Platform plans & tenant provisioning | Yes | No | No | No |
-| Platform J&T master secrets | Yes (step-up) | No | No | No |
+| Own tenant's J&T API credential setup | No (platform can pause unsafe connection only) | Yes (tenant scope, step-up) | No by default | No |
 | Seller Hosting & Domain, invoices | Platform audit | Yes | No by default | No |
 | Store products, order fulfillment | Scoped breakglass only | Yes | By permission | No |
 | Seller users & role management | Scoped breakglass only | Yes | No by default | No |
@@ -50,7 +52,7 @@ All user/admin endpoints must enforce server RBAC/tenant DB context. Front-end h
 
 ## 5. Screens and QA scenarios
 
-1. JetSeller landing CTA→signup, OTP six-box/resend/expiry, seller cannot route to platform dashboard.
+1. JetSeller landing CTA→**real** signup form (currently /daftar/ placeholder), OTP six-box/resend/expiry, provisioning progress, seller cannot route to platform dashboard.
 2. Provisioning progress and graceful error/retry view.
 3. Seller first login wizard + active trial status + preview storefront.
 4. Hosting menu plan comparison, upgrade path, invoice, unpaid/pending/grace, domain attach flow.

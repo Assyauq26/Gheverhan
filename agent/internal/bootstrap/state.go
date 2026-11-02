@@ -93,6 +93,12 @@ func OpenState(directory, installationID string) (*State, error) {
 			return nil, ErrState
 		}
 	} else if os.IsNotExist(err) {
+		// Missing key on an existing installation is recovery, never a new key.
+		for _, name := range []string{"journal.json", "pairing.json", "credential.json"} {
+			if _, checkErr := root.Lstat(name); checkErr == nil || !os.IsNotExist(checkErr) {
+				return nil, ErrState
+			}
+		}
 		_, key, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			return nil, ErrState

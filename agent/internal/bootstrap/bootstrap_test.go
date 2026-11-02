@@ -173,6 +173,10 @@ func TestStateLockIdentityAndResume(t *testing.T) {
 	if strings.Contains(string(raw), key) {
 		t.Fatal("key leaked to journal")
 	}
+	os.Remove(filepath.Join(dir, "identity.json"))
+	if _, e = OpenState(dir, id); e == nil {
+		t.Fatal("lost key silently regenerated")
+	}
 	os.Chmod(dir, 0755)
 	if _, e = OpenState(dir, id); e == nil {
 		t.Fatal("public state accepted")

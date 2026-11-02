@@ -22,5 +22,6 @@ jobs:
         with:
           node-version: '22'
       - run: node --test deploy/self-hosted/tests/packaging.test.mjs
+      - run: node --test deploy/self-hosted/recovery/fixture-snapshot.test.mjs
       - name: Build and verify synthetic isolated stack
         run: bash deploy/self-hosted/tests/runtime.sh

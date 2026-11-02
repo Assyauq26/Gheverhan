@@ -75,6 +75,8 @@ trap cleanup EXIT
 docker volume create --label "jetseller.disposable.recovery=$restore_id" "$restore_volume" >/dev/null
 test "$(docker volume inspect "$restore_volume" --format '{{index .Labels "jetseller.disposable.recovery"}}')" = "$restore_id"
 head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$workspace/destination-password"
+pg_uid=$(docker run --rm --entrypoint id "$pg_image" -u postgres)
+sudo chown "$pg_uid:$pg_uid" "$workspace/destination-password"
 docker run -d --name "$restore_container" --label "jetseller.disposable.recovery=$restore_id" \
  --network none --memory 1g --cpus 1 --pids-limit 256 \
  -e POSTGRES_USER=js_bootstrap -e "POSTGRES_DB=$database" \

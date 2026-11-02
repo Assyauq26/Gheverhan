@@ -89,6 +89,7 @@ dc restart db app
 dc up -d --wait app
 dc exec -T app node -e "if(require('fs').readFileSync('/var/lib/jetseller/media/persistence-fixture','utf8')!=='synthetic-media')process.exit(1)"
 test "$(dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' .env)" -Atc 'SELECT count(*) FROM fixture_persistence')" = 1
+bash "$repo/deploy/self-hosted/recovery/test-stack.sh" "$fixture_root/stack"
 # Ensure every saved layer, not just the final filesystem, excludes the sentinel.
 for image in "$app_image" "$migration_image"; do
  docker save "$image" -o "$fixture_root/image.tar"

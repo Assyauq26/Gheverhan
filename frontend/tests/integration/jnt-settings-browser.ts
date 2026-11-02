@@ -54,13 +54,13 @@ try {
   const secrets = ["SYNTHETIC-BROWSER-OWNER","SYNTHETIC-BROWSER-API","SYNTHETIC-BROWSER-KEY","SYNTHETIC-BROWSER-CUSTOMER","SYNTHETIC-BROWSER-TARIFF","SYNTHETIC-BROWSER-TRACK","SYNTHETIC-BROWSER-PASSWORD"];
   for(const width of [320,360,375,390,430,768,1024,1440]) {
     await page.setViewportSize({width,height:900});assert.equal((await page.goto(base+"/admin/integrations/jnt",{waitUntil:"networkidle"}))?.status(),200);
-    await expect(page.getByRole("heading",{name:"J&T Express API",exact:true})).toBeVisible();
-    await expect(page.getByRole("button",{name:"Simpan konfigurasi",exact:true})).toBeEnabled();
+    await expect(page.getByRole("heading",{name:"J&T Express",exact:true})).toBeVisible();
+    await expect(page.getByRole("button",{name: localStore ? "Simpan Pengaturan" : "Simpan konfigurasi",exact:true})).toBeEnabled();
     await expect(page.locator('input[type="url"]')).toHaveCount(4);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await page.getByRole("button",{name:"Production",exact:true}).click();
     await expect(page.locator('input[type="url"]').first()).toHaveValue(/^https:\/\/api\.jet\.co\.id\//);
-    await page.getByRole("button",{name:"Testing",exact:true}).click();
+    await page.getByRole("button",{name:"Sandbox",exact:true}).click();
     await expect(page.locator('input[type="url"]').first()).toHaveValue(/^https:\/\/demo-ecommerce\./);
     if(width===390){
       const credentialInputs=page.locator('input[data-jnt-secret]');
@@ -69,14 +69,15 @@ try {
       if(localStore) {
         for(const [label,value] of [["Nama pengirim","Synthetic sender"],["Kontak gudang","Synthetic contact"],["Telepon (+62)","+6281234567890"],["Alamat gudang","Synthetic warehouse address"],["Nama kota asal resmi (Tariff)","JAKARTA"],["Kode kota asal resmi (Order)","JKT"]]) await page.getByLabel(label,{exact:true}).fill(value);
       }
-      await page.getByRole("button",{name:"Simpan konfigurasi",exact:true}).click();
-      await expect(page.getByRole("status")).toContainText("berhasil disimpan terenkripsi");
+      await page.getByRole("button",{name: localStore ? "Simpan Pengaturan" : "Simpan konfigurasi",exact:true}).click();
+      await expect(page.getByRole("status")).toContainText("Pengaturan tersimpan");
       for(let i=0;i<secrets.length;i++)await expect(credentialInputs.nth(i)).toHaveValue("");
       const response=await owner.request.get(endpoint+"?environment=sandbox");assert.equal(response.status(),200);
       const text=await response.text();for(const secret of secrets)assert.ok(!text.includes(secret));
       if(localStore) {
         assert.equal(JSON.parse(text).data.shippingReady,false);
-        await page.getByRole("button",{name:"Test Connection order",exact:true}).click();
+        await page.getByText("Verifikasi Order",{exact:true}).click();
+        await page.getByRole("button",{name:"Periksa verifikasi Order",exact:true}).click();
         await expect(page.getByRole("status")).toContainText("Tidak ada permintaan J&T dikirim");
         const foreign=await owner.request.post(endpoint+"/test",{headers:{Origin:base},data:{environment:"sandbox",endpoint:"order",installationId:"foreign-store"}});
         assert.equal(foreign.status(),422);

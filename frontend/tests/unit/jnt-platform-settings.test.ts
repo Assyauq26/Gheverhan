@@ -36,6 +36,30 @@ const credentials = {
   tariffCustomer: "SANDBOX-OWNER", tariffKey: "SYNTHETIC-TARIFF-KEY",
   trackingUsername: "SANDBOX-OWNER", trackingPassword: "SYNTHETIC-PASSWORD",
 };
+function stubSellerStore() {
+  const installationId = "550e8400-e29b-41d4-a716-446655440000";
+  const database = "js_" + installationId.replace(/-/g, "");
+  const fixture: Record<string, string> = {
+    JETSELLER_STORE_PROFILE: "self-hosted",
+    JETSELLER_INSTALLATION_ID: installationId,
+    JETSELLER_INSTALLATION_MODE: "new",
+    JETSELLER_STORE_DOMAIN: "boutique.example",
+    APP_ORIGIN: "https://boutique.example",
+    STORAGE_PROVIDER: "local",
+    STORAGE_APP_NAME: "js_550e8400",
+    STORAGE_LOCAL_ROOT: "/data/jetseller/media",
+    DATABASE_URL: `postgresql://store_runtime:runtime-fixture@db:5432/${database}?schema=public`,
+    DIRECT_URL: `postgresql://store_migrator:migration-fixture@db:5432/${database}?schema=public`,
+    JWT_SECRET: "b".repeat(64),
+    AUTH_COOKIE_NAME: "js_550e8400_session",
+    PASSWORD_RESET_FROM: "Boutique <noreply@boutique.example>",
+    PASSWORD_RESET_BASE_URL: "https://boutique.example",
+    JNT_ENABLE_ORDER_CREATE: "no",
+    JNT_PRODUCTION_API_APPROVED: "no",
+  };
+  for (const [key, value] of Object.entries(fixture)) vi.stubEnv(key, value);
+}
+
 describe("J&T global platform secrets", () => {
   it("blocks Production API independently of saved credentials and owner UI enablement", async () => {
     vi.stubEnv("JNT_API_ENV", "production");
@@ -53,6 +77,28 @@ describe("J&T global platform secrets", () => {
     expect(isJntPlatformOwner({ id: "seller-1", roles: ["Super Admin"] })).toBe(false);
     expect(isJntPlatformOwner(null)).toBe(false);
   });
+  it("permits only a local Super Admin on a verified independent seller store", () => {
+    const sellerOwner = { id: "seller-owner-1", roles: ["Super Admin"] };
+    stubSellerStore();
+    // Central allowlists must not govern a genuinely self-hosted local store.
+    vi.stubEnv("JNT_PLATFORM_OWNER_USER_IDS", "central-operator");
+    expect(isJntPlatformOwner(sellerOwner)).toBe(true);
+    expect(isJntPlatformOwner({ id: "store-manager", roles: ["Admin"] })).toBe(false);
+    expect(isJntPlatformOwner({ id: "", roles: ["Super Admin"] })).toBe(false);
+    expect(isJntPlatformOwner(null)).toBe(false);
+    vi.stubEnv("APP_ORIGIN", "http://boutique.example");
+    expect(isJntPlatformOwner(sellerOwner)).toBe(false);
+    vi.stubEnv("APP_ORIGIN", "https://boutique.example");
+    vi.stubEnv("DATABASE_URL", "postgresql://insecure:credential@remote.example/postgres");
+    expect(isJntPlatformOwner(sellerOwner)).toBe(false);
+  });
+
+  it("fails closed on invalid selector instead of silently falling back to the legacy allowlist", () => {
+    vi.stubEnv("JETSELLER_STORE_PROFILE", "unknown");
+    vi.stubEnv("JNT_PLATFORM_OWNER_USER_IDS", "operator");
+    expect(isJntPlatformOwner({ id: "operator", roles: ["Super Admin"] })).toBe(false);
+  });
+
   it("stores encrypted config, redacts GET, and preserves existing secrets on blank updates", async () => {
     vi.stubEnv("JNT_INTEGRATION_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
     await saveJntSettings({ environment: "sandbox", enabled: false, endpoints, credentials }, "owner-1");

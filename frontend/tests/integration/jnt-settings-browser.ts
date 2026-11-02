@@ -29,7 +29,9 @@ process.env.JWT_SECRET = "jnt-browser-synthetic-session-key-only";
 const log = createWriteStream(path.join(artifact,"server.log"));
 const child = spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3102"],{
   cwd:root,env:{...process.env,DATABASE_URL:target.toString(),DIRECT_URL:target.toString(),APP_ORIGIN:base,
-    JNT_CONFIG_SCOPE:localStore ? "local_store" : "legacy_platform", JNT_INSTALLATION_ID:"synthetic-browser-installation",
+    JNT_CONFIG_SCOPE:localStore ? "local_store" : "legacy_platform",
+    JETSELLER_INSTALLATION_ID:localStore ? "550e8400-e29b-41d4-a716-446655440000" : "",
+    JNT_INSTALLATION_ID:localStore ? "550e8400-e29b-41d4-a716-446655440000" : "",
     JNT_PLATFORM_OWNER_USER_IDS:localStore ? "" : users[0].id,JNT_INTEGRATION_ENCRYPTION_KEY:randomBytes(32).toString("base64"),
     JNT_API_ENV:"production",JNT_PRODUCTION_API_APPROVED:"no",JNT_ENABLE_ORDER_CREATE:"no",JNT_ENABLE_CANCELLATION:"no",
     REGION_DATA_MODE:"snapshot",MAINTENANCE_MODE:"0",REGISTRATION_OTP_CLEANUP_DISABLED:"1"},stdio:["ignore","pipe","pipe"],windowsHide:true,

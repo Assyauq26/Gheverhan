@@ -1,5 +1,7 @@
 # 01 — PRD JetSeller SaaS
 
+> **Prioritas 2026-11-02:** First vertical slice adalah pendaftaran seller OTP yang secara otomatis menghasilkan storefront + dashboard seller pada tenant/database terisolasi. Lihat [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md). J&T resmi dikelola **per seller**, bukan kredensial Super Admin global. Billing/custom domain/J&T diposisikan setelah alur signup→toko terbukti.
+
 ## 1. Visi, masalah dan definisi pengguna
 
 JetSeller adalah platform SaaS pembuat toko online untuk seller independen/UMKM: membuat toko secara otomatis, tanpa harus memahami deployment web, lalu mengelola website dan bisnis dari dashboard seller. Produk platform berbeda dari toko demo yang saat ini ada di `gheverhan.store`.
@@ -10,14 +12,14 @@ JetSeller adalah platform SaaS pembuat toko online untuk seller independen/UMKM:
 | Seller owner | Dashboard tenantnya sendiri | Kelola toko, paket hosting & domain, gudang, katalog, pesanan, pembayaran, pengiriman |
 | Seller staff | Dashboard tenant terbatas | Hanya izin yang diberikan owner, **tidak** mengelola billing/domain rahasia secara default |
 | Customer | Storefront tenant | Browse, cart, akun customer, checkout dan status pesanan |
-| JetSeller Super Admin | Control plane internal | Mengelola tenant, provisioning, plan catalog, billing, domains, J&T master config, observability, abuse |
+| JetSeller Super Admin | Control plane internal | Mengelola tenant, provisioning, plan catalog, billing, domains, integrasi platform dan health metadata J&T non-rahasia (tanpa mengelola kredensial seller), observability, abuse |
 | Operator/support | Control plane izin terbatas | Diagnostik tanpa bebas melihat PII/secret milik seller |
 
 **Hard requirement:** pendaftaran seller lewat form publik JetSeller; **login dashboard JetSeller hanya Super Admin**. Seller otomatis mendapat tenant dan dashboard seller, bukan akses ke dashboard JetSeller.
 
 ## 2. MVP dan non-goals
 
-MVP: signup+OTP, auto-provisioning tenant + default storefront/dashboard, slug/subdomain, trial 30 hari, onboarding wizard, produk/varian/media/stock, Appearance draft→preview→publish oleh seller, pesanan dan checkout yang valid, hosting+domain dashboard, operasional J&T **sandbox** dengan gate ketat, Super Admin monitoring, backup/recovery dan regression multi-tenant.
+**MVP terdekat (wajib selesai lebih dulu):** signup seller+OTP, provisioning database tenant terisolasi, owner role, subdomain terverifikasi, storefront awal (empty/catalog safe), dashboard seller nyata, onboarding toko minimal dan trial 30 hari tercatat sekali, keamanan dan regresi 2 tenant. **Fase lanjutan:** produk/varian/media, checkout, hosting plan berbayar, custom domain, serta J&T seller-managed. Spesifikasi acceptance detail: [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md).
 
 Bukan MVP: marketplace agregator multi-seller dalam satu checkout; aplikasi native; satu deployment Next.js baru per seller; reselling domain tanpa kontrak registrar; payment gateway live tanpa perjanjian; live J&T untuk setiap seller tanpa kontrak; custom fulfillment carrier selain yang disetujui; auto-provision semua seller ke VPS terdedikasi; repo rename atau menjadikan GitHub Private.
 
@@ -52,7 +54,7 @@ Bukan MVP: marketplace agregator multi-seller dalam satu checkout; aplikasi nati
 - Harga paket, kuota dan masa grace: diatur Super Admin sebagai katalog, perlu persetujuan bisnis. Tidak mengarang harga maupun kapasitas.
 - “Hosting” adalah entitlement/resource tier di infrastruktur bersama kecuali ada paket dedicated yang memang dibangun; jangan klaim setiap paket = VPS baru.
 - Transaksi commerce toko, billing platform, dan tagihan kurir dibedakan ledger, invoice, dan rekonsiliasinya.
-- Untuk integrasi J&T, output tarif bukan bukti dukungan Create Order; pada kontrak publik versi baseline, hanya EZ yang dapat disimpulkan dari implementasi yang ada.
+- Untuk integrasi J&T, **setiap seller/tenant memasukkan dan mengelola akun API resmi J&T miliknya sendiri melalui dashboard seller** setelah toko dibuat. Tidak ada model kredensial operasional J&T global JetSeller untuk semua tenant. Output tarif bukan bukti dukungan Create Order; pada kontrak publik versi baseline, hanya EZ yang dapat disimpulkan dari implementasi yang ada.
 
 ## 6. Acceptance criteria tingkat produk
 
@@ -70,5 +72,5 @@ AC-P10: Demo `gheverhan.store` dan landing `jetseller.web.id` lolos regresi sete
 ## 7. Dependensi/persetujuan belum final
 
 - Host final control-plane/dashboard seller dan domain root subdomain platform (saat ini usulan `<slug>.gheverhan.store`; evaluasi migrasi ke domain JetSeller).
-- Registrar/domain reseller, jenis pembayaran billing SaaS, harga plan, pajak, dispute/refund, perjanjian J&T untuk multi-seller, model credential managed-vs-BYOK, jenis database-per-tenant dan backup/storage budget.
+- Registrar/domain reseller, jenis pembayaran billing SaaS, harga plan, pajak, dispute/refund, persyaratan akun/API resmi J&T **per seller**, jenis database-per-tenant dan backup/storage budget. **Model credential tenant-managed/BYOK sudah diputuskan; tidak perlu ADR memilih shared platform credential.**
 - Super Admin harus menyetujui desain kontrol, UX dan harga sebelum go-live. Detail tersebut **OPEN DECISION**, bukan scope yang diam-diam dianggap selesai.

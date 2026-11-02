@@ -1,5 +1,7 @@
 # 05 — Hosting, Domain, Trial, Billing SaaS
 
+> **DEFERRED after signup MVP:** implement only one-time 30-day trial metadata/entitlement and accurate trial-status tile during initial tenant provisioning. Paid plans, invoices, registrar/domain purchase, subscription payment and custom-domain provisioning are subsequent workstreams. First deliverable is a working new storefront and seller dashboard. See [09](09_MVP_SELLER_SIGNUP_AUTO_STORE.md).
+
 ## 1. Prinsip produk
 
 Setiap seller yang selesai auto-provision memperoleh **storefront + dashboard + trial hosting 30 hari**, tanpa wajib memilih paket sebelum mendaftar. Dashboard seller memiliki menu khusus **Hosting & Domain** untuk memilih paket, membayar/perpanjang, upgrade, dan mengelola alamat website.

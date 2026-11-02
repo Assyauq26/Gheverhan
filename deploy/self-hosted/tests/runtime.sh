@@ -11,6 +11,9 @@ docker build --target runtime -t jetseller-fixture:app "$context"
 docker build --target migration -t jetseller-fixture:migration "$context"
 app_image=$(docker image inspect jetseller-fixture:app --format '{{.Id}}')
 migration_image=$(docker image inspect jetseller-fixture:migration --format '{{.Id}}')
+for built in "$app_image" "$migration_image"; do
+ docker run --rm --entrypoint node "$built" -e "const fs=require('fs');for(const f of ['/app/self-hosted/launch.mjs','/app/self-hosted/config.mjs']){if(!fs.statSync(f).isFile())process.exit(1)}"
+done
 node deploy/self-hosted/prepare.mjs fixture "$fixture_root/stack" store.fixture.example "$app_image" "$migration_image"
 cd "$fixture_root/stack"
 test -f .jetseller-disposable

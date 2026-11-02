@@ -1,0 +1,83 @@
+{
+  "audit_date": "2026-11-02",
+  "audited_main": "fdf8d18ba90450fa1fe3d9c9392f1fc0eeefd96a",
+  "documentation_commit": "6b576b6c35eda343b13352c16b995d3723f49cb7",
+  "documentation_pr": 136,
+  "documents": [
+    {
+      "path": "docs/self-hosted/ACCEPTANCE_TESTS.md",
+      "git_blob": "f9e9f5dd3fda83521c9f1bc5c60741e4e5f1f191",
+      "lines": 94
+    },
+    {
+      "path": "docs/self-hosted/API_CONTRACTS.md",
+      "git_blob": "cb9a1d06aa666734eba7413051658ab294477f7d",
+      "lines": 221
+    },
+    {
+      "path": "docs/self-hosted/ARCHITECTURE.md",
+      "git_blob": "06fa565177b82ae141c91a252a3ec5827a7fa22f",
+      "lines": 248
+    },
+    {
+      "path": "docs/self-hosted/CODEX_EXECUTION_PROMPT.md",
+      "git_blob": "dc3ff2c4963b92d85ebfe643e3268f9797d43313",
+      "lines": 152
+    },
+    {
+      "path": "docs/self-hosted/OPEN_DECISIONS.md",
+      "git_blob": "0c4d333cb2d6d4c8a07a4d75a7d43ac73ad2eac7",
+      "lines": 30
+    },
+    {
+      "path": "docs/self-hosted/PRD.md",
+      "git_blob": "61eeb231fe58ab0c6d4535bda5320f25867036c2",
+      "lines": 288
+    },
+    {
+      "path": "docs/self-hosted/README.md",
+      "git_blob": "c3323ba538145a2445035eb6c0b584bcc1758fc0",
+      "lines": 49
+    },
+    {
+      "path": "docs/self-hosted/SECURITY_AND_RELEASES.md",
+      "git_blob": "e047ad7cd3d91f0ada5b6498a06275d3e05fba93",
+      "lines": 109
+    }
+  ],
+  "inventory_summary": {
+    "workflows": 13,
+    "next_route_handlers": 54,
+    "migrations": 19,
+    "files": 2624
+  },
+  "evidence_scope": "Static source audit reused; live repository/check/review/ruleset queries only",
+  "excluded": [
+    "raw API responses",
+    "logs",
+    "full tracked path inventory",
+    "local account/worktree metadata",
+    "env files",
+    "screenshots",
+    "credentials",
+    "production state exports"
+  ],
+  "tests": "Documentation sanitation/link/hash checks only in current review; application tests not run",
+  "publication_base": "5f6d21ed42c04ef7206e781edae09c728b52850b",
+  "delta_review": "Eight documentation files only; audited application unchanged",
+  "publication_paths": [
+    "docs/self-hosted/adr/0001-independent-store-control-plane.md",
+    "docs/self-hosted/adr/0002-device-pairing.md",
+    "docs/self-hosted/adr/0003-agent-helper.md",
+    "docs/self-hosted/adr/0004-signed-release-protocol.md",
+    "docs/self-hosted/adr/0005-schema-backup-rollback.md",
+    "docs/self-hosted/adr/0006-incremental-packaging.md",
+    "docs/self-hosted/adr/README.md",
+    "docs/self-hosted/evidence/review-summary.json",
+    "docs/self-hosted/evidence/source-manifest.json",
+    "docs/self-hosted/m0-review-gate.md",
+    "docs/self-hosted/m1-pr-plan.md",
+    "docs/self-hosted/repo-audit.md",
+    "docs/self-hosted/visibility-impact.md"
+  ]
+}

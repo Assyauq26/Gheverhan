@@ -1,0 +1,49 @@
+{
+  "repository": "Assyauq26/Gheverhan",
+  "pr": 136,
+  "url": "https://github.com/Assyauq26/Gheverhan/pull/136",
+  "head_sha": "6b576b6c35eda343b13352c16b995d3723f49cb7",
+  "base_sha": "fdf8d18ba90450fa1fe3d9c9392f1fc0eeefd96a",
+  "state": "CLOSED",
+  "merged": true,
+  "submitted_reviews": 0,
+  "review_threads": 0,
+  "code_review_summary": "completed, no findings; not approval",
+  "security_review": "not recorded",
+  "check_runs_total": 1,
+  "checks": [
+    {
+      "name": "unit-tests",
+      "conclusion": "success",
+      "status": "completed",
+      "url": "https://github.com/Assyauq26/Gheverhan/actions/runs/41395883079/job/125116981025"
+    }
+  ],
+  "actions_runs_total": 1,
+  "legacy_status_contexts": 0,
+  "legacy_combined_status": "pending with zero contexts; not a pending job",
+  "ruleset": {
+    "required_approving_review_count": 0,
+    "required_thread_resolution": true,
+    "active": true,
+    "bypass_actor_count": 0,
+    "required_check": "unit-tests"
+  },
+  "visibility": "public",
+  "has_pages": false,
+  "publication_gate": "User authorized audit PR after verified #136 merge; architecture approval required",
+  "m1": "NOT STARTED; architecture review required",
+  "production_actions": "none",
+  "applications_tests_run_in_this_review": false,
+  "historical_premerge_checked_at_utc": "2026-11-02T08:09:51.2712927Z",
+  "merge_commit_sha": "5f6d21ed42c04ef7206e781edae09c728b52850b",
+  "snapshot_scope": "Check/review/ruleset fields are historical pre-merge evidence, not fresh test results",
+  "finalization": {
+    "date": "2026-11-02",
+    "application_delta": "none; eight canonical docs added",
+    "all_eight_blobs_match": true,
+    "architecture_accepted": false,
+    "m1_authorized": false,
+    "original_evidence_preserved": true
+  }
+}

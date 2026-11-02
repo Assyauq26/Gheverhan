@@ -55,9 +55,23 @@ for attempt in $(seq 1 40); do
  if dc exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > "$fixture_root/ca.pem" 2>/dev/null && curl --noproxy '*' --silent --fail --cacert "$fixture_root/ca.pem" --resolve store.fixture.example:443:127.0.0.1 https://store.fixture.example/api/v1/health > /dev/null; then break; fi
  sleep 2
 done
-for route in / /admin /api/v1/health; do
+for route in / /admin /api/v1/health /api/v1/ready; do
  curl --noproxy '*' --silent --show-error --fail --cacert "$fixture_root/ca.pem" --resolve store.fixture.example:443:127.0.0.1 "https://store.fixture.example$route" > /dev/null
 done
+# A live process is not a ready database-backed application. Probe actual local
+# PostgreSQL failure, then restore it before persistence/recovery scenarios.
+dc stop db >/dev/null
+sleep 3 # expire the bounded per-worker success cache
+for attempt in $(seq 1 5); do
+ if dc exec -T app node -e "fetch('http://127.0.0.1:3000/api/v1/ready',{signal:AbortSignal.timeout(5000)}).then(async r=>{const j=await r.json();if(r.status!==503||JSON.stringify(j)!==JSON.stringify({success:false,data:{status:'not_ready'}}))process.exit(1)}).catch(()=>process.exit(1))"; then break; fi
+ if [ "$attempt" = 5 ]; then echo 'Database-down readiness failed'; exit 1; fi
+ sleep 2
+done
+dc exec -T app node -e "fetch('http://127.0.0.1:3000/api/v1/health',{signal:AbortSignal.timeout(2000)}).then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))"
+dc up -d --wait db
+dc up -d --wait app
+curl --noproxy '*' --silent --show-error --fail --cacert "$fixture_root/ca.pem" --resolve store.fixture.example:443:127.0.0.1 https://store.fixture.example/api/v1/ready > /dev/null
+
 dc exec -T app node -e "const fs=require('fs');fs.writeFileSync('/var/lib/jetseller/media/persistence-fixture','synthetic-media');if(fs.existsSync('/run/secrets/migration_config'))process.exit(1)"
 dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' .env)" -v ON_ERROR_STOP=1 -c "CREATE TABLE fixture_persistence (id integer primary key, label text); INSERT INTO fixture_persistence VALUES (1,'synthetic');" >/dev/null
 dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' .env)" -v ON_ERROR_STOP=1 -c 'GRANT SELECT,INSERT,UPDATE,DELETE ON fixture_persistence TO js_runtime' >/dev/null

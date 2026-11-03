@@ -30,6 +30,43 @@ test('per-install private credentials are distinct and runtime cannot read migra
     assert.throws(()=>prepareFixture(a,{domain:'store.example',appImage:digest,migrationImage:digest}));
   } finally {rmSync(tmp,{recursive:true,force:true});}
 });
+test('a verified portal-provided installation UUID is preserved across store identity, DB and J&T scope',()=>{
+  const tmp=mkdtempSync(path.join(os.tmpdir(),'js-packaging-portal-'));
+  const id='550e8400-e29b-41d4-a716-446655440000';
+  try {
+    const target=path.join(tmp,'portal-bound');
+    const response=prepareFixture(target,{domain:'shop.seller.example',appImage:digest,migrationImage:digest,installationId:id});
+    assert.equal(response.installationId,id);
+    assert.equal(response.databaseName,'js_'+id.replaceAll('-',''));
+    const runtime=loadPrivateConfig(path.join(target,'private/runtime.json'));
+    const migration=loadPrivateConfig(path.join(target,'private/migration.json'),'migration');
+    const env=readFileSync(path.join(target,'.env'),'utf8');
+    const marker=JSON.parse(readFileSync(path.join(target,'.jetseller-disposable'),'utf8'));
+    assert.equal(runtime.JETSELLER_INSTALLATION_ID,id);
+    assert.equal(runtime.JETSELLER_STORE_PROFILE,'self-hosted');
+    assert.equal(runtime.APP_ORIGIN,'https://shop.seller.example');
+    assert.equal(runtime.JETSELLER_STORE_DOMAIN,'shop.seller.example');
+    assert.equal(migration.JETSELLER_INSTALLATION_ID,id);
+    assert.match(runtime.DATABASE_URL,/\/js_550e8400e29b41d4a716446655440000\?/);
+    assert.ok(!env.includes(runtime.JWT_SECRET));
+    assert.ok(!env.includes(runtime.JNT_INTEGRATION_ENCRYPTION_KEY));
+    assert.match(env,/JETSELLER_INSTALLATION_ID=550e8400-e29b-41d4-a716-446655440000/);
+    assert.equal(marker.installation,id);
+    assert.equal(marker.production,false);
+    for(const invalid of [
+      '', '550e8400-e29b-11d4-a716-446655440000',
+      '550E8400-E29B-41D4-A716-446655440000',
+      '550e8400-e29b-41d4-a716-446655440000/../../etc',
+      42, null
+    ]) {
+      const rejected=path.join(tmp,'rejected');
+      assert.throws(()=>prepareFixture(rejected,{
+        domain:'shop.seller.example',appImage:digest,migrationImage:digest,installationId:invalid
+      }));
+      assert.throws(()=>readFileSync(path.join(rejected,'.env')));
+    }
+  } finally {rmSync(tmp,{recursive:true,force:true});}
+});
 test('invalid domains, mutable images and malformed runtime secrets fail closed',()=>{
   const tmp=mkdtempSync(path.join(os.tmpdir(),'js-packaging-'));
   try {

@@ -4,6 +4,7 @@ import { transaction, rate } from './db.mjs';
 import { sellerAuthenticator, requireCsrf, deviceKey, pairingProof, credential, agentIdentity } from './auth.mjs';
 
 import { domainProofRoute } from './domain-proof.mjs';
+import { reserveDomain } from './domain-reservation.mjs';
 
 const prefix = '/api/installer/v1';
 const normalizedCode = value => {
@@ -27,10 +28,6 @@ async function own(client, id, seller, lock = false) {
   const result = await client.query(`SELECT i.*,d.id AS device_id FROM installer.installations i LEFT JOIN installer.devices d ON d.installation_id=i.id AND d.revoked_at IS NULL WHERE i.id=$1 AND i.seller_id=$2${lock?' FOR UPDATE OF i':''}`,[id,seller]);
   if (!result.rows[0]) fail(404,'NOT_FOUND');
   return result.rows[0];
-}
-async function reserve(client, host) {
-  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[host]);
-  await client.query("UPDATE installer.installations SET reserved_domain=NULL WHERE reserved_domain=$1 AND status IN ('DRAFT','UNPAIRED') AND claim_expires_at<now()",[host]);
 }
 function pairingPublic(pairing) {
   return { pairing_session_id:pairing.id,installation_id:pairing.installation_id,display_name:pairing.display_name,
@@ -130,7 +127,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(existing){if(existing.request_hash!==digest)fail(409,'IDEMPOTENCY_CONFLICT');return existing;}
           const count=(await c.query("SELECT count(*)::int AS n FROM installer.installations WHERE seller_id=$1 AND status<>'CANCELLED'",[seller.seller_id])).rows[0].n;
           if(count>=20) fail(409,'INSTALLATION_LIMIT');
-          await reserve(c,input.domain);
+          await reserveDomain(c,input.domain);
           return (await c.query(`INSERT INTO installer.installations(id,seller_id,display_name,domain,reserved_domain,claim_expires_at,client_request_id,request_hash)
             VALUES($1,$2,$3,$4,$4,now()+interval '24 hours',$5,$6) RETURNING *`,[randomUUID(),seller.seller_id,input.display_name,input.domain,requestId,digest])).rows[0];
         });
@@ -155,7 +152,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
             const name=text(input.display_name,1,100),host=domain(input.domain);
             const pending=(await c.query("SELECT id FROM installer.pairing_sessions WHERE installation_id=$1 AND status='PENDING' AND expires_at>now() LIMIT 1",[id])).rows[0];
             if(pending) fail(409,'PAIR_PENDING');
-            await reserve(c,host);
+            await reserveDomain(c,host);
             return (await c.query("UPDATE installer.installations SET display_name=$2,domain=$3,reserved_domain=$3,claim_expires_at=now()+interval '24 hours',version=version+1,updated_at=now() WHERE id=$1 RETURNING *",[id,name,host])).rows[0];
           });
           return json(200,{installation:publicInstallation(installation)});
@@ -184,7 +181,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(hash(normalizedCode(b.user_code))!==pairing.user_hash || b.public_key_thumbprint!==pairing.thumbprint) fail(403,'PAIR_CONFIRMATION_MISMATCH');
           const installation=await own(c,pairing.installation_id,seller.seller_id,true);
           if(!['DRAFT','UNPAIRED'].includes(installation.status)||new Date(installation.claim_expires_at)<=new Date()) fail(409,'DEVICE_ALREADY_BOUND');
-          await reserve(c,installation.domain);
+          await reserveDomain(c,installation.domain);
           const device=randomUUID();
           await c.query('INSERT INTO installer.devices(id,installation_id,public_jwk,thumbprint,nonce) VALUES($1,$2,$3,$4,$5)',[device,installation.id,pairing.public_jwk,pairing.thumbprint,pairing.nonce]);
           await c.query("UPDATE installer.installations SET status='PAIRED',reserved_domain=domain,version=version+1,updated_at=now() WHERE id=$1",[installation.id]);

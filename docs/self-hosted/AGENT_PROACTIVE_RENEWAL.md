@@ -24,7 +24,7 @@ This extends the lifespan of an **online agent that renews before its old token 
 ## Deliberately not solved
 
 1. **No expired-token rescue**: token expiry still requires a separately security-reviewed device reauthentication or seller-approved recovery design.
-2. **No CLI agent renewal client yet**: existing Go pairing CLI records one credential; a long-running agent must implement signed DPoP renewal and atomic local credential persistence, refresh jitter and clock skew resilience. Do not assume this endpoint alone makes an agent durable.
+2. **No long-running agent scheduler yet**: the Go `PairingClient.Renew` method now constructs the bound DPoP proof, calls the endpoint, checks same installation/device/nonce/scopes and persists the new credential atomically. A background agent must still call it proactively before expiry, with jitter, backoff, and clock skew resilience. Do not assume this method alone makes an agent durable.
 3. Device/key rotation, replacement, renewal loss response handling, complete RFC 9449 compliance, registry credentials and signed release rollout are separate review gates.
 4. Never use this route to grant new scopes or bypass device revocation.
 
@@ -32,4 +32,4 @@ This extends the lifespan of an **online agent that renews before its old token 
 
 Isolated PostgreSQL integration covers: successful renewal, matching device/installation/PoP thumbprint, scope preservation, no new device, invalid/missing proof, wrong signing key, wrong method and URL, proof replay, repeated authorized renewal and revoked device rejection.
 
-No VPS access or production changes. Do not enable production until a specialist verifies the proof profile, error responses, rate limiting and recovery semantics.
+Go unit tests additionally cover signed POST/URL/token binding, atomic credential persistence, and rejecting a foreign device or expanded scope. No VPS access or production changes. Do not enable production until a specialist verifies the proof profile, error responses, rate limiting and recovery semantics.

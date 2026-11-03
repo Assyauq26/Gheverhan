@@ -15,6 +15,9 @@ export function prepareFixture(target, { domain, appImage, migrationImage }) {
   const id = randomUUID(), database = 'js_' + id.replaceAll('-', '');
   const secret = () => randomBytes(32).toString('hex');
   const bootstrap = secret(), migration = secret(), runtime = secret();
+  // Each independent store receives its own J&T AES-GCM key. The central
+  // portal and one-time migration process do not require carrier secrets.
+  const jntEncryptionKey = randomBytes(32).toString('base64');
   const config = {
     JETSELLER_STORE_PROFILE: 'self-hosted', JETSELLER_INSTALLATION_MODE: 'new',
     JETSELLER_INSTALLATION_ID: id, JETSELLER_STORE_DOMAIN: domain, APP_ORIGIN: 'https://' + domain,
@@ -22,8 +25,12 @@ export function prepareFixture(target, { domain, appImage, migrationImage }) {
     DATABASE_URL: `postgresql://js_runtime:${runtime}@db:5432/${database}?schema=public`,
     JETSELLER_MIGRATION_IDENTITY: 'js_migrate', JWT_SECRET: secret(), AUTH_COOKIE_NAME: 'js_' + id.slice(0,8) + '_session',
     PASSWORD_RESET_FROM: `Toko <noreply@${domain}>`, PASSWORD_RESET_BASE_URL: 'https://' + domain,
+    JNT_CONFIG_SCOPE: 'local_store', JNT_INTEGRATION_ENCRYPTION_KEY: jntEncryptionKey,
   };
-  for (const [name, data] of Object.entries({ bootstrap_password: bootstrap, migration_password: migration, runtime_password: runtime, 'runtime.json': JSON.stringify(config), 'migration.json': JSON.stringify({ ...config, DIRECT_URL: `postgresql://js_migrate:${migration}@db:5432/${database}?schema=public` }) })) {
+  const migrationConfig = { ...config };
+  delete migrationConfig.JNT_CONFIG_SCOPE;
+  delete migrationConfig.JNT_INTEGRATION_ENCRYPTION_KEY;
+  for (const [name, data] of Object.entries({ bootstrap_password: bootstrap, migration_password: migration, runtime_password: runtime, 'runtime.json': JSON.stringify(config), 'migration.json': JSON.stringify({ ...migrationConfig, DIRECT_URL: `postgresql://js_migrate:${migration}@db:5432/${database}?schema=public` }) })) {
     writeFileSync(path.join(privateDir, name), data + '\n', { mode: 0o600, flag: 'wx' });
   }
   for (const name of ['compose.yml','Caddyfile','init-db.sh','grant-runtime.sh']) copyFileSync(path.join(here,name),path.join(target,name));

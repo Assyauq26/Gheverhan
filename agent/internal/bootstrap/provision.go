@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -58,7 +59,7 @@ func (b *limitedOutput) Write(p []byte) (int, error) {
 // only a marked synthetic /tmp fixture is accepted. It does not provision host
 // packages, change DNS, fetch unsigned scripts or expose arbitrary remote exec.
 func ValidateDisposableFixturePaths(stateDirectory, stack string) error {
-	if runtime.GOOS != "linux" || os.Geteuid() != 0 || !fixturePath.MatchString(stack) || filepath.Clean(stack) != stack || safeAncestors(stack) != nil || stateDirectory != filepath.Join(filepath.Dir(stack), "state") {
+	if runtime.GOOS != "linux" || os.Geteuid() != 0 || !fixturePath.MatchString(stack) || filepath.Clean(stack) != stack || safeAncestors(stack) != nil || stateDirectory != filepath.Join(filepath.Dir(stack), "state") || safeAncestors(stateDirectory) != nil {
 		return ErrProvision
 	}
 	return nil
@@ -217,10 +218,27 @@ func applyDisposableFixture(ctx context.Context, state *State, stack, metadataDi
 const fixtureMediaProgram = `const fs=require('fs'),p='/media/.jetseller-installation-id',id=process.argv[1];if(fs.existsSync(p)){const s=fs.lstatSync(p);if(!s.isFile()||s.isSymbolicLink()||fs.readFileSync(p,'utf8')!==id+'\n')process.exit(1)}else{fs.writeFileSync(p,id+'\n',{mode:0o600,flag:'wx'})}fs.chownSync('/media',1000,1000);fs.chmodSync('/media',0o700);fs.chownSync(p,1000,1000);fs.chmodSync(p,0o600)`
 const fixtureReadinessProgram = `fetch('http://127.0.0.1:3000/api/v1/ready',{signal:AbortSignal.timeout(5000)}).then(r=>{if(r.status!==200)process.exit(1)}).catch(()=>process.exit(1))`
 
+// This check is for the root-run disposable provisioning helper only.
+// A symlink-free path is not sufficient: an unprivileged user controlling
+// any ancestor can replace files after signature verification but before
+// root's Docker/Chown calls. Only root-owned, non-writable ancestors qualify.
+// /tmp and /var/tmp are the sole exceptions: root-owned sticky directories
+// may have group/other write permission, but the fixture children must not.
 func safeAncestors(directory string) error {
 	for current := directory; ; current = filepath.Dir(current) {
 		info, err := os.Lstat(current)
 		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return ErrProvision
+		}
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		if !ok || stat.Uid != 0 {
+			return ErrProvision
+		}
+		if current == "/tmp" || current == "/var/tmp" {
+			if info.Mode()&os.ModeSticky == 0 {
+				return ErrProvision
+			}
+		} else if info.Mode().Perm()&0022 != 0 {
 			return ErrProvision
 		}
 		if filepath.Dir(current) == current {

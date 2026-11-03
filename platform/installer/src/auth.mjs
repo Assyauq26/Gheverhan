@@ -47,16 +47,17 @@ export async function pairingProof(proof, pairing, controlOrigin) {
   uuid(p.jti);
   return { jti_hash:hash(p.jti), expires_at:new Date((p.exp+5)*1000) };
 }
-export async function credential(signingKey, issuer, pairing, deviceId) {
-  const expires = new Date(Date.now()+600000);
-  const token = await new SignJWT({ installation_id:pairing.installation_id,scopes,cnf:{jkt:pairing.thumbprint} })
+export async function credential(signingKey, issuer, pairing, deviceId, issuance = {}) {
+  const issuedAt = issuance.issued_at ? Math.floor(new Date(issuance.issued_at).getTime()/1000) : Math.floor(Date.now()/1000);
+  const expires = issuance.expires_at ? new Date(issuance.expires_at) : new Date((issuedAt+600)*1000);
+  const token = await new SignJWT({ installation_id:pairing.installation_id,scopes,key_epoch:pairing.key_epoch??1,cnf:{jkt:pairing.thumbprint} })
     .setProtectedHeader({alg:'EdDSA',typ:'jetseller-agent+jwt'}).setSubject(deviceId).setIssuer(issuer).setAudience('jetseller-agent-management')
-    .setJti(randomUUID()).setIssuedAt().setExpirationTime(Math.floor(expires.getTime()/1000)).sign(signingKey);
+    .setJti(issuance.token_jti??randomUUID()).setIssuedAt(issuedAt).setExpirationTime(Math.floor(expires.getTime()/1000)).sign(signingKey);
   return { installation_id:pairing.installation_id,device_id:deviceId,credential_expires_at:expires.toISOString(),scopes,
     credential:token,token_type:'jetseller-pop',public_key_thumbprint:pairing.thumbprint,management_nonce:pairing.nonce };
 }
 
-export async function agentIdentity(request, client, verificationKey, controlOrigin) {
+export async function agentIdentity(request, client, verificationKey, controlOrigin, requiredScope='report:heartbeat', {bodyHash}={}) {
   if(!verificationKey) fail(503,'AGENT_AUTH_UNAVAILABLE');
   const authorization=request.headers.get('authorization')??'';
   if(!authorization.startsWith('DPoP ')) fail(401,'AGENT_AUTH_REQUIRED');
@@ -65,16 +66,29 @@ export async function agentIdentity(request, client, verificationKey, controlOri
   try { ({payload}=await jwtVerify(token,verificationKey,{algorithms:['EdDSA'],issuer:controlOrigin,audience:'jetseller-agent-management',typ:'jetseller-agent+jwt',requiredClaims:['sub','installation_id','cnf','scopes','iat','exp','jti'],maxTokenAge:'10m'})); }
   catch { fail(401,'AGENT_AUTH_REQUIRED'); }
   uuid(payload.sub);uuid(payload.installation_id);
-  const device=(await client.query('SELECT * FROM installer.devices WHERE id=$1 AND installation_id=$2 AND revoked_at IS NULL',[payload.sub,payload.installation_id])).rows[0];
-  if(!device||payload.cnf?.jkt!==device.thumbprint||!Array.isArray(payload.scopes)||!payload.scopes.includes('report:heartbeat')) fail(401,'AGENT_AUTH_REQUIRED');
+  const install=(await client.query("SELECT id FROM installer.installations WHERE id=$1 AND status='PAIRED' FOR UPDATE",[payload.installation_id])).rows[0];
+  if(!install)fail(401,'AGENT_AUTH_REQUIRED');
+  const device=(await client.query('SELECT * FROM installer.devices WHERE id=$1 AND installation_id=$2 AND revoked_at IS NULL FOR UPDATE',[payload.sub,payload.installation_id])).rows[0];
+  if(!device||payload.cnf?.jkt!==device.thumbprint||!Array.isArray(payload.scopes)||!payload.scopes.includes(requiredScope)||(payload.key_epoch??1)!==device.key_epoch) fail(401,'AGENT_AUTH_REQUIRED');
   const {key}=await deviceKey(device.public_jwk);
   let proof;
   try { ({payload:proof}=await jwtVerify(text(request.headers.get('dpop'),30,4096),key,{algorithms:['EdDSA'],typ:'dpop+jwt',requiredClaims:['htm','htu','ath','nonce','iat','jti'],maxTokenAge:'60s',clockTolerance:5})); }
   catch { fail(401,'INVALID_DEVICE_PROOF'); }
   if(!Number.isSafeInteger(proof.iat)||proof.htm!==request.method||proof.htu!==request.url||proof.nonce!==device.nonce||proof.ath!==Buffer.from(hash(token),'hex').toString('base64url')||proof.iat>Math.floor(Date.now()/1000)+5) fail(401,'INVALID_DEVICE_PROOF');
+  if(bodyHash && proof.bht!==bodyHash)fail(401,'INVALID_DEVICE_PROOF');
   uuid(proof.jti);
   await client.query('DELETE FROM installer.proof_replays WHERE expires_at<now()');
   const inserted=await client.query('INSERT INTO installer.proof_replays(thumbprint,jti_hash,expires_at) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING jti_hash',[device.thumbprint,hash(proof.jti),new Date((proof.iat+65)*1000)]);
   if(!inserted.rowCount)fail(409,'PROOF_REPLAY');
-  return {installation_id:device.installation_id,device_id:device.id,scopes:payload.scopes};
+  return {installation_id:device.installation_id,device_id:device.id,scopes:payload.scopes,key_epoch:device.key_epoch,public_key_thumbprint:device.thumbprint};
+}
+
+// Recheck after an external grant operation; no prior authorization snapshot may
+// survive seller revocation or device-key rotation in the meantime.
+export async function assertActiveAgent(client,principal) {
+ const install=(await client.query("SELECT id FROM installer.installations WHERE id=$1 AND status='PAIRED' FOR UPDATE",[principal.installation_id])).rows[0];
+ if(!install)fail(401,'AGENT_AUTH_REQUIRED');
+ const row=(await client.query('SELECT id FROM installer.devices WHERE id=$1 AND installation_id=$2 AND key_epoch=$3 AND thumbprint=$4 AND revoked_at IS NULL FOR UPDATE',[principal.device_id,principal.installation_id,principal.key_epoch,principal.public_key_thumbprint])).rows[0];
+ if(!row)fail(401,'AGENT_AUTH_REQUIRED');
+ return true;
 }

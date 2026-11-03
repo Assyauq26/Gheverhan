@@ -41,5 +41,6 @@ export function origin(value) {
 export function publicInstallation(row) {
   return { installation_id:row.id, display_name:row.display_name, domain:row.domain, status:row.status,
     version:row.version, created_at:row.created_at, updated_at:row.updated_at, device_id:row.device_id ?? null,
-    app_version:null, last_heartbeat_at:null };
+    app_version:row.observed_app_version??null, last_heartbeat_at:row.last_heartbeat_at??null,
+    domain_claim:{status:row.reserved_domain===row.domain && new Date(row.domain_claim_expires_at)>new Date()?'VERIFIED':row.domain_verified_at?'EXPIRED':'UNVERIFIED',expires_at:row.domain_claim_expires_at??null} };
 }

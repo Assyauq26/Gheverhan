@@ -13,7 +13,7 @@ export async function migrate(pool) {
   try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(9148327)');
-    await client.query(await readFile(new URL('../migrations/001_registry.sql', import.meta.url), 'utf8'));
+    for (const name of ['001_registry.sql','002_agent_lifecycle.sql']) await client.query(await readFile(new URL('../migrations/'+name, import.meta.url), 'utf8'));
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

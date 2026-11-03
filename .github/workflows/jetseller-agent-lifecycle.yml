@@ -1,0 +1,49 @@
+name: JetSeller agent lifecycle integration
+on:
+  pull_request:
+    paths: ['agent/**', 'platform/installer/**', '.github/workflows/jetseller-agent-lifecycle.yml']
+permissions:
+  contents: read
+concurrency:
+  group: jetseller-lifecycle-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  lifecycle-postgres-go:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_DB: js_control_fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-lifecycle-only
+        ports: ['127.0.0.1:5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U fixture -d js_control_fixture"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Build and test real management CLI
+        working-directory: agent
+        run: |
+          go vet ./...
+          go test -race -count=1 ./...
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /tmp/jetseller-lifecycle-cli ./cmd/jetseller-setup
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer
+      - run: node --test test/lifecycle-integration.mjs test/domain-lease-integration.mjs test/lifecycle-http-integration.mjs
+        working-directory: platform/installer
+        env:
+          JETSELLER_CONTROL_TEST_DATABASE_URL: postgresql://fixture:synthetic-lifecycle-only@127.0.0.1:5432/js_control_fixture
+          JETSELLER_CONTROL_TEST_CONFIRM: isolated-control-fixture
+          JETSELLER_LIFECYCLE_CLI_BINARY: /tmp/jetseller-lifecycle-cli

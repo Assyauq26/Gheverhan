@@ -35,6 +35,7 @@ func run() error {
 	issuer := flags.String("signer-issuer", "", "exact authorized OIDC issuer")
 	fixtureStack := flags.String("fixture-stack", "", "marked disposable fixture stack only")
 	metadataDirectory := flags.String("fixture-metadata", "", "local TUF fixture metadata directory")
+	recoveryConsent := flags.Bool("confirm-management-recovery", false, "explicit fresh-state device recovery after seller revokes old identity; never installation approval")
 	rootPin := flags.String("fixture-root-sha256", "", "independently pinned fixture root hash")
 	if flags.Parse(os.Args[2:]) != nil || flags.NArg() != 0 {
 		return fmt.Errorf("invalid arguments")
@@ -64,7 +65,31 @@ func run() error {
 		fmt.Println(bootstrap.FixturePlanResult(state))
 		return nil
 	}
-	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" {
+	if os.Args[1] == "renew-credential" || os.Args[1] == "rotate-device-key" || os.Args[1] == "heartbeat" {
+		state, err := bootstrap.OpenState(*directory, *installation)
+		if err != nil {
+			return err
+		}
+		defer state.Close()
+		client, err := bootstrap.NewPairingClient(*origin)
+		if err != nil {
+			return err
+		}
+		switch os.Args[1] {
+		case "renew-credential":
+			err = client.Refresh(ctx, state)
+		case "rotate-device-key":
+			err = client.Rotate(ctx, state)
+		case "heartbeat":
+			err = client.ReportHeartbeat(ctx, state, bootstrap.Heartbeat{AgentVersion: "0.1.0", Readiness: "unknown", UpdateState: "IDLE"})
+		}
+		if err != nil {
+			return err
+		}
+		fmt.Println("Device management operation accepted; no store deployment or installation-ready claim.")
+		return nil
+	}
+	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" && os.Args[1] != "recover-device" {
 		return fmt.Errorf("unsupported command")
 	}
 	state, err := bootstrap.OpenState(*directory, *installation)
@@ -72,13 +97,20 @@ func run() error {
 		return err
 	}
 	defer state.Close()
-	facts, err := bootstrap.InspectHost(*directory)
-	if err != nil {
-		return err
-	}
-	if state.Journal.Phase == "INITIALIZED" {
-		if err = state.Record("PREFLIGHT_OK"); err != nil {
+	var facts bootstrap.HostFacts
+	if os.Args[1] == "recover-device" {
+		if !*recoveryConsent {
+			return fmt.Errorf("explicit management recovery consent required")
+		}
+	} else {
+		facts, err = bootstrap.InspectHost(*directory)
+		if err != nil {
 			return err
+		}
+		if state.Journal.Phase == "INITIALIZED" {
+			if err = state.Record("PREFLIGHT_OK"); err != nil {
+				return err
+			}
 		}
 	}
 	if os.Args[1] == "preflight" {
@@ -92,7 +124,9 @@ func run() error {
 		return err
 	}
 	var session bootstrap.DeviceSession
-	if os.Args[1] == "resume-pairing" {
+	if os.Args[1] == "recover-device" {
+		session, err = client.RecoveryPairing(ctx, state)
+	} else if os.Args[1] == "resume-pairing" {
 		session, err = client.Resume(state)
 	} else {
 		session, err = client.Start(ctx, state)

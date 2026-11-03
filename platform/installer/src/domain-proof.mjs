@@ -19,15 +19,15 @@ export async function lookupTxtOwnership(host, expected, { resolver = new Resolv
   finally { clearTimeout(timer); resolver.cancel(); }
 }
 
-const publicChallenge = row => ({
+const publicChallenge = (row,installation) => ({
   challenge_id: row.id, domain: row.domain, record_type: 'TXT', record_name: '_jetseller.' + row.domain,
   record_value: row.txt_value, expires_at: row.expires_at, verified_at: row.verified_at,
   status: row.verified_at ? 'OWNERSHIP_VERIFIED' : new Date(row.expires_at) <= new Date() ? 'CHALLENGE_EXPIRED' : 'DNS_PENDING',
   // A TXT proof is independent of routing, certificate or application readiness.
-  https_verified: false, installed: false,
+  https_verified: false, installed: false, domain_claim_active: !!(installation?.reserved_domain===row.domain && new Date(installation.domain_claim_expires_at)>new Date()), domain_claim_expires_at:installation?.domain_claim_expires_at??null,
 });
 function active(record) {
-  if (record.status === 'CANCELLED' || record.reserved_domain !== record.domain || record.status !== 'PAIRED' && new Date(record.claim_expires_at) <= new Date()) fail(409, 'INSTALLATION_EXPIRED');
+  if (record.status === 'CANCELLED' || record.status !== 'PAIRED' && new Date(record.claim_expires_at) <= new Date()) fail(409, 'INSTALLATION_EXPIRED');
 }
 
 export async function domainProofRoute({ request, path, pool, seller, own, readBody, lookup = lookupTxtOwnership }) {
@@ -37,7 +37,7 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
   if (!match[2] && request.method === 'GET') {
     const installation = await own(pool, id, seller.seller_id);
     const row = (await pool.query('SELECT * FROM installer.domain_challenges WHERE installation_id=$1 AND domain=$2 ORDER BY created_at DESC,id DESC LIMIT 1', [id, installation.domain])).rows[0];
-    return { status: 200, body: { challenge: row ? publicChallenge(row) : null } };
+    return { status: 200, body: { challenge: row ? publicChallenge(row,installation) : null } };
   }
   if (request.method !== 'POST') fail(405, 'METHOD_NOT_ALLOWED');
   const body = await readBody(request);
@@ -53,18 +53,19 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
       await client.query("DELETE FROM installer.domain_challenges WHERE installation_id=$1 AND expires_at<now()-interval '7 days'", [id]);
       return (await client.query("INSERT INTO installer.domain_challenges(id,installation_id,client_request_id,domain,txt_value,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '30 minutes') RETURNING *", [randomUUID(), id, key, record.domain, 'jetseller-verification=' + opaque()])).rows[0];
     });
-    return { status: 201, body: { challenge: publicChallenge(row) } };
+    return { status: 201, body: { challenge: publicChallenge(row,await own(pool,id,seller.seller_id)) } };
   }
   await rate(pool, 'domain-verify:' + seller.seller_id, 10);
   const challengeId = uuid(match[2]);
   const installation = await own(pool, id, seller.seller_id); active(installation);
   const row = (await pool.query('SELECT * FROM installer.domain_challenges WHERE id=$1 AND installation_id=$2 AND domain=$3', [challengeId, id, installation.domain])).rows[0];
   if (!row) fail(404, 'NOT_FOUND');
-  if (row.verified_at) return { status: 200, body: { challenge: publicChallenge(row) } };
+  if (row.verified_at) return { status: 200, body: { challenge: publicChallenge(row,installation) } };
   if (new Date(row.expires_at) <= new Date()) fail(410, 'CHALLENGE_EXPIRED');
   const found = await lookup(row.domain, row.txt_value);
-  if (!found) return { status: 202, body: { challenge: publicChallenge(row), next_action: 'CHECK_DNS_TXT' } };
+  if (!found) return { status: 202, body: { challenge: publicChallenge(row,installation), next_action: 'CHECK_DNS_TXT' } };
   const verified = await transaction(pool, async client => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['domain:'+row.domain]);
     const current = await own(client, id, seller.seller_id, true); active(current);
     if (current.domain !== row.domain) fail(409, 'DOMAIN_CHANGED');
     const latest = (await client.query('SELECT id FROM installer.domain_challenges WHERE installation_id=$1 AND domain=$2 ORDER BY created_at DESC,id DESC LIMIT 1', [id, row.domain])).rows[0];
@@ -72,7 +73,12 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
     const result = (await client.query('SELECT * FROM installer.domain_challenges WHERE id=$1 FOR UPDATE', [row.id])).rows[0];
     if (result.verified_at) return result;
     if (new Date(result.expires_at) <= new Date()) fail(410, 'CHALLENGE_EXPIRED');
+    const held=(await client.query("SELECT id FROM installer.installations WHERE reserved_domain=$1 AND id<>$2 AND domain_claim_expires_at>now()",[row.domain,id])).rows[0];
+    if(held)fail(409,'DOMAIN_CLAIMED');
+    await client.query('UPDATE installer.installations SET reserved_domain=NULL WHERE reserved_domain=$1 AND domain_claim_expires_at<=now()',[row.domain]);
+    await client.query("UPDATE installer.installations SET reserved_domain=domain,domain_verified_at=clock_timestamp(),domain_claim_expires_at=now()+interval '24 hours' WHERE id=$1",[id]);
     return (await client.query('UPDATE installer.domain_challenges SET verified_at=clock_timestamp() WHERE id=$1 RETURNING *', [row.id])).rows[0];
   });
-  return { status: 200, body: { challenge: publicChallenge(verified) } };
+  const claimed=await own(pool,id,seller.seller_id);
+  return { status: 200, body: { challenge: publicChallenge(verified,claimed) } };
 }

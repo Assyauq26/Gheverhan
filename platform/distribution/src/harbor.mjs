@@ -22,7 +22,7 @@ export class HarborProvider {
   const policy=await this.api('GET','/configurations');if(policy?.token_expiration?.value!==1)fail('REGISTRY_REVOCATION_BOUND_UNPROVEN');
   const project=projectFor(installationId),name='js-'+uuid(grantId).replaceAll('-','');const projectInfo=await this.api('GET','/projects/'+project);if(String(projectInfo?.metadata?.public)!=='false')fail('REGISTRY_PROJECT_NOT_PRIVATE');let robot=await this.find(installationId,grantId);
   if(!robot){try{await this.api('POST','/robots',{name,level:'project',duration:1,description:'JetSeller installation pull grant '+grantId,permissions:[{kind:'project',namespace:project,access:[{resource:'repository',action:'pull',effect:'allow'}]}]},[201]);}catch(e){if(e.code!=='REGISTRY_CONFLICT')throw e;}robot=await this.find(installationId,grantId);}
-  if(!robot||robot.disable||robot.expires_at*1000<=Date.now()||robot.expires_at*1000>Date.now()+86460000)fail('REGISTRY_GRANT_INVALID');
+  if(!robot||!Number.isSafeInteger(robot.expires_at)||robot.disable||robot.expires_at*1000<=Date.now()||robot.expires_at*1000>Date.now()+86460000)fail('REGISTRY_GRANT_INVALID');
   // Harbor ignores supplied create-secret. Persist the chosen secret BEFORE this
   // idempotent PATCH; a lost creation/reply is reconciled by deterministic name.
   const refreshed=await this.api('PATCH','/robots/'+robot.id,{secret});if(refreshed?.secret!==undefined&&refreshed.secret!==''&&refreshed.secret!==secret)fail('REGISTRY_RESPONSE_INVALID');

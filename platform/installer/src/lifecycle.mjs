@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { jwtVerify } from 'jose';
-import { fail, exact, uuid, hash, text, opaque } from './common.mjs';
+import { fail, exact, uuid, hash, text } from './common.mjs';
 import { deviceKey, credential, agentIdentity } from './auth.mjs';
 import { transaction, rate } from './db.mjs';
 

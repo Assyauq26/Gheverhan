@@ -15,6 +15,7 @@ import { POST } from "@/app/api/v1/admin/integrations/jnt/test/route";
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); s.user = null; s.state = null; });
 function setup() {
   vi.stubEnv("APP_ORIGIN", "https://store.example"); vi.stubEnv("JNT_CONFIG_SCOPE", "local_store");
+  vi.stubEnv("JETSELLER_STORE_PROFILE", "self-hosted");
   vi.stubEnv("JETSELLER_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   s.user = { id: "local-admin", roles: ["Admin"], permissions: ["shipping.update"] };

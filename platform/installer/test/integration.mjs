@@ -124,6 +124,14 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   assert.equal(verifiedRefresh.payload.cnf.jkt,thumbprint);
   assert.ok(verifiedRefresh.payload.exp-verifiedRefresh.payload.iat<=600);
   assert.equal((await renew(renewalRequestProof)).status,409);
+  const expiredToken=await new SignJWT({
+    installation_id:issued.installation_id,scopes:issued.scopes,cnf:{jkt:thumbprint}
+  }).setProtectedHeader({alg:'EdDSA',typ:'jetseller-agent+jwt'})
+    .setSubject(issued.device_id).setIssuer(controlOrigin).setAudience('jetseller-agent-management')
+    .setJti(randomUUID()).setIssuedAt(Math.floor(Date.now()/1000)-900)
+    .setExpirationTime(Math.floor(Date.now()/1000)-600).sign(agentSigner.privateKey);
+  assert.equal((await renew(await renewalProof(expiredToken),expiredToken)).status,401);
+  assert.equal((await renew(await renewalProof(),issued.credential,{unexpected:true})).status,400);
   const renewedAgain=await renew(await renewalProof(refreshed.body.credential),refreshed.body.credential);
   assert.equal(renewedAgain.status,200);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM installer.devices WHERE installation_id=$1',[installation.installation_id])).rows[0].n,1);

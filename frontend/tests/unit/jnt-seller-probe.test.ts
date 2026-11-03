@@ -18,6 +18,20 @@ function setup() {
   vi.stubEnv("JETSELLER_STORE_PROFILE", "self-hosted");
   vi.stubEnv("JETSELLER_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
+  // Same-origin validation intentionally runs the COMPLETE self-hosted profile,
+  // not a test-only shortened UUID guard. Supply an independent synthetic
+  // HTTPS store identity instead of weakening the application security path.
+  vi.stubEnv("JETSELLER_INSTALLATION_MODE", "new");
+  vi.stubEnv("JETSELLER_STORE_DOMAIN", "store.example");
+  vi.stubEnv("STORAGE_PROVIDER", "local");
+  vi.stubEnv("STORAGE_APP_NAME", "js_550e8400");
+  vi.stubEnv("STORAGE_LOCAL_ROOT", "/var/lib/jetseller/media");
+  vi.stubEnv("DATABASE_URL", "postgresql://js_runtime:synthetic@db:5432/js_550e8400e29b41d4a716446655440000?schema=public");
+  vi.stubEnv("JETSELLER_MIGRATION_IDENTITY", "js_migrate");
+  vi.stubEnv("JWT_SECRET", "a".repeat(64));
+  vi.stubEnv("AUTH_COOKIE_NAME", "js_550e8400_session");
+  vi.stubEnv("PASSWORD_RESET_FROM", "JetSeller <noreply@store.example>");
+  vi.stubEnv("PASSWORD_RESET_BASE_URL", "https://store.example");
   s.user = { id: "local-admin", roles: ["Admin"], permissions: ["shipping.update"] };
   s.state = { enabled: true, config: { seller: { warehouse: { originSite: "SYNTHETIC CITY" },
     services: [{ code: "EZ", validUntil: "2030-01-01T00:00:00Z" }] }, credentials: { orderKey: "NEVER-RETURN-THIS-KEY" } } };
@@ -43,7 +57,9 @@ describe("local seller connection probes", () => {
     expect((await POST(request({ environment: "sandbox", endpoint: "tariff" }))).status).toBe(403);
     vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
     vi.stubEnv("JETSELLER_INSTALLATION_ID", "");
-    expect((await POST(request({ environment: "sandbox", endpoint: "tariff" }))).status).toBe(403);
+    // Broken full runtime identity blocks the request during same-origin
+    // preflight with 503, before authorization or any carrier request.
+    expect((await POST(request({ environment: "sandbox", endpoint: "tariff" }))).status).toBe(503);
     expect(s.rate).not.toHaveBeenCalled();
   });
 

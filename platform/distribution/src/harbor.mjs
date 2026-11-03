@@ -1,11 +1,12 @@
 import {fail,projectFor,uuid} from './common.mjs';
 export class HarborProvider {
+ #authorization;
  constructor({origin,username,password,robotPrefix='robot$',fetcher=fetch}){
   const u=new URL(origin);if(u.protocol!=='https:'||u.username||u.password||u.pathname!=='/'||u.search||u.hash||typeof username!=='string'||!username||typeof password!=='string'||password.length<16||!/^[-A-Za-z0-9_$]{1,32}$/.test(robotPrefix))throw new Error('Invalid private registry operator configuration');
-  this.origin=u.origin;this.robotPrefix=robotPrefix;this.fetcher=fetcher;this.authorization='Basic '+Buffer.from(username+':'+password).toString('base64');
+  this.origin=u.origin;this.robotPrefix=robotPrefix;this.fetcher=fetcher;this.#authorization='Basic '+Buffer.from(username+':'+password).toString('base64');
  }
  async api(method,path,body,allowed=[200]){
-  let r;try{r=await this.fetcher(this.origin+'/api/v2.0'+path,{method,redirect:'error',signal:AbortSignal.timeout(8000),headers:{authorization:this.authorization,'content-type':'application/json'},...(body!==undefined?{body:JSON.stringify(body)}:{})});}catch{fail('REGISTRY_UNAVAILABLE');}
+  let r;try{r=await this.fetcher(this.origin+'/api/v2.0'+path,{method,redirect:'error',signal:AbortSignal.timeout(8000),headers:{authorization:this.#authorization,'content-type':'application/json'},...(body!==undefined?{body:JSON.stringify(body)}:{})});}catch{fail('REGISTRY_UNAVAILABLE');}
   if(!allowed.includes(r.status)){if(r.body)await r.body.cancel();fail(r.status===409?'REGISTRY_CONFLICT':'REGISTRY_UNAVAILABLE');}
   if(r.status===204||r.status===201&&r.headers.get('content-length')==='0')return null;
   const reader=r.body?.getReader();if(!reader)return null;const chunks=[];let size=0;

@@ -19,6 +19,8 @@ export function localSetupConfig(env: Env) {
   catch { return reject("SETUP_UNAVAILABLE", 503); }
 }
 async function identity(tx: Prisma.TransactionClient, config: ReturnType<typeof localSetupConfig>) {
+  await tx.$executeRaw`SET LOCAL lock_timeout = '2000ms'`;
+  await tx.$executeRaw`SET LOCAL statement_timeout = '5000ms'`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LOCK})`;
   const rows = await tx.$queryRaw<{ database: string; role: string }[]>`SELECT current_database() AS database, current_user AS role`;
   if (rows.length !== 1 || rows[0].database !== config.databaseName || rows[0].role !== config.databaseRuntimeUser) reject("SETUP_UNAVAILABLE", 503);

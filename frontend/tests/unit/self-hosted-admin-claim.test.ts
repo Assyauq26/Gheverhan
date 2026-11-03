@@ -1,8 +1,26 @@
-import {describe,it,expect} from 'vitest';
+import {describe,it,expect,vi,afterEach} from 'vitest';
 import {validateLocalAdminInput,localSetupConfig} from '@/lib/self-hosted/admin-claim';
 import {readSetupInput,assertLocalSetupRequest} from '@/lib/self-hosted/admin-claim-http';
 const valid=()=>({claim:'a'.repeat(43),name:'Owner',email:'owner@example.test',password:'synthetic-password-only'});
 describe('local first administrator claim boundaries',()=>{
+  afterEach(()=>vi.unstubAllEnvs());
+  it('requires canonical HTTPS, no query secret and an explicit same-origin POST',()=>{
+    const id='550e8400-e29b-41d4-a716-446655440000', database='js_'+id.replaceAll('-','');
+    const env={JETSELLER_STORE_PROFILE:'self-hosted',JETSELLER_INSTALLATION_MODE:'new',JETSELLER_INSTALLATION_ID:id,JETSELLER_STORE_DOMAIN:'store.example',APP_ORIGIN:'https://store.example',STORAGE_PROVIDER:'local',STORAGE_APP_NAME:'js_fixture',STORAGE_LOCAL_ROOT:'/var/lib/jetseller/media',DATABASE_URL:`postgresql://js_runtime:fixture-runtime@db:5432/${database}?schema=public`,JETSELLER_MIGRATION_IDENTITY:'js_migrate',JWT_SECRET:'a'.repeat(64),AUTH_COOKIE_NAME:'js_550e8400_session',PASSWORD_RESET_FROM:'Store <noreply@store.example>',PASSWORD_RESET_BASE_URL:'https://store.example'};
+    for(const [key,value] of Object.entries(env))vi.stubEnv(key,value);
+    expect(assertLocalSetupRequest(new Request('https://store.example/admin/setup'),false).installationId).toBe(id);
+    expect(assertLocalSetupRequest(new Request('https://0.0.0.0:3000/admin/setup',{headers:{host:'store.example','x-forwarded-proto':'https'}}),false).installationId).toBe(id);
+    expect(()=>assertLocalSetupRequest(new Request('https://0.0.0.0:3000/admin/setup',{headers:{host:'attacker.example','x-forwarded-proto':'https'}}),false)).toThrow('HTTPS_REQUIRED');
+    expect(()=>assertLocalSetupRequest(new Request('http://0.0.0.0:3000/admin/setup',{headers:{host:'store.example','x-forwarded-proto':'http'}}),false)).toThrow('HTTPS_REQUIRED');
+    expect(()=>assertLocalSetupRequest(new Request('https://0.0.0.0:3000/admin/setup',{headers:{host:'store.example','x-forwarded-proto':'https,http'}}),false)).toThrow('HTTPS_REQUIRED');
+
+    expect(()=>assertLocalSetupRequest(new Request('http://store.example/admin/setup'),false)).toThrow('HTTPS_REQUIRED');
+    expect(()=>assertLocalSetupRequest(new Request('https://attacker.example/admin/setup'),false)).toThrow('HTTPS_REQUIRED');
+    expect(()=>assertLocalSetupRequest(new Request('https://store.example/admin/setup?claim=forbidden'),false)).toThrow('HTTPS_REQUIRED');
+    expect(()=>assertLocalSetupRequest(new Request('https://store.example/admin/setup',{method:'POST'}),true)).toThrow('ORIGIN_DENIED');
+    expect(()=>assertLocalSetupRequest(new Request('https://store.example/admin/setup',{method:'POST',headers:{origin:'https://attacker.example'}}),true)).toThrow('ORIGIN_DENIED');
+    expect(assertLocalSetupRequest(new Request('https://store.example/admin/setup',{method:'POST',headers:{origin:'https://store.example'}}),true).domain).toBe('store.example');
+  });
   it('rejects legacy and incomplete self-hosted profiles',()=>{
     expect(()=>localSetupConfig({})).toThrow('NOT_FOUND');
     expect(()=>localSetupConfig({JETSELLER_STORE_PROFILE:'self-hosted'})).toThrow('SETUP_UNAVAILABLE');

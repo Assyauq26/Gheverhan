@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "Local admin fixture failed at line $LINENO" >&2' ERR
 umask 077
 stack=${1:?fixture stack required}
 case "$stack" in /tmp/jetseller-runtime.*/stack) ;; *) exit 1;; esac
@@ -24,7 +25,9 @@ PY
 }
 post() { curl_setup -H 'Origin: https://store.fixture.example' -H 'Content-Type: application/x-www-form-urlencoded' --data-binary "@$work/$1.body" -o "$work/response-$1" -w '%{http_code}' "$url"; }
 issue initial
-test "$(curl_setup -o "$work/form.html" -w '%{http_code}' "$url")" = 200
+form_status=$(curl_setup -o "$work/form.html" -w '%{http_code}' "$url")
+echo "Local admin HTTPS form status=$form_status"
+test "$form_status" = 200
 test "$(curl_setup -H 'Origin: https://attacker.example' -H 'Content-Type: application/x-www-form-urlencoded' --data-binary "@$work/one.body" -o /dev/null -w '%{http_code}' "$url")" = 403
 test "$(curl_setup -H 'Content-Type: application/x-www-form-urlencoded' --data-binary "@$work/one.body" -o /dev/null -w '%{http_code}' "$url")" = 403
 for attempt in $(seq 1 5); do test "$(post wrong)" = 403; done

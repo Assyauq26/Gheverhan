@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { localAdminDatabase } from '@/lib/self-hosted/admin-claim-db';
 import { localSetupStatus, redeemLocalAdminClaim, LocalSetupError } from '@/lib/self-hosted/admin-claim';
 import { assertLocalSetupRequest, readSetupInput } from '@/lib/self-hosted/admin-claim-http';
 
@@ -15,7 +15,7 @@ function failure(error: unknown) {
 export async function GET(request: Request) {
   try {
     assertLocalSetupRequest(request,false);
-    const state=await localSetupStatus(prisma,process.env);
+    const state=await localSetupStatus(localAdminDatabase(),process.env);
     if(state.status!=='setup_required')return new Response(null,{status:404,headers});
     return page();
   } catch(error) {return failure(error);}
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const config=assertLocalSetupRequest(request,true);
-    await redeemLocalAdminClaim(prisma,process.env,await readSetupInput(request));
+    await redeemLocalAdminClaim(localAdminDatabase(),process.env,await readSetupInput(request));
     return new Response(null,{status:303,headers:{...headers,Location:config.appOrigin+'/login?redirectTo=/admin'}});
   } catch(error) {return failure(error);}
 }

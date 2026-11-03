@@ -3,7 +3,14 @@ import { localSetupConfig, LocalSetupError } from './admin-claim';
 export function assertLocalSetupRequest(request: Request, mutation: boolean) {
   const config = localSetupConfig(process.env);
   const url = new URL(request.url);
-  if (url.protocol !== 'https:' || url.origin !== config.appOrigin || url.search) throw new LocalSetupError('HTTPS_REQUIRED', 403);
+  // Next start constructs request.url with its internal bind hostname/port.
+  // Only the configured Caddy proxy can reach the unpublished app port; it
+  // preserves Host and overwrites X-Forwarded-Proto rather than trusting clients.
+  const canonical = new URL(config.appOrigin);
+  const host = request.headers.get('host');
+  const forwardedProtocol = request.headers.get('x-forwarded-proto');
+  const protocol = forwardedProtocol ?? url.protocol.slice(0, -1);
+  if (protocol !== 'https' || (host ? host !== canonical.host : url.origin !== config.appOrigin) || url.search) throw new LocalSetupError('HTTPS_REQUIRED', 403);
   if (mutation && (request.headers.get('origin') !== config.appOrigin ||
       !['same-origin', null].includes(request.headers.get('sec-fetch-site')))) throw new LocalSetupError('ORIGIN_DENIED', 403);
   return config;

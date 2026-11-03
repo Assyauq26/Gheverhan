@@ -12,7 +12,7 @@ For every independently prepared disposable Self-Hosted store, `deploy/self-host
 5. Leaves all carrier customer codes/keys empty until the seller enters official credentials in the store's local admin UI.
 6. Preserves the existing fail-closed JNT-SH-02 readiness gate: encrypted settings and Check Fee safe probe are **not** permission to place real shipments or open checkout.
 
-`deploy/self-hosted/launch.mjs` allows J&T local settings and key only in the runtime private config; the migration job rejects those fields. Runtime startup fails if the scope is not exactly local_store or the key is missing, invalid length, or noncanonical Base64. The key is not logged. The existing migration-only DB identity remains separated from the app runtime role.
+`deploy/self-hosted/launch.mjs` allows J&T local settings and key only in the runtime private config; the migration job rejects those fields. Existing installs without J&T fields remain startup-compatible. When either field is present, both a local_store scope and a canonical 32-byte Base64 key are mandatory; malformed or partial settings are refused. The key is not logged. The existing migration-only DB identity remains separated from the app runtime role.
 
 ## Evidence
 

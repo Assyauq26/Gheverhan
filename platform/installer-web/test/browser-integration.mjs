@@ -108,7 +108,10 @@ test('HTTPS browser OIDC login, durable PostgreSQL intent and device pairing thr
   await page.locator('#domain-proof-record:not([hidden])').waitFor();
   assert.equal(await page.locator('#domain-proof-name').textContent(),'_jetseller.'+domain);
   assert.match(await page.locator('#domain-proof-value').textContent(),/^jetseller-verification=[A-Za-z0-9_-]{43}$/);
+  const pendingProof=page.waitForResponse(response=>response.url().endsWith('/verify')&&response.request().method()==='POST');
   await page.getByRole('button',{name:'Periksa rekaman TXT',exact:true}).click();
+  assert.equal((await pendingProof).status(),202);
+  await page.waitForFunction(()=>document.querySelector('#domain-proof-verify').dataset.busy==='false');
   await page.locator('#domain-proof-status').filter({hasText:'Menunggu rekaman TXT'}).waitFor();
   dnsPublished=true;
   await page.getByRole('button',{name:'Periksa rekaman TXT',exact:true}).click();

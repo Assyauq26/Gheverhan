@@ -230,7 +230,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     if(!domainAttempt||domainAttempt.installation!==id)domainAttempt={installation:id,id:globalThis.crypto.randomUUID()};
     try {
       const result=await request('/installations/'+encodeURIComponent(id)+'/domain-challenges',{method:'POST',body:{},idempotencyKey:domainAttempt.id});
-      if(selected===id&&generation===current&&csrf){showDomain(result.challenge);text('action-announcement','Instruksi TXT dibuat. Tambahkan rekaman pada penyedia DNS Anda.');}
+      if(selected===id&&generation===current&&csrf){domainAttempt=null;showDomain(result.challenge);text('action-announcement','Instruksi TXT dibuat. Tambahkan rekaman pada penyedia DNS Anda.');}
     } catch(error) {if(selected===id&&generation===current)text('domain-proof-status',safeErrorMessage(error.code));}
   });
   onForm('domain-proof-verify',async()=>{

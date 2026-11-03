@@ -50,6 +50,23 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       if(path===prefix+'/agent/identity' && request.method==='GET') {
         return json(200,await transaction(pool,c=>agentIdentity(request,c,verificationKey,controlOrigin)));
       }
+      if (path===prefix+'/agent/credential/renew' && request.method==='POST') {
+        await rate(pool,'agent-renew-ip:'+clientAddress,30,600);
+        const result = await transaction(pool,async client=>{
+          // This is an explicitly *proactive* renewal. The old credential must
+          // still be valid, device-bound, and carry a fresh single-use DPoP
+          // proof for this POST URL; no seller session or static refresh token.
+          const identity = await agentIdentity(request,client,verificationKey,controlOrigin);
+          exact(await body(request),[]);
+          const device=(await client.query(
+            'SELECT installation_id,thumbprint,nonce FROM installer.devices WHERE id=$1 AND installation_id=$2 AND revoked_at IS NULL FOR UPDATE',
+            [identity.device_id,identity.installation_id]
+          )).rows[0];
+          if (!device) fail(401,'AGENT_AUTH_REQUIRED');
+          return credential(signingKey,controlOrigin,device,identity.device_id,identity.scopes);
+        });
+        return json(200,result);
+      }
       if (path === prefix+'/agent/pairing/device' && request.method==='POST') {
         await rate(pool,'device-ip:'+clientAddress,10);
         const b=exact(await body(request),['installation_hint','public_key','protocol_version','os','arch','agent_version']);

@@ -49,3 +49,12 @@ CREATE TABLE IF NOT EXISTS installer.oidc_logins (
  verifier text NOT NULL, expires_at timestamptz NOT NULL, consumed_at timestamptz
 );
 REVOKE ALL ON SCHEMA installer FROM PUBLIC;
+
+CREATE TABLE IF NOT EXISTS installer.domain_challenges (
+ id uuid PRIMARY KEY, installation_id uuid NOT NULL REFERENCES installer.installations(id),
+ client_request_id uuid NOT NULL, domain text NOT NULL, txt_value text NOT NULL,
+ expires_at timestamptz NOT NULL, verified_at timestamptz,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ UNIQUE(installation_id,client_request_id)
+);
+CREATE INDEX IF NOT EXISTS domain_challenge_install ON installer.domain_challenges(installation_id,created_at DESC);

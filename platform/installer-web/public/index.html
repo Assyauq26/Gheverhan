@@ -52,6 +52,15 @@
             <p id="pairing-error" class="form-error" role="alert" hidden></p>
             <form id="pairing-confirm" class="pairing-confirm" hidden><h4>Periksa identitas VPS</h4><dl class="facts"><div><dt>Sidik kunci perangkat</dt><dd id="device-fingerprint" class="technical"></dd></div><div><dt>Izin yang diminta</dt><dd id="device-scopes"></dd></div><div><dt>Berlaku hingga</dt><dd id="device-expiry"></dd></div></dl><p class="field-help">Cocokkan sidik kunci ini dengan yang ditampilkan installer pada VPS Anda.</p><label class="checkbox-label"><input id="confirm-device" type="checkbox" required> Saya mengenali VPS ini dan menyetujui penghubungannya ke toko yang dipilih.</label><button class="button primary" type="submit">Setujui penghubungan VPS</button></form>
           </section>
+          <section class="step" aria-labelledby="domain-proof-heading">
+            <h3 id="domain-proof-heading">Verifikasi kepemilikan domain</h3>
+            <p>Tambahkan rekaman TXT pada penyedia DNS domain Anda. Bukti ini terpisah dari arah server dan kesiapan HTTPS.</p>
+            <p id="domain-proof-status" role="status" class="muted">Belum diperiksa.</p>
+            <dl id="domain-proof-record" class="facts" hidden><div><dt>Nama rekaman TXT</dt><dd id="domain-proof-name" class="technical"></dd></div><div><dt>Nilai TXT</dt><dd id="domain-proof-value" class="technical"></dd></div><div><dt>Batas waktu</dt><dd id="domain-proof-expiry"></dd></div></dl>
+            <form id="domain-proof-create"><button type="submit" class="button secondary">Buat instruksi TXT</button></form>
+            <form id="domain-proof-verify"><button id="domain-proof-check" type="submit" class="button secondary" disabled>Periksa rekaman TXT</button></form>
+            <p class="field-help">Portal tidak mengubah DNS Anda. TXT yang cocok belum berarti sertifikat HTTPS atau aplikasi toko sudah siap.</p>
+          </section>
         </div>
         <p class="readiness-note"><strong>Aplikasi terpasang ≠ toko siap berjualan.</strong> Produk, pembayaran, pengiriman, dan pengaturan admin lokal tetap perlu diverifikasi sebelum checkout diaktifkan.</p>
       </section>

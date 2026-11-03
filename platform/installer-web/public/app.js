@@ -28,6 +28,10 @@ const errors = {
   CONFLICT: 'Status instalasi berubah. Muat ulang untuk memeriksa kondisi terbaru.',
   INVALID_REQUEST: 'Data belum valid. Periksa isian dan coba lagi.',
   INVALID_DOMAIN: 'Domain belum valid. Gunakan domain milik Anda tanpa https:// atau alamat halaman.',
+  CHALLENGE_EXPIRED: 'Instruksi TXT kedaluwarsa. Buat instruksi baru sebelum memeriksa DNS lagi.',
+  CHALLENGE_REPLACED: 'Instruksi TXT sudah diganti. Muat ulang dan gunakan nilai terbaru.',
+  DOMAIN_CHANGED: 'Domain berubah saat diperiksa. Muat ulang lalu buat instruksi yang sesuai.',
+  INSTALLATION_EXPIRED: 'Rencana instalasi sudah tidak aktif. Perbarui rencana sebelum melanjutkan.',
   NETWORK: 'Layanan tidak dapat dihubungi. Periksa koneksi Anda, lalu coba lagi.',
 };
 
@@ -69,6 +73,7 @@ export function createApi(fetcher, getCsrf, onUnauthorized = () => {}, base = AP
 export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalThis)) {
   const el = id => document.getElementById(id);
   let csrf = null, selected = null, pairing = null, createAttempt = null, generation = 0, detailRequest = 0;
+  let domainChallenge = null, domainAttempt = null;
   const request = createApi(fetcher, () => csrf, () => clearSession());
   const authRequest = createApi(fetcher, () => null, () => {}, '');
   const text = (id, value) => { el(id).textContent = value; };
@@ -79,8 +84,26 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     pairing = null; el('pairing-confirm').hidden = true; el('confirm-device').checked = false;
     text('device-fingerprint', ''); text('device-scopes', ''); text('device-expiry', '');
   }
+  function clearDomain() {
+    domainChallenge=null;domainAttempt=null;el('domain-proof-record').hidden=true;el('domain-proof-check').disabled=true;
+    for(const id of ['domain-proof-name','domain-proof-value','domain-proof-expiry'])text(id,'');
+    text('domain-proof-status','Belum ada bukti domain yang dikonfirmasi.');
+  }
+  function showDomain(challenge) {
+    clearDomain();
+    if(!challenge)return;
+    domainChallenge=challenge;el('domain-proof-record').hidden=false;
+    text('domain-proof-name',challenge.record_name);text('domain-proof-value',challenge.record_value);text('domain-proof-expiry',timestamp(challenge.expires_at));
+    text('domain-proof-status',challenge.status==='OWNERSHIP_VERIFIED'?'Kendali domain terverifikasi pada '+timestamp(challenge.verified_at)+'. HTTPS dan aplikasi tetap perlu diperiksa.':challenge.status==='CHALLENGE_EXPIRED'?'Instruksi kedaluwarsa. Buat instruksi TXT baru.':'Menunggu rekaman TXT yang cocok atau propagasi DNS.');
+    el('domain-proof-check').disabled=challenge.status!=='DNS_PENDING';
+  }
+  async function loadDomain(id) {
+    const current=generation;
+    try {const result=await request('/installations/'+encodeURIComponent(id)+'/domain-challenges');if(selected===id&&generation===current&&csrf)showDomain(result.challenge);}
+    catch {if(selected===id&&generation===current)text('domain-proof-status','Bukti domain belum dapat dimuat. Coba muat ulang.');}
+  }
   function clearSession() {
-    csrf = null; selected = null; createAttempt = null; generation++; detailRequest++; clearPairing();
+    csrf = null; selected = null; createAttempt = null; clearDomain(); generation++; detailRequest++; clearPairing();
     el('workspace').hidden = true; el('installation-list').replaceChildren(); el('sign-in').hidden = true;
     el('installation-detail').hidden = true; el('detail-placeholder').hidden = false;
     for (const id of ['detail-name','detail-domain','detail-id','detail-status','detail-version','detail-contact','detail-explanation']) text(id, '');
@@ -99,7 +122,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
   }
   function showDetail(installation) {
     if (!installation || typeof installation.installation_id !== 'string') throw new Error('Invalid response');
-    clearPairing(); el('pairing-code').value = ''; el('pairing-error').hidden = true;
+    clearPairing(); clearDomain(); el('pairing-code').value = ''; el('pairing-error').hidden = true;
     selected = installation.installation_id;
     el('detail-placeholder').hidden = true; el('installation-detail').hidden = false;
     text('detail-name', installation.display_name); text('detail-domain', installation.domain);
@@ -114,6 +137,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     const result = await request('/installations/' + encodeURIComponent(id));
     if (current !== generation || serial !== detailRequest || !csrf) return;
     showDetail(result.installation);
+    await loadDomain(id);
   }
   async function loadInstallations() {
     el('registry-loading').hidden = false;
@@ -160,7 +184,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     const form = el(id); form.addEventListener('submit', async event => {
       event.preventDefault(); if (form.dataset.busy === 'true' || !form.reportValidity()) return;
       form.dataset.busy = 'true'; const button = form.querySelector('button[type=submit]'); button.disabled = true;
-      try { await action(form); } finally { form.dataset.busy = 'false'; button.disabled = false; }
+      try { await action(form); } finally { form.dataset.busy = 'false'; button.disabled = id==='domain-proof-verify' && domainChallenge?.status!=='DNS_PENDING'; }
     });
   }
   onForm('create-form', async () => {
@@ -199,6 +223,23 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
       clearPairing(); el('pairing-code').value = ''; await selectInstallation(selected); await loadInstallations();
       text('action-announcement', 'VPS terhubung. Status pemasangan aplikasi perlu diperiksa terpisah.');
     } catch (error) { clearPairing(); fieldError('pairing-error', error); }
+  });
+  onForm('domain-proof-create',async()=>{
+    if(!selected||!csrf)return;
+    const id=selected,current=generation;
+    if(!domainAttempt||domainAttempt.installation!==id)domainAttempt={installation:id,id:globalThis.crypto.randomUUID()};
+    try {
+      const result=await request('/installations/'+encodeURIComponent(id)+'/domain-challenges',{method:'POST',body:{},idempotencyKey:domainAttempt.id});
+      if(selected===id&&generation===current&&csrf){showDomain(result.challenge);text('action-announcement','Instruksi TXT dibuat. Tambahkan rekaman pada penyedia DNS Anda.');}
+    } catch(error) {if(selected===id&&generation===current)text('domain-proof-status',safeErrorMessage(error.code));}
+  });
+  onForm('domain-proof-verify',async()=>{
+    if(!selected||!csrf||!domainChallenge)return;
+    const id=selected,current=generation,challenge=domainChallenge.challenge_id;
+    try {
+      const result=await request('/installations/'+encodeURIComponent(id)+'/domain-challenges/'+encodeURIComponent(challenge)+'/verify',{method:'POST',body:{}});
+      if(selected===id&&generation===current&&csrf)showDomain(result.challenge);
+    } catch(error) {if(selected===id&&generation===current)text('domain-proof-status',safeErrorMessage(error.code));}
   });
   el('refresh').addEventListener('click', start);
   el('focus-create').addEventListener('click', () => el('store-name').focus());

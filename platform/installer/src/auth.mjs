@@ -47,12 +47,17 @@ export async function pairingProof(proof, pairing, controlOrigin) {
   uuid(p.jti);
   return { jti_hash:hash(p.jti), expires_at:new Date((p.exp+5)*1000) };
 }
-export async function credential(signingKey, issuer, pairing, deviceId) {
+export async function credential(signingKey, issuer, pairing, deviceId, requestedScopes = scopes) {
+  // A renewal must never enlarge an existing token's privileges.
+  if (!Array.isArray(requestedScopes) || requestedScopes.length < 1 ||
+      new Set(requestedScopes).size !== requestedScopes.length ||
+      requestedScopes.some(scope => !scopes.includes(scope)) ||
+      !requestedScopes.includes('report:heartbeat')) fail(403, 'AGENT_SCOPE_DENIED');
   const expires = new Date(Date.now()+600000);
-  const token = await new SignJWT({ installation_id:pairing.installation_id,scopes,cnf:{jkt:pairing.thumbprint} })
+  const token = await new SignJWT({ installation_id:pairing.installation_id,scopes:requestedScopes,cnf:{jkt:pairing.thumbprint} })
     .setProtectedHeader({alg:'EdDSA',typ:'jetseller-agent+jwt'}).setSubject(deviceId).setIssuer(issuer).setAudience('jetseller-agent-management')
     .setJti(randomUUID()).setIssuedAt().setExpirationTime(Math.floor(expires.getTime()/1000)).sign(signingKey);
-  return { installation_id:pairing.installation_id,device_id:deviceId,credential_expires_at:expires.toISOString(),scopes,
+  return { installation_id:pairing.installation_id,device_id:deviceId,credential_expires_at:expires.toISOString(),scopes:requestedScopes,
     credential:token,token_type:'jetseller-pop',public_key_thumbprint:pairing.thumbprint,management_nonce:pairing.nonce };
 }
 

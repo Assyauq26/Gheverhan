@@ -242,7 +242,7 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 	if json.Unmarshal(raw, &config) != nil || config.Name != project || len(config.Services) != 4 || len(config.Volumes) != 4 || len(config.Networks) != 3 || len(config.Secrets) != 5 {
 		return fmt.Errorf("policy check 1: %w", ErrProvision)
 	}
-	allowed := strings.Fields("cap_drop cpus depends_on environment healthcheck image logging mem_limit networks pids_limit platform ports profiles read_only restart secrets security_opt tmpfs user volumes")
+	allowed := strings.Fields("command entrypoint cap_drop cpus depends_on environment healthcheck image logging mem_limit networks pids_limit platform ports profiles read_only restart secrets security_opt tmpfs user volumes")
 	fields := map[string]bool{}
 	for _, key := range allowed {
 		fields[key] = true
@@ -257,6 +257,11 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		for key := range service {
 			if !fields[key] {
 				return fmt.Errorf("unsupported service field %q: %w", key, ErrProvision)
+			}
+		}
+		for _, key := range []string{"entrypoint", "command"} {
+			if value, exists := service[key]; exists && string(bytes.TrimSpace(value)) != "null" {
+				return fmt.Errorf("execution override denied: %w", ErrProvision)
 			}
 		}
 		var actual string

@@ -235,11 +235,16 @@ func TestRenderedFixtureRejectsPrivilegedMountCommandPortAndExternalNetwork(t *t
 	staged := filepath.Join(t.TempDir(), "staged")
 	project := "jsfixture_550e8400"
 	good := validRenderedFixture(t, staged, project, plan)
+	good["services"].(map[string]any)["app"].(map[string]any)["entrypoint"] = nil
+	good["services"].(map[string]any)["app"].(map[string]any)["command"] = nil
 	raw, _ := json.Marshal(good)
 	if validateFixtureCompose(raw, staged, project, plan) != nil {
 		t.Fatal("valid normalized fixture denied")
 	}
 	mutations := []func(map[string]any){
+		func(c map[string]any) {
+			c["services"].(map[string]any)["app"].(map[string]any)["entrypoint"] = []string{"sh"}
+		},
 		func(c map[string]any) {
 			c["services"].(map[string]any)["app"].(map[string]any)["secrets"] = []map[string]any{{"source": "migration_config", "target": "runtime_config"}}
 		},

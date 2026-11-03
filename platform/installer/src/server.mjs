@@ -6,8 +6,8 @@ import { createOidcHandler } from './oidc.mjs';
 import { pathToFileURL } from 'node:url';
 import { serveDashboard } from '../../installer-web/dashboard.mjs';
 
-export function createControlServer(config,pool,{oidcFetch,dashboard}={}) {
-  const handle=createHandler({pool,...config});
+export function createControlServer(config,pool,{oidcFetch,dashboard,domainLookup}={}) {
+  const handle=createHandler({pool,...config,domainLookup});
   const oidc=createOidcHandler({pool,controlOrigin:config.controlOrigin,config:config.oidc,...(oidcFetch?{fetchImpl:oidcFetch}:{})});
   const server=createServer(async (req,res)=>{
     try {

@@ -3,6 +3,8 @@ import { ApiError, fail, hash, opaque, uuid, exact, text, domain, origin, scopes
 import { transaction, rate } from './db.mjs';
 import { sellerAuthenticator, requireCsrf, deviceKey, pairingProof, credential, agentIdentity } from './auth.mjs';
 
+import { domainProofRoute } from './domain-proof.mjs';
+
 const prefix = '/api/installer/v1';
 const normalizedCode = value => {
   text(value,10,11);
@@ -36,7 +38,7 @@ function pairingPublic(pairing) {
     expires_at:pairing.expires_at,scopes,agent_version:pairing.agent_version,os:pairing.os,arch:pairing.arch };
 }
 
-export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verificationKey}) {
+export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verificationKey,domainLookup}) {
   origin(controlOrigin);
   if (!signingKey) throw new Error('Agent signing key required');
   const authenticate = sellerAuthenticator(pool,sessionIssuer);
@@ -113,6 +115,8 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
         await pool.query('UPDATE installer.sessions SET revoked_at=now() WHERE id=$1',[seller.session_id]);
         return json(200,{status:'SIGNED_OUT'});
       }
+      const proof=await domainProofRoute({request,path,pool,seller,own,readBody:body,lookup:domainLookup});
+      if(proof)return json(proof.status,proof.body);
       if(path===prefix+'/installations' && request.method==='GET') {
         const result=await pool.query(`SELECT i.*,d.id AS device_id FROM installer.installations i LEFT JOIN installer.devices d ON d.installation_id=i.id AND d.revoked_at IS NULL WHERE seller_id=$1 ORDER BY i.created_at DESC LIMIT 100`,[seller.seller_id]);
         return json(200,{installations:result.rows.map(publicInstallation)});

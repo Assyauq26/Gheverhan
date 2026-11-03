@@ -126,3 +126,31 @@ test('static HTTP handler has fixed allowlist and same-origin CSP', async t => {
   assert.equal((await fetch(origin + '/PRODUCT.md')).status, 404);
   assert.equal((await fetch(origin + '/api/installer/v1/session')).status, 404);
 });
+
+
+test('DNS TXT instructions and confirmation remain separate from HTTPS and install status',async t=>{
+  let challenge=null,found=false;
+  const fixture=await setup(t,(url,options)=>{
+    if(url.endsWith('/session'))return response({authenticated:true,csrf_token:'synthetic-csrf'});
+    if(url.endsWith('/domain-challenges')&&options.method==='POST'){
+      challenge={challenge_id:'fixture-proof',record_name:'_jetseller.synthetic.example',record_value:'jetseller-verification=synthetic-public-value',expires_at:'2030-01-01T00:00:00Z',status:'DNS_PENDING',verified_at:null};return response({challenge},201);
+    }
+    if(url.endsWith('/domain-challenges'))return response({challenge});
+    if(url.endsWith('/verify')){challenge={...challenge,status:found?'OWNERSHIP_VERIFIED':'DNS_PENDING',verified_at:found?'2026-11-03T00:00:00Z':null};return response({challenge},found?200:202);}
+    if(url.endsWith('/installations'))return response({installations:[installation]});
+    return response({installation});
+  });
+  fixture.document.querySelector('.installation-item').click();await wait();
+  assert.equal(fixture.document.getElementById('domain-proof-check').disabled,true);
+  const submit=id=>fixture.document.getElementById(id).dispatchEvent(new fixture.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  submit('domain-proof-create');await wait();
+  assert.equal(fixture.document.getElementById('domain-proof-value').textContent,challenge.record_value);
+  assert.equal(fixture.document.getElementById('domain-proof-check').disabled,false);
+  submit('domain-proof-verify');await wait();assert.match(fixture.document.getElementById('domain-proof-status').textContent,/Menunggu/);
+  found=true;submit('domain-proof-verify');await wait();
+  assert.match(fixture.document.getElementById('domain-proof-status').textContent,/Kendali domain terverifikasi/);
+  assert.equal(fixture.document.getElementById('domain-proof-check').disabled,true);
+  assert.equal(fixture.document.getElementById('detail-status').textContent,'Rencana instalasi');
+  assert.match(fixture.document.getElementById('domain-proof-status').textContent,/HTTPS dan aplikasi tetap perlu diperiksa/);
+  const create=fixture.calls.find(c=>c.url.endsWith('/domain-challenges')&&c.options.method==='POST');assert.ok(create.options.headers['Idempotency-Key']);
+});

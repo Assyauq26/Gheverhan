@@ -86,7 +86,8 @@ test('HTTPS browser OIDC login, durable PostgreSQL intent and device pairing thr
     sessionIssuer: { issuer: origin, audience: 'jetseller-portal', jwks: { keys: [await exportJWK(sessionKeys.publicKey)] } },
     oidc: { issuer, clientId: 'synthetic-browser-client', authorizationEndpoint: issuer + '/authorize', tokenEndpoint: issuer + '/token', redirectUri: origin + '/auth/callback',
       jwks: { keys: [await exportJWK(providerKeys.publicKey)] }, sessionSigningKey: sessionKeys.privateKey } };
-  control = createControlServer(config, pool, { oidcFetch: trustedFetch(cert), dashboard: serveDashboard });
+  let dnsPublished=false;
+  control = createControlServer(config, pool, { domainLookup: async()=>dnsPublished, oidcFetch: trustedFetch(cert), dashboard: serveDashboard });
   const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
   // This synthetic test certificate is not a deployment certificate or public ACME proof.
   const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 390, height: 844 } });
@@ -103,6 +104,20 @@ test('HTTPS browser OIDC login, durable PostgreSQL intent and device pairing thr
   const stored = (await pool.query('SELECT display_name,status,domain FROM installer.installations WHERE id=$1', [installationId])).rows[0];
   assert.deepEqual(stored, { display_name: displayName, status: 'DRAFT', domain });
   await page.reload(); await page.getByRole('button', { name: new RegExp(displayName) }).click();
+  await page.getByRole('button',{name:'Buat instruksi TXT',exact:true}).click();
+  await page.locator('#domain-proof-record:not([hidden])').waitFor();
+  assert.equal(await page.locator('#domain-proof-name').textContent(),'_jetseller.'+domain);
+  assert.match(await page.locator('#domain-proof-value').textContent(),/^jetseller-verification=[A-Za-z0-9_-]{43}$/);
+  const pendingProof=page.waitForResponse(response=>response.url().endsWith('/verify')&&response.request().method()==='POST');
+  await page.getByRole('button',{name:'Periksa rekaman TXT',exact:true}).click();
+  assert.equal((await pendingProof).status(),202);
+  await page.waitForFunction(()=>document.querySelector('#domain-proof-verify').dataset.busy==='false');
+  await page.locator('#domain-proof-status').filter({hasText:'Menunggu rekaman TXT'}).waitFor();
+  dnsPublished=true;
+  await page.getByRole('button',{name:'Periksa rekaman TXT',exact:true}).click();
+  await page.locator('#domain-proof-status').filter({hasText:'Kendali domain terverifikasi'}).waitFor();
+  assert.equal((await pool.query('SELECT status FROM installer.installations WHERE id=$1',[installationId])).rows[0].status,'DRAFT');
+
   const agent = await generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true });
   const deviceResponse = await context.request.post(origin + '/api/installer/v1/agent/pairing/device', { data: {
     installation_hint: installationId, public_key: await exportJWK(agent.publicKey), protocol_version: '1', os: 'ubuntu-24.04', arch: 'amd64', agent_version: '0.1.0',

@@ -7,7 +7,6 @@ import { connect as netConnect } from "node:net";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { AddressInfo } from "node:net";
 import type { PrismaClient } from "@prisma/client";
 
 type Server = ReturnType<typeof createHttpServer>;

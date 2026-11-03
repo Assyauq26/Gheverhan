@@ -138,12 +138,19 @@ export function parseSelfHostedConfig(env: Env): SelfHostedStoreConfig {
   const storageRoot = safeStorageRoot(env);
   const databaseName = "js_" + installationId.replace(/-/g, "");
   const runtime = databaseIdentity(env, "DATABASE_URL", databaseName);
-  const migration = databaseIdentity(env, "DIRECT_URL", databaseName);
+  // Runtime mounts no migration secret. The prestart launcher supplies only its
+  // public role name; migration jobs still validate both real DSNs.
+  const migrationRole = env.JETSELLER_MIGRATION_IDENTITY;
+  const migration = env.DIRECT_URL
+    ? databaseIdentity(env, "DIRECT_URL", databaseName)
+    : migrationRole && NAME.test(migrationRole)
+      ? { host: runtime.host, name: databaseName, role: migrationRole, password: undefined }
+      : (() => { throw new Error("Invalid or missing DIRECT_URL"); })();
   if (
     runtime.host !== migration.host ||
     runtime.name !== migration.name ||
     runtime.role === migration.role ||
-    runtime.password === migration.password
+    migration.password !== undefined && runtime.password === migration.password
   ) throw new Error("Invalid database role separation");
   const secret = required(env, "JWT_SECRET");
   if (!/^[0-9a-f]{64}$/.test(secret)) throw new Error("Invalid JWT_SECRET");

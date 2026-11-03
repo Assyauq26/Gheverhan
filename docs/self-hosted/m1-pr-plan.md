@@ -1,6 +1,6 @@
 # M1 — Reviewable small-PR implementation plan
 
-Status: PLAN ONLY / NOT STARTED. Authority: PRD M1, FR-02,06,07 and NFR-01–09. M0 audit and six ADRs require reviewer acceptance first. This is the decomposition of canonical PR-01 (store runtime portability), not a replacement sequence for PR-02–09. No implementation branch has been created.
+Status: IMPLEMENTATION UNDER REVIEW; isolated runtime evidence available, full M1 exit pending. Authority: PRD M1, FR-02,06,07 and NFR-01–09. M0 audit merged and architecture direction authorized in ARCHITECTURE_GATE_DECISION.md; specialist/delivery gates remain open. This is the decomposition of canonical PR-01 (store runtime portability), not a replacement sequence for PR-02–09. M1-01 merged in #138; M1-02/#143, M1-03/#144 and M1-04/#145 are separate open dependency PRs. See M1-RUNTIME-RESULTS.md for actual evidence and pending gates.
 
 ## Common gates
 

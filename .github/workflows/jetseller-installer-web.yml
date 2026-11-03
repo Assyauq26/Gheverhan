@@ -1,0 +1,58 @@
+name: JetSeller installer dashboard
+on:
+  pull_request:
+    paths:
+      - platform/installer-web/**
+      - .github/workflows/jetseller-installer-web.yml
+permissions:
+  contents: read
+concurrency:
+  group: jetseller-installer-web-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  dashboard-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer-web
+      - run: npm test
+        working-directory: platform/installer-web
+  dashboard-browser-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_DB: js_control_fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-dashboard-ci-only
+        ports: ['127.0.0.1:5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U fixture -d js_control_fixture"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/installer-web
+      - run: npx playwright install --with-deps chromium
+        working-directory: platform/installer-web
+      - run: npm run test:integration
+        working-directory: platform/installer-web
+        env:
+          JETSELLER_CONTROL_TEST_DATABASE_URL: postgresql://fixture:synthetic-dashboard-ci-only@127.0.0.1:5432/js_control_fixture
+          JETSELLER_CONTROL_TEST_CONFIRM: isolated-control-fixture

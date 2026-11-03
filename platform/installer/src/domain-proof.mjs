@@ -2,6 +2,7 @@ import { Resolver } from 'node:dns/promises';
 import { randomUUID } from 'node:crypto';
 import { domain, fail, opaque, uuid } from './common.mjs';
 import { transaction, rate } from './db.mjs';
+import { reserveDomain, restoreVerifiedDomainLease } from './domain-reservation.mjs';
 
 // DNS only: no URL fetch, redirect, server-side HTTP probe or registrar mutation.
 export async function lookupTxtOwnership(host, expected, { resolver = new Resolver({ timeout: 1500, tries: 1 }), timeoutMs = 2000 } = {}) {
@@ -27,7 +28,11 @@ const publicChallenge = row => ({
   https_verified: false, installed: false,
 });
 function active(record) {
-  if (record.status === 'CANCELLED' || record.reserved_domain !== record.domain || record.status !== 'PAIRED' && new Date(record.claim_expires_at) <= new Date()) fail(409, 'INSTALLATION_EXPIRED');
+  if (record.status === 'CANCELLED' ||
+      (record.status !== 'PAIRED' && (record.reserved_domain !== record.domain || new Date(record.claim_expires_at) <= new Date())) ||
+      (record.status === 'PAIRED' && record.reserved_domain !== null && record.reserved_domain !== record.domain)) {
+    fail(409, 'INSTALLATION_EXPIRED');
+  }
 }
 
 export async function domainProofRoute({ request, path, pool, seller, own, readBody, lookup = lookupTxtOwnership }) {
@@ -60,11 +65,17 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
   const installation = await own(pool, id, seller.seller_id); active(installation);
   const row = (await pool.query('SELECT * FROM installer.domain_challenges WHERE id=$1 AND installation_id=$2 AND domain=$3', [challengeId, id, installation.domain])).rows[0];
   if (!row) fail(404, 'NOT_FOUND');
-  if (row.verified_at) return { status: 200, body: { challenge: publicChallenge(row) } };
+  if (row.verified_at) {
+    if (installation.reserved_domain !== row.domain) fail(409, 'DOMAIN_RESERVATION_REQUIRED');
+    return { status: 200, body: { challenge: publicChallenge(row) } };
+  }
   if (new Date(row.expires_at) <= new Date()) fail(410, 'CHALLENGE_EXPIRED');
   const found = await lookup(row.domain, row.txt_value);
   if (!found) return { status: 202, body: { challenge: publicChallenge(row), next_action: 'CHECK_DNS_TXT' } };
   const verified = await transaction(pool, async client => {
+    // Check and expire stale provisional leases under the same domain advisory lock
+    // used by create/patch/pairing, then re-read our row under FOR UPDATE.
+    await reserveDomain(client, row.domain);
     const current = await own(client, id, seller.seller_id, true); active(current);
     if (current.domain !== row.domain) fail(409, 'DOMAIN_CHANGED');
     const latest = (await client.query('SELECT id FROM installer.domain_challenges WHERE installation_id=$1 AND domain=$2 ORDER BY created_at DESC,id DESC LIMIT 1', [id, row.domain])).rows[0];
@@ -72,6 +83,7 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
     const result = (await client.query('SELECT * FROM installer.domain_challenges WHERE id=$1 FOR UPDATE', [row.id])).rows[0];
     if (result.verified_at) return result;
     if (new Date(result.expires_at) <= new Date()) fail(410, 'CHALLENGE_EXPIRED');
+    await restoreVerifiedDomainLease(client, current, row.domain);
     return (await client.query('UPDATE installer.domain_challenges SET verified_at=clock_timestamp() WHERE id=$1 RETURNING *', [row.id])).rows[0];
   });
   return { status: 200, body: { challenge: publicChallenge(verified) } };

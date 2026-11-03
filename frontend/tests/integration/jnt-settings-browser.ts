@@ -11,6 +11,13 @@ import { signSession } from "../../src/lib/auth/jwt";
 import { createLocalStoreBrowserFixture } from "./jnt-self-hosted-https-fixture";
 
 async function main() {
+const watchdog = setTimeout(() => {
+  // CI-only hard stop: a broken proxy/API request must fail with a useful
+  // bounded log rather than consuming the entire 45-minute workflow.
+  console.error("J&T browser fixture exceeded its 5-minute test budget");
+  process.exit(1);
+}, 300000);
+watchdog.unref();
 const target = new URL(process.env.SPRINT1_TEST_DATABASE_URL || "http://invalid");
 assert.ok(["localhost", "127.0.0.1"].includes(target.hostname));
 assert.equal(target.pathname, "/gheverhan_sprint1_test"); assert.equal(process.env.GHEVERHAN_ISOLATED_TESTS, "1");
@@ -22,7 +29,11 @@ await mkdir(artifact,{recursive:true});
 const admin = new PrismaClient({ datasources: { db: { url: target.toString() } } });
 let fixture: Awaited<ReturnType<typeof createLocalStoreBrowserFixture>> | undefined;
 try {
-  if (localStore) fixture = await createLocalStoreBrowserFixture(root, admin, target);
+  if (localStore) {
+    console.log("J&T fixture: provisioning isolated PostgreSQL + loopback TLS");
+    fixture = await createLocalStoreBrowserFixture(root, admin, target);
+    console.log("J&T fixture: separate database and TLS proxy ready");
+  }
 } finally { await admin.$disconnect(); }
 const base = fixture?.origin || "http://localhost:3102";
 const dbUrl = fixture?.database || target.toString();
@@ -56,16 +67,19 @@ const child = spawn(process.execPath,["node_modules/next/dist/bin/next","start",
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
   await expect.poll(async()=>{try{return(await fetch("http://127.0.0.1:"+internalPort+"/api/v1/health")).status;}catch{return 0;}},{timeout:30000}).toBe(200);
+  if (localStore) console.log("J&T fixture: Next server health 200; opening HTTPS browser");
   browser = await chromium.launch({executablePath:process.env.SPRINT1_CHROMIUM_PATH || (existsSync("/usr/bin/chromium")?"/usr/bin/chromium":undefined),
     ...(fixture ? { proxy: { server: fixture.proxy } } : {}) });
   const options = fixture ? {ignoreHTTPSErrors:true} : {};
   const owner = await browser.newContext(options); const seller = await browser.newContext(options); const anonymous = await browser.newContext(options);
   for(const [context,user] of [[owner,users[localStore ? 1 : 0]],[seller,users[localStore ? 2 : 1]]] as const)await context.addCookies([{name:fixture?.cookieName || "gh_session",value:await signSession({sub:user.id,email:user.email}),domain:fixture?.domain || "localhost",path:"/",httpOnly:true,secure:true,sameSite:"Lax"}]);
   const page=await owner.newPage();page.on("pageerror",e=>errors.push(e.message));
+  if (localStore) console.log("J&T fixture: browser contexts and scoped session cookies ready");
   const endpoint=base+"/api/v1/admin/integrations/jnt";
-  assert.equal((await anonymous.request.get(endpoint)).status(),401);
-  assert.equal((await seller.request.get(endpoint)).status(),403);
-  assert.equal((await seller.request.put(endpoint,{headers:{Origin:base},data:{}})).status(),403);
+  if (localStore) console.log("J&T fixture: checking anonymous/seller authorization through HTTPS");
+  assert.equal((await anonymous.request.get(endpoint,{timeout:10000})).status(),401);
+  assert.equal((await seller.request.get(endpoint,{timeout:10000})).status(),403);
+  assert.equal((await seller.request.put(endpoint,{headers:{Origin:base},data:{},timeout:10000})).status(),403);
   const denied=await seller.newPage();assert.equal((await denied.goto(base+"/admin/integrations/jnt"))?.status(),404);
   results.push("owner-only GET/PUT and page enforce backend authorization; seller and anonymous denied");
   assert.equal((await owner.request.put(endpoint,{headers:{Origin:"https://attacker.example"},data:{}})).status(),403);
@@ -116,6 +130,7 @@ try {
   assert.deepEqual(errors,[]);console.log(`PASS ${results.length} J&T configuration browser/API/DB checks`);
 } finally {
   await writeFile(path.join(artifact,"results.json"),JSON.stringify({results,errors},null,2));
+  clearTimeout(watchdog);
   await browser?.close();child.kill();await db.$disconnect();log.end();await fixture?.close();
 }
 }

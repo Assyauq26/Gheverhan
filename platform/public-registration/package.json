@@ -1,0 +1,16 @@
+{
+  "name": "@jetseller/public-registration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22 <23"},
+  "scripts": {
+    "start": "node src/server.mjs",
+    "migrate": "node src/migrate.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.15",
+    "pg": "8.23.1"
+  }
+}

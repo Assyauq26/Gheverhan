@@ -103,6 +103,17 @@ model User {
   checkoutIntents CheckoutIntent[]
 }
 
+// Local seller-owned bootstrap only. Plain claim never enters this table.
+model LocalAdminSetup {
+  installationId String @id
+  claimHash      String
+  expiresAt      DateTime
+  attempts       Int @default(0)
+  consumedAt     DateTime?
+  createdAt      DateTime @default(now())
+  @@index([expiresAt])
+}
+
 // Isolated Buy Now: a browser-bound guest intent can be claimed after login.
 // Consumed together with order creation; never mutates the customer's Cart.
 model CheckoutIntent {

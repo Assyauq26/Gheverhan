@@ -4,6 +4,9 @@ on:
     paths:
       - deploy/self-hosted/**
       - frontend/src/lib/self-hosted/**
+      - frontend/src/app/admin/setup/**
+      - frontend/scripts/self-hosted-issue-admin.ts
+      - frontend/prisma/**
       - .github/workflows/jetseller-selfhost-runtime.yml
 permissions:
   contents: read

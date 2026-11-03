@@ -8,6 +8,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 RUN node node_modules/typescript/bin/tsc src/lib/self-hosted/config.ts src/lib/self-hosted/storage-root.ts --outDir /compiled --module es2022 --target es2022 --moduleResolution node --skipLibCheck --esModuleInterop && mv /compiled/config.js /compiled/config.mjs && mv /compiled/storage-root.js /compiled/storage-root.mjs
+RUN node --input-type=module -e "import {build} from 'esbuild'; await build({entryPoints:['scripts/self-hosted-issue-admin.ts'],bundle:true,platform:'node',format:'esm',packages:'external',outfile:'/compiled/issue-admin.mjs'})"
 # Keep Prisma CLI only in the one-shot migration target.
 FROM build AS migration
 COPY --from=build /compiled ./self-hosted

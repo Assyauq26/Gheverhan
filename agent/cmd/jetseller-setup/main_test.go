@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
 )
 
 func TestRenewCredentialCommandFailsClosedWithoutPairedDevice(t *testing.T) {
@@ -28,15 +27,19 @@ func TestRenewCredentialCommandFailsClosedWithoutPairedDevice(t *testing.T) {
 		t.Fatal("unpaired device unexpectedly refreshed credentials")
 	}
 
-	state, err := bootstrap.OpenState(statePath, installationID)
-	if err != nil {
-		t.Fatal("failed to inspect local state after rejection", err)
+	if _, err := os.Stat(statePath); !os.IsNotExist(err) {
+		t.Fatal("unpaired renewal created a new state directory or identity")
 	}
-	defer state.Close()
-	if state.Journal.Phase != "INITIALIZED" {
-		t.Fatalf("renew command unexpectedly advanced provisioning state: %s", state.Journal.Phase)
+	if err := os.Mkdir(statePath, 0700); err != nil {
+		t.Fatal(err)
 	}
-	if _, err = os.Stat(filepath.Join(statePath, "credential.json")); !os.IsNotExist(err) {
-		t.Fatal("failed renewal wrote a credential")
+	if err := os.WriteFile(filepath.Join(statePath, "identity.json"), []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(); err == nil {
+		t.Fatal("incomplete state accepted for renewal")
+	}
+	if _, err := os.Stat(filepath.Join(statePath, "journal.json")); !os.IsNotExist(err) {
+		t.Fatal("renewal created a journal for incomplete state")
 	}
 }

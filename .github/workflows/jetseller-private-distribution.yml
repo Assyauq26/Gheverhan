@@ -48,5 +48,5 @@ jobs:
         run: |
           if test -f "$RUNNER_TEMP/jetseller-harbor-path"; then
             fixture=$(cat "$RUNNER_TEMP/jetseller-harbor-path")
-            case "$fixture" in /tmp/jetseller-harbor.*) test ! -f "$fixture/harbor/docker-compose.yml" || docker compose -f "$fixture/harbor/docker-compose.yml" stop ;; *) exit 1;; esac
+            case "$fixture" in /tmp/jetseller-harbor.*) test ! -f "$fixture/harbor/docker-compose.yml" || sudo docker compose -f "$fixture/harbor/docker-compose.yml" stop ;; *) exit 1;; esac
           fi

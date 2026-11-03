@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
+trap 'echo "Disposable Harbor setup failed at line=$LINENO; private logs retained only on runner" >&2' ERR
 [ "${GITHUB_ACTIONS:-}" = true ]
 [ "$(uname -m)" = x86_64 ]
 fixture=$(mktemp -d /tmp/jetseller-harbor.XXXXXXXX)
@@ -39,7 +40,7 @@ cd harbor
 docker load -i harbor.v2.15.0.tar.gz > "$fixture/loaded-images.private.log"
 ./prepare > "$fixture/prepare.private.log" 2>&1
 # Default project/container names are safe only on this fresh isolated CI runner.
-docker compose up -d > "$fixture/startup.private.log" 2>&1
+sudo docker compose up -d > "$fixture/startup.private.log" 2>&1
 for n in $(seq 1 90); do
  if curl --noproxy '*' --silent --fail --connect-timeout 2 --max-time 5 https://registry.fixture.test/api/v2.0/ping >/dev/null; then break; fi
  sleep 2

@@ -28,5 +28,5 @@ export class HarborProvider {
   const refreshed=await this.api('PATCH','/robots/'+robot.id,{secret});if(refreshed?.secret!==secret)fail('REGISTRY_RESPONSE_INVALID');
   return {robotId:robot.id,username:robot.name,expiresAt:new Date(robot.expires_at*1000)};
  }
- async disable({installationId,grantId}){const robot=await this.find(installationId,grantId);if(!robot)return;if(robot.disable)return;await this.api('PUT','/robots/'+robot.id,{name:robot.name,level:'project',duration:robot.duration,description:robot.description,disable:true,permissions:robot.permissions});}
+ async disable({installationId,grantId}){const robot=await this.find(installationId,grantId);if(!robot)return false;if(robot.disable)return true;await this.api('PUT','/robots/'+robot.id,{name:robot.name,level:'project',duration:robot.duration,description:robot.description,disable:true,permissions:robot.permissions});return true;}
 }

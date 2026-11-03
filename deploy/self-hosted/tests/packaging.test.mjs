@@ -40,6 +40,13 @@ test('invalid domains, mutable images and malformed runtime secrets fail closed'
     const fixture=path.join(tmp,'instance');
     prepareFixture(fixture,{domain:'store.example',appImage:digest,migrationImage:digest});
     const valid=loadPrivateConfig(path.join(fixture,'private/runtime.json'));
+    // Old self-hosted stores did not have local J&T secrets. They must
+    // continue to boot unchanged after upgrading the application image.
+    const legacyRuntime={...valid};
+    delete legacyRuntime.JNT_CONFIG_SCOPE;
+    delete legacyRuntime.JNT_INTEGRATION_ENCRYPTION_KEY;
+    writeFileSync(file,JSON.stringify(legacyRuntime),{mode:0o600});
+    assert.equal(loadPrivateConfig(file).JNT_CONFIG_SCOPE,undefined);
     for(const patch of [
       {JNT_CONFIG_SCOPE:'legacy_platform'},
       {JNT_INTEGRATION_ENCRYPTION_KEY:'short-key'},

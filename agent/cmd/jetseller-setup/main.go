@@ -64,7 +64,7 @@ func run() error {
 		fmt.Println(bootstrap.FixturePlanResult(state))
 		return nil
 	}
-	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" {
+	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" && os.Args[1] != "renew-credential" {
 		return fmt.Errorf("unsupported command")
 	}
 	state, err := bootstrap.OpenState(*directory, *installation)
@@ -72,6 +72,23 @@ func run() error {
 		return err
 	}
 	defer state.Close()
+	if os.Args[1] == "renew-credential" {
+		// Renewal is only for an already-paired device with a still-valid token.
+		// It must not modify preflight, pairing, journal or deploy anything.
+		client, err := bootstrap.NewPairingClient(*origin)
+		if err != nil {
+			return err
+		}
+		refreshed, err := client.Renew(ctx, state)
+		if err != nil {
+			return err
+		}
+		// Never print the renewed bearer token, device key, or nonce.
+		return json.NewEncoder(os.Stdout).Encode(struct {
+			Status string `json:"status"`
+			CredentialExpiresAt string `json:"credential_expires_at"`
+		}{Status: "renewed", CredentialExpiresAt: refreshed.ExpiresAt})
+	}
 	facts, err := bootstrap.InspectHost(*directory)
 	if err != nil {
 		return err

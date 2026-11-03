@@ -13,10 +13,15 @@ export function loadPrivateConfig(file, mode = 'runtime') {
   if (mode === 'runtime' && config.DIRECT_URL) throw new Error('Migration secret forbidden in runtime');
   if (mode === 'runtime') {
     const key = config.JNT_INTEGRATION_ENCRYPTION_KEY;
-    if (config.JNT_CONFIG_SCOPE !== 'local_store' || typeof key !== 'string' ||
-        !/^[A-Za-z0-9+/]{43}=$/.test(key) || Buffer.from(key, 'base64').length !== 32 ||
-        Buffer.from(key, 'base64').toString('base64') !== key) {
-      throw new Error('Invalid per-installation J&T key/scope');
+    // Existing independent stores may predate the optional local J&T setup.
+    // Never break their startup on upgrade; still reject partially enabled
+    // J&T configurations, bad keys or accidentally reverted legacy scope.
+    if (config.JNT_CONFIG_SCOPE !== undefined || key !== undefined) {
+      if (config.JNT_CONFIG_SCOPE !== 'local_store' || typeof key !== 'string' ||
+          !/^[A-Za-z0-9+/]{43}=$/.test(key) || Buffer.from(key, 'base64').length !== 32 ||
+          Buffer.from(key, 'base64').toString('base64') !== key) {
+        throw new Error('Invalid per-installation J&T key/scope');
+      }
     }
   }
   return config;

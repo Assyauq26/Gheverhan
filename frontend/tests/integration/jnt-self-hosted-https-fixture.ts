@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
-import { connect as netConnect } from "node:net";
+import { connect as netConnect, type Socket } from "node:net";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -82,6 +82,11 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
 
   // Next serves internally on HTTP loopback. All browser/API traffic enters
   // through the HTTPS layer; the Origin is the actual synthetic HTTPS store.
+  const connections = new Set<Socket>();
+  const track = (socket: Socket) => {
+    connections.add(socket);
+    socket.on("close", () => connections.delete(socket));
+  };
   const https = createHttpsServer({
     key: readFileSync(keyFile), cert: readFileSync(certFile),
   }, (request, response) => {
@@ -106,7 +111,11 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
     });
     upstream.on("error", () => client.destroy());
     client.on("error", () => upstream.destroy());
+    client.on("close", () => upstream.destroy());
+    upstream.on("close", () => client.destroy());
   });
+  https.on("connection", track);
+  proxy.on("connection", track);
   await listen(https, 3102);
   try { await listen(proxy, 3104); }
   catch (error) { await closeServer(https); rmSync(certRoot, { recursive: true, force: true }); throw error; }
@@ -116,8 +125,13 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
     proxy: "http://127.0.0.1:3104",
     cookieName: env.AUTH_COOKIE_NAME, domain,
     close: async () => {
-      await closeServer(proxy);
-      await closeServer(https);
+      // CONNECT tunnels are upgraded TCP sockets: server.closeAllConnections
+      // does not close them. Explicitly destroy tracked loopback sockets so
+      // an assertion failure cannot leave CI hanging for the entire job limit.
+      for (const socket of connections) socket.destroy();
+      https.closeAllConnections();
+      proxy.closeAllConnections();
+      await Promise.all([closeServer(proxy), closeServer(https)]);
       rmSync(certRoot, { recursive: true, force: true });
     },
   };

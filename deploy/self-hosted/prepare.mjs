@@ -4,15 +4,26 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export function prepareFixture(target, { domain, appImage, migrationImage }) {
+const canonicalUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+/**
+ * Only builds a disposable fixture. A future verified installer must pass the
+ * UUID of the seller-owned installation already created by the control plane;
+ * generating an unrelated UUID would break account/device/store binding.
+ *
+ * Passing installationId here does not attest seller ownership. Production
+ * must verify the signed installation manifest and device pairing first.
+ */
+export function prepareFixture(target, { domain, appImage, migrationImage, installationId }) {
   if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(domain) || domain.length > 200 || domain === 'gheverhan.store' || domain.endsWith('.gheverhan.store')) throw new Error('Invalid disposable domain');
   for (const image of [appImage, migrationImage]) if (!/^(?:[a-z0-9./:_-]+@)?sha256:[a-f0-9]{64}$/.test(image)) throw new Error('Immutable image digest required');
+  if (installationId !== undefined && !canonicalUUID.test(installationId)) throw new Error('Invalid canonical installation ID');
   if (existsSync(target)) throw new Error('Refusing existing fixture destination');
   const parent = path.dirname(path.resolve(target));
   if (lstatSync(parent).isSymbolicLink()) throw new Error('Invalid fixture parent');
   mkdirSync(target, { mode: 0o700 });
   const privateDir = path.join(target, 'private'); mkdirSync(privateDir, { mode: 0o700 });
-  const id = randomUUID(), database = 'js_' + id.replaceAll('-', '');
+  const id = installationId ?? randomUUID(), database = 'js_' + id.replaceAll('-', '');
   const secret = () => randomBytes(32).toString('hex');
   const bootstrap = secret(), migration = secret(), runtime = secret();
   // Each independent store receives its own J&T AES-GCM key. The central
@@ -56,8 +67,12 @@ export function prepareBuildContext(target) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     if (process.argv[2] === 'context') prepareBuildContext(path.resolve(process.argv[3]));
-    else if (process.argv[2] === 'fixture' && process.argv.length === 7) prepareFixture(path.resolve(process.argv[3]), { domain:process.argv[4],appImage:process.argv[5],migrationImage:process.argv[6] });
-    else throw new Error('Expected context destination or fixture destination domain app-digest migration-digest');
+    else if (process.argv[2] === 'fixture' && [7,8].includes(process.argv.length))
+      prepareFixture(path.resolve(process.argv[3]), {
+        domain: process.argv[4], appImage: process.argv[5], migrationImage: process.argv[6],
+        ...(process.argv.length === 8 ? { installationId: process.argv[7] } : {}),
+      });
+    else throw new Error('Expected context destination or fixture destination domain app-digest migration-digest [canonical-installation-id]');
     console.log('Disposable preparation complete; private values omitted');
   } catch { console.error('Disposable preparation refused'); process.exitCode=1; }
 }

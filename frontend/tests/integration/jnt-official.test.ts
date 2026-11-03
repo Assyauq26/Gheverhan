@@ -247,6 +247,7 @@ test("self-hosted credentials bind installation/environment, rotate concurrently
   const legacy = await settings.readJntSettings("sandbox");
   const before = await db.jntPlatformIntegration.findUniqueOrThrow({ where: { environment: "sandbox" } });
   process.env.JNT_CONFIG_SCOPE = "local_store";
+  process.env.JETSELLER_STORE_PROFILE = "self-hosted";
   process.env.JETSELLER_INSTALLATION_ID = "550e8400-e29b-41d4-a716-446655440000";
   process.env.JNT_INSTALLATION_ID = process.env.JETSELLER_INSTALLATION_ID;
   const seller = { warehouse: { name: "Synthetic", contact: "Synthetic", phone: "+6281234567890", address: "Synthetic warehouse",
@@ -270,7 +271,7 @@ test("self-hosted credentials bind installation/environment, rotate concurrently
     process.env.JNT_INSTALLATION_ID = process.env.JETSELLER_INSTALLATION_ID;
     await assert.rejects(settings.readJntSettings("production"), { status: 503 });
   } finally {
-    delete process.env.JNT_CONFIG_SCOPE; delete process.env.JNT_INSTALLATION_ID; delete process.env.JETSELLER_INSTALLATION_ID;
+    delete process.env.JNT_CONFIG_SCOPE; delete process.env.JETSELLER_STORE_PROFILE; delete process.env.JNT_INSTALLATION_ID; delete process.env.JETSELLER_INSTALLATION_ID;
     await db.jntPlatformIntegration.deleteMany({ where: { environment: "production" } });
   }
   assert.deepEqual(await db.jntPlatformIntegration.findUniqueOrThrow({ where: { environment: "sandbox" } }), before);

@@ -33,6 +33,9 @@ func run() error {
 	verifierHash := flags.String("cosign-sha256", "", "independently approved Cosign SHA256")
 	identity := flags.String("signer-identity", "", "exact authorized certificate identity")
 	issuer := flags.String("signer-issuer", "", "exact authorized OIDC issuer")
+	fixtureStack := flags.String("fixture-stack", "", "marked disposable fixture stack only")
+	metadataDirectory := flags.String("fixture-metadata", "", "local TUF fixture metadata directory")
+	rootPin := flags.String("fixture-root-sha256", "", "independently pinned fixture root hash")
 	if flags.Parse(os.Args[2:]) != nil || flags.NArg() != 0 {
 		return fmt.Errorf("invalid arguments")
 	}
@@ -44,6 +47,21 @@ func run() error {
 			return err
 		}
 		fmt.Println("Artifact signature and digest verified. Not executed; release freshness and install gates remain closed.")
+		return nil
+	}
+	if os.Args[1] == "apply-disposable-fixture" {
+		if err := bootstrap.ValidateDisposableFixturePaths(*directory, *fixtureStack); err != nil {
+			return err
+		}
+		state, err := bootstrap.OpenState(*directory, *installation)
+		if err != nil {
+			return err
+		}
+		defer state.Close()
+		if err = bootstrap.ApplyDisposableFixture(ctx, state, *fixtureStack, *metadataDirectory, *rootPin); err != nil {
+			return err
+		}
+		fmt.Println(bootstrap.FixturePlanResult(state))
 		return nil
 	}
 	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" {

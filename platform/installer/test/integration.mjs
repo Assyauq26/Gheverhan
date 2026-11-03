@@ -94,8 +94,42 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   const replay=(await pool.query('SELECT expires_at FROM installer.proof_replays WHERE thumbprint=$1 AND jti_hash=$2',[thumbprint,hash(futureJti)])).rows[0];
   assert.ok(new Date(replay.expires_at).getTime()>=(futureIat+65)*1000,'Replay record must cover complete accepted proof lifetime including future clock tolerance');
   assert.equal((await identity(futureProof)).status,409);
+  // Renewal is permitted *before expiry* only: a new PoP-bound credential
+  // requires a fresh proof for the specific POST endpoint and does not elevate
+  // scopes or create a new device.
+  const renewalPath=controlOrigin+'/api/installer/v1/agent/credential/renew';
+  const renewalProof=async(token=issued.credential,privateKey=keys.privateKey,patch={})=>
+    new SignJWT({htm:'POST',htu:renewalPath,
+      ath:Buffer.from(hash(token),'hex').toString('base64url'),
+      nonce:issued.management_nonce,...patch})
+      .setProtectedHeader({alg:'EdDSA',typ:'dpop+jwt'})
+      .setIssuedAt().setJti(randomUUID()).sign(privateKey);
+  const renew=async(proof,token=issued.credential,body={})=>call('POST','/agent/credential/renew',body,null,{
+    authorization:'DPoP '+token,...(proof?{dpop:proof}:{})
+  });
+  assert.equal((await renew()).status,401);
+  assert.equal((await renew(await renewalProof(issued.credential,wrong.privateKey))).status,401);
+  assert.equal((await renew(await renewalProof(issued.credential,keys.privateKey,{htm:'GET'}))).status,401);
+  assert.equal((await renew(await renewalProof(issued.credential,keys.privateKey,{htu:identityPath}))).status,401);
+  const renewalRequestProof=await renewalProof();
+  const refreshed=await renew(renewalRequestProof);
+  assert.equal(refreshed.status,200);
+  assert.notEqual(refreshed.body.credential,issued.credential);
+  assert.equal(refreshed.body.installation_id,issued.installation_id);
+  assert.equal(refreshed.body.device_id,issued.device_id);
+  assert.deepEqual(refreshed.body.scopes,issued.scopes);
+  const verifiedRefresh=await jwtVerify(refreshed.body.credential,agentSigner.publicKey,{
+    issuer:controlOrigin,audience:'jetseller-agent-management'
+  });
+  assert.equal(verifiedRefresh.payload.cnf.jkt,thumbprint);
+  assert.ok(verifiedRefresh.payload.exp-verifiedRefresh.payload.iat<=600);
+  assert.equal((await renew(renewalRequestProof)).status,409);
+  const renewedAgain=await renew(await renewalProof(refreshed.body.credential),refreshed.body.credential);
+  assert.equal(renewedAgain.status,200);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM installer.devices WHERE installation_id=$1',[installation.installation_id])).rows[0].n,1);
   assert.equal((await call('POST','/installations/'+installation.installation_id+'/unpair',{})).status,200);
   assert.equal((await identity(await dpop())).status,401);assert.equal((await poll()).status,403);
+  assert.equal((await renew(await renewalProof(refreshed.body.credential),refreshed.body.credential)).status,401);
   const expired=await call('POST','/agent/pairing/device',deviceRequest,null);assert.equal(expired.status,201);
   await pool.query("UPDATE installer.pairing_sessions SET expires_at=now()-interval '1 second' WHERE id=$1",[expired.body.pairing_session_id]);
   const expiredPoll=await call('POST','/agent/pairing/token',{device_code:expired.body.device_code,proof:'unused'},null);assert.equal(expiredPoll.status,410);

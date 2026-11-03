@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -230,8 +229,7 @@ func safeAncestors(directory string) error {
 		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			return ErrProvision
 		}
-		stat, ok := info.Sys().(*syscall.Stat_t)
-		if !ok || stat.Uid != 0 {
+		if !rootOwnedDirectory(info) {
 			return ErrProvision
 		}
 		if current == "/tmp" || current == "/var/tmp" {

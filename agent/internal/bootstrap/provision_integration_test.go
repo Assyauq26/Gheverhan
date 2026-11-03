@@ -37,22 +37,7 @@ func (r *interruptedDocker) run(ctx context.Context, args ...string) ([]byte, er
 		r.failed = true
 		return nil, ErrProvision
 	}
-	output, err := r.dockerRunner.run(ctx, args...)
-	if strings.Contains(joined, "config --format json") && err == nil {
-		var shape struct {
-			Networks map[string]map[string]json.RawMessage `json:"networks"`
-		}
-		if json.Unmarshal(output, &shape) == nil {
-			for name, fields := range shape.Networks {
-				for key, value := range fields {
-					if key != "name" {
-						fmt.Printf("fixture network %s field %s type=%T scalar=%s\n", name, key, value, string(value))
-					}
-				}
-			}
-		}
-	}
-	return output, err
+	return r.dockerRunner.run(ctx, args...)
 }
 func TestDisposableTUFProvisioningAndInterruptedResume(t *testing.T) {
 	if os.Getenv("JETSELLER_DISPOSABLE_PROVISION_TESTS") != "1" {

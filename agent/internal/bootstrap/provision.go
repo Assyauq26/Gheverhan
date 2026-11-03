@@ -401,7 +401,13 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		if !ok || n["name"] != project+"_"+name {
 			return fmt.Errorf("policy check 26: %w", ErrProvision)
 		}
-		for key := range n {
+		for key, value := range n {
+			if key == "ipam" {
+				if empty, ok := value.(map[string]any); !ok || len(empty) != 0 {
+					return fmt.Errorf("network IPAM override denied: %w", ErrProvision)
+				}
+				continue
+			}
 			if key != "name" && key != "internal" {
 				return fmt.Errorf("unsupported network field %q: %w", key, ErrProvision)
 			}

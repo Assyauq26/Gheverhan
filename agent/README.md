@@ -33,3 +33,16 @@ References: [Cosign verification](https://docs.sigstore.dev/cosign/verifying/ver
 A valid private pending session is resumed rather than replaced. Expired pending sessions checkpoint PAIR_EXPIRED and may restart with the same installation identity/key and original control origin. A saved session written before its journal checkpoint is reconciled before polling. A saved validated credential written before PAIRED is finalized locally without a second token exchange; an expired saved credential records only the historical binding and does not claim current authorization or renew it.
 
 Older interrupted credentials without the new local origin field can be recovered only when a matching private pending-session origin remains available. An older completed credential lacking both origin and pending session fails closed for explicit recovery; the CLI never guesses its origin or silently generates a new key.
+
+
+## Signed disposable provisioning engine
+
+`apply-disposable-fixture` now performs actual fixed Compose operations only for root-run marked `/tmp/jetseller-runtime.*/stack` with its state under the same fixture parent. It never accepts a production path, arbitrary shell operation, package install or mutable image reference. An independently supplied root SHA256 pins official go-tuf/v2 trustedmetadata root/timestamp/snapshot/targets validation; target length/hash authenticates the strict fixture plan, which hashes all profile/config/secret input files. Top-level expiry, wrong root, rollback, same-version equivocation, altered files and unknown command fields fail before operations.
+
+The helper stages verified inputs privately, validates normalized services/images/ports/mounts/networks and exclusive per-service secrets, then checkpoints database, migration, grants, media, app, proxy and readiness. Completed checkpoints are not repeated after interruption; an already-complete plan must still recheck live readiness. It never deletes a volume or database. PostgreSQL and app secrets retain their dedicated container UID ownership; root-only local fixture signing keys are test inputs, not an approved JetSeller production trust root.
+
+Dedicated Ubuntu CI builds images from immutable reviewed packaging commit `4b7c24c728e453c7d4d1acca550212a49000e3d2`, verifies genuine TUF signatures, interrupts after migration, resumes without repeating completed DB work, preserves media, validates real app readiness and internal-CA hostname/chain TLS, rejects tampered Compose before another Docker call, and checks the installation lock. The root-required integration is explicitly skipped in ordinary local tests and is run separately in disposable CI. No main or production branch is merged by this workflow.
+
+Production provisioning remains unavailable. Root rotation/delegation/recovery, independent initial root custody, private registry pull grants, approved source distribution, public DNS/ACME and actual VPS reboot are not established by a signed local fixture. Public HTTPS/reboot are PENDING_DISPOSABLE_VPS. This engine is not a fleet update system or permission to execute a public installer.
+
+Official library: https://github.com/theupdateframework/go-tuf/tree/v2.4.2/metadata/trustedmetadata

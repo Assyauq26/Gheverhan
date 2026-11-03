@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Obtain immutable reviewed disposable packaging profile
+      - name: Obtain immutable current RC runtime profile for combined-head verification
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: 4b7c24c728e453c7d4d1acca550212a49000e3d2
+          ref: ${{ github.event.pull_request.head.sha }}
           path: fixture-profile
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -37,10 +37,10 @@ jobs:
           go vet ./...
           go test -race -count=1 ./...
           go test -c -o /tmp/jetseller-provision.test ./internal/bootstrap
-      - name: Build fixture application and migration images
+      - name: Build current-RC fixture application and migration images
         run: |
           set -euo pipefail
-          test "$(git -C fixture-profile rev-parse HEAD)" = 4b7c24c728e453c7d4d1acca550212a49000e3d2
+          test "$(git -C fixture-profile rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           context_parent=$(mktemp -d /tmp/jetseller-provision-build.XXXXXXXX)
           node fixture-profile/deploy/self-hosted/prepare.mjs context "$context_parent/context"
           docker build --target runtime -t jetseller-fixture:app "$context_parent/context"

@@ -49,6 +49,21 @@ await db.jntPlatformIntegration.deleteMany({where:{environment:"sandbox"}});
 const users = [];
 for (const name of (localStore ? ["Super Admin", "Admin", "Manager"] : ["Super Admin", "Admin"])) {
   const role = await db.role.upsert({where:{name},create:{name,label:name},update:{}});
+  if (localStore && name === "Admin") {
+    // Fresh isolated PG has schema but deliberately no demo role seed.
+    // Assign the SAME real shipping.update role relation that local admin
+    // activation provides; a role name alone cannot grant API privileges.
+    const permission = await db.permission.upsert({
+      where: { key: "shipping.update" },
+      create: { key: "shipping.update", label: "Ubah pengiriman" },
+      update: {},
+    });
+    await db.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+      create: { roleId: role.id, permissionId: permission.id },
+      update: {},
+    });
+  }
   users.push(await db.user.create({data:{name:"Jnt browser " + name,email:`jnt-browser-${name.replaceAll(" ","")}-${prefix}@example.test`,passwordHash:"synthetic-no-login",roles:{create:{roleId:role.id}}}}));
 }
 process.env.JWT_SECRET = fixture?.env.JWT_SECRET || "jnt-browser-synthetic-session-key-only";

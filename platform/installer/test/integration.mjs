@@ -40,9 +40,9 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   const created=await call('POST','/installations',input,a,{'idempotency-key':idempotency});assert.equal(created.status,201);const installation=created.body.installation;
   assert.equal((await call('POST','/installations',input,a,{'idempotency-key':idempotency})).body.installation.installation_id,installation.installation_id);
   assert.equal((await call('POST','/installations',{...input,display_name:'Changed'},a,{'idempotency-key':idempotency})).status,409);
-  assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,409);
+  assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,201); // Unverified intents do not reserve a public domain.
   assert.equal((await call('GET','/installations/'+installation.installation_id,undefined,b)).status,404);
-  assert.deepEqual((await call('GET','/installations',undefined,b)).body.installations,[]);
+  assert.equal((await call('GET','/installations',undefined,b)).body.installations.length,1);
   assert.equal((await call('GET','/installations',undefined,null)).status,401);
   assert.equal((await call('POST','/installations',input,a,{'x-csrf-token':'wrong','idempotency-key':randomUUID()})).status,403);
   assert.equal((await call('PATCH','/installations/'+installation.installation_id,{display_name:'Changed',domain:input.domain},a,{'if-match':'99'})).status,409);

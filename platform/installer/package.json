@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test test/unit.test.mjs test/domain-proof.test.mjs",
-    "test:integration": "node --test test/integration.mjs test/domain-integration.mjs",
+    "test:integration": "node --test test/integration.mjs test/domain-integration.mjs test/lifecycle-integration.mjs test/domain-lease-integration.mjs",
     "start": "node src/server.mjs",
     "migrate": "node src/migrate.mjs"
   },

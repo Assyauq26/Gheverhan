@@ -18,7 +18,7 @@ export function createBroker({pool,provider,encryptionKey,authorizeAgent,assertA
    if(previous){if(previous.release_id!==input.release_id)fail('IDEMPOTENCY_CONFLICT',409);if(['revoking','revoked'].includes(previous.state)||previous.expires_at&&new Date(previous.expires_at)<=new Date())fail('GRANT_REVOKED',409);return previous;}
    const release=validateRelease(await resolveVerifiedRelease(c,principal,input.release_id),principal.installation_id);
    const count=(await c.query("SELECT count(*)::int AS n FROM distribution.grants WHERE installation_id=$1 AND created_at>now()-interval '1 hour'",[principal.installation_id])).rows[0].n;if(count>=6)fail('GRANT_RATE_LIMITED',429);
-   const g={id:randomUUID(),installation_id:principal.installation_id,device_id:principal.device_id,...release};g.secret_cipher=box.seal(randomBytes(48).toString('base64url'),aad(g));
+   const g={id:randomUUID(),installation_id:principal.installation_id,device_id:principal.device_id,...release};g.secret_cipher=box.seal('Aa1'+randomBytes(46).toString('base64url').slice(0,61),aad(g));
    const row=(await c.query("INSERT INTO distribution.grants(id,installation_id,device_id,request_id,release_id,project,repository,digest,version,metadata_expires_at,secret_cipher,state) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'provisioning') RETURNING *",[g.id,g.installation_id,g.device_id,input.request_id,input.release_id,g.project,g.repository,g.digest,g.version,g.metadataExpiresAt,g.secret_cipher])).rows[0];await audit(c,row,'requested');return row;
   });
   if(grant.state!=='active'){

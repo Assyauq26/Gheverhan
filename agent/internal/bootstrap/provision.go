@@ -403,7 +403,7 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		}
 		for key := range n {
 			if key != "name" && key != "internal" {
-				return fmt.Errorf("policy check 27: %w", ErrProvision)
+				return fmt.Errorf("unsupported network field %q: %w", key, ErrProvision)
 			}
 		}
 		if name != "outbound" && n["internal"] != true {

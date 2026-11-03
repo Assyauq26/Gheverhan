@@ -41,6 +41,7 @@ const seller = { warehouse: { name: "Fixture", contact: "Fixture", phone: "+6281
   originSite: "JAKARTA", originCityCode: "JKT" }, services: [{ code: "EZ" as const, verificationReference: "synthetic-agreement", validUntil: "2030-01-01T00:00:00.000Z" }] };
 function localMode() {
   vi.stubEnv("JNT_CONFIG_SCOPE", "local_store");
+  vi.stubEnv("JETSELLER_STORE_PROFILE", "self-hosted");
   vi.stubEnv("JETSELLER_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");
   vi.stubEnv("JNT_INTEGRATION_ENCRYPTION_KEY", Buffer.alloc(32, 6).toString("base64"));
@@ -59,6 +60,8 @@ describe("JNT-SH-01 local isolation", () => {
     vi.stubEnv("JETSELLER_STORE_PROFILE", "legacy");
     expect(isJntSettingsAdministrator(user)).toBe(false);
     vi.stubEnv("JETSELLER_STORE_PROFILE", "");
+    expect(isJntSettingsAdministrator(user)).toBe(false);
+    vi.stubEnv("JETSELLER_STORE_PROFILE", "self-hosted");
     vi.stubEnv("JNT_INSTALLATION_ID", "c6b147ca-dcaf-4a06-82ce-671cdaedb8ed");
     expect(isJntSettingsAdministrator(user)).toBe(false);
     vi.stubEnv("JNT_INSTALLATION_ID", "550e8400-e29b-41d4-a716-446655440000");

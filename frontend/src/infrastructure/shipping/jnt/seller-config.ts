@@ -7,14 +7,17 @@ import type { AuthUser } from "@/lib/auth/session";
  * Carrier config is local to each installation, not a central JetSeller tenant.
  * J&T cannot invent its own identity: AAD always uses M1's canonical UUID.
  *
- * M1-01 does not yet provide a full HTTPS/Postgres browser-test fixture, so
- * complete parseSelfHostedConfig validation is still an installer release gate.
- * In particular, the operator MUST NOT enable local_store on Gheverhan legacy.
+ * An explicit self-hosted profile and canonical installation UUID are
+ * required for any local J&T operation, including administration and AES-GCM
+ * associated-data binding. The complete runtime profile is still verified by
+ * the independent-store launcher; it is not inferred from a UUID alone.
  */
 const INSTALLATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 function canonicalInstallationId(): string {
-  const profile = process.env.JETSELLER_STORE_PROFILE;
-  if (profile && profile !== "self-hosted") throw new HttpError("Profil instalasi J&T tidak valid", 503);
+  // An absent profile means legacy Gheverhan, even if an attacker or a
+  // misconfigured deployment supplied a syntactically correct UUID.
+  if (process.env.JETSELLER_STORE_PROFILE !== "self-hosted")
+    throw new HttpError("Profil instalasi J&T tidak valid", 503);
   const id = process.env.JETSELLER_INSTALLATION_ID || "";
   if (!INSTALLATION_ID.test(id)) throw new HttpError("Identitas instalasi JetSeller belum valid", 503);
   if (process.env.JNT_INSTALLATION_ID && process.env.JNT_INSTALLATION_ID !== id)

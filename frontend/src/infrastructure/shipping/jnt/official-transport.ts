@@ -198,7 +198,7 @@ export async function trackJntOrder(awb: string, expectedOrderId?: string): Prom
   if (!parsed.success || (parsed.data.error_id != null &&
       String(parsed.data.error_id) !== "0" && String(parsed.data.error_id) !== "") ||
       parsed.data.awb !== awb ||
-      (expectedOrderId && parsed.data.orderid && parsed.data.orderid !== expectedOrderId)) {
+      (expectedOrderId && parsed.data.orderid !== expectedOrderId)) {
     throw new HttpError("Tracking J&T belum tersedia atau AWB tidak cocok", 502);
   }
   // Deliberately excludes personal names, phone numbers, addresses, drivers and raw notes.

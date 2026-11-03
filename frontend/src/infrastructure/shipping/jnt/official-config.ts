@@ -75,10 +75,16 @@ function validateEndpoint(kind: keyof JntConfig["endpoints"], raw: string, env: 
       tracking: "partner-track.jet.co.id",
     },
   };
-  // Strict host/path allowlist: a platform owner's input must never become an SSRF primitive.
-  if (u.protocol !== "https:" || u.hostname !== hosts[env][kind] ||
-      u.pathname !== validPaths[kind] || u.search || u.hash || u.port ||
-      u.username || u.password) {
+  // The seller's verified production Tracking contract may use J&T's
+  // older order-web host/path. Keep this as an exact allowlisted pair;
+  // never accept arbitrary hostnames, paths, redirects or URL parameters.
+  const approvedProductionTracking = kind === "tracking" && env === "production" &&
+    u.hostname === "secure-jk.jet.co.id" &&
+    u.pathname === "/jandt-order-web/track/trackAction!tracking.action";
+  const approvedDefault = u.hostname === hosts[env][kind] && u.pathname === validPaths[kind];
+  // Strict host/path allowlist: an operator's input must never become an SSRF primitive.
+  if (u.protocol !== "https:" || (!approvedDefault && !approvedProductionTracking) ||
+      u.search || u.hash || u.port || u.username || u.password) {
     throw new HttpError("Endpoint tidak sesuai allowlist resmi J&T untuk environment ini", 422);
   }
 }

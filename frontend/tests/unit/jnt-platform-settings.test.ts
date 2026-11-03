@@ -119,6 +119,30 @@ describe("J&T global platform secrets", () => {
     await saveJntSettings({ environment: "sandbox", enabled: true, endpoints, credentials: {} }, "owner-1");
     expect((await readJntPublicStatus("sandbox")).enabled).toBe(true);
   });
+  it("permits the separately proven production Tracking host and path, never arbitrary URLs", async () => {
+    vi.stubEnv("JNT_INTEGRATION_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+    const production = {
+      order: "https://api.jet.co.id/jts-idn-ecommerce-api/api/order/create",
+      cancellation: "https://api.jet.co.id/jts-idn-ecommerce-api/api/order/cancel",
+      tariff: "https://partner-track.jet.co.id/jandt_track/inquiry.action",
+      tracking: "https://secure-jk.jet.co.id/jandt-order-web/track/trackAction!tracking.action",
+    };
+    await saveJntSettings({ environment: "production", enabled: false, endpoints: production, credentials }, "owner-fixture");
+    expect((await readJntSettings("production"))?.config.endpoints.tracking).toBe(production.tracking);
+    for (const tracking of [
+      "https://secure-jk.jet.co.id.attacker.example/jandt-order-web/track/trackAction!tracking.action",
+      "https://secure-jk.jet.co.id/jandt_track/track/trackAction!tracking.action",
+      "https://partner-track.jet.co.id/jandt-order-web/track/trackAction!tracking.action",
+      production.tracking + "?return=https://attacker.example",
+      "http://secure-jk.jet.co.id/jandt-order-web/track/trackAction!tracking.action",
+    ]) {
+      await expect(saveJntSettings({ environment: "production", enabled: false,
+        endpoints: { ...production, tracking }, credentials: {} }, "owner-fixture")).rejects.toThrow(/allowlist/);
+    }
+    await expect(saveJntSettings({ environment: "sandbox", enabled: false,
+      endpoints: { ...endpoints, tracking: production.tracking }, credentials }, "owner-fixture")).rejects.toThrow(/allowlist/);
+    expect((await readJntSettings("production"))?.config.endpoints.tracking).toBe(production.tracking);
+  });
   it("rejects non-J&T hosts, wrong endpoint paths, and cross-environment confusion", async () => {
     vi.stubEnv("JNT_INTEGRATION_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
     await expect(saveJntSettings({

@@ -139,9 +139,12 @@ func applyDisposableFixture(ctx context.Context, state *State, stack, metadataDi
 	}
 	project := "jsfixture_" + identity.Installation[:8]
 	compose := []string{"compose", "--project-directory", staged, "--env-file", filepath.Join(staged, ".env"), "-f", filepath.Join(staged, "compose.yml")}
-	rendered, err := runner.run(ctx, append(append([]string{}, compose...), "config", "--format", "json")...)
-	if err != nil || validateFixtureCompose(rendered, staged, project, plan) != nil {
-		return ErrProvision
+	rendered, err := runner.run(ctx, append(append([]string{}, compose...), "--profile", "tools", "config", "--format", "json")...)
+	if err != nil {
+		return fmt.Errorf("compose normalization: %w", ErrProvision)
+	}
+	if err := validateFixtureCompose(rendered, staged, project, plan); err != nil {
+		return fmt.Errorf("compose policy: %w", err)
 	}
 	// Resolve the UID from the exact digest-authorized database image. No shared
 	// secret is placed in argv/env; file-backed mounts retain restrictive modes.
@@ -237,7 +240,7 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		} `json:"secrets"`
 	}
 	if json.Unmarshal(raw, &config) != nil || config.Name != project || len(config.Services) != 4 || len(config.Volumes) != 4 || len(config.Networks) != 3 || len(config.Secrets) != 5 {
-		return ErrProvision
+		return fmt.Errorf("policy check 1: %w", ErrProvision)
 	}
 	allowed := strings.Fields("cap_drop cpus depends_on environment healthcheck image logging mem_limit networks pids_limit platform ports profiles read_only restart secrets security_opt tmpfs user volumes")
 	fields := map[string]bool{}
@@ -249,38 +252,38 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 	for name, image := range images {
 		service, ok := config.Services[name]
 		if !ok {
-			return ErrProvision
+			return fmt.Errorf("policy check 2: %w", ErrProvision)
 		}
 		for key := range service {
 			if !fields[key] {
-				return ErrProvision
+				return fmt.Errorf("policy check 3: %w", ErrProvision)
 			}
 		}
 		var actual string
 		if json.Unmarshal(service["image"], &actual) != nil || actual != image {
-			return ErrProvision
+			return fmt.Errorf("policy check 4: %w", ErrProvision)
 		}
 		if name == "app" || name == "migrate" {
 			var user string
 			var readOnly bool
 			if json.Unmarshal(service["user"], &user) != nil || user != "1000:1000" || json.Unmarshal(service["read_only"], &readOnly) != nil || !readOnly {
-				return ErrProvision
+				return fmt.Errorf("policy check 5: %w", ErrProvision)
 			}
 		}
 		expectedNetworks := map[string][]string{"db": {"database"}, "migrate": {"database"}, "app": {"database", "edge", "outbound"}, "caddy": {"edge", "outbound"}}
 		var networks map[string]json.RawMessage
 		if json.Unmarshal(service["networks"], &networks) != nil || len(networks) != len(expectedNetworks[name]) {
-			return ErrProvision
+			return fmt.Errorf("policy check 6: %w", ErrProvision)
 		}
 		for _, network := range expectedNetworks[name] {
 			if _, ok := networks[network]; !ok {
-				return ErrProvision
+				return fmt.Errorf("policy check 7: %w", ErrProvision)
 			}
 		}
 		if name == "app" || name == "migrate" {
 			var caps, security []string
 			if json.Unmarshal(service["cap_drop"], &caps) != nil || len(caps) != 1 || caps[0] != "ALL" || json.Unmarshal(service["security_opt"], &security) != nil || len(security) != 1 || (security[0] != "no-new-privileges:true" && security[0] != "no-new-privileges") {
-				return ErrProvision
+				return fmt.Errorf("policy check 8: %w", ErrProvision)
 			}
 		}
 		// Do not attach migration secrets to an ordinary application container.
@@ -288,17 +291,17 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		var grants []map[string]any
 		if data, ok := service["secrets"]; ok {
 			if json.Unmarshal(data, &grants) != nil {
-				return ErrProvision
+				return fmt.Errorf("policy check 9: %w", ErrProvision)
 			}
 		}
 		if len(grants) != len(expectedSecrets[name]) {
-			return ErrProvision
+			return fmt.Errorf("policy check 10: %w", ErrProvision)
 		}
 		seenSecrets := map[string]bool{}
 		for _, grant := range grants {
 			source, ok := grant["source"].(string)
 			if !ok || seenSecrets[source] {
-				return ErrProvision
+				return fmt.Errorf("policy check 11: %w", ErrProvision)
 			}
 			seenSecrets[source] = true
 			permitted := false
@@ -308,21 +311,21 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 				}
 			}
 			if !permitted {
-				return ErrProvision
+				return fmt.Errorf("policy check 12: %w", ErrProvision)
 			}
 			for key, value := range grant {
 				switch key {
 				case "source":
 				case "target":
 					if value != source && value != "/run/secrets/"+source {
-						return ErrProvision
+						return fmt.Errorf("policy check 13: %w", ErrProvision)
 					}
 				case "mode":
 					if value != float64(0o444) && value != float64(0o600) {
-						return ErrProvision
+						return fmt.Errorf("policy check 14: %w", ErrProvision)
 					}
 				default:
-					return ErrProvision
+					return fmt.Errorf("policy check 15: %w", ErrProvision)
 				}
 			}
 		}
@@ -334,20 +337,20 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		}
 		if data, ok := service["ports"]; ok {
 			if json.Unmarshal(data, &ports) != nil {
-				return ErrProvision
+				return fmt.Errorf("policy check 16: %w", ErrProvision)
 			}
 		}
 		if name != "caddy" && len(ports) != 0 {
-			return ErrProvision
+			return fmt.Errorf("policy check 17: %w", ErrProvision)
 		}
 		if name == "caddy" {
 			if len(ports) != 2 {
-				return ErrProvision
+				return fmt.Errorf("policy check 18: %w", ErrProvision)
 			}
 			seen := map[int]bool{}
 			for _, p := range ports {
 				if (p.Target != 80 && p.Target != 443) || p.Published != strconv.Itoa(p.Target) || (p.HostIP != "" && p.HostIP != "0.0.0.0") || p.Protocol != "tcp" || seen[p.Target] {
-					return ErrProvision
+					return fmt.Errorf("policy check 19: %w", ErrProvision)
 				}
 				seen[p.Target] = true
 			}
@@ -360,46 +363,46 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		}
 		if data, ok := service["volumes"]; ok {
 			if json.Unmarshal(data, &volumes) != nil {
-				return ErrProvision
+				return fmt.Errorf("policy check 20: %w", ErrProvision)
 			}
 		}
 		if len(volumes) != len(mounts[name]) {
-			return ErrProvision
+			return fmt.Errorf("policy check 21: %w", ErrProvision)
 		}
 		seen := map[string]bool{}
 		for _, v := range volumes {
 			expected, ok := mounts[name][v.Target]
 			if !ok || seen[v.Target] || v.Source != expected {
-				return ErrProvision
+				return fmt.Errorf("policy check 22: %w", ErrProvision)
 			}
 			seen[v.Target] = true
 			if filepath.IsAbs(expected) {
 				if v.Type != "bind" || !v.ReadOnly {
-					return ErrProvision
+					return fmt.Errorf("policy check 23: %w", ErrProvision)
 				}
 			} else if v.Type != "volume" {
-				return ErrProvision
+				return fmt.Errorf("policy check 24: %w", ErrProvision)
 			}
 		}
 	}
 	for _, name := range []string{"db_data", "media", "caddy_data", "caddy_config"} {
 		v, ok := config.Volumes[name]
 		if !ok || len(v) != 1 || v["name"] != project+"_"+name {
-			return ErrProvision
+			return fmt.Errorf("policy check 25: %w", ErrProvision)
 		}
 	}
 	for _, name := range []string{"database", "edge", "outbound"} {
 		n, ok := config.Networks[name]
 		if !ok || n["name"] != project+"_"+name {
-			return ErrProvision
+			return fmt.Errorf("policy check 26: %w", ErrProvision)
 		}
 		for key := range n {
 			if key != "name" && key != "internal" {
-				return ErrProvision
+				return fmt.Errorf("policy check 27: %w", ErrProvision)
 			}
 		}
 		if name != "outbound" && n["internal"] != true {
-			return ErrProvision
+			return fmt.Errorf("policy check 28: %w", ErrProvision)
 		}
 	}
 	for _, name := range []string{"bootstrap_password", "migration_password", "runtime_password", "runtime_config", "migration_config"} {
@@ -408,7 +411,7 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 			filename = strings.TrimSuffix(name, "_config") + ".json"
 		}
 		if secret, ok := config.Secrets[name]; !ok || secret.File != filepath.Join(staged, "private", filename) {
-			return ErrProvision
+			return fmt.Errorf("policy check 29: %w", ErrProvision)
 		}
 	}
 	return nil

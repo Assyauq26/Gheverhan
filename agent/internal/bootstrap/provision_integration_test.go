@@ -108,11 +108,12 @@ func TestDisposableTUFProvisioningAndInterruptedResume(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	runner := &interruptedDocker{dockerRunner: localDocker{}}
-	if err := applyDisposableFixture(ctx, state, stack, repo.directory, repo.pin, runner); err == nil {
+	firstErr := applyDisposableFixture(ctx, state, stack, repo.directory, repo.pin, runner)
+	if firstErr == nil {
 		t.Fatal("injected interruption not observed")
 	}
 	if !runner.failed {
-		t.Fatalf("provisioning stopped before the intended injected interruption; fixed Docker calls=%d", runner.calls)
+		t.Fatalf("provisioning stopped before the intended injected interruption; fixed Docker calls=%d: %v", runner.calls, firstErr)
 	}
 	journalRaw, err := state.readPrivate("fixture-provision.json", 4096)
 	if err != nil {

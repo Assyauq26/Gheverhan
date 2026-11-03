@@ -256,7 +256,7 @@ func validateFixtureCompose(raw []byte, staged, project string, plan FixturePlan
 		}
 		for key := range service {
 			if !fields[key] {
-				return fmt.Errorf("policy check 3: %w", ErrProvision)
+				return fmt.Errorf("unsupported service field %q: %w", key, ErrProvision)
 			}
 		}
 		var actual string

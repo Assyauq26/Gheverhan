@@ -39,7 +39,7 @@ P0-C. Complete the **installation executor after secure pairing**. Current `jets
 
 P0-D. Production-grade per-store identity: the portal installation UUID must be preserved in local installation environment, DB name, agent credential, local admin and device events. This PR introduces that identity **only into the disposable fixture preparation seam**, with synthetic tests. It does not create a live production installer or authenticate the caller. Never accept an untrusted UUID as proof of seller authorization.
 
-P0-E. Real one-time admin, complete product/photo-upload/public catalog E2E on two new seller-owned VPS installation fixtures. Verify distinct JWT/session namespaces, dedicated DB/media, absence of cross-store access, persistent media and recovery after restart.
+P0-E. Real one-time admin, complete product/photo-upload/public catalog E2E on two new seller-owned VPS installation fixtures. Verify distinct JWT/session namespaces, dedicated DB/media, absence of cross-store access, persistent media and recovery after restart. **Current new CI increment:** `deploy/self-hosted/tests/admin-setup.sh` opens the product editor, stages an actual tiny synthetic PNG through the authenticated local-store media API and asserts owner-only access. Staging a photo is NOT equivalent to saving/publishing a product or proving the public storefront displays it.
 
 P0-F. An owner-visible activation status with authenticated agent progress and verified local readiness; no fabricated `INSTALLED`/\`READY\` status. Provide cancellable failure/retry instructions; old installation state must persist. Keep changes reviewable in isolated branches with CI.
 

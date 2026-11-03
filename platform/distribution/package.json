@@ -1,0 +1,1 @@
+{"name":"@jetseller/private-distribution","version":"0.1.0","private":true,"type":"module","engines":{"node":">=22 <23"},"scripts":{"test":"node --test test/unit.test.mjs","test:integration":"node --test test/harbor-integration.mjs"},"dependencies":{"pg":"8.23.1"}}

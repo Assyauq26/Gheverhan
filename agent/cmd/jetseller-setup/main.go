@@ -9,6 +9,7 @@ import (
 	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 )
 
@@ -66,6 +67,16 @@ func run() error {
 	}
 	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" && os.Args[1] != "renew-credential" {
 		return fmt.Errorf("unsupported command")
+	}
+	if os.Args[1] == "renew-credential" {
+		// Renewal is not an installer. Refuse absent/incomplete state before
+		// OpenState can initialize a fresh device identity or journal.
+		for _, name := range []string{"identity.json", "journal.json", "credential.json"} {
+			info, err := os.Lstat(filepath.Join(*directory, name))
+			if err != nil || !info.Mode().IsRegular() {
+				return fmt.Errorf("existing paired device state required")
+			}
+		}
 	}
 	state, err := bootstrap.OpenState(*directory, *installation)
 	if err != nil {

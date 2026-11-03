@@ -271,3 +271,19 @@ func TestRenderedFixtureRejectsPrivilegedMountCommandPortAndExternalNetwork(t *t
 		}
 	}
 }
+
+func TestBoundedInputDistinguishesMissingFromInvalidFile(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "not-created")
+	if _, err := readBoundedRegular(target, 10); !os.IsNotExist(err) {
+		t.Fatal("missing staged file must be creatable")
+	}
+	if err := os.WriteFile(target, []byte("small"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if raw, err := readBoundedRegular(target, 10); err != nil || string(raw) != "small" {
+		t.Fatal("regular bounded input")
+	}
+	if _, err := readBoundedRegular(target, 2); err == nil || os.IsNotExist(err) {
+		t.Fatal("oversize input must not be treated as missing")
+	}
+}

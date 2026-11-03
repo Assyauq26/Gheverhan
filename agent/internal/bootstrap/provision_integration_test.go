@@ -111,6 +111,9 @@ func TestDisposableTUFProvisioningAndInterruptedResume(t *testing.T) {
 	if err := applyDisposableFixture(ctx, state, stack, repo.directory, repo.pin, runner); err == nil {
 		t.Fatal("injected interruption not observed")
 	}
+	if !runner.failed {
+		t.Fatalf("provisioning stopped before the intended injected interruption; fixed Docker calls=%d", runner.calls)
+	}
 	journalRaw, err := state.readPrivate("fixture-provision.json", 4096)
 	if err != nil {
 		t.Fatal("checkpoint absent")

@@ -41,7 +41,10 @@ type fixtureTrust struct {
 
 func readBoundedRegular(path string, max int64) ([]byte, error) {
 	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() > max {
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Size() > max {
 		return nil, ErrProvision
 	}
 	file, err := os.Open(path)

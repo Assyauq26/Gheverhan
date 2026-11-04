@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -22,8 +23,19 @@ type HostFacts struct {
 	ExistingServices bool
 }
 
+func SupportedUbuntuRelease(release string) bool {
+	return release == "ubuntu:22.04" || release == "ubuntu:24.04"
+}
+func CurrentOSRelease() (string, error) {
+	f, err := os.Open("/etc/os-release")
+	if err != nil {
+		return "", ErrPreflight
+	}
+	defer f.Close()
+	return ParseOSRelease(f)
+}
 func ValidateHost(f HostFacts) error {
-	if f.OS != "linux" || f.Arch != "amd64" || f.Release != "ubuntu:24.04" || f.CPUs < 2 || f.MemoryBytes < 4*1024*1024*1024 || f.FreeBytes < 40*1024*1024*1024 || f.FreeInodes < 10000 || !f.PortsAvailable || f.ExistingServices {
+	if f.OS != "linux" || f.Arch != "amd64" || !SupportedUbuntuRelease(f.Release) || f.CPUs < 2 || f.MemoryBytes < 4*1024*1024*1024 || f.FreeBytes < 40*1024*1024*1024 || f.FreeInodes < 10000 || !f.PortsAvailable || f.ExistingServices {
 		return ErrPreflight
 	}
 	return nil
@@ -47,10 +59,10 @@ func ParseOSRelease(r io.Reader) (string, error) {
 			values[k] = strings.Trim(v, "\"")
 		}
 	}
-	if s.Err() != nil || values["ID"] != "ubuntu" || values["VERSION_ID"] != "24.04" {
+	if s.Err() != nil || values["ID"] != "ubuntu" || !SupportedUbuntuRelease("ubuntu:"+values["VERSION_ID"]) {
 		return "", ErrPreflight
 	}
-	return "ubuntu:24.04", nil
+	return "ubuntu:" + values["VERSION_ID"], nil
 }
 func MemoryBytes(r io.Reader) (uint64, error) {
 	s := bufio.NewScanner(io.LimitReader(r, 65537))

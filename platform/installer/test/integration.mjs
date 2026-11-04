@@ -52,7 +52,8 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   handler=createHandler(options); // Fresh service instance reads durable registry and sessions.
   assert.equal((await call('GET','/installations/'+installation.installation_id)).body.installation.display_name,'Changed');
   const keys=await generateKeyPair('EdDSA',{crv:'Ed25519',extractable:true}),jwk=await exportJWK(keys.publicKey),thumbprint=await calculateJwkThumbprint(jwk);
-  const deviceRequest={installation_hint:installation.installation_id,public_key:jwk,protocol_version:'1',os:'ubuntu-24.04',arch:'amd64',agent_version:'0.1.0'};
+  const deviceRequest={installation_hint:installation.installation_id,public_key:jwk,protocol_version:'1',os:'ubuntu-22.04',arch:'amd64',agent_version:'0.1.0'};
+  for(const os of ['ubuntu-20.04','ubuntu-26.04','debian-12'])assert.equal((await call('POST','/agent/pairing/device',{...deviceRequest,os},null)).status,400);
   const pair=await call('POST','/agent/pairing/device',deviceRequest,null);assert.equal(pair.status,201);const session=pair.body;
   assert.equal(JSON.stringify((await call('GET','/installations')).body).includes(session.device_code),false);
   const proof=async(privateKey=keys.privateKey,patch={})=>new SignJWT({nonce:session.nonce,operation:'pairing-token',code_hash:hash(session.device_code),...patch}).setProtectedHeader({alg:'EdDSA',typ:'jetseller-pairing+jwt'}).setAudience(controlOrigin).setIssuedAt().setExpirationTime('60s').setJti(randomUUID()).sign(privateKey);
@@ -62,7 +63,7 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   const wrong=await generateKeyPair('EdDSA',{crv:'Ed25519'});assert.equal((await poll(await proof(wrong.privateKey))).status,401);
   assert.equal((await poll(await proof(keys.privateKey,{nonce:'wrong'}))).status,401);
   assert.equal((await call('POST','/pairing-sessions/lookup',{user_code:session.user_code},b)).status,404);
-  const lookup=await call('POST','/pairing-sessions/lookup',{user_code:session.user_code});assert.equal(lookup.status,200);assert.equal(lookup.body.public_key_thumbprint,thumbprint);
+  const lookup=await call('POST','/pairing-sessions/lookup',{user_code:session.user_code});assert.equal(lookup.status,200);assert.equal(lookup.body.public_key_thumbprint,thumbprint);assert.equal(lookup.body.os,'ubuntu-22.04');
   const approval={user_code:session.user_code,public_key_thumbprint:thumbprint,confirm:true};
   assert.equal((await call('POST','/pairing-sessions/'+session.pairing_session_id+'/approve',approval,b)).status,404);
   assert.equal((await call('POST','/pairing-sessions/'+session.pairing_session_id+'/approve',{...approval,public_key_thumbprint:'wrong'})).status,403);

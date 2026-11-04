@@ -235,7 +235,7 @@ func validateManifest(p Policy, m Manifest, now time.Time) error {
 	if (m.ImageArchiveSHA256 == "") != (m.MigrationArchiveSHA256 == "") || (m.ImageArchiveSHA256 != "" && (!hex64.MatchString(m.ImageArchiveSHA256) || !hex64.MatchString(m.MigrationArchiveSHA256))) {
 		return ErrRelease
 	}
-	if !hex64.MatchString(m.ImageConfigSHA256) || !hex64.MatchString(m.MigrationConfigSHA256) || m.SchemaVersion != "1" || m.Sequence == 0 || !appVersionPattern.MatchString(m.AppVersion) || m.ReleaseID != "rel-"+m.AppVersion+"-"+p.Channel || m.Channel != p.Channel || m.Platform != "linux/amd64" || m.OS != "ubuntu:24.04" || m.ProtocolVersion != 1 || m.ComposeTemplateVersion != 1 || m.SignerIssuer != p.SignerIssuer || m.SignerIdentity != p.SignerIdentity || m.Revoked {
+	if !hex64.MatchString(m.ImageConfigSHA256) || !hex64.MatchString(m.MigrationConfigSHA256) || m.SchemaVersion != "1" || m.Sequence == 0 || !appVersionPattern.MatchString(m.AppVersion) || m.ReleaseID != "rel-"+m.AppVersion+"-"+p.Channel || m.Channel != p.Channel || m.Platform != "linux/amd64" || (m.OS != "ubuntu:22.04" && m.OS != "ubuntu:24.04") || m.ProtocolVersion != 1 || m.ComposeTemplateVersion != 1 || m.SignerIssuer != p.SignerIssuer || m.SignerIdentity != p.SignerIdentity || m.Revoked {
 		return ErrRelease
 	}
 	prefix := p.Registry + "/" + p.RepositoryPrefix + "/"
@@ -294,7 +294,10 @@ type Host struct {
 
 func (r TrustedRelease) Compatible(h Host) error {
 	m := r.manifest
-	if r.digest == "" || h.OS != m.OS || h.Platform != m.Platform || h.ProtocolVersion != m.ProtocolVersion || h.ComposeTemplateVersion != m.ComposeTemplateVersion || h.SchemaVersion < m.MinStoreSchemaVersion || h.SchemaVersion > m.MaxStoreSchemaVersion || h.SchemaVersion > m.TargetSchemaVersion {
+	// Signed OS is the minimum supported LTS. Only these tested LTS releases
+	// are accepted; a future or older Ubuntu release is never inferred safe.
+	osCompatible := h.OS == m.OS || (m.OS == "ubuntu:22.04" && h.OS == "ubuntu:24.04")
+	if r.digest == "" || !osCompatible || h.Platform != m.Platform || h.ProtocolVersion != m.ProtocolVersion || h.ComposeTemplateVersion != m.ComposeTemplateVersion || h.SchemaVersion < m.MinStoreSchemaVersion || h.SchemaVersion > m.MaxStoreSchemaVersion || h.SchemaVersion > m.TargetSchemaVersion {
 		return ErrRelease
 	}
 	actual, ok := version(h.AgentVersion)

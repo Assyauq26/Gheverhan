@@ -16,16 +16,19 @@ evidence="$fixture/evidence"; mkdir -m 700 "$evidence"
 echo "P0_VM_EVIDENCE=$evidence"
 sudo apt-get update -qq
 sudo apt-get install -y -qq qemu-system-x86 qemu-utils cloud-image-utils ubuntu-cloudimage-keyring gnupg ca-certificates curl acl >/dev/null
-base='https://cloud-images.ubuntu.com/noble/current'
-for file in SHA256SUMS SHA256SUMS.gpg noble-server-cloudimg-amd64.img; do
+version=${P0_GUEST_UBUNTU_VERSION:-24.04}
+case "$version" in 22.04) codename=jammy;; 24.04) codename=noble;; *) echo 'Unapproved guest OS' >&2; exit 2;; esac
+base="https://cloud-images.ubuntu.com/$codename/current"
+image="$codename-server-cloudimg-amd64.img"
+for file in SHA256SUMS SHA256SUMS.gpg "$image"; do
   curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 20 --max-time 600 --retry 2 "$base/$file" --output "$fixture/$file"
 done
 gpgv --keyring /usr/share/keyrings/ubuntu-cloudimage-keyring.gpg "$fixture/SHA256SUMS.gpg" "$fixture/SHA256SUMS" 2>"$evidence/ubuntu-signature.txt"
-awk '$2=="*noble-server-cloudimg-amd64.img" || $2=="noble-server-cloudimg-amd64.img" { print }' "$fixture/SHA256SUMS" > "$fixture/selected-sum"
+awk -v image="$image" '$2=="*"image || $2==image { print }' "$fixture/SHA256SUMS" > "$fixture/selected-sum"
 [[ $(wc -l < "$fixture/selected-sum") = 1 ]] || exit 2
 (cd "$fixture" && sha256sum --check selected-sum) > "$evidence/ubuntu-checksum.txt"
 cp "$fixture/selected-sum" "$evidence/ubuntu-image-sha256.txt"
-qemu-img create -q -f qcow2 -F qcow2 -b "$fixture/noble-server-cloudimg-amd64.img" "$fixture/guest.qcow2"
+qemu-img create -q -f qcow2 -F qcow2 -b "$fixture/$image" "$fixture/guest.qcow2"
 qemu-img resize -q "$fixture/guest.qcow2" 40000000000
 ssh-keygen -q -t ed25519 -N '' -f "$fixture/client-key"
 ssh-keygen -q -t ed25519 -N '' -f "$fixture/guest-host-key"
@@ -94,6 +97,8 @@ for attempt in $(seq 1 180); do
   sleep 3
 done
 guest 'sudo -n cloud-init status --wait >/dev/null'
+actual_version=$(guest '. /etc/os-release; printf "%s" "$VERSION_ID"')
+[[ "$actual_version" = "$version" ]] || { echo 'Guest OS does not match selected test target' >&2; exit 2; }
 guest_ready=1
 boot_seconds=$((SECONDS-boot_start))
 guest "sudo -n install -d -m700 /opt/p0-payload; printf '%s\n' '$id' | sudo -n tee /run/p0-ci-fixture >/dev/null"
@@ -106,15 +111,17 @@ umask 077
 export DEBIAN_FRONTEND=noninteractive
 test "$(hostname)" = p0-resource-fixture
 test -s /run/p0-ci-fixture
+. /etc/os-release
+case "$VERSION_ID:$VERSION_CODENAME" in 22.04:jammy|24.04:noble) ;; *) exit 2;; esac
 apt-get update -qq
 apt-get install -y -qq ca-certificates curl >/dev/null
 install -m0755 -d /etc/apt/keyrings
 curl --fail --proto '=https' --tlsv1.2 --connect-timeout 20 --max-time 120 https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
-cat >/etc/apt/sources.list.d/docker.sources <<'DOCKER'
+cat >/etc/apt/sources.list.d/docker.sources <<DOCKER
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
-Suites: noble
+Suites: $VERSION_CODENAME
 Components: stable
 Architectures: amd64
 Signed-By: /etc/apt/keyrings/docker.asc
@@ -147,10 +154,11 @@ collect_evidence
 guest 'sudo -n docker --host unix:///var/run/docker.sock version --format "{{json .}}"' > "$evidence/docker-version.json" || true
 guest 'sudo -n docker --host unix:///var/run/docker.sock stats --no-stream --format "{{json .}}"' > "$evidence/docker-final-stats.jsonl" || true
 guest 'sudo -n bash -s' < "$repo/deploy/self-hosted/tests/docker-final-state.sh" > "$evidence/docker-final-state.txt" || true
-python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$callback_result" "$callback_present" <<'PY'
+python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$callback_result" "$callback_present" "$actual_version" <<'PY'
 import json,pathlib,sys
 root=pathlib.Path(sys.argv[1]);sample_file=root/'p0-resource-samples.jsonl';samples=[json.loads(line) for line in sample_file.read_text().splitlines()] if sample_file.is_file() else []
 summary={'evidence':'ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS','vcpus':2,'allocated_memory_bytes':2*1024**3,'virtual_disk_bytes':40_000_000_000,'boot_seconds':int(sys.argv[2]),'callback_seconds':int(sys.argv[3]),'callback_exit':int(sys.argv[4]),'callback_present':sys.argv[5]=='1','sample_count':len(samples),'guest_resource_evidence':'AVAILABLE' if samples else 'UNAVAILABLE','oom_kills':max((s['oom_kills_since_start'] for s in samples),default=None),'max_swap_used_bytes':max((s['swap_used_bytes'] for s in samples),default=None),'max_swap_available_bytes':max((s['swap_total_bytes'] for s in samples),default=None),'min_available_memory_bytes':min((s['mem_available_bytes'] for s in samples),default=None),'min_disk_free_bytes':min((s['disk_free_bytes'] for s in samples),default=None),'installation_result':'CALLBACK_RESULT_ONLY; NOT_PUBLIC_VPS' if sys.argv[5]=='1' else 'NOT_TESTED; RESOURCE_PREFLIGHT_ONLY'}
+summary['ubuntu_release']=sys.argv[6]
 (root/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 print(json.dumps(summary))
 PY

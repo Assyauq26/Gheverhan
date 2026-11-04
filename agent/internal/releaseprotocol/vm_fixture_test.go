@@ -23,6 +23,7 @@ func TestBuildFullVMFixture(t *testing.T) {
 	f.policy.SignerIdentity = os.Getenv("P0_FIXTURE_SIGNER_IDENTITY")
 	f.policy.MaxArtifactBytes = 2 << 30
 	m := f.manifest()
+	m.OS = "ubuntu:22.04"
 	m.SignerIdentity = f.policy.SignerIdentity
 	m.RequiresBackup = false
 	m.MinStoreSchemaVersion = 0

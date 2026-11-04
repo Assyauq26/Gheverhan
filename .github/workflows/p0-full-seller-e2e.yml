@@ -9,9 +9,13 @@ concurrency:
   group: full-p0-vm-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  full-synthetic-seller:
+  seller-vm:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ['22.04', '24.04']
     permissions:
       contents: read
       id-token: write # Test identity only; never official production publication.
@@ -75,7 +79,7 @@ jobs:
           /tmp/p0-full-build/cosign sign-blob --yes --bundle /tmp/p0-full-build/policy.sigstore.json /tmp/p0-full-build/policy.json
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go -C agent build -trimpath -o /tmp/p0-full-build/jetseller-setup ./cmd/jetseller-setup
           /tmp/p0-full-build/cosign sign-blob --yes --bundle /tmp/p0-full-build/setup.sigstore.json /tmp/p0-full-build/jetseller-setup
-          go -C agent test -c -o /tmp/p0-vm-payload/installer.test ./internal/installer
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go -C agent test -c -o /tmp/p0-vm-payload/installer.test ./internal/installer
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go -C agent test -c -o /tmp/p0-vm-payload/resource-probe.test ./internal/bootstrap
           cp /tmp/p0-full-build/cosign /tmp/p0-full-build/jetseller-setup /tmp/p0-full-build/policy.json /tmp/p0-vm-payload/
       - name: Verify complete signed directory and ZIP before scoped HTTPS serving
@@ -112,16 +116,26 @@ jobs:
           npm ci --prefix platform/installer-web --ignore-scripts --no-audit --no-fund
           (cd platform/installer-web && npx playwright install --with-deps chromium)
           sudo apt-get install -y -qq libnss3-tools
-      - name: Full real installer engine in clean2CPU2GiB40GB Ubuntu24.04 VM
+      - name: Full real installer engine in clean2CPU2GiB40GB Ubuntu VM
         env:
           P0_DISPOSABLE_CI_CONFIRM: only-disposable-ci
           P0_FULL_SELLER_E2E: '1'
+          P0_GUEST_UBUNTU_VERSION: ${{ matrix.ubuntu }}
         run: bash deploy/self-hosted/tests/p0-vm.sh /tmp/p0-vm-payload
       - name: Preserve allowlisted synthetic journey and resource evidence only
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: full-synthetic-seller-vm-evidence
+          name: full-synthetic-seller-vm-evidence-${{ matrix.ubuntu }}
           path: /tmp/buattokosendiri-p0-vm.*/evidence/**
           retention-days: 7
           if-no-files-found: warn
+  full-synthetic-seller:
+    runs-on: ubuntu-24.04
+    needs: seller-vm
+    if: always()
+    steps:
+      - name: Require complete seller journeys on both supported Ubuntu LTS releases
+        env:
+          RESULT: ${{ needs.seller-vm.result }}
+        run: test "$RESULT" = success

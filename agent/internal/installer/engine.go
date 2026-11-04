@@ -193,7 +193,8 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 			return ErrInstall
 		}
 	}
-	if manifest.RequiresBackup || trusted.Compatible(releaseprotocol.Host{OS: "ubuntu:24.04", Platform: "linux/amd64", AgentVersion: "0.1.0", ProtocolVersion: 1, ComposeTemplateVersion: 1, SchemaVersion: 0}) != nil {
+	hostRelease, hostErr := bootstrap.CurrentOSRelease()
+	if hostErr != nil || manifest.RequiresBackup || trusted.Compatible(releaseprotocol.Host{OS: hostRelease, Platform: "linux/amd64", AgentVersion: "0.1.0", ProtocolVersion: 1, ComposeTemplateVersion: 1, SchemaVersion: 0}) != nil {
 		return ErrInstall
 	}
 	stack := filepath.Join(o.StateDirectory, "store")

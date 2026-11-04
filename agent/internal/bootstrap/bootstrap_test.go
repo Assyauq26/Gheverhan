@@ -27,7 +27,7 @@ func TestPreflightRejectsUnsafeHosts(t *testing.T) {
 	bad := []HostFacts{valid, valid, valid, valid, valid, valid, valid, valid}
 	bad[0].OS = "windows"
 	bad[1].Arch = "arm64"
-	bad[2].Release = "ubuntu:22.04"
+	bad[2].Release = "ubuntu:20.04"
 	bad[3].CPUs = 1
 	bad[4].MemoryBytes = 1
 	bad[5].FreeBytes = 1
@@ -43,7 +43,7 @@ func TestOSAndMemoryParsing(t *testing.T) {
 	if got, e := ParseOSRelease(strings.NewReader("ID=ubuntu\nVERSION_ID=\"24.04\"\n")); e != nil || got != "ubuntu:24.04" {
 		t.Fatal("release")
 	}
-	for _, s := range []string{"ID=debian\nVERSION_ID=24.04", "ID=ubuntu\nID=ubuntu\nVERSION_ID=24.04", "ID=ubuntu\nVERSION_ID=22.04"} {
+	for _, s := range []string{"ID=debian\nVERSION_ID=24.04", "ID=ubuntu\nID=ubuntu\nVERSION_ID=24.04", "ID=ubuntu\nVERSION_ID=20.04", "ID=ubuntu\nVERSION_ID=26.04"} {
 		if _, e := ParseOSRelease(strings.NewReader(s)); e == nil {
 			t.Fatal("bad OS accepted")
 		}

@@ -124,3 +124,25 @@ func TestSavedCredentialFinalizesBindingWithoutSecondExchange(t *testing.T) {
 		})
 	}
 }
+
+func TestCredentialMetadataClockBoundsDoNotExtendExpiry(t *testing.T) {
+	s := recoveryState(t)
+	defer s.Close()
+	c := &PairingClient{}
+	now := time.Now().UTC()
+	valid := Credential{InstallationID: s.Identity.InstallationID, Thumbprint: Thumbprint(s.PrivateKey()), TokenType: "jetseller-pop", DeviceID: "fixture-device", Token: strings.Repeat("x", 64), Scopes: []string{"report:heartbeat"}}
+	for _, tc := range []struct {
+		name   string
+		delta  time.Duration
+		accept bool
+	}{{"normal", 10 * time.Minute, true}, {"bounded_clock_skew", 10*time.Minute + 5*time.Second, true}, {"excess_clock_skew", 10*time.Minute + 5*time.Second + time.Nanosecond, false}, {"expired", -time.Nanosecond, false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			cred := valid
+			cred.ExpiresAt = now.Add(tc.delta).Format(time.RFC3339Nano)
+			e := c.validateCredentialAt(s, cred, true, now)
+			if (e == nil) != tc.accept {
+				t.Fatal("credential metadata time bound mismatch")
+			}
+		})
+	}
+}

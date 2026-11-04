@@ -35,5 +35,7 @@ jobs:
           test -z "$(dc port db 5432)"
           dc exec -T control node --input-type=module -e "const r=await fetch('http://control:3100/auth/status');const v=await r.json();if(!r.ok||!v.configured||v.method!=='email_otp')process.exit(1)"
           dc exec -T control node --input-type=module < deploy/control-plane/verify-runtime.mjs
+          dc run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
+          dc run --rm --no-deps --entrypoint wget caddy -qO- http://control:3100/auth/status | grep -q email_otp
           dc restart control
           dc up -d --wait control

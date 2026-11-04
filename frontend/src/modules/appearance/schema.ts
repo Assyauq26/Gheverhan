@@ -369,8 +369,8 @@ export function legacyDefault(): StoreAppearanceV1 {
 /** New/reset drafts only. Never rewrite an existing published config or legacy revision. */
 export function makeDefault(): StoreAppearanceV1 {
   const v = monochromeDefault();
-  v.identity = { ...v.identity, name: "JetSeller", tagline: "JetSeller Demo Store", logoAssetId: null, mode: "text" };
-  v.footer.tagline = "JetSeller Demo Store";
+  v.identity = { ...v.identity, name: "Toko Anda", tagline: "Toko online mandiri", logoAssetId: null, mode: "text" };
+  v.footer.tagline = "Toko online mandiri";
   Object.assign(v.colors, {
     surface: "#F7F7F8", disabled: "#F7F7F8", text: "#111418", secondaryText: "#667085", disabledText: "#667085",
     primary: "#E1251B", primaryHover: "#B3121A", primaryPressed: "#931017",

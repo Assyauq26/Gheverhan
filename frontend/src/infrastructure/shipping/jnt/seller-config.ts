@@ -19,9 +19,9 @@ function canonicalInstallationId(): string {
   if (process.env.JETSELLER_STORE_PROFILE !== "self-hosted")
     throw new HttpError("Profil instalasi J&T tidak valid", 503);
   const id = process.env.JETSELLER_INSTALLATION_ID || "";
-  if (!INSTALLATION_ID.test(id)) throw new HttpError("Identitas instalasi JetSeller belum valid", 503);
+  if (!INSTALLATION_ID.test(id)) throw new HttpError("Identitas instalasi toko belum valid", 503);
   if (process.env.JNT_INSTALLATION_ID && process.env.JNT_INSTALLATION_ID !== id)
-    throw new HttpError("Identitas instalasi J&T tidak cocok dengan JetSeller", 503);
+    throw new HttpError("Identitas instalasi J&T tidak cocok dengan toko", 503);
   return id;
 }
 export function localJntSettings() { return process.env.JNT_CONFIG_SCOPE === "local_store"; }

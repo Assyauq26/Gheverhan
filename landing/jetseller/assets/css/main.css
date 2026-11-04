@@ -318,3 +318,7 @@ button:focus-visible { outline:3px solid var(--red); outline-offset:4px; }
 .hero-visual { animation-delay:.4s; }
 .revealed { animation:enter .65s ease both; }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+
+/* Full official name must wrap safely in navigation and footer. */
+.brand{white-space:normal;max-width:17ch;font-size:1.15rem;letter-spacing:-.025em}.brand-name{color:var(--ink)}.platform-tagline{font-weight:600;color:var(--red-dark);margin-bottom:16px}
+@media(max-width:600px){.brand{font-size:1rem;max-width:17ch}.footer-inner{gap:24px}}

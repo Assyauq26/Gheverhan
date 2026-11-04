@@ -3,6 +3,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pairingExitMessage } from './cli-diagnostics.mjs';
 
 const docker = args => execFileSync('docker', ['--host', 'unix:///var/run/docker.sock', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
 const imagePattern = /^ubuntu@sha256:[a-f0-9]{64}$/;
@@ -29,7 +30,11 @@ export async function startPairingCli(t, { directory, origin, installationId }) 
   const child = spawn('docker', ['--host', 'unix:///var/run/docker.sock', 'run', '--name', name, ...common, 'pair', ...flags], { stdio: ['ignore', 'pipe', 'pipe'] });
   const stopped = new Promise(resolve => { child.once('error', () => resolve(null)); child.once('close', code => resolve(code)); });
   // Human code/fingerprint are read only into test memory, never logged/artifacted.
-  let terminal = ''; child.stderr.on('data', () => {});
+  let terminal = '', diagnostic = '';
+  // Whitelist public host diagnostics; never forward arbitrary CLI/Docker logs.
+  child.stderr.on('data', data => {
+    diagnostic = (diagnostic + data.toString()).slice(-4096);
+  });
   const session = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Real CLI did not reach private pairing checkpoint')), 45000);
     child.stdout.on('data', data => {
@@ -38,7 +43,10 @@ export async function startPairingCli(t, { directory, origin, installationId }) 
       const match = terminal.match(/Open (https:\/\/\S+) and enter ([A-HJ-NP-Z2-9]{5}-[A-HJ-NP-Z2-9]{5})\. Confirm device fingerprint ([A-Za-z0-9_-]{43})\./);
       if (match) { clearTimeout(timeout); resolve({ verification_uri: match[1], user_code: match[2], thumbprint: match[3] }); }
     });
-    stopped.then(() => { clearTimeout(timeout); reject(new Error('CLI exited before pairing checkpoint')); });
+    stopped.then(code => {
+      clearTimeout(timeout);
+      reject(new Error(pairingExitMessage(code, diagnostic)));
+    });
   });
   t.after(() => {
     try {

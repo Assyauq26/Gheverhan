@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="JetSeller">
-  <rect width="128" height="128" rx="16" fill="#fff"/>
-  <text x="4" y="74" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" letter-spacing="-1.5" textLength="120" lengthAdjust="spacingAndGlyphs"><tspan fill="#E1251B">Jet</tspan><tspan fill="#111418">Seller</tspan></text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Toko online"><rect width="128" height="128" rx="24" fill="#fff"/><g fill="none" stroke="#b3121a" stroke-width="7" stroke-linejoin="round"><path d="M25 54h78v49H25zM20 54l12-29h64l12 29M48 103V76h32v27"/><path d="M20 54q11 18 22 0 11 18 22 0 11 18 22 0 11 18 22 0"/></g></svg>

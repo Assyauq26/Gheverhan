@@ -1,10 +1,12 @@
+> Identitas produk diperbarui 4 November 2026. Identifier teknis lama tetap kompatibel; lihat `../rebranding-buattokosendiri/README.md`. Klaim kesiapan dalam spesifikasi ini tetap memerlukan bukti implementasi.
+
 # Open Decisions and Safe Defaults
 
 Open items should not block **read-only inventory and architecture PoC**. Codex may use safe defaults for a disposable prototype, but must not silently resolve significant business/security decisions as final product policy.
 
 | Issue | MVP safe default | Final decision owner |
 |---|---|---|
-| Seller hosting OS | Ubuntu 24.04 LTS x86_64 VPS with sudo | JetSeller product + engineering |
+| Seller hosting OS | Ubuntu 24.04 LTS x86_64 VPS with sudo | Buat Toko Online Sendiri product + engineering |
 | VPS min specs | Proposed 2 vCPU / 4 GiB RAM / 40 GiB free; benchmark | Engineering |
 | Portal hostname / admin routes | jetseller.web.id / dashboard.jetseller.web.id | Product |
 | Internal package layout | Incremental modularization; avoid risky repo-wide move | Engineering after audit |

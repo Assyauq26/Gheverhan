@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-import { JetSellerWordmark } from "@/components/brand/wordmark";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -40,14 +39,6 @@ export function StoreLogo() {
     i.logoAssetId &&
     !failed &&
     (!preview || Boolean(logoUrl));
-  // Keep the two-color mark on the white demo preset. Custom header/footer
-  // palettes retain their validated inherited foreground instead of a red-on-red mark.
-  const wordmark = i.name === "JetSeller" &&
-    config.colors.header.toUpperCase() === "#FFFFFF" &&
-    config.colors.footer.toUpperCase() === "#FFFFFF" &&
-    config.colors.pageBg.toUpperCase() === "#FFFFFF" &&
-    !config.gradients.header.enabled &&
-    !config.gradients.footer.enabled;
   return (
     <span
       className="inline-flex max-w-full items-center gap-2"
@@ -70,7 +61,7 @@ export function StoreLogo() {
           onError={() => setFailed(true)}
         />
       )}
-      {(i.mode !== "image" || !show) && <span>{wordmark ? <JetSellerWordmark sellerColor={config.colors.text} /> : i.name}</span>}
+      {(i.mode !== "image" || !show) && <span>{i.name}</span>}
     </span>
   );
 }

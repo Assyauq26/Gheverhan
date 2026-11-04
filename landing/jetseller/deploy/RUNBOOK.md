@@ -1,3 +1,5 @@
+> HISTORIS — merek lama telah dipensiunkan. Dokumen/aset ini dipertahankan sebagai bukti dan kompatibilitas rilis lama; bukan panduan deployment domain baru. Gunakan `docs/rebranding-buattokosendiri/README.md` untuk identitas dan rencana rilis terkini.
+
 # RUNBOOK — JetSeller landing page (Opsi B, draft)
 
 Untuk rilis V3 pada Caddy yang sudah melayani JetSeller, gunakan

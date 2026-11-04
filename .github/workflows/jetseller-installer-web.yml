@@ -1,4 +1,4 @@
-name: JetSeller installer dashboard
+name: Buat Toko Online Sendiri installer dashboard
 on:
   pull_request:
     paths:

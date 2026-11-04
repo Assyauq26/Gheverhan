@@ -195,7 +195,7 @@ export function AppearanceEditor({
             ? `Terbitkan kembali revisi ${revision}? Draft saat ini tetap disimpan.`
             : kind === "discard"
               ? "Buang draft server dan salin tampilan published?"
-              : "Reset draft ke JetSeller Demo Store? Published tidak berubah.",
+              : "Reset draft ke toko ini? Published tidak berubah.",
       )
     )
       return;

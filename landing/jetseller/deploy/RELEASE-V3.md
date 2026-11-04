@@ -1,3 +1,5 @@
+> HISTORIS — merek lama telah dipensiunkan. Dokumen/aset ini dipertahankan sebagai bukti dan kompatibilitas rilis lama; bukan panduan deployment domain baru. Gunakan `docs/rebranding-buattokosendiri/README.md` untuk identitas dan rencana rilis terkini.
+
 # Rilis statis JetSeller V3 dari terminal Helipod
 
 Jalankan hanya di terminal Bash VPS Helipod yang sudah berhasil login dan

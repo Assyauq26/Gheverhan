@@ -345,7 +345,7 @@ export async function verifyStoreAppearance({
           );
           await assertSearchFocus(frame);
           await expect(frame.getByTestId("bottom-cart-count")).toHaveText("2");
-          if (["JetSeller Demo Store", "Midnight Ink"].includes(preset.name)) {
+          if (["Toko Online Mandiri", "Midnight Ink"].includes(preset.name)) {
             await captureShell(
               page,
               frame,
@@ -562,7 +562,7 @@ export async function verifyStoreAppearance({
           .getByRole("button", { name: "Preset/Template Warna", exact: true })
           .click();
         await page
-          .getByRole("button", { name: "JetSeller Demo Store", exact: true })
+          .getByRole("button", { name: "Toko Online Mandiri", exact: true })
           .click();
         await page
           .getByRole("button", { name: "Gradasi", exact: true })
@@ -983,7 +983,7 @@ export async function verifyStoreAppearance({
           .getByRole("button", { name: "Preset/Template Warna", exact: true })
           .click();
         await page
-          .getByRole("button", { name: "JetSeller Demo Store", exact: true })
+          .getByRole("button", { name: "Toko Online Mandiri", exact: true })
           .click();
         const frame = page.frameLocator('iframe[title="Preview draft toko"]');
         await page

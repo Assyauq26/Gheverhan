@@ -1,7 +1,7 @@
 import { makeDefault, parseAppearance } from "./schema";
 import { foreground, mix } from "./contrast";
 const seeds = [
-  ["JetSeller Demo Store", "#111111", "#FFFFFF"],
+  ["Toko Online Mandiri", "#111111", "#FFFFFF"],
   ["Midnight Ink", "#D6E4FF", "#101827"],
   ["Sage Studio", "#294D3A", "#F5F8F3"],
   ["Terracotta", "#833F2B", "#FFF8F4"],

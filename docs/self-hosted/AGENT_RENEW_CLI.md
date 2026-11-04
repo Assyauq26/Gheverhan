@@ -1,4 +1,4 @@
-# JetSeller agent: one-shot credential renewal CLI
+# Buat Toko Online Sendiri agent: one-shot credential renewal CLI
 
 **Status: REVIEW/CI ONLY.** This is not a production daemon, systemd timer, release updater, offline recovery or approved server installation.
 

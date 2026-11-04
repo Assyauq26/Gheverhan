@@ -15,7 +15,16 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "JetSeller setup blocked; no store deployment performed.")
+		// Only fixed error categories reach stderr; network errors may contain
+		// credentials, pairing codes or callback URLs and must never be printed.
+		category := "operation_failed"
+		switch {
+		case errors.Is(err, bootstrap.ErrPreflight):
+			category = "host_preflight"
+		case errors.Is(err, bootstrap.ErrState):
+			category = "private_state"
+		}
+		fmt.Fprintf(os.Stderr, "Penyiapan Buat Toko Online Sendiri dihentikan (%s). Tidak ada deployment toko.\n", category)
 		os.Exit(1)
 	}
 }
@@ -26,7 +35,7 @@ func run() error {
 	flags := flag.NewFlagSet("jetseller-setup", flag.ContinueOnError)
 	directory := flags.String("state", "/var/lib/jetseller-agent", "private local state directory (parent must exist)")
 	installation := flags.String("installation-id", "", "existing seller installation intent UUID")
-	origin := flags.String("control-origin", "https://jetseller.web.id", "HTTPS control origin")
+	origin := flags.String("control-origin", "https://dashboard.buattokosendiri.web.id", "HTTPS control origin")
 	artifact := flags.String("artifact", "", "local artifact path")
 	bundle := flags.String("bundle", "", "local Sigstore bundle")
 	digest := flags.String("sha256", "", "approved artifact SHA256")
@@ -96,12 +105,16 @@ func run() error {
 		}
 		// Never print the renewed bearer token, device key, or nonce.
 		return json.NewEncoder(os.Stdout).Encode(struct {
-			Status string `json:"status"`
+			Status              string `json:"status"`
 			CredentialExpiresAt string `json:"credential_expires_at"`
 		}{Status: "renewed", CredentialExpiresAt: refreshed.ExpiresAt})
 	}
 	facts, err := bootstrap.InspectHost(*directory)
 	if err != nil {
+		if errors.Is(err, bootstrap.ErrPreflight) {
+			// Public host facts only, never environment variables or private state.
+			fmt.Fprintf(os.Stderr, "preflight: os=%s arch=%s release=%s cpus=%d memory_bytes=%d free_bytes=%d free_inodes=%d ports_available=%t existing_services=%t\n", facts.OS, facts.Arch, facts.Release, facts.CPUs, facts.MemoryBytes, facts.FreeBytes, facts.FreeInodes, facts.PortsAvailable, facts.ExistingServices)
+		}
 		return err
 	}
 	if state.Journal.Phase == "INITIALIZED" {

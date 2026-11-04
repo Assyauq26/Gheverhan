@@ -1,0 +1,713 @@
+path	line	match	class	rationale
+.github/workflows/jetseller-disposable-provisioning.yml	6	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	10	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	39	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	44	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	46	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	47	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	51	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	51	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-disposable-provisioning.yml	51	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-control.yml	4	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-control.yml	40	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-control.yml	41	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-web.yml	6	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-web.yml	10	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-web.yml	57	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer-web.yml	58	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	7	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	30	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	30	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	34	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	35	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	48	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	49	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-installer.yml	50	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	6	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	7	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	22	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	22	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	22	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	25	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	29	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	30	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	34	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	35	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	39	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	39	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	40	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	45	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	50	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	51	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	57	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-landing-ui.yml	58	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	8	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	12	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	43	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	43	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	54	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	65	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	70	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	71	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	72	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	73	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	73	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-pairing-e2e.yml	74	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-selfhost-runtime.yml	10	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+.github/workflows/jetseller-selfhost-runtime.yml	14	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/README.md	1	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+agent/README.md	15	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/README.md	15	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/README.md	19	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+agent/README.md	40	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/README.md	42	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+agent/cmd/jetseller-setup/main.go	35	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/cmd/jetseller-setup/main.go	36	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/cmd/jetseller-setup/main_test.go	21	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/agent_renewal_test.go	26	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/agent_renewal_test.go	116	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/agent_renewal_test.go	147	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/bootstrap_test.go	216	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/cosign_fixture_test.go	15	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/cosign_fixture_test.go	19	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/cosign_fixture_test.go	20	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/fixture_owner_test.go	14	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/pairing.go	307	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/pairing.go	334	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/pairing_recovery_test.go	81	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/pairing_recovery_test.go	111	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	19	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	74	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	188	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	217	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	267	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	267	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision.go	267	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	36	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	43	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	49	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	53	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	65	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	65	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	73	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	138	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_integration_test.go	145	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_test.go	185	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_test.go	185	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/provision_test.go	186	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+agent/internal/bootstrap/verify.go	33	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/.env.example	1	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+deploy/self-hosted/.env.example	5	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/.env.example	6	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/.env.example	7	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/.env.example	8	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/Caddyfile	4	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/README.md	1	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+deploy/self-hosted/README.md	7	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/README.md	23	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/README.md	30	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/README.md	51	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	15	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	16	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	29	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	42	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	50	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	72	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/compose.yml	72	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/launch.mjs	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/launch.mjs	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/launch.mjs	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/launch.mjs	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/launch.mjs	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	33	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	33	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	34	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	34	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	35	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	37	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/prepare.mjs	49	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/README.md	21	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/fixture-snapshot.mjs	9	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/fixture-snapshot.mjs	50	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/fixture-snapshot.mjs	60	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/fixture-snapshot.test.mjs	10	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/fixture-snapshot.test.mjs	76	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	9	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	18	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	21	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	25	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	25	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	37	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	47	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	71	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	76	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	77	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/recovery/test-stack.sh	81	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	6	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	7	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	36	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	39	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	83	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/admin-setup.sh	85	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	27	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	44	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	45	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	46	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	49	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/packaging.test.mjs	53	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	5	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	10	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	12	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	13	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	19	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	47	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	50	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	51	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	51	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	78	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	79	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	80	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	93	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+deploy/self-hosted/tests/runtime.sh	94	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/rebranding-jetseller/PLAN_REBRANDING.md	1	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	6	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	6	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	6	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	12	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	12	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	13	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	14	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	17	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	18	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	19	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	24	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	28	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	28	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	29	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	29	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	32	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	39	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	51	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	51	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	53	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	53	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	69	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	69	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	73	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	77	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	82	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	85	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	91	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	99	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	99	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	102	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	106	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	109	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	114	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	129	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	149	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	163	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	168	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	168	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	177	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	219	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	219	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	244	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	245	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	261	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	265	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	266	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	267	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	268	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PLAN_REBRANDING.md	269	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	1	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	7	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	13	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	14	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	20	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	20	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	22	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	22	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	25	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	29	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	30	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	31	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/PROMPT_CODEX.md	32	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	1	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	9	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	9	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	9	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	9	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	18	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/README.md	20	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/01-baseline-audit.md	4	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/01-baseline-audit.md	16	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/01-baseline-audit.md	24	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/01-baseline-audit.md	30	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/02-ui-implementation.md	5	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/02-ui-implementation.md	7	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/02-ui-implementation.md	11	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/03-qa-matrix.md	28	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/04-production-handoff.md	9	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/04-production-handoff.md	11	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/04-production-handoff.md	12	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/04-production-handoff.md	12	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/04-production-handoff.md	12	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/05-private-repo-readiness.md	9	jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/evidence/before-production/routes.json	7	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/evidence/before-production/routes.json	28	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/evidence/before-production/routes.json	49	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/evidence/before-production/routes.json	70	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/evidence/production-appearance-readonly.txt	3	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/evidence/production-appearance-readonly.txt	3	Jetseller	D	Historical audit/evidence; retain original provenance
+docs/rebranding-jetseller/reports/residual-branding.tsv	45	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/self-hosted/AGENT_RENEW_CLI.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/AGENT_RENEW_CLI.md	5	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/AGENT_RENEW_CLI.md	15	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/AGENT_RENEW_CLI.md	16	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/API_CONTRACTS.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/API_CONTRACTS.md	81	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/API_CONTRACTS.md	154	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	53	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	54	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	79	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	84	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	85	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	85	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	85	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE.md	220	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/ARCHITECTURE_GATE_DECISION.md	1	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/self-hosted/ARCHITECTURE_GATE_DECISION.md	10	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/self-hosted/ARCHITECTURE_GATE_DECISION.md	37	JetSeller	D	Historical audit/evidence; retain original provenance
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	12	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	13	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	14	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	17	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	28	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	28	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	28	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	32	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/BUATTOKOSENDIRI_DOMAIN_MIGRATION.md	37	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	7	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	12	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	20	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	38	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	41	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	42	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	43	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	45	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	74	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_EXECUTION_PROMPT.md	152	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_MINIMAL_HANDOFF.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/CODEX_MINIMAL_HANDOFF.md	5	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_MINIMAL_HANDOFF.md	13	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_MINIMAL_HANDOFF.md	14	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_MINIMAL_HANDOFF.md	32	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/CODEX_MINIMAL_HANDOFF.md	66	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/JNT-RUNTIME-ISOLATION.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/JNT-RUNTIME-ISOLATION.md	8	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT-RUNTIME-ISOLATION.md	23	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT-SH-01.md	3	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT-SH-01.md	15	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT-SH-01.md	15	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT-SH-01.md	15	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT_CANONICAL_PROFILE_SECURITY.md	7	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT_CANONICAL_PROFILE_SECURITY.md	7	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT_CANONICAL_PROFILE_SECURITY.md	11	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/JNT_CANONICAL_PROFILE_SECURITY.md	23	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/M1-03-READINESS.md	13	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/MVP_PUBLIC_AUTO_STORE_LAUNCH.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/MVP_PUBLIC_AUTO_STORE_LAUNCH.md	7	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/MVP_PUBLIC_AUTO_STORE_LAUNCH.md	7	JetSeller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/MVP_PUBLIC_AUTO_STORE_LAUNCH.md	10	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/MVP_PUBLIC_AUTO_STORE_LAUNCH.md	38	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/OPEN_DECISIONS.md	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/OPEN_DECISIONS.md	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/PAIRING-E2E.md	28	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/PRD.md	48	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/PRD.md	49	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/RC-COMBINED-WORKSTREAMS.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/RC-COMBINED-WORKSTREAMS.md	12	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/RC-INTEGRATION-01.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/RC-INTEGRATION-01.md	14	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/RC-JNT-SETTINGS-INTEGRATION.md	6	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/RC-SECURITY-CONSOLIDATION.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/README.md	13	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/repo-audit.md	1	JetSeller	D	Test or design/history reference; not served product copy
+docs/self-hosted/repo-audit.md	7	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/repo-audit.md	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/repo-audit.md	21	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/repo-audit.md	33	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/repo-audit.md	53	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/repo-audit.md	99	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+docs/self-hosted/visibility-impact.md	18	JetSeller	D	Test or design/history reference; not served product copy
+frontend/scripts/self-hosted-issue-admin.ts	21	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/app/globals.css	147	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+frontend/src/app/globals.css	148	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/infrastructure/shipping/jnt/seller-config.ts	7	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+frontend/src/infrastructure/shipping/jnt/seller-config.ts	19	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/infrastructure/shipping/jnt/seller-config.ts	21	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/infrastructure/shipping/jnt/seller-config.ts	41	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	2	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+frontend/src/lib/self-hosted/config.ts	5	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	37	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	40	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	64	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	69	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	120	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	125	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	126	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	127	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	128	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	143	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	187	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/config.ts	188	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/readiness-probes.ts	80	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/readiness-probes.ts	87	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/readiness-probes.ts	99	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/readiness-probes.ts	102	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/src/lib/self-hosted/readiness-probes.ts	104	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/auth-ui-browser.ts	65	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/jnt-official.test.ts	250	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-official.test.ts	251	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-official.test.ts	252	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-official.test.ts	270	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-official.test.ts	271	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-official.test.ts	274	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-official.test.ts	274	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	57	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	58	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	59	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	60	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	64	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	66	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-self-hosted-https-fixture.ts	69	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/jnt-settings-browser.ts	75	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/jnt-settings-browser.ts	76	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/integration/navigation-browser.ts	210	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/product-browser.ts	90	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/registration-conflicts.test.ts	82	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/registration-otp.test.ts	82	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/registration-otp.test.ts	234	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/registration-otp.test.ts	342	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/store-appearance-browser.ts	348	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/store-appearance-browser.ts	565	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/store-appearance-browser.ts	986	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/integration/store-appearance.test.ts	68	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/unit/jetseller-wordmark.test.ts	13	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jetseller-wordmark.test.ts	15	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jetseller-wordmark.test.ts	15	JetSeller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jetseller-wordmark.test.ts	27	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jetseller-wordmark.test.ts	28	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/unit/jetseller-wordmark.test.ts	29	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/unit/jnt-platform-settings.test.ts	44	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	45	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	54	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	61	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	66	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	80	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	82	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	84	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	88	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	101	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-platform-settings.test.ts	111	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	18	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	19	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	24	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	25	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	28	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	30	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/jnt-seller-probe.test.ts	33	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/unit/jnt-seller-probe.test.ts	59	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	9	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	9	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-admin-claim.test.ts	26	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	11	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	12	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	13	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	14	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	18	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	23	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/unit/self-hosted-config.test.ts	32	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	33	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	34	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	36	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	42	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	42	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	43	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	56	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	63	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	64	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	78	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	79	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	80	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	134	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	154	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-config.test.ts	157	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness-route.test.ts	6	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness-route.test.ts	13	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness-route.test.ts	14	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness-route.test.ts	21	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	13	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	13	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	14	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	14	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	16	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	20	JetSeller	D	Test or design/history reference; not served product copy
+frontend/tests/unit/self-hosted-readiness.test.ts	34	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	37	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	103	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	106	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	108	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	112	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	124	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	125	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	139	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+frontend/tests/unit/self-hosted-readiness.test.ts	140	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/assets/css/refactor.css	2	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/assets/img/PROVENANCE.md	1	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/assets/img/PROVENANCE.md	6	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/assets/img/PROVENANCE.md	7	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/Caddyfile.jetseller.DRAFT	50	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/Caddyfile.jetseller.DRAFT	51	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/Caddyfile.jetseller.DRAFT	54	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/Caddyfile.jetseller.DRAFT	55	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	1	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RELEASE-V3.md	36	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	38	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	55	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RELEASE-V3.md	61	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	62	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	71	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RELEASE-V3.md	81	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RELEASE-V3.md	87	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	92	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	94	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	96	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	106	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	119	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	120	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RELEASE-V3.md	121	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	1	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RUNBOOK.md	3	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RUNBOOK.md	82	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	83	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	85	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	87	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	109	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	110	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	111	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	116	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	122	jetseller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RUNBOOK.md	144	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	144	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	144	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	145	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	145	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	145	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	146	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	146	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	146	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	146	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	147	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	153	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	153	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	163	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	164	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	165	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	166	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	167	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	167	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	168	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	169	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	170	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	174	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	182	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	185	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	186	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	193	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	197	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	198	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	198	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	222	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	222	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	223	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	224	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	225	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	232	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RUNBOOK.md	233	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RUNBOOK.md	234	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/RUNBOOK.md	246	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	247	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	256	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	257	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	259	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	261	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	262	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	263	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	264	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	265	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	266	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	266	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	267	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/RUNBOOK.md	284	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/release-v3-from-vps.sh	2	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/release-v3-from-vps.sh	8	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	12	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	17	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	18	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	22	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	26	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	29	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	31	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	32	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	33	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	34	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	42	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/release-v3-from-vps.sh	91	jetseller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/deploy/release-v3-from-vps.sh	100	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	103	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/deploy/release-v3-from-vps.sh	107	JetSeller	B	Internal comment or package metadata; reviewed separately from rendered brand
+landing/jetseller/tests/VERIFICATION-MOBILE-WORDMARK.md	1	JetSeller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-MOBILE-WORDMARK.md	11	JetSeller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-MOBILE-WORDMARK.md	35	JetSeller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V2.md	1	JetSeller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V2.md	3	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V2.md	20	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V2.md	21	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V4.md	27	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V4.md	37	JetSeller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V4.md	58	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V4.md	59	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/VERIFICATION-V4.md	61	jetseller	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/browser.cjs	1	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/browser.cjs	6	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/browser.cjs	25	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/browser.cjs	26	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/browser.cjs	27	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	13	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/domain-cutover.test.cjs	18	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	22	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	26	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	30	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	30	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	31	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	37	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/domain-cutover.test.cjs	39	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/evidence/lighthouse-v2.json	1862	JETSELLER	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/evidence/lighthouse-v2.json	1883	JETSELLER	D	Historical audit/evidence; retain original provenance
+landing/jetseller/tests/refactor.test.cjs	1	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/refactor.test.cjs	23	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/refactor.test.cjs	35	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/refactor.test.cjs	37	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/release.test.cjs	52	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	63	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	64	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	65	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	67	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	72	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	74	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	79	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	79	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	80	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	83	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	84	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	98	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	101	JetSeller	D	Test or design/history reference; not served product copy
+landing/jetseller/tests/release.test.cjs	104	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	118	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/release.test.cjs	118	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+landing/jetseller/tests/visual-v4.cjs	42	JetSeller	D	Test or design/history reference; not served product copy
+platform/installer-web/package-lock.json	2	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/package-lock.json	8	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/package.json	2	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	35	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	37	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	38	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	42	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	45	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	48	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	88	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	111	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	112	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/browser-integration.mjs	148	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	15	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	16	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	21	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	23	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	24	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	27	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	54	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/cli-fixture.mjs	85	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/dashboard.test.mjs	136	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer-web/test/dashboard.test.mjs	136	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	17	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	18	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	23	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	25	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	26	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	32	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	96	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/README.md	102	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/migrations/001_registry.sql	3	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/package-lock.json	2	jetseller	B	Internal comment or package metadata; reviewed separately from rendered brand
+platform/installer/package-lock.json	8	jetseller	B	Internal comment or package metadata; reviewed separately from rendered brand
+platform/installer/package.json	2	jetseller	B	Internal comment or package metadata; reviewed separately from rendered brand
+platform/installer/src/auth.mjs	43	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/auth.mjs	58	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/auth.mjs	58	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/auth.mjs	61	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/auth.mjs	70	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/auth.mjs	70	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/db.mjs	7	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/db.mjs	9	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/domain-proof.mjs	9	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/domain-proof.mjs	11	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/domain-proof.mjs	24	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/domain-proof.mjs	55	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/domain-proof.mjs	59	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/migrate.mjs	5	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/migrate.mjs	6	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/oidc.mjs	72	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/runtime.mjs	37	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/src/server.mjs	34	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-integration.mjs	12	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-integration.mjs	13	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	8	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	22	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	23	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	23	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	27	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	45	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/domain-proof.test.mjs	47	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	11	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	12	JETSELLER	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	21	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	28	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	56	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	75	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	122	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	129	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	130	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	144	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/integration.mjs	154	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/unit.test.mjs	28	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required
+platform/installer/test/unit.test.mjs	31	jetseller	C	Path/protocol/environment/workflow/fixture compatibility; versioned migration required

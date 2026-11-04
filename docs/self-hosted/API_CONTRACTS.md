@@ -1,4 +1,4 @@
-# API Contracts V1 (Proposed) — JetSeller Installer and Update Agent
+# API Contracts V1 (Proposed) — Buat Toko Online Sendiri Installer and Update Agent
 
 **These are design schemas, not existing endpoints.** Final paths depend on actual repository layout. Never use raw client-supplied installation owner IDs as authority. All endpoints versioned under `/api/installer/v1` for initial MVP. JSON examples contain only synthetic test data.
 

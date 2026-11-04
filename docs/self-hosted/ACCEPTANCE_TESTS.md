@@ -1,3 +1,5 @@
+> Identitas produk diperbarui 4 November 2026. Identifier teknis lama tetap kompatibel; lihat `../rebranding-buattokosendiri/README.md`. Klaim kesiapan dalam spesifikasi ini tetap memerlukan bukti implementasi.
+
 # Acceptance Criteria & QA Matrix
 
 The following is a **test plan**, not evidence of completed testing. Every test must be scripted/recorded against a disposable VPS and a sandbox control plane before production pilot.
@@ -42,7 +44,7 @@ The following is a **test plan**, not evidence of completed testing. Every test 
 | A25 | Central Portal unreachable for 2 hours | Storefront and local checkout/auth still functional |
 | A26 | Agent heartbeat | Only allowlisted non-PII technical metadata sent |
 | A27 | Agent revoked/unpaired | No update access, store/DB continue operating |
-| A28 | Reinstall on server with existing JetSeller | Repair/resume route, no DB reset |
+| A28 | Reinstall on server with existing Buat Toko Online Sendiri | Repair/resume route, no DB reset |
 
 ## B. Update and recovery scenarios
 

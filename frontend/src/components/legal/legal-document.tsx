@@ -12,7 +12,7 @@ export function LegalDocument({
   return (
     <article className="legal-document">
       <header>
-        <p className="legal-eyebrow">Informasi JetSeller Demo Store</p>
+        <p className="legal-eyebrow">Informasi toko ini</p>
         <h1>{title}</h1>
         <p className="legal-intro">{intro}</p>
         <p className="legal-date">

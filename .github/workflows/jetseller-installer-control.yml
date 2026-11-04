@@ -1,4 +1,4 @@
-name: JetSeller installer control registry
+name: Buat Toko Online Sendiri installer control registry
 on:
   pull_request:
     paths: ['platform/installer/**', '.github/workflows/jetseller-installer-control.yml']

@@ -1,4 +1,6 @@
-# Technical Architecture — JetSeller Self-Hosted V1
+> Identitas produk diperbarui 4 November 2026. Identifier teknis lama tetap kompatibel; lihat `../rebranding-buattokosendiri/README.md`. Klaim kesiapan dalam spesifikasi ini tetap memerlukan bukti implementasi.
+
+# Technical Architecture — Buat Toko Online Sendiri Self-Hosted V1
 
 **Companion:** `PRD.md` (normative functional requirements). All topology is proposed until existing repository audit validates compatibility.
 
@@ -6,16 +8,16 @@
 
 ```mermaid
 flowchart TB
-  Developer[JetSeller Development / GitHub] --> CI[CI Build, Test, Sign]
+  Developer[Buat Toko Online Sendiri Development / GitHub] --> CI[CI Build, Test, Sign]
   CI --> OCI[(Private OCI Registry / Signed Artifacts)]
   CI --> Release[Release Metadata / Approval]
-  Seller[Seller Browser] --> Portal[JetSeller Portal / Control Plane]
-  Operator[Platform Operator] --> Console[JetSeller Control Center]
+  Seller[Seller Browser] --> Portal[Buat Toko Online Sendiri Portal / Control Plane]
+  Operator[Platform Operator] --> Console[Buat Toko Online Sendiri Control Center]
   Console --> Release
   Portal --> Registry[(Control DB: accounts, installations, metadata)]
   Release --> Registry
   subgraph SellerOwned[Each Seller-Owned VPS / Domain]
-    Agent[JetSeller Agent - outbound client]
+    Agent[Buat Toko Online Sendiri Agent - outbound client]
     Helper[Restricted Local Deploy Helper]
     Proxy[Caddy HTTPS]
     App[Next.js Storefront and /admin]
@@ -33,7 +35,7 @@ flowchart TB
   Customer[End Customer] -->|HTTPS direct to seller domain| Proxy
 ```
 
-**Hard boundary:** No transaction data, PII, DB connection strings, shipping API secrets, customer sessions, raw payment payloads, or storage objects cross to JetSeller Control Plane. A public website must not proxy its checkout through the JetSeller installer service.
+**Hard boundary:** No transaction data, PII, DB connection strings, shipping API secrets, customer sessions, raw payment payloads, or storage objects cross to Buat Toko Online Sendiri Control Plane. A public website must not proxy its checkout through the Buat Toko Online Sendiri installer service.
 
 ## B. Proposed repository layout
 
@@ -41,8 +43,8 @@ flowchart TB
 /
   apps/
     portal/                # Seller dashboard, installation wizard, authenticated portal
-    control-center/        # JetSeller platform operator dashboard (may share Next.js with portal)
-    store/                 # Existing JetSeller/Gheverhan store app adapted to independent runtime
+    control-center/        # Buat Toko Online Sendiri platform operator dashboard (may share Next.js with portal)
+    store/                 # Existing Buat Toko Online Sendiri/Gheverhan store app adapted to independent runtime
   packages/
     ui/                    # Reusable accessible components
     contracts/             # Zod/JSON schemas for agent <-> portal, server-side validation
@@ -83,7 +85,7 @@ Local helper: fixed operation API for root-authorized install/update; localhost-
 - Agent local state in owner-protected directory such as `/var/lib/jetseller-agent`; installation config under `/etc/jetseller`; app data path under `/var/lib/jetseller/store` or named volumes.
 - Agent unprivileged. Docker socket access is effectively privileged; do **not** grant broad Docker group to untrusted agent. A separate narrowly-scoped signed updater helper with local authorization performs only allowlisted operations. Audit privileged helper design before release.
 - Secrets: root-owned private files / supported secret mounts, not environment values printed to CLI; no browser access to DB credentials; app runtime only sees secrets needed locally.
-- JetSeller storefront and account auth continue to work during agent update or central outage.
+- Buat Toko Online Sendiri storefront and account auth continue to work during agent update or central outage.
 
 ## D. Identity model and pairing sequence
 
@@ -165,7 +167,7 @@ flowchart TD
 | Existing services port 80/443, 5432 | Never stop others automatically; guided remediation |
 | DNS/egress + TLS trust | Block until internet and time sync work |
 | Container networking, firewall, public IP | Guide port setup without changing unrelated firewall rules |
-| Existing JetSeller installation signature | Offer resume/repair; no duplicate installation |
+| Existing Buat Toko Online Sendiri installation signature | Offer resume/repair; no duplicate installation |
 | Writable persistent data directories | Block if read-only or conflicting ownership |
 | Registry connectivity / signed artifact reachability | Retry with bounded backoff |
 
@@ -197,7 +199,7 @@ Git SHA → CI Tests → OCI Image (immutable sha256 digest)
                         ↓
              Signed Release Manifest (channel/version/compatibility/expiry)
                         ↓
-                JetSeller Control Plane approval
+                Buat Toko Online Sendiri Control Plane approval
                         ↓
                  Agent poll + verification
                         ↓

@@ -1,0 +1,6 @@
+{
+  "controlOrigin": "https://dashboard.buattokosendiri.web.id",
+  "port": 3100,
+  "databaseUrlFile": "/etc/buattokosendiri/control-database-url",
+  "signingKeyFile": "/etc/buattokosendiri/agent-signing-key.pem"
+}

@@ -14,7 +14,7 @@ assert.match(html, /assets\/css\/refactor\.css/);
 assert.match(css, /background-size:36px 36px/);
 assert.match(css, /linear-gradient\(to right/);
 assert.match(html, /class="hero-artwork"/);
-assert.match(html, /hero-desktop\.png/);
+assert.match(html, /hero-self-hosted\.svg/);
 assert.doesNotMatch(html, /class="(?:laptop|phone|shipping-truck)"/);
 assert.match(html, /href="https:\/\/gheverhan\.store" target="_blank" rel="noopener noreferrer"/);
 assert.match(html, /href="\/daftar\/"/);
@@ -27,11 +27,11 @@ assert.doesNotMatch(css, /url\(https?:/);
 assert.doesNotMatch(html, /<script[^>]+src="https?:/);
 for(const route of ['index.html','404.html','daftar/index.html','masuk/index.html']) {
   const page=fs.readFileSync(path.join(base,route),'utf8');
-  assert.match(page,/rel="icon"[^>]+favicon\.svg\?v=wordmark-1/);
-  assert.match(page,/rel="apple-touch-icon"[^>]+apple-touch-icon\.png\?v=wordmark-1/);
+  assert.match(page,/rel="icon"[^>]+favicon\.svg\?v=identity-2/);
+  assert.match(page,/rel="apple-touch-icon"[^>]+apple-touch-icon\.png\?v=identity-2/);
 }
 const icon=fs.readFileSync(path.join(base,'assets/img/favicon.svg'),'utf8');
-assert.match(icon,/>Jet<\/tspan><tspan[^>]+>Seller<\/tspan>/);
-assert.doesNotMatch(icon,/<path/);
+assert.match(icon,/Buat Toko Online Sendiri/);
+assert.doesNotMatch(icon,/JetSeller/);
 assert(fs.statSync(path.join(base,'assets/img/apple-touch-icon.png')).size>0);
 console.log('JetSeller V3 static page integrity: PASS');

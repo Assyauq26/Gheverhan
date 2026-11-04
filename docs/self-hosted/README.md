@@ -1,10 +1,12 @@
-# JetSeller Self-Hosted — Paket Spesifikasi Produk & Eksekusi Codex
+> Identitas produk diperbarui 4 November 2026. Identifier teknis lama tetap kompatibel; lihat `../rebranding-buattokosendiri/README.md`. Klaim kesiapan dalam spesifikasi ini tetap memerlukan bukti implementasi.
 
-**Versi:** PRD 1.0 / 2 November 2026  
-**Status:** Proposed design — belum diimplementasikan dan belum dipasang di produksi  
-**Pemilik produk:** JetSeller  
-**Target:** Codex engineering team + reviewer  
-**Model:** Seller membeli sendiri VPS dan domain, JetSeller menyediakan installer, aplikasi, dan pembaruan software terpusat.
+# Buat Toko Online Sendiri Self-Hosted — Paket Spesifikasi Produk & Eksekusi Codex
+
+**Versi:** PRD 1.0 / 2 November 2026
+**Status:** Proposed design — belum diimplementasikan dan belum dipasang di produksi
+**Pemilik produk:** Buat Toko Online Sendiri
+**Target:** Codex engineering team + reviewer
+**Model:** Seller membeli sendiri VPS dan domain, Buat Toko Online Sendiri menyediakan installer, aplikasi, dan pembaruan software terpusat.
 
 ## Lokasi resmi di GitHub
 
@@ -24,9 +26,9 @@ Mulai dengan `docs/self-hosted/CODEX_EXECUTION_PROMPT.md` untuk instruksi Codex 
 
 ## Source of truth & catatan kompatibilitas
 
-- Dokumen ini **menggantikan konsep** multi-tenant runtime bersama dan layanan hosting JetSeller untuk pengembangan baru. Tiap instalasi adalah aplikasi mandiri dengan server, domain, database, file dan kredensialnya sendiri.
-- **Satu master codebase JetSeller** tetap digunakan. Perubahan kode dikompilasi menjadi rilis yang kemudian didistribusikan ke instalasi milik seller.
-- `jetseller.web.id` = portal seller/installer; `dashboard.jetseller.web.id` = console operator JetSeller; `<domain-seller>/admin` = dashboard seller; `<domain-seller>` = storefront.
+- Dokumen ini **menggantikan konsep** multi-tenant runtime bersama dan layanan hosting Buat Toko Online Sendiri untuk pengembangan baru. Tiap instalasi adalah aplikasi mandiri dengan server, domain, database, file dan kredensialnya sendiri.
+- **Satu master codebase Buat Toko Online Sendiri** tetap digunakan. Perubahan kode dikompilasi menjadi rilis yang kemudian didistribusikan ke instalasi milik seller.
+- `buattokosendiri.web.id` = landing; `dashboard.buattokosendiri.web.id` = portal/control plane; `staging.buattokosendiri.web.id` = staging; `<domain-seller>/admin` = dashboard seller; `<domain-seller>` = storefront.
 - J&T Express memakai **akun/kredensial API seller masing-masing**, disimpan lokal di toko. Tidak ada secret J&T global dalam control plane.
 - `gheverhan.store` sudah memiliki deployment dan data/aplikasi yang harus dianggap berharga. Gunakan demo disposable atau staging VPS untuk semua uji, jangan mengubah situs live, data, atau DNS tanpa izin terpisah.
 - Dokumen ini disusun dari percakapan dan referensi publik; **repository `Assyauq26/Gheverhan` dan branch `main` telah terverifikasi tersedia; struktur kode serta kompatibilitas implementasi belum diaudit secara lengkap**. Path/modul yang dicontohkan adalah target rancangan, bukan deskripsi kode existing.

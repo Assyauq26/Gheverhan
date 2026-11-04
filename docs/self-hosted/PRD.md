@@ -1,9 +1,11 @@
-# PRD — JetSeller Self-Hosted Installer & Central Software Management
+> Identitas produk diperbarui 4 November 2026. Identifier teknis lama tetap kompatibel; lihat `../rebranding-buattokosendiri/README.md`. Klaim kesiapan dalam spesifikasi ini tetap memerlukan bukti implementasi.
+
+# PRD — Buat Toko Online Sendiri Self-Hosted Installer & Central Software Management
 
 | Field | Value |
 |---|---|
 | Document | Product Requirements Document |
-| Product | JetSeller Self-Hosted Commerce |
+| Product | Buat Toko Online Sendiri Self-Hosted Commerce |
 | Version | 1.0, 2 November 2026 |
 | Status | Proposed for technical discovery and staged implementation |
 | Priority | P0/MVP installation & update safety |
@@ -14,22 +16,22 @@
 
 ## 1. Executive summary
 
-JetSeller beralih dari model SaaS runtime multi-tenant yang ditangani pusat menjadi **distribusi aplikasi toko online self-hosted**. Setiap seller membeli hosting VPS Linux dan domain sendiri. JetSeller memasok aplikasi toko online lengkap (storefront, dashboard seller, backend), installer berbasis web dengan satu bootstrap command di VPS, registry instalasi, lisensi software (jika digunakan), pembaruan rilis terverifikasi secara terpusat, audit deployment, dan monitoring non-PII.
+Buat Toko Online Sendiri beralih dari model SaaS runtime multi-tenant yang ditangani pusat menjadi **distribusi aplikasi toko online self-hosted**. Setiap seller membeli hosting VPS Linux dan domain sendiri. Buat Toko Online Sendiri memasok aplikasi toko online lengkap (storefront, dashboard seller, backend), installer berbasis web dengan satu bootstrap command di VPS, registry instalasi, lisensi software (jika digunakan), pembaruan rilis terverifikasi secara terpusat, audit deployment, dan monitoring non-PII.
 
-Model ini memastikan seluruh toko menggunakan **satu sumber kode** tanpa berbagi database atau runtime. JetSeller tidak menjadi penyedia hosting, registrar domain, pemroses data transaksi lintas seller, ataupun pemegang kata sandi SSH dan database seller.
+Model ini memastikan seluruh toko menggunakan **satu sumber kode** tanpa berbagi database atau runtime. Buat Toko Online Sendiri tidak menjadi penyedia hosting, registrar domain, pemroses data transaksi lintas seller, ataupun pemegang kata sandi SSH dan database seller.
 
 ## 2. Problem statement & pengguna
 
 **Masalah seller**: ingin toko online sendiri pada infrastruktur miliknya, tetapi kesulitan memasang Next.js, PostgreSQL, reverse proxy, DNS, SSL dan pembaruan tanpa keterampilan DevOps.
 
-**Masalah JetSeller**: ingin memperbaiki bug, meningkatkan fitur, dan menjaga keamanan ratusan instalasi tanpa harus SSH ke setiap VPS atau mendistribusikan source repository privat.
+**Masalah Buat Toko Online Sendiri**: ingin memperbaiki bug, meningkatkan fitur, dan menjaga keamanan ratusan instalasi tanpa harus SSH ke setiap VPS atau mendistribusikan source repository privat.
 
 **Persona**:
 
 1. **Seller Owner**: membeli VPS/domain, mengikuti wizard, mengaktifkan toko, menyetujui kebijakan update; mengelola transaksi di dashboard tokonya.
-2. **Seller Technician** (opsional): diberi izin untuk menjalankan bootstrap pada VPS dan memeriksa DNS; tidak harus mengetahui akun/secret JetSeller pusat.
-3. **JetSeller Platform Owner / Release Manager**: mengatur master rilis, staged rollout, kebijakan keharusan versi minimum keamanan, support dan incident.
-4. **JetSeller Support Operator**: melihat metadata instalasi dan log tersanitasi sesuai hak akses; tidak memiliki akses default ke data pesanan/customer atau shell VPS.
+2. **Seller Technician** (opsional): diberi izin untuk menjalankan bootstrap pada VPS dan memeriksa DNS; tidak harus mengetahui akun/secret Buat Toko Online Sendiri pusat.
+3. **Buat Toko Online Sendiri Platform Owner / Release Manager**: mengatur master rilis, staged rollout, kebijakan keharusan versi minimum keamanan, support dan incident.
+4. **Buat Toko Online Sendiri Support Operator**: melihat metadata instalasi dan log tersanitasi sesuai hak akses; tidak memiliki akses default ke data pesanan/customer atau shell VPS.
 5. **End Customer**: mengakses storefront publik dan melakukan belanja; **tidak bergantung pada availability control plane**.
 
 ## 3. Keputusan bisnis dan batas sistem (source of truth)
@@ -39,19 +41,19 @@ Model ini memastikan seluruh toko menggunakan **satu sumber kode** tanpa berbagi
 | Hosting | Seller membawa VPS sendiri; MVP Ubuntu Server 24.04 LTS, x86_64 (amd64) dengan akses sudo yang sah |
 | Domain | Seller membeli sendiri domain; DNS diatur melalui dashboard registrar/DNS provider seller |
 | Store runtime | Satu set container independen di tiap VPS: app Next.js, PostgreSQL, Caddy; agent update terpisah |
-| Source | Satu private master repo JetSeller, CI/CD menghasilkan signed immutable artifact |
+| Source | Satu private master repo Buat Toko Online Sendiri, CI/CD menghasilkan signed immutable artifact |
 | Installs | Bootstrap satu command dari portal resmi; pairing device-style; **tanpa menitipkan password SSH** |
 | Database | PostgreSQL setiap toko sepenuhnya lokal; tidak disinkronkan ke pusat |
 | Seller URL | `https://domain-seller/` dan `https://domain-seller/admin` |
-| JetSeller Portal | `https://jetseller.web.id` (akun, wizard, instalasi, status perangkat) |
-| JetSeller Admin | `https://dashboard.jetseller.web.id` (operator platform) |
+| Buat Toko Online Sendiri Portal | `https://jetseller.web.id` (akun, wizard, instalasi, status perangkat) |
+| Buat Toko Online Sendiri Admin | `https://dashboard.jetseller.web.id` (operator platform) |
 | J&T | Credentials seller masing-masing, diisi di toko setelah instalasi; bukan API key pusat |
 | Update | Agent outbound-only memeriksa signed manifest, immutable image digest, rollout policy, preflight, backup, deploy, health, rollback |
 | Outage pusat | Tidak menghambat storefront, checkout lokal, dan transaksi yang tidak membutuhkan control plane |
 | Ownership data | Produk, akun toko, pembeli, pesanan, pembayaran, media, konfigurasi J&T tetap di server seller |
 | Demo Gheverhan | Jangan reset, migrasi, atau ubah deployment production sebagai bagian P0 |
 
-**Tidak ada biaya hosting atau domain yang ditagih JetSeller secara otomatis** dalam desain ini. Skema lisensi/software support adalah keputusan bisnis terpisah, tidak boleh menjadi kill-switch checkout saat portal offline.
+**Tidak ada biaya hosting atau domain yang ditagih Buat Toko Online Sendiri secara otomatis** dalam desain ini. Skema lisensi/software support adalah keputusan bisnis terpisah, tidak boleh menjadi kill-switch checkout saat portal offline.
 
 ## 4. Goals, non-goals, dan metrik
 
@@ -79,7 +81,7 @@ Model ini memastikan seluruh toko menggunakan **satu sumber kode** tanpa berbagi
 
 - >=95% instalasi di VPS fixture yang memenuhi syarat selesai tanpa bantuan manual (dari tes terkontrol).
 - >=99% pairing sukses di simulator jaringan sehat; pairing yang gagal dapat diulang tanpa instalasi duplikat.
-- 0 password SSH, database, API key shipping, atau PII customer tersimpan di JetSeller pusat/log.
+- 0 password SSH, database, API key shipping, atau PII customer tersimpan di Buat Toko Online Sendiri pusat/log.
 - 100% release yang diinstal lulus signature dan digest verification.
 - 100% deployment update memiliki jejak audit, alasan dan status rollback.
 - Toko tetap memberikan respons normal saat control plane unavailable (chaos test).
@@ -95,7 +97,7 @@ Do not attempt P1/P2 before P0 acceptance and security review.
 
 ## 6. Seller experience & screens (desktop 1440 and mobile 390/360)
 
-**Public page:** CTA “Instal JetSeller di VPS Saya”, eligibility and prerequisite checklist. Site does not claim all hosts supported.
+**Public page:** CTA “Instal Buat Toko Online Sendiri di VPS Saya”, eligibility and prerequisite checklist. Site does not claim all hosts supported.
 
 **Auth:** seller name, email, phone optional/required per existing account policy review, password + confirmation, OTP verification, privacy/terms consent; respect existing secure auth patterns (do not rewrite auth blindly).
 
@@ -134,7 +136,7 @@ States must support resumability/retries with idempotency. **`INSTALLED` != `STO
 
 - Initial target Ubuntu 24.04 LTS amd64. Minimum requirements are configurable **proposal**: 2 vCPU, 4 GiB RAM, 40 GiB free disk at install (or stricter/looser after measured tests); SSH/sudo, IPv4, outbound HTTPS 443, inbound 80/443 for public domain, correct time.
 - Preflight checks Docker/Compose available or installable, open port conflicts, package manager lock, IPv6 if AAAA exists, disk filesystem, swap, DNS resolution; blocking errors cannot be bypassed silently.
-- Installer detects existing apps and never replaces Caddy/Docker configs or containers unrelated to JetSeller. Conflict requires explicit guided remediation or stop.
+- Installer detects existing apps and never replaces Caddy/Docker configs or containers unrelated to Buat Toko Online Sendiri. Conflict requires explicit guided remediation or stop.
 
 ### FR-03 Secure one-command bootstrap
 
@@ -219,7 +221,7 @@ All central→agent actions must be declarative, authenticated, scoped, signed, 
 ## 9. Non-functional requirements
 
 - NFR-01 Isolation: no DB, storage, network or session shared among separate stores.
-- NFR-02 Availability: store runs independently from JetSeller center; agent offline cannot block checkout.
+- NFR-02 Availability: store runs independently from Buat Toko Online Sendiri center; agent offline cannot block checkout.
 - NFR-03 Security: TLS, secret masking, role-based permission, mTLS or proof-of-possession, signed immutable artifacts, least privilege and audit.
 - NFR-04 Reliability: resumable provisioning, idempotent retries, durable step journal, timeout/reconciliation, interruption recovery.
 - NFR-05 Operability: structured logs, correlation IDs, safe support export, separate debug and operational logging, no plaintext secrets.

@@ -1,0 +1,24 @@
+# Candidate P0 profile; layer over compose.yml only after verified release and
+# P0 preflight. Never overlap migration and application startup on a 2GiB host.
+services:
+  db:
+    mem_limit: 384m
+    memswap_limit: 768m
+    cpus: 0.75
+    pids_limit: 128
+    command: [postgres, -c, shared_buffers=64MB, -c, max_connections=30, -c, work_mem=2MB, -c, maintenance_work_mem=32MB]
+  migrate:
+    mem_limit: 768m
+    memswap_limit: 1536m
+    cpus: 1
+    pids_limit: 128
+  app:
+    mem_limit: 768m
+    memswap_limit: 1536m
+    cpus: 1
+    pids_limit: 192
+  caddy:
+    mem_limit: 96m
+    memswap_limit: 192m
+    cpus: 0.25
+    pids_limit: 64

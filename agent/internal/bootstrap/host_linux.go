@@ -14,6 +14,14 @@ import (
 )
 
 func InspectHost(stateDirectory string) (HostFacts, error) {
+	f, err := inspectHostFacts(stateDirectory)
+	if err != nil {
+		return f, err
+	}
+	return f, ValidateHost(f)
+}
+
+func inspectHostFacts(stateDirectory string) (HostFacts, error) {
 	f := HostFacts{OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU()}
 	release, err := os.Open("/etc/os-release")
 	if err != nil {
@@ -75,5 +83,5 @@ func InspectHost(stateDirectory string) (HostFacts, error) {
 		}
 		listeners = append(listeners, l)
 	}
-	return f, ValidateHost(f)
+	return f, nil
 }

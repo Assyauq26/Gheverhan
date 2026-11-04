@@ -15,6 +15,7 @@ import (
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -174,7 +175,7 @@ func rotate(configFile string) error {
 	return f.Sync()
 }
 func run() error {
-	if os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || len(os.Args) != 4 || os.Args[3] != "offline-encrypted-custody" {
+	if runtime.GOOS != "linux" || os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || len(os.Args) != 4 || os.Args[3] != "offline-encrypted-custody" {
 		return fmt.Errorf("offline explicit custody required")
 	}
 	target := os.Args[2]

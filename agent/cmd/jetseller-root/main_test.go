@@ -7,6 +7,7 @@ import (
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -40,6 +41,9 @@ func TestCIRootCeremonyRefused(t *testing.T) {
 }
 
 func TestOfflineRotationNeedsBothQuorumsAndIndependentPins(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("offline Linux private-mode ceremony; exercised in Linux CI")
+	}
 	base := t.TempDir()
 	oldDir := filepath.Join(base, "OLD-FIXTURE")
 	newDir := filepath.Join(base, "NEW-FIXTURE")

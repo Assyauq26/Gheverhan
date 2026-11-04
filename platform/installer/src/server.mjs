@@ -32,7 +32,7 @@ export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,
         } catch {res.writeHead(503,{'Cache-Control':'no-store'}).end();}
         return;
       }
-      if(req.url?.startsWith('/downloads/')||req.url?.startsWith('/bootstrap/')){
+      if(req.url?.startsWith('/bootstrap/')){
         res.setTimeout(20*60*1000,()=>res.destroy());
         const response=delivery?await delivery.handle(new Request(new URL(req.url,config.controlOrigin),{method:req.method})):new Response(null,{status:404});
         res.writeHead(response.status,Object.fromEntries(response.headers));

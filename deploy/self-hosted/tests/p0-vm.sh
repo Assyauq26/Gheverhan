@@ -121,6 +121,12 @@ test -z "$(docker --host unix:///var/run/docker.sock ps --all --quiet)"
 P0_RESOURCE_PROBE=isolated-2-2-40-fixture /opt/p0-payload/resource-probe.test -test.run '^TestP0RealHostEvidence$' -test.v
 GUEST
 callback_seconds=0; callback_present=0; result=0
+if [[ "${P0_FULL_SELLER_E2E:-}" = 1 ]]; then
+ callback_present=1; callback_start=$SECONDS
+ P0_VM_SSH_PORT="$port" P0_VM_SSH_KEY="$fixture/client-key" P0_VM_KNOWN_HOSTS="$fixture/known_hosts" P0_VM_EVIDENCE_DIR="$evidence" node "$repo/deploy/self-hosted/tests/full-seller-driver.mjs" >"$evidence/full-seller.log" 2>&1 || result=$?
+ callback_seconds=$((SECONDS-callback_start))
+fi
+
 if [[ -f "$repo/deploy/self-hosted/tests/p0-guest-integration.sh" ]]; then
   callback_present=1
   scp "${ssh_flags[@]}" -P "$port" "$repo/deploy/self-hosted/tests/p0-guest-integration.sh" ubuntu@127.0.0.1:/home/ubuntu/p0-guest-integration.sh >/dev/null

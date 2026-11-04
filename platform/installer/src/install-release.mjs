@@ -24,7 +24,7 @@ export function createInstallReleaseHandler({pool,verificationKey,controlOrigin,
   const url=new URL(request.url);if(url.origin!==controlOrigin||url.search||url.hash)return response(400,{error:{code:'INVALID_REQUEST'}});
   const path=url.pathname;
   const sellerPath=path.match(/^\/api\/installer\/v1\/installations\/([^/]+)\/(install-instructions|install-progress)$/);
-  if(!sellerPath&&!['/agent/install-authorization','/agent/install-progress','/agent/credential/refresh'].some(route=>path===prefix+route))return null;
+  if(!sellerPath&&!['/agent/install-authorization','/agent/release-download-authorization','/agent/install-progress','/agent/credential/refresh'].some(route=>path===prefix+route))return null;
   try {
    if(sellerPath){
     if(request.method!=='GET')fail(405,'METHOD_NOT_ALLOWED');const seller=await sellerAuth(request),id=uuid(sellerPath[1]);
@@ -36,7 +36,8 @@ export function createInstallReleaseHandler({pool,verificationKey,controlOrigin,
     let catalog;try{catalog=validateReleaseCatalog(await getCatalog());}catch{return response(200,{installation_id:id,available:false,reason:'RELEASE_UNAVAILABLE'});}
     return response(200,{installation_id:id,available:true,release_bundle_available:true,release_id:catalog.release_id,installer:catalog.installer,control_origin:controlOrigin,policy_url:catalog.policy_url,policy_sha256:catalog.policy_sha256,root_sha256:catalog.root_sha256,manifest_sha256:catalog.manifest_sha256});
    }
-   if((path.endsWith('install-authorization')&&request.method!=='GET')||(path.endsWith('install-progress')&&request.method!=='POST'))fail(405,'METHOD_NOT_ALLOWED');
+   const downloadPath=path===prefix+'/agent/release-download-authorization';
+   if(([prefix+'/agent/install-authorization',prefix+'/agent/release-download-authorization'].includes(path)&&request.method!=='GET')||(path===prefix+'/agent/install-progress'&&request.method!=='POST'))fail(405,'METHOD_NOT_ALLOWED');
    let raw='';if(request.method==='POST'){raw=await request.text();if(Buffer.byteLength(raw)>4096)fail(413,'BODY_TOO_LARGE');}
    return await transaction(pool,async client=>{
     if(path===prefix+'/agent/credential/refresh'){
@@ -56,8 +57,8 @@ export function createInstallReleaseHandler({pool,verificationKey,controlOrigin,
      const proof=(await client.query("SELECT verified_at,expires_at FROM installer.domain_challenges WHERE installation_id=$1 AND domain=$2 AND verified_at IS NOT NULL AND verified_at<=expires_at AND expires_at>now() AND verified_at>now()-interval '30 minutes' ORDER BY verified_at DESC LIMIT 1",[record.id,record.domain])).rows[0];
      if(!proof||record.reserved_domain!==record.domain||Date.parse(record.claim_expires_at)<=Date.now())fail(409,'FRESH_DOMAIN_PROOF_REQUIRED');
      const expiresAt=new Date(Math.min(Date.now()+120000,Date.parse(proof.expires_at),Date.parse(record.claim_expires_at),Date.parse(catalog.expires_at))).toISOString();
-     let bundleURL=catalog.release_bundle.url;
-     if(catalog.release_bundle.delivery==='scoped'){
+     let bundleURL=catalog.release_bundle.delivery==='scoped'?null:catalog.release_bundle.url;
+     if(catalog.release_bundle.delivery==='scoped'&&downloadPath){
       if(!issueDownloadGrant)fail(503,'RELEASE_UNAVAILABLE');
       bundleURL=await issueDownloadGrant(client,{installationId:record.id,deviceId:agent.device_id,manifestSHA256:catalog.manifest_sha256,catalog,expiresAt});
      }

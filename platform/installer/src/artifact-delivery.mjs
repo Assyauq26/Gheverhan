@@ -24,11 +24,11 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
   if(!Number.isFinite(expires.getTime())||expires<=new Date())fail(503,'RELEASE_UNAVAILABLE');
   await client.query("DELETE FROM installer.download_grants WHERE expires_at<now()-interval '1 day'");
   await client.query('INSERT INTO installer.download_grants(token_hash,installation_id,device_id,manifest_sha256,bundle_sha256,expires_at) VALUES($1,$2,$3,$4,$5,$6)',[hash(token),installationId,deviceId,manifestSHA256,catalog.release_bundle.sha256,expires]);
-  return controlOrigin+'/downloads/'+token;
+  return controlOrigin+'/bootstrap/downloads/'+token;
  };
  const handle=async request=>{
-  const u=new URL(request.url),bootstrap=u.pathname.startsWith('/bootstrap/');if(!u.pathname.startsWith('/downloads/')&&!bootstrap)return null;
-  if(u.origin!==controlOrigin||request.method!=='GET'||u.search||u.hash||!(bootstrap?/^\/bootstrap\/[a-f0-9]{64}\/(jetseller-setup|signature.json|policy.json)$/.test(u.pathname):/^\/downloads\/[A-Za-z0-9_-]{43}$/.test(u.pathname)))return denied();
+  const u=new URL(request.url),bootstrap=u.pathname.startsWith('/bootstrap/')&&!u.pathname.startsWith('/bootstrap/downloads/');if(!u.pathname.startsWith('/bootstrap/downloads/')&&!bootstrap)return null;
+  if(u.origin!==controlOrigin||request.method!=='GET'||u.search||u.hash||!(bootstrap?/^\/bootstrap\/[a-f0-9]{64}\/(jetseller-setup|signature.json|policy.json)$/.test(u.pathname):/^\/bootstrap\/downloads\/[A-Za-z0-9_-]{43}$/.test(u.pathname)))return denied();
   if(active>=maxConcurrent)return new Response(null,{status:429,headers:{'retry-after':'5','cache-control':'no-store'}});
   active++;let file,stream,finished=false;
   const finish=()=>{if(!finished){finished=true;active--;}};
@@ -46,9 +46,9 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
    file=await open(path.join(artifactDirectory,catalog.release_bundle.sha256+'.zip'),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
    const st=await file.stat();if(!st.isFile()||st.size!==catalog.release_bundle.bytes||st.size<1||st.size>maxBytes||(process.platform!=='win32'&&((st.mode&0o022)||![0,process.getuid()].includes(st.uid))))throw Error('Invalid artifact');
    const grant=await transaction(pool,async client=>{
-    // Match unpair's installationâ†’device lock order; consume with a CAS so
+    // Match unpair's installationÃ¢â€ â€™device lock order; consume with a CAS so
     // concurrent GETs cannot share the capability even after an earlier read.
-    const tokenHash=hash(u.pathname.slice('/downloads/'.length));
+    const tokenHash=hash(u.pathname.slice('/bootstrap/downloads/'.length));
     const row=(await client.query('SELECT * FROM installer.download_grants WHERE token_hash=$1',[tokenHash])).rows[0];
     if(!row||row.manifest_sha256!==catalog.manifest_sha256||row.bundle_sha256!==catalog.release_bundle.sha256)fail(404,'NOT_FOUND');
     const installation=(await client.query("SELECT id FROM installer.installations WHERE id=$1 AND status='PAIRED' AND reserved_domain=domain AND claim_expires_at>now() FOR UPDATE",[row.installation_id])).rows[0];

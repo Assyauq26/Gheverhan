@@ -23,7 +23,10 @@ import (
 )
 
 //go:embed templates/*
-var templates embed.FS
+var embeddedTemplates embed.FS
+
+// Production always reads the embedded fixed templates. Test substitutions exist only in _test.go.
+var templates interface{ ReadFile(string) ([]byte, error) } = embeddedTemplates
 var ErrInstall = errors.New("installation blocked; existing database and media preserved")
 var ErrHTTPSPending = errors.New("public HTTPS verification pending; preserve installed services")
 

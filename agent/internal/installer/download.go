@@ -39,7 +39,7 @@ func FetchRelease(ctx context.Context, o Options) error {
 		return e
 	}
 	var auth Authorization
-	if client.InstallRequest(ctx, o.State, "GET", "/agent/install-authorization", nil, &auth) != nil || auth.InstallationID != o.State.Identity.InstallationID || !auth.ExpiresAt.After(time.Now()) {
+	if client.InstallRequest(ctx, o.State, "GET", "/agent/release-download-authorization", nil, &auth) != nil || auth.InstallationID != o.State.Identity.InstallationID || !auth.ExpiresAt.After(time.Now()) {
 		return ErrInstall
 	}
 	credential, e := o.State.PairedCredential()

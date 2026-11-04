@@ -1,0 +1,98 @@
+name: P0 full synthetic seller VM E2E
+on:
+  pull_request:
+    paths: ['agent/**', 'platform/installer/**', 'platform/installer-web/**', 'deploy/release/**', 'deploy/self-hosted/**', '.github/workflows/p0-full-seller-e2e.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: full-p0-vm-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full-synthetic-seller:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write # Test identity only; never official production publication.
+    services:
+      postgres:
+        image: postgres@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_DB: js_control_fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-full-vm-only
+        ports: ['127.0.0.1:5432:5432']
+        options: --health-cmd='pg_isready -U fixture -d js_control_fixture' --health-interval=5s --health-retries=20
+    env:
+      JETSELLER_CONTROL_TEST_DATABASE_URL: postgresql://fixture:synthetic-full-vm-only@127.0.0.1:5432/js_control_fixture
+      JETSELLER_CONTROL_TEST_CONFIRM: isolated-control-fixture
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with: {go-version: '1.27.3', cache: false}
+      - name: Build outside2GiB VM and sign synthetic payloads with this TEST workflow identity
+        run: |
+          set -euo pipefail
+          echo "P0_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          mkdir -m700 /tmp/p0-full-build /tmp/p0-full-build/artifacts /tmp/p0-vm-payload /tmp/p0-full-artifacts
+          curl --fail --location --proto '=https' --tlsv1.2 https://github.com/sigstore/cosign/releases/download/v3.1.4/cosign-linux-amd64 -o /tmp/p0-full-build/cosign
+          echo '424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa  /tmp/p0-full-build/cosign' | sha256sum -c -
+          chmod700() { chmod 700 "$@"; }
+          chmod700 /tmp/p0-full-build/cosign
+          echo 424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa > /tmp/p0-full-build/cosign-sha256
+          node deploy/self-hosted/prepare.mjs context /tmp/p0-full-build/context
+          for role in app migration; do
+            target=runtime; test "$role" != migration || target=migration
+            docker build --target "$target" -t "p0-full-$role:fixture" /tmp/p0-full-build/context
+            docker image inspect "p0-full-$role:fixture" --format '{{.Id}}' > "/tmp/p0-full-build/$role-config-digest"
+            docker save "p0-full-$role:fixture" | gzip -n > "/tmp/p0-full-build/artifacts/$role.tar.gz"
+            /tmp/p0-full-build/cosign sign-blob --yes --bundle "/tmp/p0-full-build/artifacts/$role.bundle.json" "/tmp/p0-full-build/artifacts/$role.tar.gz"
+          done
+          export P0_FIXTURE_SIGNER_IDENTITY="https://github.com/$GITHUB_WORKFLOW_REF"
+          GITHUB_ACTIONS=true P0_FULL_VM_PAYLOAD=/tmp/p0-full-build go -C agent test ./internal/releaseprotocol -run '^TestBuildFullVMFixture$' -count=1
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go -C agent build -trimpath -o /tmp/p0-full-build/jetseller-setup ./cmd/jetseller-setup
+          /tmp/p0-full-build/cosign sign-blob --yes --bundle /tmp/p0-full-build/setup.sigstore.json /tmp/p0-full-build/jetseller-setup
+          go -C agent test -c -o /tmp/p0-vm-payload/installer.test ./internal/installer
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go -C agent test -c -o /tmp/p0-vm-payload/resource-probe.test ./internal/bootstrap
+          cp /tmp/p0-full-build/cosign /tmp/p0-full-build/jetseller-setup /tmp/p0-full-build/policy.json /tmp/p0-vm-payload/
+      - name: Verify complete signed directory and ZIP before scoped HTTPS serving
+        run: |
+          set -euo pipefail
+          test ! -e /opt/p0-payload
+          sudo install -d -m700 /opt/p0-payload
+          for entry in root.json targets.json timestamp.json snapshot.json channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /opt/p0-payload/; done
+          sudo chown -R root:root /opt/p0-payload
+          sudo /opt/p0-payload/jetseller-setup verify-release --policy /opt/p0-payload/policy.json --release-directory /opt/p0-payload --receipt /opt/p0-payload/verified.json
+          sudo "$(command -v node)" deploy/release/package-candidate.mjs /opt/p0-payload /opt/p0-payload/verified.json /opt/p0-release.zip
+          sudo /opt/p0-payload/jetseller-setup verify-release-archive --policy /opt/p0-payload/policy.json --artifact /opt/p0-release.zip --receipt /opt/p0-archive-receipt.json
+          sudo install -m644 /opt/p0-archive-receipt.json /tmp/p0-full-archive-receipt.json
+          cp /tmp/p0-full-build/policy.json /tmp/p0-full-policy.json
+          setup_sha=$(sha256sum /tmp/p0-full-build/jetseller-setup | cut -d' ' -f1)
+          printf '%s' "$setup_sha" > /tmp/p0-full-setup-sha
+          cp /tmp/p0-full-build/jetseller-setup "/tmp/p0-full-artifacts/$setup_sha.setup"
+          cp /tmp/p0-full-build/setup.sigstore.json "/tmp/p0-full-artifacts/$setup_sha.sigstore.json"
+          cp /tmp/p0-full-build/policy.json "/tmp/p0-full-artifacts/$setup_sha.policy.json"
+          bundle_sha=$(node -p "require('/tmp/p0-full-archive-receipt.json').bundle_sha256")
+          sudo install -m600 -o "$(id -u)" /opt/p0-release.zip "/tmp/p0-full-artifacts/$bundle_sha.zip"
+          npm ci --prefix platform/installer --ignore-scripts --no-audit --no-fund
+          npm ci --prefix platform/installer-web --ignore-scripts --no-audit --no-fund
+          cd platform/installer-web && npx playwright install --with-deps chromium
+      - name: Full real installer engine in clean2CPU2GiB40GB Ubuntu24.04 VM
+        env:
+          P0_DISPOSABLE_CI_CONFIRM: only-disposable-ci
+          P0_FULL_SELLER_E2E: '1'
+        run: bash deploy/self-hosted/tests/p0-vm.sh /tmp/p0-vm-payload
+      - name: Preserve allowlisted synthetic journey and resource evidence only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: full-synthetic-seller-vm-evidence
+          path: /tmp/buattokosendiri-p0-vm.*/evidence/**
+          retention-days: 7
+          if-no-files-found: warn

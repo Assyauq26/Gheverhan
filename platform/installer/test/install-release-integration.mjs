@@ -126,7 +126,8 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     const artifactBytes=Buffer.alloc(256*1024,7),bundleSHA=hash(artifactBytes);
     await writeFile(path.join(artifactDirectory,bundleSHA+'.zip'),artifactBytes,{mode:0o600});
     catalog={...availableCatalog(),release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:artifactBytes.length}};
-    const grant=async()=>{const r=await call(authorization,{proof:await proofFor({path:authorization})});assert.equal(r.status,200);assert.match(r.body.release_bundle_url,/\/downloads\/[A-Za-z0-9_-]{43}$/);return r.body.release_bundle_url;};
+    const downloadAuthorization='/api/installer/v1/agent/release-download-authorization';
+    const grant=async()=>{const r=await call(downloadAuthorization,{proof:await proofFor({path:downloadAuthorization})});assert.equal(r.status,200);assert.match(r.body.release_bundle_url,/\/bootstrap\/downloads\/[A-Za-z0-9_-]{43}$/);return r.body.release_bundle_url;};
     assert.equal((await call(authorization)).status,401);
     await writeFile(path.join(artifactDirectory,catalog.installer.sha256+'.setup'),Buffer.from('SYNTHETIC BOOTSTRAP DATA ONLY'),{mode:0o600});
     const bootstrapURL=controlOrigin+'/bootstrap/'+catalog.installer.sha256+'/jetseller-setup';
@@ -140,6 +141,7 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     const changedURL=await grant();catalog={...catalog,manifest_sha256:'f'.repeat(64),verification_receipt:{...catalog.verification_receipt,manifest_sha256:'f'.repeat(64)}};assert.equal((await delivery.handle(new Request(changedURL))).status,404);
     catalog={...availableCatalog(),release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:artifactBytes.length}};
     const revokedURL=await grant();
+    for(let i=0;i<8;i++){const r=await call(authorization,{proof:await proofFor({path:authorization})});assert.equal(r.status,200);assert.equal(r.body.release_bundle_url,null);} // Phase checks never mint or exhaust download grants.
     await pool.query('UPDATE installer.devices SET revoked_at=now() WHERE id=$1',[deviceId]);
     assert.equal((await delivery.handle(new Request(revokedURL))).status,404);
     assert.equal((await call(authorization,{proof:await proofFor({path:authorization})})).status,401);

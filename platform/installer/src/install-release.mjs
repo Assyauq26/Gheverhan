@@ -13,6 +13,7 @@ export function validateReleaseCatalog(value,now=Date.now()) {
  if(!value||value.version!==1||!/^rel-[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?-(internal|pilot|stable)$/.test(value.release_id)||!digest.test(value.manifest_sha256)||!digest.test(value.root_sha256)||!digest.test(value.policy_sha256)||!digest.test(value.installer?.sha256)||!value.verification_receipt||(!Number.isFinite(Date.parse(value.expires_at))||Date.parse(value.expires_at)<=now))fail(503,'RELEASE_UNAVAILABLE');
  const receipt=value.verification_receipt;
  if(receipt.status!=='VERIFIED'||receipt.manifest_sha256!==value.manifest_sha256||receipt.root_sha256!==value.root_sha256||receipt.release_id!==value.release_id||Date.parse(receipt.expires_at)<Date.parse(value.expires_at)||!Number.isFinite(Date.parse(receipt.expires_at)))fail(503,'RELEASE_UNAVAILABLE');
+ if(!value.release_bundle||!digest.test(value.release_bundle.sha256))fail(503,'RELEASE_UNAVAILABLE');https(value.release_bundle.url);
  for(const link of [value.installer.url,value.installer.signature_url,value.policy_url])https(link);
  return value;
 }
@@ -32,7 +33,7 @@ export function createInstallReleaseHandler({pool,verificationKey,controlOrigin,
      return response(200,{installation_id:id,phase:progress?.phase??'NOT_STARTED',sequence:Number(progress?.sequence??0),updated_at:progress?.updated_at??null,error_code:progress?.error_code??null,store_origin:'https://'+record.domain,evidence_source:'DEVICE_REPORT_NOT_PUBLIC_TLS_ATTESTATION'});
     }
     let catalog;try{catalog=validateReleaseCatalog(await getCatalog());}catch{return response(200,{installation_id:id,available:false,reason:'RELEASE_UNAVAILABLE'});}
-    return response(200,{installation_id:id,available:true,release_id:catalog.release_id,installer:catalog.installer,control_origin:controlOrigin,policy_url:catalog.policy_url,policy_sha256:catalog.policy_sha256,root_sha256:catalog.root_sha256,manifest_sha256:catalog.manifest_sha256});
+    return response(200,{installation_id:id,available:true,release_bundle_available:true,release_id:catalog.release_id,installer:catalog.installer,control_origin:controlOrigin,policy_url:catalog.policy_url,policy_sha256:catalog.policy_sha256,root_sha256:catalog.root_sha256,manifest_sha256:catalog.manifest_sha256});
    }
    if((path.endsWith('install-authorization')&&request.method!=='GET')||(path.endsWith('install-progress')&&request.method!=='POST'))fail(405,'METHOD_NOT_ALLOWED');
    let raw='';if(request.method==='POST'){raw=await request.text();if(Buffer.byteLength(raw)>4096)fail(413,'BODY_TOO_LARGE');}
@@ -53,7 +54,7 @@ export function createInstallReleaseHandler({pool,verificationKey,controlOrigin,
      const catalog=validateReleaseCatalog(await getCatalog());
      const proof=(await client.query("SELECT verified_at,expires_at FROM installer.domain_challenges WHERE installation_id=$1 AND domain=$2 AND verified_at IS NOT NULL AND verified_at<=expires_at AND expires_at>now() AND verified_at>now()-interval '30 minutes' ORDER BY verified_at DESC LIMIT 1",[record.id,record.domain])).rows[0];
      if(!proof||record.reserved_domain!==record.domain||Date.parse(record.claim_expires_at)<=Date.now())fail(409,'FRESH_DOMAIN_PROOF_REQUIRED');
-     return response(200,{installation_id:record.id,device_id:agent.device_id,domain:record.domain,release_id:catalog.release_id,manifest_sha256:catalog.manifest_sha256,domain_verified_at:proof.verified_at,expires_at:new Date(Math.min(Date.now()+120000,Date.parse(proof.expires_at),Date.parse(record.claim_expires_at),Date.parse(catalog.expires_at))).toISOString()});
+     return response(200,{installation_id:record.id,device_id:agent.device_id,domain:record.domain,release_id:catalog.release_id,manifest_sha256:catalog.manifest_sha256,release_bundle_url:catalog.release_bundle?.url??null,release_bundle_sha256:catalog.release_bundle?.sha256??null,domain_verified_at:proof.verified_at,expires_at:new Date(Math.min(Date.now()+120000,Date.parse(proof.expires_at),Date.parse(record.claim_expires_at),Date.parse(catalog.expires_at))).toISOString()});
     }
     // The same JWS was cryptographically verified by agentIdentity above.
     const proof=decodeJwt(request.headers.get('dpop'));if(proof.body_sha256!==Buffer.from(hash(raw),'hex').toString('base64url'))fail(401,'INVALID_DEVICE_PROOF');

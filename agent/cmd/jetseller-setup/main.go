@@ -37,6 +37,7 @@ func run() error {
 	}
 	flags := flag.NewFlagSet("jetseller-setup", flag.ContinueOnError)
 	receiptFile := flags.String("receipt", "", "new root-private verification receipt file")
+	profile := flags.String("profile", "legacy-4-40", "explicit resource profile: legacy-4-40 or p0-2-2-40")
 	policyFile := flags.String("policy", "/etc/buattokosendiri/release-policy.json", "independently trusted root-private release policy")
 	releaseDirectory := flags.String("release-directory", "/var/lib/jetseller-agent/release", "root-owned signed release package")
 	confirmation := flags.String("confirm-install", "", "confirm canonical installation UUID before local provisioning")
@@ -65,7 +66,7 @@ func run() error {
 		fmt.Println("Metadata dan signature arsip rilis terverifikasi; receipt privat tersimpan. Tidak menjalankan instalasi.")
 		return nil
 	}
-	if os.Args[1] == "install" || os.Args[1] == "activate-admin" {
+	if os.Args[1] == "install" || os.Args[1] == "activate-admin" || os.Args[1] == "fetch-release" {
 		if *confirmation != *installation {
 			return fmt.Errorf("installation confirmation required")
 		}
@@ -74,6 +75,13 @@ func run() error {
 			return err
 		}
 		defer state.Close()
+		if os.Args[1] == "fetch-release" {
+			if err = installer.FetchRelease(ctx, installer.Options{State: state, StateDirectory: *directory, PolicyFile: *policyFile, ReleaseDirectory: *releaseDirectory, ControlOrigin: *origin, Confirmation: *confirmation}); err != nil {
+				return err
+			}
+			fmt.Println("Paket rilis tersimpan setelah verifikasi TUF dan signature. Belum menjalankan instalasi.")
+			return nil
+		}
 		if os.Args[1] == "activate-admin" {
 			if err = installer.ActivateAdmin(ctx, state, *directory, *confirmation); err != nil {
 				return err
@@ -145,7 +153,16 @@ func run() error {
 			CredentialExpiresAt string `json:"credential_expires_at"`
 		}{Status: "renewed", CredentialExpiresAt: refreshed.ExpiresAt})
 	}
-	facts, err := bootstrap.InspectHost(*directory)
+	var facts bootstrap.HostFacts
+	if *profile == "p0-2-2-40" {
+		var p0 bootstrap.P0HostFacts
+		p0, err = bootstrap.InspectP0Host(*directory, bootstrap.DefaultP0DiskBudget())
+		facts = p0.HostFacts
+	} else if *profile == "legacy-4-40" {
+		facts, err = bootstrap.InspectHost(*directory)
+	} else {
+		return fmt.Errorf("unsupported resource profile")
+	}
 	if err != nil {
 		if errors.Is(err, bootstrap.ErrPreflight) {
 			// Public host facts only, never environment variables or private state.

@@ -144,7 +144,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     provisionRequest++;
     el('installer-release').hidden = true;
     for (const id of ['installer-download','installer-signature','installer-policy','local-admin','local-products','local-storefront','activate-command']) { el(id).hidden = true; el(id).removeAttribute('href'); }
-    for (const id of ['installer-release-id','installer-sha','installer-policy-sha','installer-root-sha','installer-manifest-sha','pair-command','install-command','activate-command','progress-contact','progress-error']) text(id, '');
+    for (const id of ['installer-release-id','installer-sha','installer-policy-sha','installer-root-sha','installer-manifest-sha','pair-command','fetch-command','install-command','activate-command','progress-contact','progress-error']) text(id, '');
     text('installer-status', 'Rilis installer belum tersedia. Jangan jalankan script yang belum diverifikasi.');
     text('progress-status', 'Belum ada laporan installer.'); el('progress-error').hidden = true;
     text('wizard-installer', 'Menunggu rilis'); text('wizard-progress', 'Belum dimulai');
@@ -158,7 +158,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
   function installCommands(value, location) {
     if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value.installation_id) || value.control_origin !== new URL(location).origin || !value.control_origin.startsWith('https://')) throw new Error('Invalid installation command');
     const flags = ' --state /var/lib/jetseller-agent --installation-id ' + value.installation_id + ' --control-origin ' + value.control_origin;
-    return { pair: 'sudo /usr/local/bin/jetseller-setup pair' + flags, install: 'sudo /usr/local/bin/jetseller-setup install' + flags + ' --policy /etc/buattokosendiri/release-policy.json --release-directory /var/lib/jetseller-agent/release --confirm-install ' + value.installation_id, activate: 'sudo /usr/local/bin/jetseller-setup activate-admin' + flags + ' --policy /etc/buattokosendiri/release-policy.json --confirm-install ' + value.installation_id };
+    return { fetch: 'sudo /usr/local/bin/jetseller-setup fetch-release' + flags + ' --policy /etc/buattokosendiri/release-policy.json --release-directory /var/lib/jetseller-agent/release --confirm-install ' + value.installation_id, pair: 'sudo /usr/local/bin/jetseller-setup pair --profile p0-2-2-40' + flags, install: 'sudo /usr/local/bin/jetseller-setup install' + flags + ' --policy /etc/buattokosendiri/release-policy.json --release-directory /var/lib/jetseller-agent/release --confirm-install ' + value.installation_id, activate: 'sudo /usr/local/bin/jetseller-setup activate-admin' + flags + ' --policy /etc/buattokosendiri/release-policy.json --confirm-install ' + value.installation_id };
   }
   function showInstructions(value) {
     if (value?.installation_id !== selected || value.available !== true) return;
@@ -168,7 +168,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     const commands = installCommands(value, document.URL);
     text('installer-release-id', value.release_id); text('installer-sha', value.installer.sha256); text('installer-policy-sha', value.policy_sha256); text('installer-root-sha', value.root_sha256); text('installer-manifest-sha', value.manifest_sha256);
     for (const [index, id] of ['installer-download','installer-signature','installer-policy'].entries()) { el(id).href = urls[index]; el(id).hidden = false; }
-    text('pair-command', commands.pair); text('install-command', commands.install); text('activate-command', commands.activate);
+    text('fetch-command', commands.fetch); text('pair-command', commands.pair); text('install-command', commands.install); text('activate-command', commands.activate);
     text('installer-status', 'Rilis disediakan. Selesaikan verifikasi independen sebelum menjalankan installer.');
     text('wizard-installer', 'Berkas rilis tersedia'); el('installer-release').hidden = false;
   }

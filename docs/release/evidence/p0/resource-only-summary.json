@@ -1,0 +1,19 @@
+{
+  "evidence": "ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS",
+  "vcpus": 2,
+  "allocated_memory_bytes": 2147483648,
+  "virtual_disk_bytes": 40000000000,
+  "boot_seconds": 14,
+  "callback_seconds": 0,
+  "callback_exit": 0,
+  "callback_present": false,
+  "sample_count": 17,
+  "oom_kills": 0,
+  "max_swap_used_bytes": 0,
+  "max_swap_available_bytes": 0,
+  "min_available_memory_bytes": 1535725568,
+  "min_disk_free_bytes": 35114160128,
+  "installation_result": "NOT_TESTED; RESOURCE_PREFLIGHT_ONLY",
+  "code_head": "402705bfac102a6c64b6390aa849dc81863ade93",
+  "workflow_run": "https://github.com/Assyauq26/Gheverhan/actions/runs/41774960054"
+}

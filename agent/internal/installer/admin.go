@@ -22,7 +22,7 @@ func ActivateAdmin(ctx context.Context, s *bootstrap.State, directory, confirmat
 	}
 	project := "jsstore_" + strings.ReplaceAll(j.InstallationID, "-", "")
 	stack := filepath.Join(directory, "store")
-	if protectedDirectory(stack) != nil {
+	if protectedDirectory(stack) != nil || checkTemplates(stack) != nil {
 		return ErrInstall
 	}
 	id, e := bootstrap.NewUUID()

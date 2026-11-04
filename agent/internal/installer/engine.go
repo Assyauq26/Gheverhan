@@ -27,6 +27,8 @@ const proxyImage = "caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6
 var phases = []string{"PREFLIGHT", "VERIFIED_RELEASE", "DATABASE", "MIGRATION", "APPLICATION", "HTTPS_PENDING", "LOCAL_READINESS"}
 
 type Authorization struct {
+	BundleURL        string    `json:"release_bundle_url"`
+	BundleSHA256     string    `json:"release_bundle_sha256"`
 	InstallationID   string    `json:"installation_id"`
 	DeviceID         string    `json:"device_id"`
 	Domain           string    `json:"domain"`
@@ -81,8 +83,31 @@ func (localDocker) run(ctx context.Context, args ...string) ([]byte, error) {
 func itoa(n int) string { return strconv.Itoa(n) }
 func validDomain(s string) bool {
 	u, e := url.Parse("https://" + s)
-	return e == nil && u.Hostname() == s && u.Port() == "" && u.User == nil && u.Path == "" && u.RawQuery == "" && u.Fragment == "" && len(s) <= 200 && strings.Contains(s, ".") && !strings.ContainsAny(s, "/\\ \t\r\n:$@#?") && s != "gheverhan.store" && !strings.HasSuffix(s, ".gheverhan.store")
+	if e != nil || u.Hostname() != s || u.Port() != "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || len(s) > 200 || net.ParseIP(s) != nil {
+		return false
+	}
+	labels := strings.Split(s, ".")
+	if len(labels) < 2 {
+		return false
+	}
+	for _, label := range labels {
+		if len(label) < 1 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for _, c := range label {
+			if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
+				return false
+			}
+		}
+	}
+	for _, reserved := range []string{"gheverhan.store", "buattokosendiri.web.id", "jetseller.web.id"} {
+		if s == reserved || strings.HasSuffix(s, "."+reserved) {
+			return false
+		}
+	}
+	return true
 }
+
 func Install(ctx context.Context, o Options) error {
 	return install(ctx, o, localDocker{}, &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 		return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", "127.0.0.1:443")
@@ -342,6 +367,9 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	}
 	compose := []string{"compose", "--project-directory", stack, "-f", filepath.Join(stack, "compose.yml"), "-f", filepath.Join(stack, "compose.p0-2-2-40.yml")}
 	run := func(args ...string) error {
+		if checkTemplates(stack) != nil {
+			return ErrInstall
+		}
 		if freshAuthority() != nil {
 			return ErrInstall
 		}
@@ -455,6 +483,19 @@ func onlyOwnedContainers(ctx context.Context, d docker, project, app, migration 
 		if e != nil || strings.TrimSpace(string(labels)) != project {
 			return ErrInstall
 		}
+		raw, e := d.run(ctx, "inspect", "--format", `{{index .Config.Labels "com.docker.compose.service"}} {{.Config.Image}}`, item.ID)
+		if e != nil {
+			return ErrInstall
+		}
+		parts := strings.Fields(string(raw))
+		if len(parts) != 2 {
+			return ErrInstall
+		}
+		expected := map[string]string{"db": postgresImage, "caddy": proxyImage, "app": app, "migrate": migration}
+		if expected[parts[0]] == "" || parts[1] != expected[parts[0]] {
+			return ErrInstall
+		}
+
 	}
 	return nil
 }

@@ -36,7 +36,7 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     await pool.query('INSERT INTO installer.devices(id,installation_id,public_jwk,thumbprint,nonce) VALUES($1,$2,$3,$4,$5)',[deviceId,installationId,jwk,thumbprint,nonce]);
     let catalog=null;
     const availableCatalog=()=>({version:1,release_id:'rel-1.0.0-internal',manifest_sha256:'a'.repeat(64),root_sha256:'b'.repeat(64),policy_sha256:'c'.repeat(64),
-      expires_at:new Date(Date.now()+600000).toISOString(),policy_url:'https://releases.fixture.example/policy.json',
+      release_bundle:{url:'https://releases.fixture.example/bundle.zip',sha256:'e'.repeat(64)},expires_at:new Date(Date.now()+600000).toISOString(),policy_url:'https://releases.fixture.example/policy.json',
       installer:{url:'https://releases.fixture.example/setup',sha256:'d'.repeat(64),signature_url:'https://releases.fixture.example/setup.sigstore.json'},
       verification_receipt:{status:'VERIFIED',release_id:'rel-1.0.0-internal',manifest_sha256:'a'.repeat(64),root_sha256:'b'.repeat(64),expires_at:new Date(Date.now()+900000).toISOString()}});
     let catalogOutage=false;

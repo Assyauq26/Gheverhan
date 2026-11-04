@@ -25,6 +25,7 @@ var ErrInstall = errors.New("installation blocked; existing database and media p
 var ErrHTTPSPending = errors.New("public HTTPS verification pending; preserve installed services")
 
 type Policy struct {
+	ArtifactOrigin string                 `json:"artifact_origin"`
 	Version        int                    `json:"version"`
 	Trust          releaseprotocol.Policy `json:"trust"`
 	VerifierPath   string                 `json:"verifier_path"`
@@ -239,4 +240,18 @@ func render(s *bootstrap.State, stack, domain, app, migration string, pgUID int)
 	}
 	env := "COMPOSE_PROJECT_NAME=jsstore_" + strings.ReplaceAll(id, "-", "") + "\nJETSELLER_DATABASE_NAME=" + database + "\nJETSELLER_INSTALLATION_ID=" + id + "\nJETSELLER_STORE_DOMAIN=" + domain + "\nJETSELLER_APP_IMAGE=" + app + "\nJETSELLER_MIGRATION_IMAGE=" + migration + "\n"
 	return stableFile(filepath.Join(stack, ".env"), []byte(env), 0600)
+}
+
+func checkTemplates(stack string) error {
+	for _, name := range []string{"compose.yml", "compose.p0-2-2-40.yml", "Caddyfile", "init-db.sh", "grant-runtime.sh"} {
+		expected, e := templates.ReadFile("templates/" + name)
+		if e != nil {
+			return ErrInstall
+		}
+		actual, e := protectedRead(filepath.Join(stack, name), 128<<10, true)
+		if e != nil || !bytes.Equal(expected, actual) {
+			return ErrInstall
+		}
+	}
+	return nil
 }

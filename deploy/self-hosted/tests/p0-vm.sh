@@ -4,6 +4,7 @@
 # Gheverhan, reads local SSH configuration, or touches the host Docker daemon.
 set -euo pipefail
 umask 077
+[[ "${P0_DISPOSABLE_CI_CONFIRM:-}" = only-disposable-ci && "${GITHUB_ACTIONS:-}" = true ]] || { echo "Disposable CI confirmation required" >&2; exit 2; }
 repo=$(git rev-parse --show-toplevel)
 payload=$(realpath "${1:?absolute prebuilt payload directory required}")
 [[ "$payload" = /* && -d "$payload" && ! -L "$payload" ]] || exit 2
@@ -14,7 +15,7 @@ fixture=$(mktemp -d /tmp/buattokosendiri-p0-vm.XXXXXXXX)
 evidence="$fixture/evidence"; mkdir -m 700 "$evidence"
 echo "P0_VM_EVIDENCE=$evidence"
 sudo apt-get update -qq
-sudo apt-get install -y -qq qemu-system-x86 qemu-utils cloud-image-utils ubuntu-cloudimage-keyring gnupg ca-certificates curl >/dev/null
+sudo apt-get install -y -qq qemu-system-x86 qemu-utils cloud-image-utils ubuntu-cloudimage-keyring gnupg ca-certificates curl acl >/dev/null
 base='https://cloud-images.ubuntu.com/noble/current'
 for file in SHA256SUMS SHA256SUMS.gpg noble-server-cloudimg-amd64.img; do
   curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 20 --max-time 600 --retry 2 "$base/$file" --output "$fixture/$file"
@@ -53,6 +54,7 @@ cloud-localds "$fixture/seed.img" "$fixture/user-data" "$fixture/meta-data"
 port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
 read -r keytype keyvalue _ < "$fixture/guest-host-key.pub"
 printf '[127.0.0.1]:%s %s %s\n' "$port" "$keytype" "$keyvalue" > "$fixture/known_hosts"
+if [[ -c /dev/kvm && ( ! -r /dev/kvm || ! -w /dev/kvm ) ]]; then sudo setfacl -m "u:$(id -u):rw" /dev/kvm; fi
 accel=( -accel tcg,thread=multi -cpu max )
 if [[ -r /dev/kvm && -w /dev/kvm ]]; then accel=( -accel kvm -cpu host ); fi
 qemu-system-x86_64 -machine q35 "${accel[@]}" -smp 2 -m 2048 \

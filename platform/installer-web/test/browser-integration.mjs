@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer as createHttpsServer, request as httpsRequest } from 'node:https';
 import { once } from 'node:events';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash, X509Certificate } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -10,13 +10,12 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { createPool, migrate } from '../../installer/src/db.mjs';
 import { createControlServer } from '../../installer/src/server.mjs';
-import { hash } from '../../installer/src/common.mjs';
 import { serveDashboard } from '../dashboard.mjs';
 import { startPairingCli } from './cli-fixture.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const { generateKeyPair, exportJWK, SignJWT, jwtVerify } = createRequire(new URL('../../installer/package.json', import.meta.url))('jose');
+const { generateKeyPair, exportJWK, jwtVerify } = createRequire(new URL('../../installer/package.json', import.meta.url))('jose');
 
 /** Genuine HTTPS transport with the test certificate explicitly trusted. No
  * global TLS bypass and no substituted API/auth response handler. */
@@ -33,7 +32,7 @@ function trustedFetch(cert) {
 }
 
 const realCli = process.env.JETSELLER_PAIRING_E2E === '1';
-test(realCli ? 'real Go CLI preflight, HTTPS OIDC browser consent and durable PostgreSQL key-bound pairing' : 'HTTPS browser OIDC login, durable PostgreSQL intent and device pairing through real same-origin UI', { timeout: 150000 }, async t => {
+test(realCli ? 'real Go CLI preflight, email OTP browser verification and PostgreSQL key-bound pairing' : 'HTTPS email OTP browser registration/login, PostgreSQL intent and device pairing through real same-origin UI', { timeout: 150000 }, async t => {
   const connection = process.env.JETSELLER_CONTROL_TEST_DATABASE_URL;
   if (process.env.JETSELLER_CONTROL_TEST_CONFIRM !== 'isolated-control-fixture' || !connection) throw new Error('Explicit isolated control fixture required');
   const database = new URL(connection);
@@ -48,54 +47,48 @@ test(realCli ? 'real Go CLI preflight, HTTPS OIDC browser consent and durable Po
   execFileSync(process.env.JETSELLER_TEST_OPENSSL || 'openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
     '-subj', '/CN=127.0.0.1', '-addext', 'subjectAltName=IP:127.0.0.1', '-keyout', path.join(directory, 'key.pem'), '-out', path.join(directory, 'cert.pem')], { stdio: 'ignore' });
   const key = await readFile(path.join(directory, 'key.pem')), cert = await readFile(path.join(directory, 'cert.pem'));
-  const providerKeys = await generateKeyPair('EdDSA', { crv: 'Ed25519' });
+  const localFetch = trustedFetch(cert);
   const sessionKeys = await generateKeyPair('EdDSA', { crv: 'Ed25519' });
   const deviceSigner = await generateKeyPair('EdDSA', { crv: 'Ed25519' });
-  const grants = new Map(); let issuer; let tokenExchanges = 0;
-  const provider = createHttpsServer({ key, cert }, async (req, res) => {
+  const email = 'browser-' + randomUUID() + '@fixture.example';
+  let mailRequests = 0, lastCode = null, mailOrigin;
+  // A real local HTTPS delivery transport, not live Resend/inbox delivery.
+  // OTP remains only in test memory and is never logged or artifacted.
+  const mail = createHttpsServer({ key, cert }, async (req, res) => {
     try {
-      const url = new URL(req.url, issuer);
-      if (req.method === 'GET' && url.pathname === '/authorize') {
-        assert.equal(url.searchParams.get('client_id'), 'synthetic-browser-client');
-        assert.equal(url.searchParams.get('response_type'), 'code'); assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
-        const code = randomUUID(); grants.set(code, { nonce: url.searchParams.get('nonce'), challenge: url.searchParams.get('code_challenge') });
-        const callback = new URL(url.searchParams.get('redirect_uri'));
-        callback.searchParams.set('code', code); callback.searchParams.set('state', url.searchParams.get('state'));
-        res.writeHead(302, { location: callback.href, 'Cache-Control': 'no-store' }); res.end(); return;
-      }
-      if (req.method === 'POST' && url.pathname === '/token') {
-        const chunks = []; let bytes = 0;
-        for await (const chunk of req) { bytes += chunk.length; if (bytes > 8192) throw new Error('Oversized fixture request'); chunks.push(chunk); }
-        const body = new URLSearchParams(Buffer.concat(chunks).toString());
-        const grant = grants.get(body.get('code')); assert.ok(grant); grants.delete(body.get('code'));
-        assert.equal(body.get('grant_type'), 'authorization_code');
-        assert.equal(Buffer.from(hash(body.get('code_verifier')), 'hex').toString('base64url'), grant.challenge);
-        tokenExchanges++;
-        const token = await new SignJWT({ nonce: grant.nonce, email_verified: true }).setProtectedHeader({ alg: 'EdDSA' })
-          .setSubject('synthetic-browser-' + directory).setIssuer(issuer).setAudience('synthetic-browser-client').setIssuedAt().setExpirationTime('5m').sign(providerKeys.privateKey);
-        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ id_token: token })); return;
-      }
-      res.writeHead(404); res.end();
+      if (req.method !== 'POST' || new URL(req.url, mailOrigin).pathname !== '/emails') throw new Error('Invalid fixture route');
+      const chunks = []; let bytes = 0;
+      for await (const chunk of req) { bytes += chunk.length; if (bytes > 16384) throw new Error('Oversized fixture mail'); chunks.push(chunk); }
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      assert.ok(body.to.includes(email));
+      const match = body.text.match(/: (\d{6})\n/); assert.ok(match, 'Six-digit email proof required');
+      lastCode = match[1]; mailRequests++;
+      res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'}); res.end(JSON.stringify({id:randomUUID()}));
     } catch { res.writeHead(400); res.end(); }
   });
-  provider.listen(0, '127.0.0.1'); await once(provider, 'listening'); issuer = 'https://127.0.0.1:' + provider.address().port;
-  t.after(() => new Promise(resolve => provider.close(resolve)));
+  mail.listen(0, '127.0.0.1'); await once(mail, 'listening'); mailOrigin = 'https://127.0.0.1:' + mail.address().port;
+  t.after(() => new Promise(resolve => mail.close(resolve)));
   let control;
   const gateway = createHttpsServer({ key, cert }, (req, res) => control.emit('request', req, res));
   gateway.listen(0, '127.0.0.1'); await once(gateway, 'listening'); const origin = 'https://127.0.0.1:' + gateway.address().port;
   t.after(() => new Promise(resolve => gateway.close(resolve)));
   const config = { controlOrigin: origin, signingKey: deviceSigner.privateKey, verificationKey: deviceSigner.publicKey,
+    authMode:'email_otp',
     sessionIssuer: { issuer: origin, audience: 'jetseller-portal', jwks: { keys: [await exportJWK(sessionKeys.publicKey)] } },
-    oidc: { issuer, clientId: 'synthetic-browser-client', authorizationEndpoint: issuer + '/authorize', tokenEndpoint: issuer + '/token', redirectUri: origin + '/auth/callback',
-      jwks: { keys: [await exportJWK(providerKeys.publicKey)] }, sessionSigningKey: sessionKeys.privateKey } };
+    emailAuth: {resendApiKey:'synthetic-resend-key',otpPepper:'a'.repeat(64),from:'Buat Toko Online Sendiri <noreply@fixture.example>',sessionSigningKey:sessionKeys.privateKey} };
   let dnsPublished=false;
-  control = createControlServer(config, pool, { domainLookup: async()=>dnsPublished, oidcFetch: trustedFetch(cert), dashboard: serveDashboard });
-  const browser = await chromium.launch({ headless: true }); t.after(() => browser.close());
+  control = createControlServer(config, pool, { domainLookup: async()=>dnsPublished, emailFetch: async (endpoint, options) => { assert.equal(endpoint,'https://api.resend.com/emails'); return trustedFetch(cert)(mailOrigin+'/emails', options); }, dashboard: serveDashboard });
+  const spki = createHash('sha256').update(new X509Certificate(cert).publicKey.export({type:'spki',format:'der'})).digest('base64');
+  const browser = await chromium.launch({ headless: true, args:['--ignore-certificate-errors-spki-list='+spki] }); t.after(() => browser.close());
   // This synthetic test certificate is not a deployment certificate or public ACME proof.
-  const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 390, height: 844 } });
+  const context = await browser.newContext({ ignoreHTTPSErrors: false, viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
-  await page.goto(origin); await page.getByRole('link', { name: 'Masuk ke akun seller' }).click();
-  await page.locator('#workspace:not([hidden])').waitFor(); assert.equal(tokenExchanges, 1);
+  await page.goto(origin+'/daftar'); await page.locator('#email-auth:not([hidden])').waitFor();
+  await page.getByLabel('Nama Anda',{exact:true}).fill('Browser Seller'); await page.getByLabel('Nama toko pertama',{exact:true}).fill('Synthetic Browser Store'); await page.getByLabel('Alamat email',{exact:true}).fill(email);
+  await page.getByRole('button',{name:'Kirim kode verifikasi',exact:true}).click(); await page.locator('#email-verify-form:not([hidden])').waitFor();
+  assert.equal(mailRequests,1); assert.ok(lastCode); await page.getByLabel('Kode 6 digit dari email',{exact:true}).fill(lastCode); lastCode=null;
+  await page.getByRole('button',{name:'Verifikasi dan lanjutkan',exact:true}).click(); await page.locator('#workspace:not([hidden])').waitFor();
+  assert.equal(new URL(page.url()).pathname,'/'); assert.equal(await page.locator('#email-auth').isVisible(),false); assert.equal(await page.locator('#email-code').inputValue(),'');
   const cookies = await context.cookies(origin); const sessionCookie = cookies.find(cookie => cookie.name === '__Host-js_portal_session');
   assert.ok(sessionCookie?.httpOnly && sessionCookie.secure); assert.equal(await page.evaluate(() => document.cookie.includes('__Host-js_portal_session')), false);
   const displayName = 'Synthetic Browser Store', domain = 'browser-' + randomUUID() + '.example';
@@ -125,10 +118,10 @@ test(realCli ? 'real Go CLI preflight, HTTPS OIDC browser consent and durable Po
     cli = await startPairingCli(t, { directory, origin, installationId }); device = cli;
   } else {
     const agent = await generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true });
-    const deviceResponse = await context.request.post(origin + '/api/installer/v1/agent/pairing/device', { data: {
+    const deviceResponse = await localFetch(origin + '/api/installer/v1/agent/pairing/device', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({
       installation_hint: installationId, public_key: await exportJWK(agent.publicKey), protocol_version: '1', os: 'ubuntu-24.04', arch: 'amd64', agent_version: '0.1.0',
-    } });
-    assert.equal(deviceResponse.status(), 201); device = await deviceResponse.json();
+    }) });
+    assert.equal(deviceResponse.status, 201); device = await deviceResponse.json();
   }
   // Follow the exact verification URI printed by the Go installer, not a test-only root URL.
   assert.equal(new URL(device.verification_uri).pathname,'/hubungkan-server');
@@ -149,13 +142,31 @@ test(realCli ? 'real Go CLI preflight, HTTPS OIDC browser consent and durable Po
     assert.equal(verified.payload.installation_id,installationId);assert.equal(verified.payload.cnf.jkt,cli.thumbprint);
     assert.equal((await page.content()).includes(completed.credential.credential),false);
   }
-  assert.equal(await page.locator('#detail-version').textContent(), 'Belum terpasang');
+  assert.equal(await page.locator('#detail-version').textContent(), 'Belum ada versi terlapor');
   assert.equal(await page.locator('code').count(), 0);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   // The same real session cannot mutate without a matching CSRF token.
-  const denied = await context.request.post(origin + '/api/installer/v1/installations', { headers: { Origin: origin }, data: {
+  const denied = await localFetch(origin + '/api/installer/v1/installations', { method:'POST', headers:{Origin:origin,'content-type':'application/json',Cookie:'__Host-js_portal_session='+sessionCookie.value}, body:JSON.stringify({
     display_name: 'must not persist', domain: 'denied-' + randomUUID() + '.example', profile: 'fresh_vps_ubuntu_amd64', requested_install_version: 'stable',
-  } });
-  assert.equal(denied.status(), 403);
+  }) });
+  assert.equal(denied.status, 403);
+  const priorSession = await jwtVerify(sessionCookie.value,sessionKeys.publicKey,{issuer:origin,audience:'jetseller-portal'});
+  await page.getByRole('button',{name:'Keluar',exact:true}).click(); await page.locator('#email-auth:not([hidden])').waitFor();
+  assert.ok((await pool.query('SELECT revoked_at FROM installer.sessions WHERE id=$1',[priorSession.payload.sid])).rows[0].revoked_at);
+  const revoked = await localFetch(origin+'/api/installer/v1/session',{headers:{Cookie:'__Host-js_portal_session='+sessionCookie.value}}); assert.equal(revoked.status,401);
+  await page.getByLabel('Alamat email',{exact:true}).fill(email);
+  // Pin this owned fixture's cooldown to now so slow CI cannot skip the denial.
+  await pool.query('UPDATE installer.email_challenges SET created_at=now() WHERE email=$1',[email]);
+  const limited = page.waitForResponse(response=>response.url().endsWith('/auth/email/start')&&response.status()===429);
+  await page.getByRole('button',{name:'Kirim kode verifikasi',exact:true}).click(); await limited;
+  await page.locator('#email-auth-error').filter({hasText:'Terlalu banyak percobaan'}).waitFor();
+  // Advance only this synthetic fixture's cooldown row; production keeps 60s.
+  await pool.query("UPDATE installer.email_challenges SET created_at=now()-interval '61 seconds' WHERE email=$1",[email]);
+  await page.getByRole('button',{name:'Kirim kode verifikasi',exact:true}).click(); await page.locator('#email-verify-form:not([hidden])').waitFor();
+  assert.equal(mailRequests,2); assert.ok(lastCode);
+  const wrong = lastCode === '000000' ? '111111' : '000000'; await page.getByLabel('Kode 6 digit dari email',{exact:true}).fill(wrong); await page.getByRole('button',{name:'Verifikasi dan lanjutkan',exact:true}).click();
+  await page.locator('#email-auth-error').filter({hasText:'Kode belum cocok'}).waitFor(); assert.equal(await page.locator('#workspace').isVisible(),false);
+  await page.getByLabel('Kode 6 digit dari email',{exact:true}).fill(lastCode); lastCode=null; await page.getByRole('button',{name:'Verifikasi dan lanjutkan',exact:true}).click(); await page.locator('#workspace:not([hidden])').waitFor();
+  assert.equal(await page.locator('#email-code').inputValue(),''); assert.equal(await page.locator('.installation-item').count(),1);
   await context.close();
 });

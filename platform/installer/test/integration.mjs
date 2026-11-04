@@ -41,7 +41,7 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   const created=await call('POST','/installations',input,a,{'idempotency-key':idempotency});assert.equal(created.status,201);const installation=created.body.installation;
   assert.equal((await call('POST','/installations',input,a,{'idempotency-key':idempotency})).body.installation.installation_id,installation.installation_id);
   assert.equal((await call('POST','/installations',{...input,display_name:'Changed'},a,{'idempotency-key':idempotency})).status,409);
-  assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,409);
+  assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,201);
   assert.equal((await call('GET','/installations/'+installation.installation_id,undefined,b)).status,404);
   assert.deepEqual((await call('GET','/installations',undefined,b)).body.installations,[]);
   assert.equal((await call('GET','/installations',undefined,null)).status,401);
@@ -213,7 +213,7 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   assert.equal(basicComplete.headers.get('location'),'/');
   handler=createHandler(options);
   // Different domains/idempotency keys must still share a seller-scoped limit lock.
-  for(let n=0;n<19;n++)assert.equal((await call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})).status,201);
+  for(let n=0;n<18;n++)assert.equal((await call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})).status,201);
   const limitRace=await Promise.all([0,1].map(()=>call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})));
   assert.deepEqual(limitRace.map(r=>r.status).sort(),[201,409]);
   assert.equal(limitRace.find(r=>r.status===409).body.error.code,'INSTALLATION_LIMIT');

@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
+	"github.com/Assyauq26/Gheverhan/agent/internal/installer"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -21,10 +22,12 @@ func main() {
 		switch {
 		case errors.Is(err, bootstrap.ErrPreflight):
 			category = "host_preflight"
+		case errors.Is(err, installer.ErrHTTPSPending):
+			category = "https_pending"
 		case errors.Is(err, bootstrap.ErrState):
 			category = "private_state"
 		}
-		fmt.Fprintf(os.Stderr, "Penyiapan Buat Toko Online Sendiri dihentikan (%s). Tidak ada deployment toko.\n", category)
+		fmt.Fprintf(os.Stderr, "Penyiapan Buat Toko Online Sendiri dihentikan (%s). Data instalasi dipertahankan; periksa status sebelum melanjutkan.\n", category)
 		os.Exit(1)
 	}
 }
@@ -33,6 +36,9 @@ func run() error {
 		return fmt.Errorf("command required")
 	}
 	flags := flag.NewFlagSet("jetseller-setup", flag.ContinueOnError)
+	policyFile := flags.String("policy", "/etc/buattokosendiri/release-policy.json", "independently trusted root-private release policy")
+	releaseDirectory := flags.String("release-directory", "/var/lib/jetseller-agent/release", "root-owned signed release package")
+	confirmation := flags.String("confirm-install", "", "confirm canonical installation UUID before local provisioning")
 	directory := flags.String("state", "/var/lib/jetseller-agent", "private local state directory (parent must exist)")
 	installation := flags.String("installation-id", "", "existing seller installation intent UUID")
 	origin := flags.String("control-origin", "https://dashboard.buattokosendiri.web.id", "HTTPS control origin")
@@ -51,6 +57,28 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+	if os.Args[1] == "install" || os.Args[1] == "activate-admin" {
+		if *confirmation != *installation {
+			return fmt.Errorf("installation confirmation required")
+		}
+		state, err := bootstrap.OpenState(*directory, *installation)
+		if err != nil {
+			return err
+		}
+		defer state.Close()
+		if os.Args[1] == "activate-admin" {
+			if err = installer.ActivateAdmin(ctx, state, *directory, *confirmation); err != nil {
+				return err
+			}
+			fmt.Println("Kode aktivasi admin tersimpan pada file privat local-admin-claim.json di direktori state VPS. Kode tidak dikirim ke platform.")
+			return nil
+		}
+		if err = installer.Install(ctx, installer.Options{State: state, StateDirectory: *directory, PolicyFile: *policyFile, ReleaseDirectory: *releaseDirectory, ControlOrigin: *origin, Confirmation: *confirmation}); err != nil {
+			return err
+		}
+		fmt.Println("Readiness lokal dan TLS server terverifikasi. Jalankan activate-admin untuk mengaktifkan dashboard toko. Produk dan kesiapan transaksi belum diverifikasi.")
+		return nil
+	}
 	if os.Args[1] == "verify-artifact" {
 		err := bootstrap.VerifyArtifact(ctx, bootstrap.VerifyPolicy{VerifierPath: *verifier, VerifierSHA256: *verifierHash, CertificateIdentity: *identity, OIDCIssuer: *issuer}, *artifact, *bundle, *digest)
 		if err != nil {

@@ -7,19 +7,35 @@
   <title>Instalasi toko — Buat Toko Online Sendiri</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <script type="module" src="/assets/app.js"></script>
-  <meta name="robots" content="noindex, nofollow">
 </head>
 <body>
   <a class="skip-link" href="#main">Lewati ke instalasi</a>
   <header class="topbar">
     <a class="wordmark" href="/" aria-label="Buat Toko Online Sendiri, instalasi toko">Buat Toko Online Sendiri</a>
     <span class="workspace-label">Instalasi mandiri</span>
-    <span id="account-state" class="account-state">Memeriksa sesi…</span>
+    <span id="account-state" class="account-state">Memeriksa sesi…</span><button id="sign-out" class="button secondary" type="button" hidden>Keluar</button>
   </header>
   <main id="main" tabindex="-1">
     <div class="page-heading"><div><h1>Instalasi toko</h1><p>Hubungkan VPS milik Anda. Data toko dan kredensial tetap berada di server Anda.</p></div><button id="refresh" class="button secondary" type="button">Muat ulang</button></div>
-    <section id="service-notice" class="notice" role="status" aria-live="polite"><p id="notice-message">Memeriksa layanan instalasi…</p><a id="sign-in" class="button primary" href="/auth/login" hidden>Masuk ke akun seller</a></section>
+    <section id="service-notice" class="notice" role="status" aria-live="polite"><p id="notice-message">Memeriksa layanan instalasi…</p><div class="auth-actions"><a id="sign-in" class="button primary" href="/masuk" hidden>Masuk ke akun seller</a><a id="register" class="button secondary" href="/daftar" hidden>Daftar akun seller</a></div></section>
+    <section id="email-auth" class="surface email-auth" aria-labelledby="email-auth-heading" hidden>
+      <h2 id="email-auth-heading">Masuk dengan email</h2><p class="muted">Kode sekali pakai dikirim ke email Anda. Akun seller terpisah dari akun pelanggan toko.</p>
+      <div class="auth-actions"><button id="auth-toggle-login" class="button secondary" type="button" aria-pressed="true">Sudah punya akun</button><button id="auth-toggle-register" class="button secondary" type="button" aria-pressed="false">Daftar akun</button></div>
+      <form id="email-start-form"><div id="registration-profile" hidden><label for="seller-name">Nama Anda</label><input id="seller-name" name="name" maxlength="100" autocomplete="name"><label for="seller-store-name">Nama toko pertama</label><input id="seller-store-name" name="store_name" maxlength="100" autocomplete="organization"></div><label for="seller-email">Alamat email</label><input id="seller-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" aria-describedby="email-auth-help"><p id="email-auth-help" class="field-help">Gunakan email yang dapat Anda akses. Password SSH, database, atau admin toko tidak diminta di sini.</p><button class="button primary" type="submit">Kirim kode verifikasi</button></form>
+      <form id="email-verify-form" hidden><label for="email-code">Kode 6 digit dari email</label><input id="email-code" name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" minlength="6" maxlength="6" spellcheck="false" aria-describedby="email-code-help"><p id="email-code-help" class="field-help">Maksimal 5 percobaan. Jangan bagikan kode kepada siapa pun; kode tidak dicantumkan dalam URL.</p><button class="button primary" type="submit">Verifikasi dan lanjutkan</button><div class="auth-actions"><button id="email-resend" class="button secondary" type="button" disabled>Kirim ulang kode</button><button id="email-change" class="button secondary" type="button">Ubah email</button></div></form>
+      <p id="email-auth-status" class="field-help" role="status"></p><p id="email-auth-error" class="form-error" role="alert" hidden></p>
+    </section>
     <noscript><p class="notice">Aktifkan JavaScript untuk memakai registry dan pairing. Tidak ada instalasi yang dijalankan dari halaman ini tanpa konfirmasi.</p></noscript>
+    <nav id="wizard-navigation" aria-label="Tahap instalasi toko" hidden><ol class="wizard-steps">
+      <li><a href="#create-heading">Informasi toko</a><span id="wizard-store">Belum dipilih</span></li>
+      <li><a href="#domain-proof-heading">Domain seller</a><span id="wizard-domain">Perlu bukti kepemilikan</span></li>
+      <li><a href="#vps-heading">Persiapan VPS</a><span>Periksa di server Anda</span></li>
+      <li><a href="#bootstrap-heading">Installer resmi</a><span id="wizard-installer">Menunggu rilis</span></li>
+      <li><a href="#pairing-heading">Pairing perangkat</a><span id="wizard-pairing">Menunggu fingerprint</span></li>
+      <li><a href="#progress-heading">Pemasangan aplikasi</a><span id="wizard-progress">Belum dimulai</span></li>
+      <li><a href="#activation-heading">Admin lokal</a><span>Aktivasi di domain toko</span></li>
+      <li><a href="#product-heading">Produk dan foto</a><span>Verifikasi di storefront</span></li>
+    </ol></nav>
     <div id="workspace" class="workspace" hidden>
       <div class="registry-column">
         <section aria-labelledby="registry-heading" class="surface registry">
@@ -47,12 +63,6 @@
           <p id="detail-domain" class="domain"></p>
           <dl class="facts"><div><dt>ID instalasi</dt><dd id="detail-id" class="technical"></dd></div><div><dt>Versi aplikasi</dt><dd id="detail-version"></dd></div><div><dt>Kontak terakhir</dt><dd id="detail-contact"></dd></div></dl>
           <p id="detail-explanation" class="state-explanation"></p>
-          <section class="step" aria-labelledby="bootstrap-heading"><h3 id="bootstrap-heading">Pasang installer di VPS</h3><p>Perintah bootstrap belum tersedia. Distribusi installer dan verifikasi tanda tangan harus dikonfigurasi sebelum perintah dapat ditampilkan.</p><p class="field-help">Jangan jalankan script yang tidak terverifikasi. Portal tidak meminta password SSH atau database Anda.</p></section>
-          <section class="step" aria-labelledby="pairing-heading"><h3 id="pairing-heading">Hubungkan VPS dengan kode</h3><p>Jika installer terverifikasi sudah menampilkan kode di terminal VPS, masukkan kode tersebut di sini.</p>
-            <form id="pairing-form"><label for="pairing-code">Kode dari terminal VPS</label><div class="input-action"><input id="pairing-code" name="user_code" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"><button class="button secondary" type="submit">Periksa kode</button></div></form>
-            <p id="pairing-error" class="form-error" role="alert" hidden></p>
-            <form id="pairing-confirm" class="pairing-confirm" hidden><h4>Periksa identitas VPS</h4><dl class="facts"><div><dt>Sidik kunci perangkat</dt><dd id="device-fingerprint" class="technical"></dd></div><div><dt>Izin yang diminta</dt><dd id="device-scopes"></dd></div><div><dt>Berlaku hingga</dt><dd id="device-expiry"></dd></div></dl><p class="field-help">Cocokkan sidik kunci ini dengan yang ditampilkan installer pada VPS Anda.</p><label class="checkbox-label"><input id="confirm-device" type="checkbox" required> Saya mengenali VPS ini dan menyetujui penghubungannya ke toko yang dipilih.</label><button class="button primary" type="submit">Setujui penghubungan VPS</button></form>
-          </section>
           <section class="step" aria-labelledby="domain-proof-heading">
             <h3 id="domain-proof-heading">Verifikasi kepemilikan domain</h3>
             <p>Tambahkan rekaman TXT pada penyedia DNS domain Anda. Bukti ini terpisah dari arah server dan kesiapan HTTPS.</p>
@@ -62,6 +72,20 @@
             <form id="domain-proof-verify"><button id="domain-proof-check" type="submit" class="button secondary" disabled>Periksa rekaman TXT</button></form>
             <p class="field-help">Portal tidak mengubah DNS Anda. TXT yang cocok belum berarti sertifikat HTTPS atau aplikasi toko sudah siap.</p>
           </section>
+          <section class="step" aria-labelledby="vps-heading"><h3 id="vps-heading">Siapkan VPS baru</h3><p>Target MVP: Ubuntu 24.04 amd64, 2 vCPU, RAM fisik 2 GiB, dan SSD 40 GB total. Installer menilai ruang kosong, inode, port, dan konflik layanan sebelum memasang apa pun.</p><ul class="preparation-list"><li>Gunakan server khusus toko ini, dengan akses terminal milik Anda.</li><li>Arahkan domain ke VPS dan pastikan TCP 80/443 dapat digunakan.</li><li>Jangan gunakan server yang sudah menjalankan toko atau database lain.</li><li>Image aplikasi disiapkan di CI; tidak ada build Next.js di VPS seller.</li></ul><p class="field-help">Daftar ini bukan hasil preflight. Hasil pemeriksaan yang sah berasal dari installer di VPS.</p></section>
+          <section class="step" aria-labelledby="bootstrap-heading"><h3 id="bootstrap-heading">Dapatkan installer resmi</h3><p id="installer-status" role="status">Memeriksa ketersediaan rilis. Jangan jalankan script yang belum diverifikasi.</p>
+            <div id="installer-release" hidden><p class="field-help">Berkas dan checksum di portal ini bukan kanal kepercayaan independen. Cocokkan trust root serta identitas penandatangan melalui kanal resmi terpisah sebelum menjalankan binary atau memakai policy.</p><dl class="facts"><div><dt>Rilis</dt><dd id="installer-release-id"></dd></div><div><dt>SHA256 installer</dt><dd id="installer-sha" class="technical"></dd></div><div><dt>SHA256 policy</dt><dd id="installer-policy-sha" class="technical"></dd></div><div><dt>Trust root</dt><dd id="installer-root-sha" class="technical"></dd></div><div><dt>Manifest</dt><dd id="installer-manifest-sha" class="technical"></dd></div></dl><div class="release-links"><a id="installer-download" class="button secondary" rel="noopener noreferrer" target="_blank">Unduh installer</a><a id="installer-signature" class="button secondary" rel="noopener noreferrer" target="_blank">Bukti signature</a><a id="installer-policy" class="button secondary" rel="noopener noreferrer" target="_blank">Policy rilis</a></div>
+              <p>Setelah verifikasi independen dan installer ditempatkan di VPS, hubungkan perangkat:</p><pre id="pair-command" class="command" tabindex="0"></pre><p>Sesudah fingerprint disetujui dan domain terverifikasi, jalankan pemasangan lokal:</p><pre id="install-command" class="command" tabindex="0"></pre></div>
+            <p class="field-help">Portal tidak meminta password SSH, database, atau admin toko. Perintah tidak mengunduh lalu menjalankan shell jarak jauh.</p></section>
+          <section class="step" aria-labelledby="pairing-heading"><h3 id="pairing-heading">Hubungkan VPS dengan kode</h3><p>Jika installer terverifikasi sudah menampilkan kode di terminal VPS, masukkan kode tersebut di sini.</p>
+            <form id="pairing-form"><label for="pairing-code">Kode dari terminal VPS</label><div class="input-action"><input id="pairing-code" name="user_code" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"><button class="button secondary" type="submit">Periksa kode</button></div></form>
+            <p id="pairing-error" class="form-error" role="alert" hidden></p>
+            <form id="pairing-confirm" class="pairing-confirm" hidden><h4>Periksa identitas VPS</h4><dl class="facts"><div><dt>Sidik kunci perangkat</dt><dd id="device-fingerprint" class="technical"></dd></div><div><dt>Izin yang diminta</dt><dd id="device-scopes"></dd></div><div><dt>Berlaku hingga</dt><dd id="device-expiry"></dd></div></dl><p class="field-help">Cocokkan sidik kunci ini dengan yang ditampilkan installer pada VPS Anda.</p><label class="checkbox-label"><input id="confirm-device" type="checkbox" required> Saya mengenali VPS ini dan menyetujui penghubungannya ke toko yang dipilih.</label><button class="button primary" type="submit">Setujui penghubungan VPS</button></form>
+          </section>
+
+          <section class="step" aria-labelledby="progress-heading"><div class="section-heading"><h3 id="progress-heading">Progres pemasangan</h3><button id="refresh-progress" class="button secondary" type="button">Periksa progres</button></div><p id="progress-status" role="status">Belum ada laporan installer.</p><p id="progress-contact" class="field-help"></p><p id="progress-error" class="form-error" role="alert" hidden></p><p class="field-help">Tahap ini adalah laporan agent yang terautentikasi, bukan bukti bahwa HTTPS publik atau produk toko sudah siap.</p></section>
+          <section class="step" aria-labelledby="activation-heading"><h3 id="activation-heading">Aktifkan admin lokal</h3><p>Akun administrator toko dibuat langsung di domain Anda. Kode aktivasi hanya ditulis pada VPS; jangan masukkan atau mengirimkannya ke portal platform.</p><pre id="activate-command" class="command" tabindex="0" hidden></pre><a id="local-admin" class="button secondary" rel="noopener noreferrer" target="_blank" hidden>Buka aktivasi admin toko</a><p id="local-admin-status" class="field-help">Tautan tersedia setelah installer melaporkan readiness lokal. Pemeriksaan TLS publik tetap dilakukan oleh browser Anda.</p></section>
+          <section class="step" aria-labelledby="product-heading"><h3 id="product-heading">Tambahkan produk dan foto</h3><p>Login ke dashboard lokal, isi nama, harga, stok, variasi, dan foto; lalu publikasikan produk. Buka storefront untuk memeriksa tampilan publik dan gambar.</p><div class="release-links"><a id="local-products" class="button secondary" rel="noopener noreferrer" target="_blank" hidden>Buka produk toko</a><a id="local-storefront" class="button secondary" rel="noopener noreferrer" target="_blank" hidden>Periksa storefront</a></div><p class="field-help">Portal tidak menyimpulkan produk atau transaksi siap. Checkout, ongkir production, dan J&amp;T Create Order tetap mengikuti gate validasi masing-masing.</p></section>
         </div>
         <p class="readiness-note"><strong>Aplikasi terpasang ≠ toko siap berjualan.</strong> Produk, pembayaran, pengiriman, dan pengaturan admin lokal tetap perlu diverifikasi sebelum checkout diaktifkan.</p>
       </section>

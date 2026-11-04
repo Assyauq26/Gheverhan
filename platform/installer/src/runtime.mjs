@@ -23,7 +23,7 @@ export async function privateFile(file) {
 }
 export async function runtimeConfig(file) {
   const value=JSON.parse(await privateFile(file));
-  if(Object.keys(value).some(k=>!['controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port'].includes(k))) throw new Error('Invalid configuration');
+  if(Object.keys(value).some(k=>!['releaseCatalogFile','controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port'].includes(k))) throw new Error('Invalid configuration');
   origin(value.controlOrigin);
   const port=value.port??3100;
   if(!Number.isInteger(port)||port<1024||port>65535) throw new Error('Invalid configuration');
@@ -62,5 +62,6 @@ export async function runtimeConfig(file) {
     const clientSecret=o.clientSecretFile?(await privateFile(o.clientSecretFile)).trim():undefined;
     oidc={...o,...(clientSecret!==undefined?{clientSecret}:{}),jwks:JSON.parse(await privateFile(o.jwksFile)),sessionSigningKey};
   }
-  return {controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port};
+  const getCatalog=value.releaseCatalogFile?async()=>JSON.parse(await privateFile(value.releaseCatalogFile)):async()=>null;
+  return {getCatalog,controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port};
 }

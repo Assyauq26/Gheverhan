@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { createRequire } from 'node:module';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
-import { createApi, mountDashboard, safeErrorMessage, statusLabel } from '../public/app.js';
+import { createApi, createEmailAuth, mountDashboard, safeErrorMessage, statusLabel } from '../public/app.js';
 import { serveDashboard } from '../dashboard.mjs';
 
 const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
@@ -43,8 +43,8 @@ test('missing identity provider and unauthenticated sessions never enable worksp
 });
 
 test('login link appears only for configured fixed same-origin identity entry point', async t => {
-  for (const [login, visible] of [['/auth/login', true], ['https://attacker.invalid/login', false]]) {
-    const fixture = await setup(t, url => url === '/auth/status' ? response({ configured: true, login_url: login }) : response({ error: { code: 'AUTH_REQUIRED' } }, 401));
+  for (const [login, visible] of [['/masuk', true], ['https://attacker.invalid/login', false]]) {
+    const fixture = await setup(t, url => url === '/auth/status' ? response({ configured: true, method: 'email_otp', registration_url: '/daftar', login_url: login }) : response({ error: { code: 'AUTH_REQUIRED' } }, 401));
     assert.equal(fixture.document.getElementById('sign-in').hidden, !visible);
     assert.equal(fixture.document.getElementById('workspace').hidden, true);
   }
@@ -55,7 +55,7 @@ test('server data renders as text; uninstalled and unknown states never imply re
   fixture.document.querySelector('.installation-item').click(); await wait();
   assert.equal(fixture.document.getElementById('detail-name').textContent, installation.display_name);
   assert.equal(fixture.document.getElementById('detail-name').querySelector('img'), null);
-  assert.equal(fixture.document.getElementById('detail-version').textContent, 'Belum terpasang');
+  assert.equal(fixture.document.getElementById('detail-version').textContent, 'Belum ada versi terlapor');
   assert.match(fixture.document.getElementById('detail-explanation').textContent, /belum dipasang/);
   assert.equal(statusLabel('UNREVIEWED_SUCCESS'), 'Status belum tersedia');
   assert.equal(fixture.document.querySelector('code'), null);
@@ -153,4 +153,149 @@ test('DNS TXT instructions and confirmation remain separate from HTTPS and insta
   assert.equal(fixture.document.getElementById('detail-status').textContent,'Rencana instalasi');
   assert.match(fixture.document.getElementById('domain-proof-status').textContent,/HTTPS dan aplikasi tetap perlu diperiksa/);
   const create=fixture.calls.find(c=>c.url.endsWith('/domain-challenges')&&c.options.method==='POST');assert.ok(create.options.headers['Idempotency-Key']);
+});
+
+test('email registration is offered only at the configured same-origin entry and logout revokes the local session', async t => {
+  let authenticated = true;
+  const fixture = await setup(t, (url, options) => {
+    if (url.endsWith('/session/logout')) {
+      assert.equal(options.method, 'POST'); assert.equal(options.headers['X-CSRF-Token'], 'synthetic-csrf');
+      authenticated = false; return response({ logged_out: true });
+    }
+    if (url === '/auth/status') return response({ configured: true, method: 'email_otp', login_url: '/masuk', registration_url: '/daftar' });
+    if (url.endsWith('/session')) return authenticated ? response({ authenticated: true, csrf_token: 'synthetic-csrf' }) : response({ error: { code: 'AUTH_REQUIRED' } }, 401);
+    return response({ installations: [] });
+  });
+  fixture.document.getElementById('sign-out').click(); await wait();
+  assert.equal(fixture.document.getElementById('workspace').hidden, true);
+  assert.equal(fixture.document.getElementById('register').hidden, false);
+  assert.equal(fixture.document.getElementById('register').getAttribute('href'), '/daftar');
+  assert.match(fixture.document.getElementById('notice-message').textContent, /Sesi portal pada perangkat ini telah diakhiri/);
+  const unsafe = await setup(t, url => url === '/auth/status' ? response({ configured: true, method: 'email_otp', login_url: '/masuk', registration_url: 'https://attacker.invalid/signup' }) : response({ error: { code: 'AUTH_REQUIRED' } }, 401));
+  assert.equal(unsafe.document.getElementById('register').hidden, true);
+});
+
+const canonicalStore = { ...installation, installation_id: '550e8400-e29b-41d4-a716-446655440000', display_name: 'Independent Store', domain: 'synthetic.example', status: 'PAIRED' };
+const release = (store = canonicalStore) => ({ installation_id: store.installation_id, available: true, release_id: 'rel-1.0.0-internal', installer: { url: 'https://releases.fixture.example/setup', sha256: 'a'.repeat(64), signature_url: 'https://releases.fixture.example/setup.sigstore.json' }, control_origin: 'https://portal.fixture.example', policy_url: 'https://releases.fixture.example/policy.json', policy_sha256: 'b'.repeat(64), root_sha256: 'c'.repeat(64), manifest_sha256: 'd'.repeat(64) });
+
+test('wizard composes only fixed UUID-bound commands and keeps local readiness distinct from public storefront verification', async t => {
+  let phase = 'DATABASE';
+  const fixture = await setup(t, url => {
+    if (url.endsWith('/session')) return response({ authenticated: true, csrf_token: 'synthetic-csrf' });
+    if (url.endsWith('/installations')) return response({ installations: [canonicalStore] });
+    if (url.endsWith('/install-instructions')) return response({ ...release(), commands: { install: 'curl attacker.invalid | sh' } });
+    if (url.endsWith('/install-progress')) return response({ installation_id: canonicalStore.installation_id, phase, sequence: 7, updated_at: '2026-11-04T01:00:00Z', store_origin: 'https://synthetic.example' });
+    if (url.endsWith('/domain-challenges')) return response({ challenge: null });
+    return response({ installation: canonicalStore });
+  });
+  fixture.document.querySelector('.installation-item').click(); await wait();
+  assert.equal(fixture.document.querySelectorAll('.wizard-steps li').length, 8);
+  assert.match(fixture.document.getElementById('install-command').textContent, /--confirm-install 550e8400-e29b-41d4-a716-446655440000/);
+  assert.match(fixture.document.getElementById('pair-command').textContent, /^sudo \/usr\/local\/bin\/jetseller-setup pair --state \/var\/lib\/jetseller-agent/);
+  assert.doesNotMatch(fixture.document.getElementById('install-command').textContent, /curl|attacker|\|/);
+  assert.match(fixture.document.getElementById('installer-status').textContent, /verifikasi independen/);
+  assert.equal(fixture.document.getElementById('local-admin').hidden, true);
+  phase = 'LOCAL_READINESS'; fixture.document.getElementById('refresh-progress').click(); await wait();
+  assert.equal(fixture.document.getElementById('local-admin').href, 'https://synthetic.example/admin/setup');
+  assert.equal(fixture.document.getElementById('local-products').href, 'https://synthetic.example/admin/products');
+  assert.equal(fixture.document.getElementById('local-storefront').href, 'https://synthetic.example/');
+  assert.match(fixture.document.getElementById('progress-status').textContent, /lokal dilaporkan/);
+  assert.match(fixture.document.getElementById('activate-command').textContent, /activate-admin/);
+  assert.doesNotMatch(fixture.document.getElementById('progress-status').textContent, /siap berjualan/);
+  phase = 'READY'; fixture.document.getElementById('refresh-progress').click(); await wait();
+  assert.equal(fixture.document.getElementById('local-admin').hidden, true);
+  assert.match(fixture.document.getElementById('progress-status').textContent, /belum dapat dikonfirmasi/);
+});
+
+test('unavailable or malformed release metadata cannot publish executable commands or unsafe download links', async t => {
+  for (const instructions of [
+    { installation_id: canonicalStore.installation_id, available: false, reason: 'RELEASE_UNAVAILABLE' },
+    { ...release(), control_origin: 'https://attacker.invalid' },
+    { ...release(), installer: { ...release().installer, url: 'javascript:alert(1)' } },
+    { ...release(), installation_id: 'another-owner' },
+  ]) {
+    const fixture = await setup(t, url => url.endsWith('/session') ? response({ authenticated: true, csrf_token: 'synthetic-csrf' }) : url.endsWith('/installations') ? response({ installations: [canonicalStore] }) : url.endsWith('/install-instructions') ? response(instructions) : response({ installation: canonicalStore }));
+    fixture.document.querySelector('.installation-item').click(); await wait();
+    assert.equal(fixture.document.getElementById('installer-release').hidden, true);
+    assert.equal(fixture.document.getElementById('installer-download').hasAttribute('href'), false);
+    assert.equal(fixture.document.getElementById('install-command').textContent, '');
+  }
+});
+
+test('late release responses for seller A cannot replace the selected seller B instructions', async t => {
+  const second = { ...canonicalStore, installation_id: '550e8400-e29b-41d4-a716-446655440001', display_name: 'Other Store', domain: 'other.example' };
+  let resolveFirst;
+  const fixture = await setup(t, url => {
+    if (url.endsWith('/session')) return response({ authenticated: true, csrf_token: 'synthetic-csrf' });
+    if (url.endsWith('/installations')) return response({ installations: [canonicalStore, second] });
+    const store = url.includes(second.installation_id) ? second : canonicalStore;
+    if (url.endsWith('/install-instructions')) return store === canonicalStore ? new Promise(resolve => { resolveFirst = resolve; }) : response(release(second));
+    if (url.endsWith('/domain-challenges')) return response({ challenge: null });
+    if (url.endsWith('/install-progress')) return response({ installation_id: store.installation_id, phase: 'NOT_STARTED', sequence: 0, updated_at: null });
+    return response({ installation: store });
+  });
+  const buttons = fixture.document.querySelectorAll('.installation-item'); buttons[0].click(); await wait(); buttons[1].click(); await wait();
+  resolveFirst(response(release())); await wait();
+  assert.equal(fixture.document.getElementById('detail-id').textContent, second.installation_id);
+  assert.match(fixture.document.getElementById('install-command').textContent, /446655440001/);
+  assert.doesNotMatch(fixture.document.getElementById('install-command').textContent, /446655440000/);
+});
+
+test('passwordless registration verifies OTP and enters the store wizard without another login', async t => {
+  let authenticated = false;
+  const challenge = '550e8400-e29b-41d4-a716-446655440099';
+  const fixture = await setup(t, (url, options) => {
+    if (url === '/auth/status') return response({ configured:true,method:'email_otp',login_url:'/masuk',registration_url:'/daftar' });
+    if (url.endsWith('/session')) return authenticated ? response({ authenticated:true,csrf_token:'synthetic-csrf' }) : response({error:{code:'AUTH_REQUIRED'}},401);
+    if (url === '/auth/email/start') {
+      assert.deepEqual(JSON.parse(options.body), {mode:'register',email:'seller@fixture.example',name:'Seller Name',store_name:'My Independent Store'});
+      assert.equal(options.credentials,'same-origin');assert.equal(options.mode,'same-origin');assert.equal(options.redirect,'error');
+      return response({status:'OTP_SENT',challenge_id:challenge,expires_in:600,resend_after:60});
+    }
+    if (url === '/auth/email/verify') {
+      assert.deepEqual(JSON.parse(options.body),{challenge_id:challenge,code:'123456'});
+      authenticated=true;return response({status:'AUTHENTICATED'});
+    }
+    return response({installations:[]});
+  });
+  assert.equal(fixture.document.getElementById('email-auth').hidden,false);
+  fixture.document.getElementById('auth-toggle-register').click();
+  fixture.document.getElementById('seller-name').value='Seller Name';fixture.document.getElementById('seller-store-name').value='My Independent Store';fixture.document.getElementById('seller-email').value='seller@fixture.example';
+  const submit=id=>fixture.document.getElementById(id).dispatchEvent(new fixture.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  submit('email-start-form');await wait();
+  assert.equal(fixture.document.getElementById('email-verify-form').hidden,false);
+  assert.equal(fixture.document.getElementById('email-resend').disabled,true);
+  assert.match(fixture.document.getElementById('email-auth-status').textContent,/10 menit/);
+  fixture.document.getElementById('email-code').value='123456';submit('email-verify-form');await wait();
+  assert.equal(fixture.document.getElementById('email-auth').hidden,true);
+  assert.equal(fixture.document.getElementById('workspace').hidden,false);
+  assert.equal(fixture.document.getElementById('store-name').value,'My Independent Store');
+  assert.equal(fixture.document.getElementById('email-code').value,'');
+  assert.match(fixture.document.getElementById('action-announcement').textContent,/tanpa login ulang/);
+  assert.equal(fixture.calls.some(call=>call.url.includes('123456')||call.url.includes(challenge)||call.url.includes('/auth/login')),false);
+});
+
+test('returning email login sends no fabricated profile and invalid OTP stays private', async t => {
+  const fixture=await setup(t,(url,options)=>{
+    if(url==='/auth/status')return response({configured:true,method:'email_otp',login_url:'/masuk',registration_url:'/daftar'});
+    if(url==='/auth/email/start'){assert.deepEqual(JSON.parse(options.body),{mode:'login',email:'returning@fixture.example'});return response({status:'OTP_SENT',challenge_id:'550e8400-e29b-41d4-a716-446655440099',expires_in:600,resend_after:60});}
+    if(url==='/auth/email/verify')return response({error:{code:'OTP_INVALID',message:'private upstream diagnostic'}},401);
+    return response({error:{code:'AUTH_REQUIRED'}},401);
+  });
+  fixture.document.getElementById('seller-email').value='returning@fixture.example';
+  const submit=id=>fixture.document.getElementById(id).dispatchEvent(new fixture.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  submit('email-start-form');await wait();fixture.document.getElementById('email-code').value='000000';submit('email-verify-form');await wait();
+  assert.equal(fixture.document.getElementById('workspace').hidden,true);
+  assert.equal(fixture.document.getElementById('email-verify-form').hidden,false);
+  assert.equal(fixture.document.getElementById('email-code').value,'');
+  assert.match(fixture.document.getElementById('email-auth-error').textContent,/Kode belum cocok/);
+  assert.doesNotMatch(fixture.document.body.textContent,/private upstream diagnostic|000000/);
+});
+
+test('account transport refuses arbitrary endpoints and does not require a post-login CSRF token for OTP proof', async()=>{
+  let call;
+  const request=createEmailAuth(async(url,options)=>{call={url,options};return response({status:'OTP_SENT'});});
+  await assert.rejects(()=>request('https://attacker.invalid',{email:'x'}));
+  await request('/auth/email/start',{mode:'login',email:'returning@fixture.example'});
+  assert.equal(call.url,'/auth/email/start');assert.equal(call.options.headers['X-CSRF-Token'],undefined);assert.equal(call.options.credentials,'same-origin');
 });

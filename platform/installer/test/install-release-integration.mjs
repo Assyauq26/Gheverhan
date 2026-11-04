@@ -40,7 +40,7 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
       installer:{url:'https://releases.fixture.example/setup',sha256:'d'.repeat(64),signature_url:'https://releases.fixture.example/setup.sigstore.json'},
       verification_receipt:{status:'VERIFIED',release_id:'rel-1.0.0-internal',manifest_sha256:'a'.repeat(64),root_sha256:'b'.repeat(64),expires_at:new Date(Date.now()+900000).toISOString()}});
     let catalogOutage=false;
-    const installRelease=createInstallReleaseHandler({pool,verificationKey:agentKeys.publicKey,controlOrigin,sessionIssuer,getCatalog:async()=>{
+    const installRelease=createInstallReleaseHandler({pool,signingKey:agentKeys.privateKey,verificationKey:agentKeys.publicKey,controlOrigin,sessionIssuer,getCatalog:async()=>{
       if(catalogOutage)throw Error('Synthetic private publication service outage');return catalog;
     }});
     const handler=createHandler({pool,controlOrigin,sessionIssuer,signingKey:agentKeys.privateKey,verificationKey:agentKeys.publicKey,installRelease});
@@ -111,9 +111,16 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     catalogOutage=true;
     assert.equal((await call(authorization,{proof:await proofFor({path:authorization})})).status,503);
     assert.equal((await call(instruction,{seller:sellers[0]})).body.available,false);catalogOutage=false;
+    // Durable approved device identity can refresh a short-lived management
+    // credential without accepting an expired bearer or changing its UUID/key.
+    const refreshPath='/agent/credential/refresh';
+    const refreshProof=async()=>new SignJWT({nonce,operation:'refresh_installation_credential',request_hash:hash(JSON.stringify({installation_id:installationId,device_id:deviceId}))}).setProtectedHeader({alg:'EdDSA',typ:'jetseller-management+jwt'}).setAudience(controlOrigin).setIssuedAt().setExpirationTime('60s').setJti(randomUUID()).sign(deviceKeys.privateKey);
+    const refresh=async(proof)=>{const r=await handler(new Request(controlOrigin+'/api/installer/v1'+refreshPath,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({installation_id:installationId,device_id:deviceId,proof})}),{clientAddress:'refresh-'+fixture});return {status:r.status,body:await r.json()};};
+    const keyProof=await refreshProof(),refreshed=await refresh(keyProof);assert.equal(refreshed.status,200);assert.equal(refreshed.body.installation_id,installationId);assert.equal(refreshed.body.public_key_thumbprint,thumbprint);assert.equal((await refresh(keyProof)).status,409);
     await pool.query('UPDATE installer.devices SET revoked_at=now() WHERE id=$1',[deviceId]);
     assert.equal((await call(authorization,{proof:await proofFor({path:authorization})})).status,401);
     assert.equal((await send({phase:'LOCAL_READINESS',sequence:8})).status,401);
+    assert.equal((await refresh(await refreshProof())).status,401);
   }finally {
     // Delete only fixture-owned rows from an explicitly isolated local database.
     await pool.query('DELETE FROM installer.install_progress WHERE installation_id=$1',[installationId]).catch(()=>{});

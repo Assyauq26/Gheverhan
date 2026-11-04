@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { createInstallReleaseHandler } from './install-release.mjs';
 import { createHandler } from './api.mjs';
 import { createPool } from './db.mjs';
 import { runtimeConfig } from './runtime.mjs';
@@ -8,7 +9,8 @@ import { pathToFileURL } from 'node:url';
 import { serveDashboard } from '../../installer-web/dashboard.mjs';
 
 export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,domainLookup,installRelease}={}) {
-  const handle=createHandler({pool,...config,domainLookup,installRelease});
+  const releases=installRelease??createInstallReleaseHandler({pool,...config});
+  const handle=createHandler({pool,...config,domainLookup,installRelease:releases});
   // Legacy OIDC remains available only when explicitly selected/configured.
   // Direct fixture callers may pass oidc; runtime defaults to email_otp.
   const auth=config.authMode==='oidc'||(!config.authMode&&config.oidc)?

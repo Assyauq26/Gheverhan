@@ -20,17 +20,18 @@ export async function lookupTxtOwnership(host, expected, { resolver = new Resolv
   finally { clearTimeout(timer); resolver.cancel(); }
 }
 
-const publicChallenge = row => ({
+const claimActive=(row,installation)=>!!installation?.domain_verified_at&&installation.reserved_domain===row.domain&&new Date(installation.claim_expires_at)>new Date();
+const publicChallenge = (row,installation) => ({
   challenge_id: row.id, domain: row.domain, record_type: 'TXT', record_name: '_jetseller.' + row.domain,
   record_value: row.txt_value, expires_at: row.expires_at, verified_at: row.verified_at,
   status: row.verified_at ? 'OWNERSHIP_VERIFIED' : new Date(row.expires_at) <= new Date() ? 'CHALLENGE_EXPIRED' : 'DNS_PENDING',
   // A TXT proof is independent of routing, certificate or application readiness.
   https_verified: false, installed: false,
+  domain_claim_active:claimActive(row,installation),
+  domain_claim_expires_at:claimActive(row,installation)?installation.claim_expires_at:null,
 });
 function active(record) {
-  if (record.status === 'CANCELLED' ||
-      (record.status !== 'PAIRED' && (record.reserved_domain !== record.domain || new Date(record.claim_expires_at) <= new Date())) ||
-      (record.status === 'PAIRED' && record.reserved_domain !== null && record.reserved_domain !== record.domain)) {
+  if (record.status === 'CANCELLED' || (record.reserved_domain !== null && record.reserved_domain !== record.domain)) {
     fail(409, 'INSTALLATION_EXPIRED');
   }
 }
@@ -42,7 +43,7 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
   if (!match[2] && request.method === 'GET') {
     const installation = await own(pool, id, seller.seller_id);
     const row = (await pool.query('SELECT * FROM installer.domain_challenges WHERE installation_id=$1 AND domain=$2 ORDER BY created_at DESC,id DESC LIMIT 1', [id, installation.domain])).rows[0];
-    return { status: 200, body: { challenge: row ? publicChallenge(row) : null } };
+    return { status: 200, body: { challenge: row ? publicChallenge(row,installation) : null } };
   }
   if (request.method !== 'POST') fail(405, 'METHOD_NOT_ALLOWED');
   const body = await readBody(request);
@@ -58,7 +59,7 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
       await client.query("DELETE FROM installer.domain_challenges WHERE installation_id=$1 AND expires_at<now()-interval '7 days'", [id]);
       return (await client.query("INSERT INTO installer.domain_challenges(id,installation_id,client_request_id,domain,txt_value,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '30 minutes') RETURNING *", [randomUUID(), id, key, record.domain, 'jetseller-verification=' + opaque()])).rows[0];
     });
-    return { status: 201, body: { challenge: publicChallenge(row) } };
+    return { status: 201, body: { challenge: publicChallenge(row,await own(pool,id,seller.seller_id)) } };
   }
   await rate(pool, 'domain-verify:' + seller.seller_id, 10);
   const challengeId = uuid(match[2]);
@@ -67,14 +68,14 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
   if (!row) fail(404, 'NOT_FOUND');
   if (row.verified_at) {
     if (installation.reserved_domain !== row.domain) fail(409, 'DOMAIN_RESERVATION_REQUIRED');
-    return { status: 200, body: { challenge: publicChallenge(row) } };
+    return { status: 200, body: { challenge: publicChallenge(row,installation),...(claimActive(row,installation)?{}:{next_action:'REQUEST_NEW_CHALLENGE'}) } };
   }
   if (new Date(row.expires_at) <= new Date()) fail(410, 'CHALLENGE_EXPIRED');
   const found = await lookup(row.domain, row.txt_value);
-  if (!found) return { status: 202, body: { challenge: publicChallenge(row), next_action: 'CHECK_DNS_TXT' } };
+  if (!found) return { status: 202, body: { challenge: publicChallenge(row,installation), next_action: 'CHECK_DNS_TXT' } };
   const verified = await transaction(pool, async client => {
-    // Check and expire stale provisional leases under the same domain advisory lock
-    // used by create/patch/pairing, then re-read our row under FOR UPDATE.
+    // Domain lock precedes installation row locks for all actual claim changes.
+    // Intents/patches/pairing never mint an exclusive claim.
     await reserveDomain(client, row.domain);
     const current = await own(client, id, seller.seller_id, true); active(current);
     if (current.domain !== row.domain) fail(409, 'DOMAIN_CHANGED');
@@ -86,5 +87,5 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
     await restoreVerifiedDomainLease(client, current, row.domain);
     return (await client.query('UPDATE installer.domain_challenges SET verified_at=clock_timestamp() WHERE id=$1 RETURNING *', [row.id])).rows[0];
   });
-  return { status: 200, body: { challenge: publicChallenge(verified) } };
+  return { status: 200, body: { challenge: publicChallenge(verified,await own(pool,id,seller.seller_id)) } };
 }

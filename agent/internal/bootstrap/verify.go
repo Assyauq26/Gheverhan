@@ -27,10 +27,22 @@ type VerifyPolicy struct {
 // standard verifier. It never executes the artifact. Freshness/TUF and initial
 // verifier trust remain separate release gates, not simulated checks.
 func VerifyArtifact(ctx context.Context, policy VerifyPolicy, artifact, bundle, expectedSHA string) error {
+	return verifyReleaseArtifact(ctx, policy, artifact, bundle, expectedSHA, 256<<20, "")
+}
+
+// VerifyReleaseArtifact retains the independent pinned verifier and bounded
+// immutable snapshot while allowing a streamed prebuilt OCI image archive.
+func VerifyReleaseArtifact(ctx context.Context, policy VerifyPolicy, artifact, bundle, expectedSHA string, max int64, privateParent string) error {
+	if max <= 0 || max > 8<<30 || safeAncestors(privateParent) != nil {
+		return ErrVerification
+	}
+	return verifyReleaseArtifact(ctx, policy, artifact, bundle, expectedSHA, max, privateParent)
+}
+func verifyReleaseArtifact(ctx context.Context, policy VerifyPolicy, artifact, bundle, expectedSHA string, max int64, privateParent string) error {
 	if !filepath.IsAbs(policy.VerifierPath) || !shaPattern.MatchString(policy.VerifierSHA256) || !shaPattern.MatchString(expectedSHA) || policy.CertificateIdentity == "" || policy.OIDCIssuer == "" {
 		return ErrVerification
 	}
-	dir, err := os.MkdirTemp("", "jetseller-verify-")
+	dir, err := os.MkdirTemp(privateParent, "jetseller-verify-")
 	if err != nil {
 		return ErrVerification
 	}
@@ -43,7 +55,7 @@ func VerifyArtifact(ctx context.Context, policy VerifyPolicy, artifact, bundle, 
 		return ErrVerification
 	}
 	target := filepath.Join(dir, "artifact")
-	if copyVerified(artifact, target, expectedSHA, 256<<20, 0600) != nil {
+	if copyVerified(artifact, target, expectedSHA, max, 0600) != nil {
 		return ErrVerification
 	}
 	proof := filepath.Join(dir, "bundle.json")

@@ -4,7 +4,6 @@ import { transaction, rate } from './db.mjs';
 import { sellerAuthenticator, requireCsrf, deviceKey, pairingProof, credential, agentIdentity } from './auth.mjs';
 
 import { domainProofRoute } from './domain-proof.mjs';
-import { reserveDomain } from './domain-reservation.mjs';
 
 const prefix = '/api/installer/v1';
 const normalizedCode = value => {
@@ -153,9 +152,8 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(existing){if(existing.request_hash!==digest)fail(409,'IDEMPOTENCY_CONFLICT');return existing;}
           const count=(await c.query("SELECT count(*)::int AS n FROM installer.installations WHERE seller_id=$1 AND status<>'CANCELLED'",[seller.seller_id])).rows[0].n;
           if(count>=20) fail(409,'INSTALLATION_LIMIT');
-          await reserveDomain(c,input.domain);
           return (await c.query(`INSERT INTO installer.installations(id,seller_id,display_name,domain,reserved_domain,claim_expires_at,client_request_id,request_hash)
-            VALUES($1,$2,$3,$4,$4,now()+interval '24 hours',$5,$6) RETURNING *`,[randomUUID(),seller.seller_id,input.display_name,input.domain,requestId,digest])).rows[0];
+            VALUES($1,$2,$3,$4,NULL,now()+interval '24 hours',$5,$6) RETURNING *`,[randomUUID(),seller.seller_id,input.display_name,input.domain,requestId,digest])).rows[0];
         });
         return json(201,{installation:publicInstallation(installation)});
       }
@@ -173,13 +171,16 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
             if(!['DRAFT','UNPAIRED'].includes(record.status)) fail(409,'INSTALLATION_LOCKED');
             if(!input) {
               await c.query("UPDATE installer.pairing_sessions SET status='CANCELLED' WHERE installation_id=$1 AND status='PENDING'",[id]);
-              return (await c.query("UPDATE installer.installations SET status='CANCELLED',reserved_domain=NULL,version=version+1,updated_at=now() WHERE id=$1 RETURNING *",[id])).rows[0];
+              return (await c.query("UPDATE installer.installations SET status='CANCELLED',reserved_domain=NULL,domain_verified_at=NULL,version=version+1,updated_at=now() WHERE id=$1 RETURNING *",[id])).rows[0];
             }
             const name=text(input.display_name,1,100),host=domain(input.domain);
             const pending=(await c.query("SELECT id FROM installer.pairing_sessions WHERE installation_id=$1 AND status='PENDING' AND expires_at>now() LIMIT 1",[id])).rows[0];
             if(pending) fail(409,'PAIR_PENDING');
-            await reserveDomain(c,host);
-            return (await c.query("UPDATE installer.installations SET display_name=$2,domain=$3,reserved_domain=$3,claim_expires_at=now()+interval '24 hours',version=version+1,updated_at=now() WHERE id=$1 RETURNING *",[id,name,host])).rows[0];
+            return (await c.query(`UPDATE installer.installations SET display_name=$2,domain=$3,
+              reserved_domain=CASE WHEN domain=$3 THEN reserved_domain ELSE NULL END,
+              domain_verified_at=CASE WHEN domain=$3 THEN domain_verified_at ELSE NULL END,
+              claim_expires_at=CASE WHEN domain=$3 AND reserved_domain IS NOT NULL THEN claim_expires_at ELSE now()+interval '24 hours' END,
+              version=version+1,updated_at=now() WHERE id=$1 RETURNING *`,[id,name,host])).rows[0];
           });
           return json(200,{installation:publicInstallation(installation)});
         }
@@ -207,10 +208,9 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(hash(normalizedCode(b.user_code))!==pairing.user_hash || b.public_key_thumbprint!==pairing.thumbprint) fail(403,'PAIR_CONFIRMATION_MISMATCH');
           const installation=await own(c,pairing.installation_id,seller.seller_id,true);
           if(!['DRAFT','UNPAIRED'].includes(installation.status)||new Date(installation.claim_expires_at)<=new Date()) fail(409,'DEVICE_ALREADY_BOUND');
-          await reserveDomain(c,installation.domain);
           const device=randomUUID();
           await c.query('INSERT INTO installer.devices(id,installation_id,public_jwk,thumbprint,nonce) VALUES($1,$2,$3,$4,$5)',[device,installation.id,pairing.public_jwk,pairing.thumbprint,pairing.nonce]);
-          await c.query("UPDATE installer.installations SET status='PAIRED',reserved_domain=domain,version=version+1,updated_at=now() WHERE id=$1",[installation.id]);
+          await c.query("UPDATE installer.installations SET status='PAIRED',version=version+1,updated_at=now() WHERE id=$1",[installation.id]);
           await c.query("UPDATE installer.pairing_sessions SET status='APPROVED',device_id=$2 WHERE id=$1",[id,device]);
           return {installation_id:installation.id,device_id:device,status:'PAIRED'};
         });
@@ -226,7 +226,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
           if(record.status!=='PAIRED')fail(409,'INSTALLATION_LOCKED');
           await c.query('UPDATE installer.devices SET revoked_at=now() WHERE installation_id=$1 AND revoked_at IS NULL',[record.id]);
           await c.query("UPDATE installer.pairing_sessions SET status='CANCELLED' WHERE installation_id=$1",[record.id]);
-          return (await c.query("UPDATE installer.installations SET status='UNPAIRED',claim_expires_at=now()+interval '24 hours',version=version+1,updated_at=now() WHERE id=$1 RETURNING *",[record.id])).rows[0];
+          return (await c.query("UPDATE installer.installations SET status='UNPAIRED',reserved_domain=NULL,domain_verified_at=NULL,claim_expires_at=now()+interval '24 hours',version=version+1,updated_at=now() WHERE id=$1 RETURNING *",[record.id])).rows[0];
         });
         return json(200,{installation:publicInstallation(result)});
       }

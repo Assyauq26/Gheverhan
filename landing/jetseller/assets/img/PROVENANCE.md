@@ -1,3 +1,5 @@
+> HISTORIS — merek lama telah dipensiunkan. Dokumen/aset ini dipertahankan sebagai bukti dan kompatibilitas rilis lama; bukan panduan deployment domain baru. Gunakan `docs/rebranding-buattokosendiri/README.md` untuk identitas dan rencana rilis terkini.
+
 # JetSeller V4 assets
 
 - `hero-desktop.png`: user-supplied `ChatGPT Image Nov 1, 2026, 03_30_21 PM-1.png`, 1672×941 RGBA; copied byte-for-byte.

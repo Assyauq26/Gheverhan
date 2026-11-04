@@ -1,0 +1,10 @@
+# Apply only after comparing with the live dashboard block. No other hostname is changed.
+ dashboard.buattokosendiri.web.id {
+-  respond "Temporarily unavailable" 503
++  @private path /healthz
++  respond @private 404
++  reverse_proxy btos-control-api:3100 {
++    header_up -X-Btos-Pilot-Token
++  }
+ }
+# Rollback this block to: respond "Temporarily unavailable" 503

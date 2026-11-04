@@ -5,8 +5,26 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-
 )
+
+func TestProductionCLIRejectsDisposableFixtureEntryPoints(t *testing.T) {
+	original := os.Args
+	defer func() { os.Args = original }()
+	state := filepath.Join(t.TempDir(), "must-not-exist")
+	for _, args := range [][]string{
+		{"apply-disposable-fixture", "--state", state},
+		{"pair", "--fixture-root-sha256", "untrusted", "--state", state},
+		{"pair", "--fixture-stack", "/tmp/synthetic/stack", "--state", state},
+	} {
+		os.Args = append([]string{"jetseller-setup"}, args...)
+		if run() == nil {
+			t.Fatal("production CLI admitted fixture entry point")
+		}
+		if _, err := os.Stat(state); !os.IsNotExist(err) {
+			t.Fatal("fixture command touched local state")
+		}
+	}
+}
 
 func TestRenewCredentialCommandFailsClosedWithoutPairedDevice(t *testing.T) {
 	if runtime.GOOS != "linux" {

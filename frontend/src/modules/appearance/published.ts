@@ -3,6 +3,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { readPublishedUncached } from "./service";
 import { legacyDefault } from "./schema";
+import { initialPublishedAppearance } from "./initial";
 export const APPEARANCE_TAG = "store-appearance-v1";
 const cached = unstable_cache(readPublishedUncached, [APPEARANCE_TAG], {
   tags: [APPEARANCE_TAG],
@@ -12,6 +13,7 @@ export const getPublishedAppearance = cache(async () => {
   try {
     return await cached();
   } catch {
-    return { config: legacyDefault(), version: 0, legacy: true };
+    const config = initialPublishedAppearance();
+    return { config, version: 0, legacy: JSON.stringify(config) === JSON.stringify(legacyDefault()) };
   }
 });

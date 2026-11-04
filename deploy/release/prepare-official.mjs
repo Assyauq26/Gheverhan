@@ -1,0 +1,33 @@
+// Protected production job input validation; never creates a root or activates delivery.
+import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {createHash,createPrivateKey,createPublicKey} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {validatePublisherEnvironment} from './publisher-environment.mjs';
+const env=process.env,dir='/tmp/btos-publication-input',repo='Assyauq26/Gheverhan',identity='https://github.com/'+repo+'/.github/workflows/btos-official-release.yml@refs/heads/main';
+if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!==repo||env.GITHUB_REF!=='refs/heads/main'||env.GITHUB_WORKFLOW_REF!==repo+'/.github/workflows/btos-official-release.yml@refs/heads/main')throw Error('Dedicated main workflow required');
+if(!/^[a-f0-9]{40}$/.test(env.RELEASE_SOURCE_SHA??'')||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()!==env.RELEASE_SOURCE_SHA||env.GITHUB_SHA!==env.RELEASE_SOURCE_SHA)throw Error('Exact main source required');
+const api=async route=>{const r=await fetch('https://api.github.com/repos/'+repo+route,{headers:{authorization:'Bearer '+env.GH_TOKEN,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28'},redirect:'error'});if(!r.ok)throw Error('Approval metadata unavailable');return r.json();};
+const protection=await api('/environments/btos-release-publisher');
+const policies=protection.deployment_branch_policy?.custom_branch_policies?(await api('/environments/btos-release-publisher/deployment-branch-policies?per_page=100')).branch_policies:undefined;
+validatePublisherEnvironment(protection,policies);
+const checks=await api('/commits/'+env.RELEASE_SOURCE_SHA+'/check-runs?per_page=100');
+for(const name of ['installer-tests','registry-tests','private-control-stack','metadata-and-package','full-synthetic-seller','unit-tests','dashboard-contracts','dashboard-browser-integration','cli-browser-pairing','privileged-boundaries','resource-vm','disposable-runtime','signed-fixture-provision','visual-regression','isolated-integration-browser','build-and-deploy']){
+ const latest=checks.check_runs?.filter(c=>c.name===name&&c.head_sha===env.RELEASE_SOURCE_SHA).sort((a,b)=>b.id-a.id)[0];
+ if(!latest||latest.conclusion!=='success')throw Error('Latest exact-SHA check missing or not successful: '+name);
+}
+if(env.APPROVED_GHCR_PREFIX!=='ghcr.io/assyauq26/buattokosendiri')throw Error('Registry namespace approval missing');
+const raw=env.TUF_PUBLIC_ROOT_JSON??'',pin=createHash('sha256').update(raw).digest('hex');if(!/^[a-f0-9]{64}$/.test(env.APPROVED_ROOT_SHA256??'')||pin!==env.APPROVED_ROOT_SHA256)throw Error('Independent production root pin required');
+const updates=JSON.parse(env.TUF_ROOT_UPDATES_JSON||'[]');if(!Array.isArray(updates)||updates.length>64||updates.some(x=>typeof x!=='string'))throw Error('Bounded public root chain required');
+let root=JSON.parse(raw).signed;for(const nextRaw of updates){const next=JSON.parse(nextRaw).signed;if(next.version!==root.version+1)throw Error('Sequential roots required');root=next;}if(root.roles.root.threshold!==2||root.roles.root.keyids.length!==3||Date.parse(root.expires)<=Date.now())throw Error('Current2of3 root required');
+const previous=JSON.parse(env.TUF_PREVIOUS_STATE_JSON||'{}');if(!previous.highest_release_sequence&&!(env.GENESIS_RELEASE==='true'&&env.GENESIS_APPROVED_PIN===pin&&root.version===1))throw Error('Approved previous publication state or explicit genesis required');
+const manifest=JSON.parse(env.RELEASE_MANIFEST_JSON||'null');if(!manifest||manifest.channel==='internal'||manifest.sequence!==(previous.highest_release_sequence??0)+1||manifest.signer_identity!==identity||manifest.signer_issuer!=='https://token.actions.githubusercontent.com')throw Error('Reviewed production manifest required');
+const rootPublic=root.roles.root.keyids.map(id=>root.keys[id].keyval.public),publicKeys=[];
+mkdirSync(dir,{mode:0o700});const write=(name,value)=>writeFileSync(dir+'/'+name,value,{flag:'wx',mode:0o600});
+for(const role of ['targets','snapshot','timestamp']){const pem=env['TUF_'+role.toUpperCase()+'_PKCS8'];const key=createPrivateKey(pem);if(key.asymmetricKeyType!=='ed25519')throw Error('Approved Ed25519 online role required');const jwk=createPublicKey(key).export({format:'jwk'}),hex=Buffer.from(jwk.x,'base64url').toString('hex');if(root.roles[role].threshold!==1||!root.roles[role].keyids.some(id=>root.keys[id].keyval.public===hex)||rootPublic.includes(hex))throw Error('Online role key mismatch/root key forbidden in CI');publicKeys.push(hex);write(role+'.pem',pem);}
+if(new Set(publicKeys).size!==3)throw Error('Independent online role keys required');
+write('root.json',raw);const rootUpdateFiles=updates.map((v,i)=>{const name=(i+2)+'.root.json';write(name,v);return dir+'/'+name;});write('previous.json',JSON.stringify(previous));write('manifest-template.json',JSON.stringify(manifest));
+const policy={version:1,artifact_origin:'https://dashboard.buattokosendiri.web.id',trust:{BootstrapRootSHA256:pin,Channel:manifest.channel,Registry:'ghcr.io',RepositoryPrefix:'assyauq26/buattokosendiri',SignerIssuer:'https://token.actions.githubusercontent.com',SignerIdentity:identity,MinimumRootThreshold:2,MaxArtifactBytes:2*1024**3},verifier_path:'/usr/local/lib/buattokosendiri/cosign',verifier_sha256:'424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa',disk_budget:{download_bytes:2*1024**3,expanded_bytes:4*1024**3,update_bytes:6*1024**3,database_bytes:4*1024**3,media_bytes:4*1024**3,reserve_bytes:4*1024**3}};
+if(env.REVIEWED_COSIGN_SHA256!==policy.verifier_sha256)throw Error('Verifier version approval required');
+write('policy.json',JSON.stringify(policy));write('publication.json',JSON.stringify({RootUpdateFiles:rootUpdateFiles,Policy:policy.trust,RootFile:dir+'/root.json',ManifestFile:dir+'/manifest.json',PreviousStateFile:dir+'/previous.json',ArtifactDirectory:'/tmp/btos-release-build',OutputDirectory:'/root/btos-publication/metadata',Version:Math.max(previous.targets_version??0,previous.snapshot_version??0,previous.timestamp_version??0)+1,Keys:Object.fromEntries(['targets','snapshot','timestamp'].map(r=>[r,dir+'/'+r+'.pem']))}));
+write('staging.json',JSON.stringify({control_origin:policy.artifact_origin,receipt_file:'/root/btos-publication/archive-receipt.json',policy_file:'/root/btos-publication/policy.json',installer_file:'/tmp/btos-release-build/jetseller-setup',installer_signature_file:'/tmp/btos-release-build/jetseller-setup.sigstore.json',bundle_file:'/root/btos-publication/release.zip',output_directory:'/root/btos-publication/staged'}));
+console.log('Approved public configuration checked; no private key material emitted');

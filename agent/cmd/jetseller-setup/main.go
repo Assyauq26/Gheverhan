@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
+	"github.com/Assyauq26/Gheverhan/agent/internal/installer"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -21,10 +22,12 @@ func main() {
 		switch {
 		case errors.Is(err, bootstrap.ErrPreflight):
 			category = "host_preflight"
+		case errors.Is(err, installer.ErrHTTPSPending):
+			category = "https_pending"
 		case errors.Is(err, bootstrap.ErrState):
 			category = "private_state"
 		}
-		fmt.Fprintf(os.Stderr, "Penyiapan Buat Toko Online Sendiri dihentikan (%s). Tidak ada deployment toko.\n", category)
+		fmt.Fprintf(os.Stderr, "Penyiapan Buat Toko Online Sendiri dihentikan (%s). Data instalasi dipertahankan; periksa status sebelum melanjutkan.\n", category)
 		os.Exit(1)
 	}
 }
@@ -33,6 +36,11 @@ func run() error {
 		return fmt.Errorf("command required")
 	}
 	flags := flag.NewFlagSet("jetseller-setup", flag.ContinueOnError)
+	receiptFile := flags.String("receipt", "", "new root-private verification receipt file")
+	profile := flags.String("profile", "legacy-4-40", "explicit resource profile: legacy-4-40 or p0-2-2-40")
+	policyFile := flags.String("policy", "/etc/buattokosendiri/release-policy.json", "independently trusted root-private release policy")
+	releaseDirectory := flags.String("release-directory", "/var/lib/jetseller-agent/release", "root-owned signed release package")
+	confirmation := flags.String("confirm-install", "", "confirm canonical installation UUID before local provisioning")
 	directory := flags.String("state", "/var/lib/jetseller-agent", "private local state directory (parent must exist)")
 	installation := flags.String("installation-id", "", "existing seller installation intent UUID")
 	origin := flags.String("control-origin", "https://dashboard.buattokosendiri.web.id", "HTTPS control origin")
@@ -43,35 +51,60 @@ func run() error {
 	verifierHash := flags.String("cosign-sha256", "", "independently approved Cosign SHA256")
 	identity := flags.String("signer-identity", "", "exact authorized certificate identity")
 	issuer := flags.String("signer-issuer", "", "exact authorized OIDC issuer")
-	fixtureStack := flags.String("fixture-stack", "", "marked disposable fixture stack only")
-	metadataDirectory := flags.String("fixture-metadata", "", "local TUF fixture metadata directory")
-	rootPin := flags.String("fixture-root-sha256", "", "independently pinned fixture root hash")
 	if flags.Parse(os.Args[2:]) != nil || flags.NArg() != 0 {
 		return fmt.Errorf("invalid arguments")
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	if os.Args[1] == "verify-artifact" {
-		err := bootstrap.VerifyArtifact(ctx, bootstrap.VerifyPolicy{VerifierPath: *verifier, VerifierSHA256: *verifierHash, CertificateIdentity: *identity, OIDCIssuer: *issuer}, *artifact, *bundle, *digest)
-		if err != nil {
+	if os.Args[1] == "verify-release-archive" {
+		if err := installer.VerifyReleaseArchive(ctx, *policyFile, *artifact, *receiptFile); err != nil {
 			return err
 		}
-		fmt.Println("Artifact signature and digest verified. Not executed; release freshness and install gates remain closed.")
+		fmt.Println("ZIP rilis dan seluruh signature terverifikasi; receipt privat tersimpan. Tidak menjalankan instalasi.")
 		return nil
 	}
-	if os.Args[1] == "apply-disposable-fixture" {
-		if err := bootstrap.ValidateDisposableFixturePaths(*directory, *fixtureStack); err != nil {
+	if os.Args[1] == "verify-release" {
+		if err := installer.VerifyPackage(ctx, *policyFile, *releaseDirectory, *receiptFile); err != nil {
 			return err
+		}
+		fmt.Println("Metadata dan signature arsip rilis terverifikasi; receipt privat tersimpan. Tidak menjalankan instalasi.")
+		return nil
+	}
+	if os.Args[1] == "install" || os.Args[1] == "activate-admin" || os.Args[1] == "fetch-release" {
+		if *confirmation != *installation {
+			return fmt.Errorf("installation confirmation required")
 		}
 		state, err := bootstrap.OpenState(*directory, *installation)
 		if err != nil {
 			return err
 		}
 		defer state.Close()
-		if err = bootstrap.ApplyDisposableFixture(ctx, state, *fixtureStack, *metadataDirectory, *rootPin); err != nil {
+		if os.Args[1] == "fetch-release" {
+			if err = installer.FetchRelease(ctx, installer.Options{State: state, StateDirectory: *directory, PolicyFile: *policyFile, ReleaseDirectory: *releaseDirectory, ControlOrigin: *origin, Confirmation: *confirmation}); err != nil {
+				return err
+			}
+			fmt.Println("Paket rilis tersimpan setelah verifikasi TUF dan signature. Belum menjalankan instalasi.")
+			return nil
+		}
+		if os.Args[1] == "activate-admin" {
+			if err = installer.ActivateAdmin(ctx, state, *directory, *confirmation); err != nil {
+				return err
+			}
+			fmt.Println("Kode aktivasi admin tersimpan pada file privat local-admin-claim.json di direktori state VPS. Kode tidak dikirim ke platform.")
+			return nil
+		}
+		if err = installer.Install(ctx, installer.Options{State: state, StateDirectory: *directory, PolicyFile: *policyFile, ReleaseDirectory: *releaseDirectory, ControlOrigin: *origin, Confirmation: *confirmation}); err != nil {
 			return err
 		}
-		fmt.Println(bootstrap.FixturePlanResult(state))
+		fmt.Println("Readiness lokal dan TLS server terverifikasi. Jalankan activate-admin untuk mengaktifkan dashboard toko. Produk dan kesiapan transaksi belum diverifikasi.")
+		return nil
+	}
+	if os.Args[1] == "verify-artifact" {
+		err := bootstrap.VerifyArtifact(ctx, bootstrap.VerifyPolicy{VerifierPath: *verifier, VerifierSHA256: *verifierHash, CertificateIdentity: *identity, OIDCIssuer: *issuer}, *artifact, *bundle, *digest)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Artifact signature and digest verified. Not executed; release freshness and install gates remain closed.")
 		return nil
 	}
 	if os.Args[1] != "preflight" && os.Args[1] != "pair" && os.Args[1] != "resume-pairing" && os.Args[1] != "renew-credential" {
@@ -109,7 +142,16 @@ func run() error {
 			CredentialExpiresAt string `json:"credential_expires_at"`
 		}{Status: "renewed", CredentialExpiresAt: refreshed.ExpiresAt})
 	}
-	facts, err := bootstrap.InspectHost(*directory)
+	var facts bootstrap.HostFacts
+	if *profile == "p0-2-2-40" {
+		var p0 bootstrap.P0HostFacts
+		p0, err = bootstrap.InspectP0Host(*directory, bootstrap.DefaultP0DiskBudget())
+		facts = p0.HostFacts
+	} else if *profile == "legacy-4-40" {
+		facts, err = bootstrap.InspectHost(*directory)
+	} else {
+		return fmt.Errorf("unsupported resource profile")
+	}
 	if err != nil {
 		if errors.Is(err, bootstrap.ErrPreflight) {
 			// Public host facts only, never environment variables or private state.

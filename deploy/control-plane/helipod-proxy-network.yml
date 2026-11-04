@@ -1,0 +1,11 @@
+# Review-only override for the EXISTING Helipod Compose project.
+# Live network attachment can avoid replacing its running proxy; this persists it on later approved redeploy.
+services:
+  proxy:
+    networks:
+      default: {}
+      btos_ingress: {}
+networks:
+  btos_ingress:
+    external: true
+    name: btos_control_ingress

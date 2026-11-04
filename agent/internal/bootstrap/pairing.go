@@ -303,8 +303,14 @@ func (c *PairingClient) Poll(ctx context.Context, state *State, session DeviceSe
 }
 
 func (c *PairingClient) validateCredential(state *State, credential Credential, current bool) error {
+	return c.validateCredentialAt(state, credential, current, time.Now())
+}
+
+// Only the metadata upper bound tolerates the protocol's existing five-second
+// clock skew. This does not extend the signed server JWT TTL or accept expiry.
+func (c *PairingClient) validateCredentialAt(state *State, credential Credential, current bool, now time.Time) error {
 	expiry, err := time.Parse(time.RFC3339, credential.ExpiresAt)
-	if err != nil || (current && !expiry.After(time.Now())) || expiry.After(time.Now().Add(10*time.Minute)) || credential.InstallationID != state.Identity.InstallationID || credential.Thumbprint != Thumbprint(state.PrivateKey()) || credential.TokenType != "jetseller-pop" || credential.DeviceID == "" || len(credential.Token) < 32 || len(credential.Token) > 8192 {
+	if err != nil || (current && !expiry.After(now)) || expiry.After(now.Add(10*time.Minute+5*time.Second)) || credential.InstallationID != state.Identity.InstallationID || credential.Thumbprint != Thumbprint(state.PrivateKey()) || credential.TokenType != "jetseller-pop" || credential.DeviceID == "" || len(credential.Token) < 32 || len(credential.Token) > 8192 {
 		return ErrPairing
 	}
 	allowed := map[string]bool{"report:heartbeat": true, "install:progress": true, "release:read": true}

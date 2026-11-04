@@ -8,6 +8,7 @@ on:
       - frontend/scripts/self-hosted-issue-admin.ts
       - frontend/prisma/**
       - .github/workflows/jetseller-selfhost-runtime.yml
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:

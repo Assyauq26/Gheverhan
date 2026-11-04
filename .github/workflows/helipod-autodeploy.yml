@@ -14,13 +14,18 @@ on:
       - "frontend/**"
   workflow_dispatch:
     inputs:
+      build_only:
+        description: "Build and validate in disposable CI only; no production access"
+        required: true
+        default: true
+        type: boolean
       confirm:
         description: "Type deploy-gheverhan to explicitly authorize this production release"
-        required: true
+        required: false
         type: string
       release_sha:
         description: "Full HEAD commit SHA of main to deploy (must equal workflow commit)"
-        required: true
+        required: false
         type: string
 
 permissions:
@@ -69,7 +74,7 @@ jobs:
       # explicit manual dispatch on main, matching HEAD SHA, confirmation, and
       # existing deployment allow-variable.
       - name: Verify the explicit production release request
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && !inputs.build_only
         env:
           CONFIRM: ${{ inputs.confirm }}
           EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -80,7 +85,7 @@ jobs:
           test "$EXPECTED_SHA" = "$GITHUB_SHA"
 
       - name: Install the restricted SSH deploy key and pinned host key
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-gheverhan' && inputs.release_sha == github.sha && vars.HELI_POD_AUTODEPLOY == 'enabled'
+        if: github.event_name == 'workflow_dispatch' && !inputs.build_only && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-gheverhan' && inputs.release_sha == github.sha && vars.HELI_POD_AUTODEPLOY == 'enabled'
         env:
           HELI_POD_DEPLOY_KEY_B64: ${{ secrets.HELI_POD_DEPLOY_KEY_B64 }}
           HELI_POD_SSH_KNOWN_HOSTS: ${{ vars.HELI_POD_SSH_KNOWN_HOSTS }}
@@ -100,7 +105,7 @@ jobs:
           echo "HELI_POD_KNOWN_HOSTS_FILE=$known_hosts_file" >> "$GITHUB_ENV"
 
       - name: Stream the immutable images to the Helipod VPS
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-gheverhan' && inputs.release_sha == github.sha && vars.HELI_POD_AUTODEPLOY == 'enabled'
+        if: github.event_name == 'workflow_dispatch' && !inputs.build_only && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-gheverhan' && inputs.release_sha == github.sha && vars.HELI_POD_AUTODEPLOY == 'enabled'
         run: |
           set -euo pipefail
           docker save "gheverhan:$GITHUB_SHA" "gheverhan-migrate:$GITHUB_SHA" \
@@ -118,13 +123,13 @@ jobs:
                 ubuntu@43.173.21.197
 
       - name: Verify the public production health endpoint
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-gheverhan' && inputs.release_sha == github.sha && vars.HELI_POD_AUTODEPLOY == 'enabled'
+        if: github.event_name == 'workflow_dispatch' && !inputs.build_only && github.ref == 'refs/heads/main' && inputs.confirm == 'deploy-gheverhan' && inputs.release_sha == github.sha && vars.HELI_POD_AUTODEPLOY == 'enabled'
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused \
             https://gheverhan.store/api/v1/health
 
       - name: Confirm automatic production deployment is disabled
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch' || inputs.build_only
         run: |
           echo "Build completed. Production deploy requires a separate explicit manual workflow_dispatch on main."

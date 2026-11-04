@@ -7,6 +7,7 @@ import { createHandler } from '../src/api.mjs';
 import { hash, opaque } from '../src/common.mjs';
 import { reserveDomain } from '../src/domain-reservation.mjs';
 import { transaction } from '../src/db.mjs';
+import { domainProofRoute } from '../src/domain-proof.mjs';
 
 test('dedicated PostgreSQL domain consent is seller-scoped, idempotent, expiring and race-safe',async()=>{
   const connection=process.env.JETSELLER_CONTROL_TEST_DATABASE_URL;
@@ -20,7 +21,7 @@ test('dedicated PostgreSQL domain consent is seller-scoped, idempotent, expiring
     for(let i=0;i<2;i++) {
       const seller=randomUUID(),subject='domain-'+randomUUID(),sid=randomUUID(),csrf=opaque();
       await pool.query('INSERT INTO installer.sellers(id,external_subject,email_verified) VALUES($1,$2,true)',[seller,subject]);
-      await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[sid,seller,hash(csrf)]);
+      await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at,authenticated_at) VALUES($1,$2,$3,now()+interval '1 hour',now())",[sid,seller,hash(csrf)]);
       const token=await new SignJWT({sid,csrf,email_verified:true}).setProtectedHeader({alg:'EdDSA'}).setSubject(subject).setIssuer(issuer).setAudience('domain-fixture').setIssuedAt().setExpirationTime('1h').sign(keys.privateKey);
       users.push({seller,csrf,token});
     }
@@ -42,7 +43,16 @@ test('dedicated PostgreSQL domain consent is seller-scoped, idempotent, expiring
     assert.equal((await call('POST',verify,{})).status,202);
     assert.equal((await call('POST',verify,{},users[1])).status,404);
     observed=true;
-    const results=await Promise.all([call('POST',verify,{}),call('POST',verify,{})]);assert.deepEqual(results.map(r=>r.status),[200,200]);
+    // Deterministically hold one route after its initial installation read.
+    // The real authenticated requests commit before it reads the challenge.
+    const staleInstallation=(await pool.query('SELECT * FROM installer.installations WHERE id=$1',[installation.installation_id])).rows[0];
+    let releaseStale,started;const held=new Promise(r=>releaseStale=r),entered=new Promise(r=>started=r);let reads=0;
+    const delayed=domainProofRoute({request:new Request(controlOrigin+'/api/installer/v1'+verify,{method:'POST'}),path:'/api/installer/v1'+verify,pool,seller:{seller_id:users[0].seller},readBody:async()=>({}),lookup:async()=>true,
+      own:async(client,id,seller,lock)=>{if(++reads===1){started();await held;return staleInstallation;}return (await client.query('SELECT * FROM installer.installations WHERE id=$1 AND seller_id=$2'+(lock?' FOR UPDATE':''),[id,seller])).rows[0];}});
+    await entered;
+    const results=await Promise.all([call('POST',verify,{}),call('POST',verify,{})]);releaseStale();
+    const resumed=await delayed;assert.equal(resumed.status,200);assert.equal(resumed.body.challenge.domain_claim_active,true);
+    assert.deepEqual(results.map(r=>r.status),[200,200]);
     assert.ok(results.every(r=>r.body.challenge.status==='OWNERSHIP_VERIFIED'&&r.body.challenge.https_verified===false&&r.body.challenge.installed===false));
     assert.equal(results[0].body.challenge.verified_at,results[1].body.challenge.verified_at);
     assert.equal((await call('GET',route)).body.challenge.status,'OWNERSHIP_VERIFIED');
@@ -53,36 +63,25 @@ test('dedicated PostgreSQL domain consent is seller-scoped, idempotent, expiring
     assert.equal((await call('POST',verify,{})).status,404);
     assert.equal((await call('GET',route)).body.challenge,null);
 
-    // An expired PAIRED installation without DNS proof may not occupy a
-    // domain forever. A different seller may reserve the released domain.
-    const contested = randomUUID()+'.example';
-    const old = (await call('POST','/installations',{...input,domain:contested},users[0],{'idempotency-key':randomUUID()})).body.installation;
-    await pool.query("UPDATE installer.installations SET status='PAIRED',claim_expires_at=now()-interval '1 second' WHERE id=$1",[old.installation_id]);
-    const newerOwner = await call('POST','/installations',{...input,domain:contested},users[1],{'idempotency-key':randomUUID()});
-    assert.equal(newerOwner.status,201);
-    const released = (await pool.query('SELECT reserved_domain FROM installer.installations WHERE id=$1',[old.installation_id])).rows[0];
-    assert.equal(released.reserved_domain,null);
-    const recoverRoute='/installations/'+old.installation_id+'/domain-challenges';
-    const recover=(await call('POST',recoverRoute,{},users[0],{'idempotency-key':randomUUID()}));
-    assert.equal(recover.status,201);
-    expected=recover.body.challenge.record_value;observed=true;
-    const recoveryVerify=recoverRoute+'/'+recover.body.challenge.challenge_id+'/verify';
-    const blocked=await call('POST',recoveryVerify,{});
-    assert.equal(blocked.status,409);
-    assert.equal(blocked.body.error.code,'DOMAIN_RESERVED');
+    // Typing or pairing a domain never grants exclusive ownership.
+    const contested=randomUUID()+'.example';
+    const old=(await call('POST','/installations',{...input,domain:contested},users[0],{'idempotency-key':randomUUID()})).body.installation;
+    const contender=(await call('POST','/installations',{...input,domain:contested},users[1],{'idempotency-key':randomUUID()})).body.installation;
+    assert.ok(old.installation_id&&contender.installation_id);
     assert.equal((await pool.query('SELECT reserved_domain FROM installer.installations WHERE id=$1',[old.installation_id])).rows[0].reserved_domain,null);
-
-    // Once a competing provisional claim is cancelled, the PAIRed seller
-    // can prove DNS and regain the reservation, without stale automatic lease.
-    const competitor=newerOwner.body.installation;
-    const cancelled=await call('DELETE','/installations/'+competitor.installation_id,undefined,users[1],{'if-match':String(competitor.version)});
-    assert.equal(cancelled.status,200);
-    const regained=await call('POST',recoveryVerify,{});
-    assert.equal(regained.status,200);
-    assert.equal(regained.body.challenge.status,'OWNERSHIP_VERIFIED');
+    const ownerRoute='/installations/'+contender.installation_id+'/domain-challenges';
+    const ownerProof=(await call('POST',ownerRoute,{},users[1],{'idempotency-key':randomUUID()})).body.challenge;
+    expected=ownerProof.record_value;observed=true;
+    assert.equal((await call('POST',ownerRoute+'/'+ownerProof.challenge_id+'/verify',{},users[1])).status,200);
+    const oldRoute='/installations/'+old.installation_id+'/domain-challenges';
+    const oldProof=(await call('POST',oldRoute,{},users[0],{'idempotency-key':randomUUID()})).body.challenge;
+    expected=oldProof.record_value;
+    assert.equal((await call('POST',oldRoute+'/'+oldProof.challenge_id+'/verify',{})).status,409,'An active verified lease is exclusive');
+    await pool.query("UPDATE installer.installations SET claim_expires_at=now()-interval '1 second' WHERE id=$1",[contender.installation_id]);
+    assert.equal((await call('POST',oldRoute+'/'+oldProof.challenge_id+'/verify',{})).status,200,'Fresh TXT proof can acquire an expired lease');
     assert.equal((await pool.query('SELECT reserved_domain FROM installer.installations WHERE id=$1',[old.installation_id])).rows[0].reserved_domain,contested);
-    await pool.query("UPDATE installer.installations SET claim_expires_at=now()-interval '1 second' WHERE id=$1",[old.installation_id]);
-    await transaction(pool,c=>reserveDomain(c,contested));
-    assert.equal((await pool.query('SELECT reserved_domain FROM installer.installations WHERE id=$1',[old.installation_id])).rows[0].reserved_domain,contested);
+    const before=(await pool.query('SELECT claim_expires_at,version FROM installer.installations WHERE id=$1',[old.installation_id])).rows[0];
+    assert.equal((await call('PATCH','/installations/'+old.installation_id,{display_name:'Renamed',domain:contested},users[0],{'if-match':String(before.version)})).status,200);
+    assert.equal((await pool.query('SELECT claim_expires_at FROM installer.installations WHERE id=$1',[old.installation_id])).rows[0].claim_expires_at.toISOString(),before.claim_expires_at.toISOString(),'Rename cannot renew domain ownership');
   } finally {await pool.end();}
 });

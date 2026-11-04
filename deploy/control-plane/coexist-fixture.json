@@ -1,0 +1,50 @@
+{
+  "admin": {
+    "listen": "localhost:2019"
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "fixture": {
+          "listen": [
+            ":80",
+            ":443"
+          ],
+          "automatic_https": {
+            "disable": true
+          },
+          "routes": [
+            {
+              "match": [
+                {
+                  "host": [
+                    "dashboard.buattokosendiri.web.id"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [
+                    {
+                      "dial": "btos-control-api:3100"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "body": "existing-site-fixture",
+                  "status_code": 200
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

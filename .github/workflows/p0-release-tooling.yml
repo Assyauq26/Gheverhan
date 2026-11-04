@@ -1,0 +1,26 @@
+name: P0 release tooling
+on:
+  pull_request:
+    paths: ['agent/**', 'deploy/release/**', '.github/workflows/p0-release-tooling.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata-and-package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.3'
+      - run: go test -race ./internal/releaseprotocol ./cmd/jetseller-publish
+        working-directory: agent
+      - run: bash -n deploy/release/build-candidate.sh && node --test deploy/release/package-candidate.test.mjs
+
+      - run: python3 deploy/release/normalize-image-archive.test.py
+      - run: node --test deploy/release/publisher-environment.test.mjs

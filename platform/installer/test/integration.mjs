@@ -6,6 +6,7 @@ import { createPool,migrate } from '../src/db.mjs';
 import { createHandler } from '../src/api.mjs';
 import { hash,opaque } from '../src/common.mjs';
 import { createControlServer } from '../src/server.mjs';
+import { createOidcHandler } from '../src/oidc.mjs';
 
 test('real isolated PostgreSQL ownership, durability, atomic pairing, proof binding and revocation',async()=>{
  const connection=process.env.JETSELLER_CONTROL_TEST_DATABASE_URL;
@@ -24,7 +25,7 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   for(let i=0;i<2;i++){
    const seller=randomUUID(),sid=randomUUID(),csrf=opaque(),subject='fixture-'+randomUUID();
    await pool.query('INSERT INTO installer.sellers(id,external_subject,email_verified) VALUES($1,$2,true)',[seller,subject]);
-   await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[sid,seller,hash(csrf)]);
+   await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at,authenticated_at) VALUES($1,$2,$3,now()+interval '1 hour',now())",[sid,seller,hash(csrf)]);
    const token=await new SignJWT({sid,csrf,email_verified:true}).setProtectedHeader({alg:'EdDSA'}).setSubject(subject).setIssuer(issuer).setAudience('jetseller-portal').setIssuedAt().setExpirationTime('1h').sign(authKeys.privateKey);
    users.push({seller,sid,csrf,token});
   }
@@ -40,9 +41,10 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   const created=await call('POST','/installations',input,a,{'idempotency-key':idempotency});assert.equal(created.status,201);const installation=created.body.installation;
   assert.equal((await call('POST','/installations',input,a,{'idempotency-key':idempotency})).body.installation.installation_id,installation.installation_id);
   assert.equal((await call('POST','/installations',{...input,display_name:'Changed'},a,{'idempotency-key':idempotency})).status,409);
-  assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,409);
+  assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,201);
   assert.equal((await call('GET','/installations/'+installation.installation_id,undefined,b)).status,404);
-  assert.deepEqual((await call('GET','/installations',undefined,b)).body.installations,[]);
+  const bInstallations=(await call('GET','/installations',undefined,b)).body.installations;
+  assert.equal(bInstallations.length,1);assert.ok(bInstallations.every(item=>item.installation_id!==installation.installation_id),'Seller B cannot list Seller A installation');
   assert.equal((await call('GET','/installations',undefined,null)).status,401);
   assert.equal((await call('POST','/installations',input,a,{'x-csrf-token':'wrong','idempotency-key':randomUUID()})).status,403);
   assert.equal((await call('PATCH','/installations/'+installation.installation_id,{display_name:'Changed',domain:input.domain},a,{'if-match':'99'})).status,409);
@@ -149,19 +151,19 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   // public DNS, email or production endpoint is involved.
   const portalSigner=await generateKeyPair('EdDSA',{crv:'Ed25519'});
   const portalJwk=await exportJWK(portalSigner.publicKey);
-  let authNonce,challenge,exchanges=0,verifiedEmail=true;
-  const oidc={issuer,clientId:'fixture-client',authorizationEndpoint:issuer+'/authorize',tokenEndpoint:issuer+'/token',redirectUri:controlOrigin+'/auth/callback',jwks:{keys:[publicJwk]},sessionSigningKey:portalSigner.privateKey};
-  const server=createControlServer({...options,sessionIssuer:{issuer:controlOrigin,audience:'jetseller-portal',jwks:{keys:[portalJwk]}},oidc},pool,{oidcFetch:async(endpoint,init)=>{
+  let authNonce,challenge,exchanges=0,verifiedEmail=true,emailClaim='seller@fixture.example';
+  const oidc={issuer,clientId:'fixture-client',authorizationEndpoint:issuer+'/authorize',registrationEndpoint:issuer+'/register',tokenEndpoint:issuer+'/token',redirectUri:controlOrigin+'/auth/callback',jwks:{keys:[publicJwk]},sessionSigningKey:portalSigner.privateKey};
+  const server=createControlServer({releaseAccess:{mode:"public"},...options,sessionIssuer:{issuer:controlOrigin,audience:'jetseller-portal',jwks:{keys:[portalJwk]}},oidc},pool,{oidcFetch:async(endpoint,init)=>{
    assert.equal(endpoint,oidc.tokenEndpoint);assert.equal(init.redirect,'error');assert.equal(init.method,'POST');
    const params=new URLSearchParams(init.body);assert.equal(params.get('grant_type'),'authorization_code');assert.equal(params.get('client_id'),oidc.clientId);
    assert.equal(Buffer.from(hash(params.get('code_verifier')),'hex').toString('base64url'),challenge);
    exchanges++;
-   return Response.json({id_token:await new SignJWT({nonce:authNonce,email_verified:verifiedEmail}).setProtectedHeader({alg:'EdDSA'}).setSubject('verified-fixture-account').setIssuer(issuer).setAudience(oidc.clientId).setIssuedAt().setExpirationTime('5m').sign(authKeys.privateKey)});
+   return Response.json({id_token:await new SignJWT({nonce:authNonce,email_verified:verifiedEmail,...(emailClaim===undefined?{}:{email:emailClaim})}).setProtectedHeader({alg:'EdDSA'}).setSubject('verified-fixture-account').setIssuer(issuer).setAudience(oidc.clientId).setIssuedAt().setExpirationTime('5m').sign(authKeys.privateKey)});
   }});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base='http://127.0.0.1:'+server.address().port;
   try{
-   assert.deepEqual(await (await fetch(base+'/auth/status')).json(),{configured:true,login_url:'/auth/login'});
+   assert.deepEqual(await (await fetch(base+'/auth/status')).json(),{configured:true,login_url:'/auth/login',registration_url:'/auth/register',logout_url:'/api/installer/v1/session/logout',logout_scope:'local_portal_session'});
    const login=await fetch(base+'/auth/login',{redirect:'manual'});assert.equal(login.status,302);
    const authorization=new URL(login.headers.get('location'));assert.equal(authorization.origin,issuer);
    assert.equal(authorization.searchParams.get('code_challenge_method'),'S256');assert.equal(authorization.searchParams.get('redirect_uri'),oidc.redirectUri);
@@ -174,16 +176,45 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
    assert.equal((await fetch(base+callback,{redirect:'manual',headers:{cookie:loginCookie}})).status,400);assert.equal(exchanges,1);
    const session=await (await fetch(base+'/api/installer/v1/session',{headers:{cookie:sessionCookie}})).json();assert.equal(session.authenticated,true);assert.ok(session.csrf_token);
    const create=await fetch(base+'/api/installer/v1/installations',{method:'POST',headers:{cookie:sessionCookie,origin:controlOrigin,'x-csrf-token':session.csrf_token,'content-type':'application/json','idempotency-key':randomUUID()},body:JSON.stringify({...input,domain:'oidc-'+randomUUID()+'.example'})});assert.equal(create.status,201);
-   const logout=await fetch(base+'/api/installer/v1/session/logout',{method:'POST',headers:{cookie:sessionCookie,origin:controlOrigin,'x-csrf-token':session.csrf_token,'content-type':'application/json'},body:'{}'});assert.equal(logout.status,200);
+   const logout=await fetch(base+'/api/installer/v1/session/logout',{method:'POST',headers:{cookie:sessionCookie,origin:controlOrigin,'x-csrf-token':session.csrf_token,'content-type':'application/json'},body:'{}'});assert.equal(logout.status,200);assert.match(logout.headers.get('set-cookie'),/__Host-js_portal_session=; Path=\/; Max-Age=0; Secure; HttpOnly; SameSite=Lax/);
    assert.equal((await fetch(base+'/api/installer/v1/session',{headers:{cookie:sessionCookie}})).status,401);
    verifiedEmail=false;
    const deniedLogin=await fetch(base+'/auth/login',{redirect:'manual'});const deniedAuthorization=new URL(deniedLogin.headers.get('location'));
    authNonce=deniedAuthorization.searchParams.get('nonce');challenge=deniedAuthorization.searchParams.get('code_challenge');
    const denied=await fetch(base+'/auth/callback?code=synthetic-denied&state='+deniedAuthorization.searchParams.get('state'),{redirect:'manual',headers:{cookie:deniedLogin.headers.getSetCookie()[0].split(';')[0]}});assert.equal(denied.status,403);
+   verifiedEmail=true;
+   const registration=await fetch(base+'/auth/register',{redirect:'manual'});assert.equal(registration.status,302);
+   const registrationUrl=new URL(registration.headers.get('location'));assert.equal(registrationUrl.origin+registrationUrl.pathname,oidc.registrationEndpoint);
+   authNonce=registrationUrl.searchParams.get('nonce');challenge=registrationUrl.searchParams.get('code_challenge');
+   const registered=await fetch(base+'/auth/callback?code=synthetic-registration&state='+registrationUrl.searchParams.get('state'),{redirect:'manual',headers:{cookie:registration.headers.getSetCookie()[0].split(';')[0]}});assert.equal(registered.status,302);
+   // Provider-hosted signup and login map to the same issuer+sub, not duplicate sellers.
+   assert.equal((await pool.query('SELECT count(*)::int AS n FROM installer.sellers WHERE external_subject=$1',[hash(issuer+'\0verified-fixture-account')])).rows[0].n,1);
+   emailClaim=undefined;
+   const missingEmail=await fetch(base+'/auth/login',{redirect:'manual'});const missingUrl=new URL(missingEmail.headers.get('location'));
+   authNonce=missingUrl.searchParams.get('nonce');challenge=missingUrl.searchParams.get('code_challenge');
+   const missing=await fetch(base+'/auth/callback?code=synthetic-missing-email&state='+missingUrl.searchParams.get('state'),{redirect:'manual',headers:{cookie:missingEmail.headers.getSetCookie()[0].split(';')[0]}});assert.equal(missing.status,403);
   }finally{await new Promise(resolve=>server.close(resolve));}
+  // Real JOSE + PostgreSQL callback also supports a confidential PKCE client.
+  // The fixture never sends this synthetic credential to an external provider.
+  const secret='synthetic:private-client-credential';
+  let basicNonce,basicChallenge;
+  const basicOidc=createOidcHandler({pool,controlOrigin,config:{...oidc,tokenEndpointAuthMethod:'client_secret_basic',clientSecret:secret},fetchImpl:async(endpoint,init)=>{
+    assert.equal(endpoint,oidc.tokenEndpoint);
+    const encode=value=>new URLSearchParams({value}).toString().slice(6);
+    assert.equal(init.headers.authorization,'Basic '+Buffer.from(encode(oidc.clientId)+':'+encode(secret)).toString('base64'));
+    const params=new URLSearchParams(init.body);assert.equal(params.has('client_secret'),false);
+    assert.equal(Buffer.from(hash(params.get('code_verifier')),'hex').toString('base64url'),basicChallenge);
+    return Response.json({id_token:await new SignJWT({nonce:basicNonce,email_verified:true,email:'confidential@fixture.example'}).setProtectedHeader({alg:'EdDSA'}).setSubject('basic-fixture-account').setIssuer(issuer).setAudience(oidc.clientId).setIssuedAt().setExpirationTime('5m').sign(authKeys.privateKey)});
+  }});
+  const basicStart=await basicOidc(new Request(controlOrigin+'/auth/login'),{clientAddress:'confidential-fixture'});
+  const basicUrl=new URL(basicStart.headers.get('location'));basicNonce=basicUrl.searchParams.get('nonce');basicChallenge=basicUrl.searchParams.get('code_challenge');
+  assert.equal(basicUrl.href.includes(secret),false);
+  const basicComplete=await basicOidc(new Request(controlOrigin+'/auth/callback?code=synthetic-basic&state='+basicUrl.searchParams.get('state'),{headers:{cookie:basicStart.headers.getSetCookie()[0].split(';')[0]}}),{clientAddress:'confidential-fixture'});
+  assert.equal(basicComplete.status,302);
+  assert.equal(basicComplete.headers.get('location'),'/');
   handler=createHandler(options);
   // Different domains/idempotency keys must still share a seller-scoped limit lock.
-  for(let n=0;n<19;n++)assert.equal((await call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})).status,201);
+  for(let n=0;n<18;n++)assert.equal((await call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})).status,201);
   const limitRace=await Promise.all([0,1].map(()=>call('POST','/installations',{...input,domain:'limit-'+randomUUID()+'.example'},b,{'idempotency-key':randomUUID()})));
   assert.deepEqual(limitRace.map(r=>r.status).sort(),[201,409]);
   assert.equal(limitRace.find(r=>r.status===409).body.error.code,'INSTALLATION_LIMIT');

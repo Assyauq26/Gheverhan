@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 const assets = new Map([
   ['/', ['public/index.html', 'text/html; charset=utf-8']],
+  ['/daftar', ['public/index.html', 'text/html; charset=utf-8']],
+  ['/masuk', ['public/index.html', 'text/html; charset=utf-8']],
   ['/hubungkan-server', ['public/index.html', 'text/html; charset=utf-8']],
   ['/assets/app.js', ['public/app.js', 'text/javascript; charset=utf-8']],
   ['/assets/styles.css', ['public/styles.css', 'text/css; charset=utf-8']],

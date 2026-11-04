@@ -1,0 +1,115 @@
+name: Buat Toko Online Sendiri official release
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact approved40character main commit
+        required: true
+        type: string
+      genesis:
+        description: First publication only; requires independent approved root pin
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: btos-official-publication
+  cancel-in-progress: false
+jobs:
+  sign-and-stage:
+    if: github.repository == 'Assyauq26/Gheverhan' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: btos-release-publisher
+    permissions:
+      contents: read
+      checks: read
+      actions: read
+      packages: write
+      id-token: write
+    env:
+      RELEASE_SOURCE_SHA: ${{ inputs.release_sha }}
+      RELEASE_SIGNER_IDENTITY: https://github.com/Assyauq26/Gheverhan/.github/workflows/btos-official-release.yml@refs/heads/main
+      RELEASE_SIGNER_ISSUER: https://token.actions.githubusercontent.com
+      RELEASE_IMAGE_REPOSITORY: ghcr.io/assyauq26/buattokosendiri
+      RELEASE_COSIGN_PATH: /usr/local/lib/buattokosendiri/cosign
+      RELEASE_COSIGN_SHA256: 424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa
+      DOCKER_CONFIG: /tmp/btos-docker-auth
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with: {go-version: '1.27.3', cache: false}
+      - name: Validate independent root, exact-SHA checks, approved identity and protected environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_GHCR_PREFIX: ${{ vars.APPROVED_GHCR_PREFIX }}
+          APPROVED_ROOT_SHA256: ${{ vars.APPROVED_ROOT_SHA256 }}
+          TUF_ROOT_UPDATES_JSON: ${{ vars.TUF_ROOT_UPDATES_JSON }}
+          TUF_PUBLIC_ROOT_JSON: ${{ vars.TUF_PUBLIC_ROOT_JSON }}
+          TUF_PREVIOUS_STATE_JSON: ${{ vars.TUF_PREVIOUS_STATE_JSON }}
+          RELEASE_MANIFEST_JSON: ${{ vars.RELEASE_MANIFEST_JSON }}
+          GENESIS_RELEASE: ${{ inputs.genesis }}
+          GENESIS_APPROVED_PIN: ${{ vars.GENESIS_APPROVED_PIN }}
+          REVIEWED_COSIGN_SHA256: ${{ vars.REVIEWED_COSIGN_SHA256 }}
+          TUF_TARGETS_PKCS8: ${{ secrets.TUF_TARGETS_PKCS8 }}
+          TUF_SNAPSHOT_PKCS8: ${{ secrets.TUF_SNAPSHOT_PKCS8 }}
+          TUF_TIMESTAMP_PKCS8: ${{ secrets.TUF_TIMESTAMP_PKCS8 }}
+        run: |
+          umask077() { umask 077; }
+          umask077
+          node deploy/release/prepare-official.mjs
+          go -C agent build -trimpath -o /tmp/jetseller-publish ./cmd/jetseller-publish
+          /tmp/jetseller-publish check-root /tmp/btos-publication-input/publication.json
+      - name: Obtain independently reviewed verifier and authenticate approved GHCR namespace
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl --fail --location --proto '=https' --tlsv1.2 https://github.com/sigstore/cosign/releases/download/v3.1.4/cosign-linux-amd64 -o /tmp/btos-cosign
+          printf '%s  %s\n' "$RELEASE_COSIGN_SHA256" /tmp/btos-cosign | sha256sum -c -
+          sudo install -d -m755 /usr/local/lib/buattokosendiri
+          sudo install -m755 /tmp/btos-cosign "$RELEASE_COSIGN_PATH"
+          mkdir -m700 "$DOCKER_CONFIG"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Build and sign immutable OCI images and native bootstrap after environment approval
+        env:
+          RELEASE_OWNER_APPROVED: signed-candidate-build
+        run: bash deploy/release/build-candidate.sh /tmp/btos-release-build
+      - name: Sign and independently verify metadata, archive and bootstrap before staging
+        run: |
+          set -euo pipefail
+          umask 077
+          node deploy/release/prepare-manifest.mjs /tmp/btos-publication-input/manifest-template.json /tmp/btos-release-build /tmp/btos-publication-input/manifest.json
+          sudo install -d -m700 /root/btos-publication
+          sudo /tmp/jetseller-publish /tmp/btos-publication-input/publication.json
+          sudo cp -a /tmp/btos-release-build/artifacts /root/btos-publication/metadata/
+          sudo chown -R root:root /root/btos-publication/metadata
+          sudo install -m600 /tmp/btos-publication-input/policy.json /root/btos-publication/policy.json
+          sudo /tmp/btos-release-build/jetseller-setup verify-release --policy /root/btos-publication/policy.json --release-directory /root/btos-publication/metadata --receipt /root/btos-publication/directory-receipt.json
+          sudo "$(command -v node)" deploy/release/package-candidate.mjs /root/btos-publication/metadata /root/btos-publication/directory-receipt.json /root/btos-publication/release.zip
+          sudo /tmp/btos-release-build/jetseller-setup verify-release-archive --policy /root/btos-publication/policy.json --artifact /root/btos-publication/release.zip --receipt /root/btos-publication/archive-receipt.json
+          sudo "$(command -v node)" deploy/release/stage-publication.mjs /tmp/btos-publication-input/staging.json
+          sudo --preserve-env=RELEASE_SOURCE_SHA,RELEASE_SIGNER_IDENTITY,RELEASE_SIGNER_ISSUER,GITHUB_RUN_ID "$(command -v node)" deploy/release/final-manifest.mjs
+          sudo --preserve-env=ACTIONS_ID_TOKEN_REQUEST_URL,ACTIONS_ID_TOKEN_REQUEST_TOKEN,GITHUB_ACTIONS "$RELEASE_COSIGN_PATH" sign-blob --yes --bundle /root/btos-publication/staged/release-manifest.sigstore.json /root/btos-publication/staged/release-manifest.json
+          sudo "$RELEASE_COSIGN_PATH" verify-blob --offline --bundle /root/btos-publication/staged/release-manifest.sigstore.json --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" /root/btos-publication/staged/release-manifest.json
+          sudo install -m600 /root/btos-publication/metadata/candidate-state.json /root/btos-publication/staged/publication-state.private.json
+          test ! -e /tmp/btos-approved-output
+          sudo cp -a /root/btos-publication/staged /tmp/btos-approved-output
+          sudo chown -R "$(id -u):$(id -g)" /tmp/btos-approved-output
+      - name: Retain verified publication handoff (no HTTP activation or production deployment)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: approved-official-publication-${{ inputs.release_sha }}
+          path: /tmp/btos-approved-output/**
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove online signing inputs and registry auth from disposable runner
+        if: always()
+        run: |
+          rm -f /tmp/btos-publication-input/targets.pem /tmp/btos-publication-input/snapshot.pem /tmp/btos-publication-input/timestamp.pem
+          docker logout ghcr.io >/dev/null 2>&1 || true

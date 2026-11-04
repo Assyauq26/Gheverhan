@@ -38,6 +38,9 @@ func OpenState(directory, installationID string) (*State, error) {
 	if !uuidPattern.MatchString(installationID) || !filepath.IsAbs(directory) || filepath.Clean(directory) != directory {
 		return nil, ErrState
 	}
+	if trustedStateAncestors(filepath.Dir(directory), os.Geteuid()) != nil {
+		return nil, ErrState
+	}
 	if err := os.Mkdir(directory, 0700); err != nil && !os.IsExist(err) {
 		return nil, ErrState
 	}
@@ -48,7 +51,7 @@ func OpenState(directory, installationID string) (*State, error) {
 		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			return nil, ErrState
 		}
-		if current == directory && info.Mode().Perm()&0077 != 0 {
+		if current == directory && (info.Mode().Perm()&0077 != 0 || !ownedBy(info, os.Geteuid())) {
 			return nil, ErrState
 		}
 		parent := filepath.Dir(current)
@@ -63,7 +66,7 @@ func OpenState(directory, installationID string) (*State, error) {
 	}
 	fail := func() (*State, error) { root.Close(); return nil, ErrState }
 	if info, checkErr := root.Lstat("operation.lock"); checkErr == nil {
-		if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+		if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || !ownedBy(info, os.Geteuid()) {
 			return fail()
 		}
 	} else if !os.IsNotExist(checkErr) {
@@ -152,7 +155,7 @@ func (s *State) readPrivate(name string, max int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > max {
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || !ownedBy(info, os.Geteuid()) || info.Size() > max {
 		return nil, ErrState
 	}
 	f, err := s.root.Open(name)

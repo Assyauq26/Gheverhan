@@ -4,10 +4,11 @@ on:
     paths:
       - agent/**
       - .github/workflows/jetseller-disposable-provisioning.yml
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: jetseller-provision-${{ github.event.pull_request.number }}
+  group: jetseller-provision-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   signed-fixture-provision:
@@ -20,7 +21,7 @@ jobs:
       - name: Obtain immutable current RC runtime profile for combined-head verification
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: fixture-profile
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -40,7 +41,7 @@ jobs:
       - name: Build current-RC fixture application and migration images
         run: |
           set -euo pipefail
-          test "$(git -C fixture-profile rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git -C fixture-profile rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           context_parent=$(mktemp -d /tmp/jetseller-provision-build.XXXXXXXX)
           node fixture-profile/deploy/self-hosted/prepare.mjs context "$context_parent/context"
           docker build --target runtime -t jetseller-fixture:app "$context_parent/context"

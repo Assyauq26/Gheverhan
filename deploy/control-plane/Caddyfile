@@ -1,0 +1,5 @@
+dashboard.buattokosendiri.web.id {
+  @private path /healthz
+  respond @private 404
+  reverse_proxy control:3100
+}

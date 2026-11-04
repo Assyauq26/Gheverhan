@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Masuk — Login Seller Belum Tersedia | Buat Toko Online Sendiri</title>
+  <title>Masuk ke Akun Seller | Buat Toko Online Sendiri</title>
   <meta name="description" content="Login seller Buat Toko Online Sendiri belum tersedia karena autentikasi platform masih dibangun. Halaman informasi resmi — tanpa form login palsu." />
   <link rel="canonical" href="https://buattokosendiri.web.id/masuk/" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#E1251B" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Buat Toko Online Sendiri" />
-  <meta property="og:title" content="Masuk — Login Seller Belum Tersedia | Buat Toko Online Sendiri" />
+  <meta property="og:title" content="Masuk ke Akun Seller | Buat Toko Online Sendiri" />
   <meta property="og:description" content="Autentikasi seller masih dibangun. Belum ada akun yang bisa dipakai login." />
   <meta property="og:url" content="https://buattokosendiri.web.id/masuk/" />
   <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg?v=identity-2" />
@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/main.css" />
 </head>
-<body>
+<body data-portal-action="login">
   <a class="skip-link" href="#konten">Lewati ke konten utama</a>
   <header class="site-header">
     <div class="container header-inner">
@@ -44,11 +44,12 @@
     <section class="info-hero" aria-labelledby="masuk-title">
       <div class="container narrow">
         <p class="pill">Login Seller</p>
-        <h1 id="masuk-title">Login seller <span class="text-red">belum tersedia</span></h1>
-        <p class="lead">Autentikasi platform Buat Toko Online Sendiri masih dalam tahap pembangunan. Halaman ini adalah penjelasan resmi — <strong>tidak ada formulir login</strong> sampai sistem autentikasi selesai dan diumumkan.</p>
+        <h1 id="masuk-title">Masuk ke akun seller</h1>
+        <p class="lead">Gunakan portal Buat Toko Online Sendiri untuk masuk ke akun seller. Halaman ini memeriksa ketersediaan layanan akun sebelum mengarahkan Anda — <strong>tidak ada formulir login sementara</strong>.</p>
         <div class="notice" role="status">
           <strong>Catatan keamanan:</strong> autentikasi seller memakai identitas dan sesi terpisah dari toko demo. Akun pelanggan di <a href="https://gheverhan.store" target="_blank" rel="noopener noreferrer">gheverhan.store</a> tidak berlaku sebagai akun seller dan tidak bisa dipakai untuk masuk ke platform.
         </div>
+        <section class="notice" aria-labelledby="portal-entry-heading"><h2 id="portal-entry-heading">Lanjutkan di portal seller</h2><p id="portal-entry-status" role="status">Portal publik belum diaktifkan untuk halaman ini. Kami tidak menyediakan formulir akun sementara.</p><a id="portal-entry-link" class="btn btn-primary" hidden>Masuk ke portal seller</a></section>
         <h2>Yang bisa kamu lakukan sekarang</h2>
         <ul class="checklist">
           <li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#E1251B"/><path d="M6.5 10.2l2.4 2.4 4.6-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Baca <a href="/daftar/">status pendaftaran seller</a> dan siapkan data tokomu.</span></li>
@@ -75,5 +76,6 @@
     </div>
   </footer>
   <script src="/assets/js/main.js" defer></script>
+  <script src="/assets/js/portal-entry.js" defer></script>
 </body>
 </html>

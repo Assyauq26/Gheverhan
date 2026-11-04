@@ -6,6 +6,7 @@ on:
       - platform/installer/**
       - platform/installer-web/**
       - .github/workflows/jetseller-pairing-e2e.yml
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:

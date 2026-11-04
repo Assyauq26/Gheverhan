@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "test:integration": "node --test test/integration.mjs test/domain-integration.mjs",
+    "test:integration": "node --test test/integration.mjs test/domain-integration.mjs test/install-release-integration.mjs",
     "start": "node src/server.mjs",
     "migrate": "node src/migrate.mjs"
   },

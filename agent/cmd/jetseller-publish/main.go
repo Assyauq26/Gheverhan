@@ -43,6 +43,21 @@ func decode(b []byte, v any) error {
 	return nil
 }
 func run() error {
+	if len(os.Args) == 3 && os.Args[1] == "check-root" {
+		raw, e := read(os.Args[2], true)
+		if e != nil {
+			return e
+		}
+		var c config
+		if decode(raw, &c) != nil {
+			return fmt.Errorf("invalid config")
+		}
+		root, e := read(c.RootFile, false)
+		if e != nil {
+			return e
+		}
+		return releaseprotocol.VerifyBootstrapRoot(root, c.Policy.BootstrapRootSHA256, c.Policy.MinimumRootThreshold, time.Now())
+	}
 	if len(os.Args) != 2 {
 		return fmt.Errorf("publication config required")
 	}

@@ -95,6 +95,7 @@ func rotate(configFile string) error {
 	}
 	var c struct {
 		PreviousRoot, CandidateRoot, OutputFile string
+		PreviousRootSHA256, CandidateRootSHA256 string
 		SigningKeys                             []string
 	}
 	if json.Unmarshal(raw, &c) != nil {
@@ -104,6 +105,10 @@ func rotate(configFile string) error {
 	if e != nil {
 		return e
 	}
+	previousHash := sha256.Sum256(raw)
+	if hex.EncodeToString(previousHash[:]) != c.PreviousRootSHA256 {
+		return fmt.Errorf("independent previous root pin mismatch")
+	}
 	old, e := metadata.Root().FromBytes(raw)
 	if e != nil {
 		return e
@@ -111,6 +116,10 @@ func rotate(configFile string) error {
 	raw, e = read(c.CandidateRoot)
 	if e != nil {
 		return e
+	}
+	candidateHash := sha256.Sum256(raw)
+	if hex.EncodeToString(candidateHash[:]) != c.CandidateRootSHA256 {
+		return fmt.Errorf("reviewed candidate hash mismatch")
 	}
 	next, e := metadata.Root().FromBytes(raw)
 	if e != nil {

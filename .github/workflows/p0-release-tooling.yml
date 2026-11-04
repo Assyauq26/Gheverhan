@@ -2,6 +2,7 @@ name: P0 release tooling
 on:
   pull_request:
     paths: ['agent/**', 'deploy/release/**', '.github/workflows/p0-release-tooling.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

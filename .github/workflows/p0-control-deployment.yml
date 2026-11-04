@@ -2,6 +2,7 @@ name: P0 control deployment fixture
 on:
   pull_request:
     paths: ['platform/installer/**', 'platform/installer-web/**', 'deploy/control-plane/**', '.github/workflows/p0-control-deployment.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

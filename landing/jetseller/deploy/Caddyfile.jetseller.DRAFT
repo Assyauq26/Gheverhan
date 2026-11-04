@@ -11,11 +11,13 @@ gheverhan.store {
   reverse_proxy app:3000
 }
 
-www.jetseller.web.id {
-  redir https://jetseller.web.id{uri} permanent
+# Stage new domain and HTTPS first; DO NOT activate this full draft until
+# public DNS, certificate issuance, and the old-domain compatibility plan pass.
+www.buattokosendiri.web.id {
+  redir https://buattokosendiri.web.id{uri} permanent
 }
 
-jetseller.web.id {
+buattokosendiri.web.id {
   encode zstd gzip
   root * /data/landing/jetseller
 
@@ -42,6 +44,19 @@ jetseller.web.id {
   }
 }
 
-# No wildcard routing.
-# dashboard.jetseller.web.id and seller subdomains are future platform routes.
-# jetseller.web.id is static-only and never reverse-proxies to app:3000.
+# LEGACY CUTOVER (enable only after the new landing and all former portal
+# URL consumers have been verified; preserve the old domain's active TLS).
+www.jetseller.web.id {
+  redir https://buattokosendiri.web.id{uri} permanent
+}
+
+jetseller.web.id {
+  redir https://buattokosendiri.web.id{uri} permanent
+}
+
+# No wildcard routing. This static landing DOES NOT host the seller portal.
+# dashboard.buattokosendiri.web.id must receive a SEPARATELY REVIEWED HTTPS
+# reverse_proxy to the isolated installer-control service after OIDC readiness.
+# Seller storefronts always use their own domains, never platform subdomains.
+# Preserve the separate staging host on its dedicated VPS.
+# Gheverhan production app/router must remain unchanged.

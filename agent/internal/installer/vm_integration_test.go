@@ -19,6 +19,36 @@ import (
 
 type vmFixtureTemplates struct{}
 
+// Same actual daemon, command, environment and bounds as localDocker. Only the
+// disposable test records fixed error categories; never raw Docker output.
+type vmDiagnosticDocker struct{ t *testing.T }
+
+func (d vmDiagnosticDocker) run(ctx context.Context, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Minute)
+	defer cancel()
+	c := exec.CommandContext(ctx, "/usr/bin/docker", append([]string{"--host", "unix:///var/run/docker.sock"}, args...)...)
+	c.Env = []string{"PATH=/usr/bin:/bin", "HOME=/nonexistent", "DOCKER_CONFIG=/nonexistent", "LANG=C.UTF-8"}
+	var out, diagnostic boundedOutput
+	c.Stdout, c.Stderr = &out, &diagnostic
+	e := c.Run()
+	category := "ok"
+	if e != nil {
+		category = "unclassified"
+		text := strings.ToLower(diagnostic.String())
+		for _, known := range []string{"no such image", "no space left", "permission denied", "invalid tar", "content digest", "failed to extract", "failed to unpack", "not found", "cannot connect", "no matching manifest"} {
+			if strings.Contains(text, known) {
+				category = strings.ReplaceAll(known, " ", "_")
+				break
+			}
+		}
+	}
+	d.t.Logf("VM_DOCKER_RESULT operation=%s success=%t category=%s", args[0], e == nil, category)
+	if e != nil {
+		return nil, ErrInstall
+	}
+	return out.Bytes(), nil
+}
+
 func (vmFixtureTemplates) ReadFile(name string) ([]byte, error) {
 	if name == "templates/Caddyfile" {
 		return []byte("{\n admin off\n}\nstore.fixture.example {\n tls internal\n reverse_proxy app:3000\n}\n"), nil
@@ -54,7 +84,7 @@ func TestFullVMInstaller(t *testing.T) {
 	case "fetch":
 		e = FetchRelease(ctx, o)
 	case "first-install":
-		e = Install(ctx, o)
+		e = install(ctx, o, vmDiagnosticDocker{t}, installProbe())
 		if !errors.Is(e, ErrHTTPSPending) {
 			var j journal
 			_ = s.ReadInstallRecord(bootstrap.InstallJournalRecord, &j)
@@ -63,7 +93,7 @@ func TestFullVMInstaller(t *testing.T) {
 		}
 		return
 	case "install":
-		e = Install(ctx, o)
+		e = install(ctx, o, vmDiagnosticDocker{t}, installProbe())
 	case "activate":
 		e = ActivateAdmin(ctx, s, o.StateDirectory, id)
 	default:

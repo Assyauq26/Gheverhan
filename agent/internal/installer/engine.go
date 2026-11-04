@@ -111,9 +111,12 @@ func validDomain(s string) bool {
 }
 
 func Install(ctx context.Context, o Options) error {
-	return install(ctx, o, localDocker{}, &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+	return install(ctx, o, localDocker{}, installProbe())
+}
+func installProbe() *http.Client {
+	return &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 		return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", "127.0.0.1:443")
-	}}, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }})
+	}}, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 func install(ctx context.Context, o Options, d docker, probe *http.Client) error {
 	if bootstrap.ValidateInstallState(o.State) != nil || o.StateDirectory == "" || o.Confirmation != o.State.Identity.InstallationID {

@@ -66,15 +66,18 @@ jobs:
       - name: Verify complete signed directory and ZIP before scoped HTTPS serving
         run: |
           set -euo pipefail
-          test ! -e /opt/p0-payload
+          test ! -e /root/p0-publication
+          sudo install -d -m700 /root/p0-publication
+          for entry in root.json targets.json timestamp.json snapshot.json channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /root/p0-publication/; done
+          sudo chown -R root:root /root/p0-publication
           sudo install -d -m700 /opt/p0-payload
-          for entry in root.json targets.json timestamp.json snapshot.json channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /opt/p0-payload/; done
-          sudo chown -R root:root /opt/p0-payload
+          sudo install -m700 /tmp/p0-full-build/cosign /opt/p0-payload/cosign
+          sudo stat -c "%u %a %F" / /opt /root /root/p0-publication /root/p0-publication/policy.json
           sudo env GITHUB_ACTIONS=true P0_PUBLICATION_VERIFY_FIXTURE=isolated-full-seller /tmp/p0-vm-payload/installer.test -test.run ^TestP0PublicationFixtureVerification$ -test.v -test.timeout=10m
-          sudo /opt/p0-payload/jetseller-setup verify-release --policy /opt/p0-payload/policy.json --release-directory /opt/p0-payload --receipt /opt/p0-payload/verified.json
-          sudo "$(command -v node)" deploy/release/package-candidate.mjs /opt/p0-payload /opt/p0-payload/verified.json /opt/p0-release.zip
-          sudo /opt/p0-payload/jetseller-setup verify-release-archive --policy /opt/p0-payload/policy.json --artifact /opt/p0-release.zip --receipt /opt/p0-archive-receipt.json
-          sudo install -m644 /opt/p0-archive-receipt.json /tmp/p0-full-archive-receipt.json
+          sudo /root/p0-publication/jetseller-setup verify-release --policy /root/p0-publication/policy.json --release-directory /root/p0-publication --receipt /root/p0-publication/verified.json
+          sudo "$(command -v node)" deploy/release/package-candidate.mjs /root/p0-publication /root/p0-publication/verified.json /root/p0-release.zip
+          sudo /root/p0-publication/jetseller-setup verify-release-archive --policy /root/p0-publication/policy.json --artifact /root/p0-release.zip --receipt /root/p0-archive-receipt.json
+          sudo install -m644 /root/p0-archive-receipt.json /tmp/p0-full-archive-receipt.json
           cp /tmp/p0-full-build/policy.json /tmp/p0-full-policy.json
           setup_sha=$(sha256sum /tmp/p0-full-build/jetseller-setup | cut -d' ' -f1)
           printf '%s' "$setup_sha" > /tmp/p0-full-setup-sha
@@ -85,7 +88,7 @@ jobs:
           cp /tmp/p0-full-build/setup.sigstore.json "/tmp/p0-full-artifacts/$signature_sha.sigstore.json"
           cp /tmp/p0-full-build/policy.json "/tmp/p0-full-artifacts/$policy_sha.policy.json"
           bundle_sha=$(node -p "require('/tmp/p0-full-archive-receipt.json').bundle_sha256")
-          sudo install -m600 -o "$(id -u)" /opt/p0-release.zip "/tmp/p0-full-artifacts/$bundle_sha.zip"
+          sudo install -m600 -o "$(id -u)" /root/p0-release.zip "/tmp/p0-full-artifacts/$bundle_sha.zip"
           npm ci --prefix platform/installer --ignore-scripts --no-audit --no-fund
           npm ci --prefix platform/installer-web --ignore-scripts --no-audit --no-fund
           (cd platform/installer-web && npx playwright install --with-deps chromium)

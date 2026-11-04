@@ -81,11 +81,20 @@ func TestP0PublicationFixtureVerification(t *testing.T) {
 	if os.Getuid() != 0 || os.Getenv("GITHUB_ACTIONS") != "true" {
 		t.Fatal("root CI fixture only")
 	}
-	p, e := loadPolicy("/opt/p0-payload/policy.json")
+	p, e := loadPolicy("/root/p0-publication/policy.json")
 	if e != nil {
-		t.Fatal("POLICY", e)
+		raw, re := protectedRead("/root/p0-publication/policy.json", 65536, true)
+		if re != nil {
+			t.Fatal("POLICY_READ", re)
+		}
+		var parsed Policy
+		if pe := strictJSON(raw, &parsed); pe != nil {
+			t.Fatal("POLICY_JSON", pe)
+		}
+		_, be := parsed.Budget.RequiredFreeBytes()
+		t.Fatalf("POLICY_FIELDS version=%d verifierHashLen=%d budgetError=%v", parsed.Version, len(parsed.VerifierSHA256), be)
 	}
-	b, e := loadBundle("/opt/p0-payload", p.Trust.Channel)
+	b, e := loadBundle("/root/p0-publication", p.Trust.Channel)
 	if e != nil {
 		t.Fatal("METADATA_READ", e)
 	}
@@ -96,8 +105,8 @@ func TestP0PublicationFixtureVerification(t *testing.T) {
 	m := r.Manifest()
 	var total, largest uint64
 	for _, item := range []struct{ archive, bundle string }{{m.ImageArchiveTarget, m.ImageBundleTarget}, {m.MigrationArchiveTarget, m.MigrationBundleTarget}} {
-		target := filepath.Join("/opt/p0-payload", item.archive)
-		proof := filepath.Join("/opt/p0-payload", item.bundle)
+		target := filepath.Join("/root/p0-publication", item.archive)
+		proof := filepath.Join("/root/p0-publication", item.bundle)
 		n, e := r.TargetSize(item.archive)
 		if e != nil {
 			t.Fatal("TARGET_SIZE", e)
@@ -130,7 +139,7 @@ func TestP0PublicationFixtureVerification(t *testing.T) {
 		if e != nil {
 			t.Fatal("STANDARD_COSIGN", e)
 		}
-		if e = bootstrap.VerifyReleaseArtifact(context.Background(), bootstrap.VerifyPolicy{VerifierPath: p.VerifierPath, VerifierSHA256: p.VerifierSHA256, CertificateIdentity: p.Trust.SignerIdentity, OIDCIssuer: p.Trust.SignerIssuer}, target, proof, hex.EncodeToString(h.Sum(nil)), p.Trust.MaxArtifactBytes, "/opt/p0-payload"); e != nil {
+		if e = bootstrap.VerifyReleaseArtifact(context.Background(), bootstrap.VerifyPolicy{VerifierPath: p.VerifierPath, VerifierSHA256: p.VerifierSHA256, CertificateIdentity: p.Trust.SignerIdentity, OIDCIssuer: p.Trust.SignerIssuer}, target, proof, hex.EncodeToString(h.Sum(nil)), p.Trust.MaxArtifactBytes, "/root/p0-publication"); e != nil {
 			t.Fatal("ISOLATED_PINNED_COSIGN", e)
 		}
 	}

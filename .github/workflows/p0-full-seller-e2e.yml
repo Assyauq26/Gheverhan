@@ -45,6 +45,7 @@ jobs:
           go -C agent test ./internal/releaseprotocol -run '^TestArchiveManifestPinsArePairedValidatedSignedFields$' -count=1 -v
           node --test deploy/self-hosted/tests/guest-command.test.mjs
           python3 deploy/release/normalize-image-archive.test.py
+          python3 deploy/self-hosted/tests/p0-vm-host-monitor.test.py
           bash deploy/self-hosted/tests/docker-final-state.test.sh
           bash -n deploy/self-hosted/tests/p0-vm.sh
       - name: Build outside2GiB VM and sign synthetic payloads with this TEST workflow identity

@@ -61,9 +61,14 @@ qemu-system-x86_64 -machine q35 "${accel[@]}" -smp 2 -m 2048 \
   -drive "file=$fixture/guest.qcow2,if=virtio,format=qcow2" \
   -drive "file=$fixture/seed.img,if=virtio,format=raw,readonly=on" \
   -netdev "user,id=net0,hostfwd=tcp:127.0.0.1:$port-:22" -device virtio-net-pci,netdev=net0 \
+  -qmp "unix:$fixture/qmp.sock,server=on,wait=off" \
   -device virtio-rng-pci -display none -serial "file:$evidence/guest-serial.log" -monitor none -no-reboot >"$evidence/qemu.log" 2>&1 &
 qemu_pid=$!
+python3 "$repo/deploy/self-hosted/tests/p0-vm-host-monitor.py" "$evidence" "$fixture/qmp.sock" "$qemu_pid" >"$evidence/host-monitor.log" 2>&1 &
+host_monitor_pid=$!
 cleanup() {
+  touch "$evidence/host-monitor-finished"
+  if kill -0 "$host_monitor_pid" 2>/dev/null; then kill -TERM "$host_monitor_pid"; wait "$host_monitor_pid" || true; fi
   # Terminate only this owned QEMU process. Disk/DB/media artifacts are retained
   # until the disposable CI runner itself is destroyed.
   if kill -0 "$qemu_pid" 2>/dev/null; then kill -TERM "$qemu_pid"; wait "$qemu_pid" || true; fi
@@ -135,15 +140,17 @@ if [[ -f "$repo/deploy/self-hosted/tests/p0-guest-integration.sh" ]]; then
   guest 'sudo -n setsid bash -c '\''echo $$ >/root/p0-callback.pid; exec bash /root/p0-guest-integration.sh'\''' >"$evidence/guest-integration.log" 2>&1 || result=$?
   callback_seconds=$((SECONDS-callback_start))
 fi
+callback_result=$result
 guest 'sudo -n touch /root/p0-monitor-finished; sudo -n test ! -f /root/p0-resource-stop.json' || result=1
 collect_evidence
+[[ -s "$evidence/p0-resource-samples.jsonl" ]] || result=1
 guest 'sudo -n docker --host unix:///var/run/docker.sock version --format "{{json .}}"' > "$evidence/docker-version.json" || true
 guest 'sudo -n docker --host unix:///var/run/docker.sock stats --no-stream --format "{{json .}}"' > "$evidence/docker-final-stats.jsonl" || true
 guest 'sudo -n bash -s' < "$repo/deploy/self-hosted/tests/docker-final-state.sh" > "$evidence/docker-final-state.txt" || true
-python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$result" "$callback_present" <<'PY'
+python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$callback_result" "$callback_present" <<'PY'
 import json,pathlib,sys
-root=pathlib.Path(sys.argv[1]);samples=[json.loads(line) for line in (root/'p0-resource-samples.jsonl').read_text().splitlines()]
-summary={'evidence':'ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS','vcpus':2,'allocated_memory_bytes':2*1024**3,'virtual_disk_bytes':40_000_000_000,'boot_seconds':int(sys.argv[2]),'callback_seconds':int(sys.argv[3]),'callback_exit':int(sys.argv[4]),'callback_present':sys.argv[5]=='1','sample_count':len(samples),'oom_kills':max((s['oom_kills_since_start'] for s in samples),default=0),'max_swap_used_bytes':max((s['swap_used_bytes'] for s in samples),default=0),'max_swap_available_bytes':max((s['swap_total_bytes'] for s in samples),default=0),'min_available_memory_bytes':min((s['mem_available_bytes'] for s in samples),default=0),'min_disk_free_bytes':min((s['disk_free_bytes'] for s in samples),default=0),'installation_result':'CALLBACK_RESULT_ONLY; NOT_PUBLIC_VPS' if sys.argv[5]=='1' else 'NOT_TESTED; RESOURCE_PREFLIGHT_ONLY'}
+root=pathlib.Path(sys.argv[1]);sample_file=root/'p0-resource-samples.jsonl';samples=[json.loads(line) for line in sample_file.read_text().splitlines()] if sample_file.is_file() else []
+summary={'evidence':'ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS','vcpus':2,'allocated_memory_bytes':2*1024**3,'virtual_disk_bytes':40_000_000_000,'boot_seconds':int(sys.argv[2]),'callback_seconds':int(sys.argv[3]),'callback_exit':int(sys.argv[4]),'callback_present':sys.argv[5]=='1','sample_count':len(samples),'guest_resource_evidence':'AVAILABLE' if samples else 'UNAVAILABLE','oom_kills':max((s['oom_kills_since_start'] for s in samples),default=None),'max_swap_used_bytes':max((s['swap_used_bytes'] for s in samples),default=None),'max_swap_available_bytes':max((s['swap_total_bytes'] for s in samples),default=None),'min_available_memory_bytes':min((s['mem_available_bytes'] for s in samples),default=None),'min_disk_free_bytes':min((s['disk_free_bytes'] for s in samples),default=None),'installation_result':'CALLBACK_RESULT_ONLY; NOT_PUBLIC_VPS' if sys.argv[5]=='1' else 'NOT_TESTED; RESOURCE_PREFLIGHT_ONLY'}
 (root/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 print(json.dumps(summary))
 PY

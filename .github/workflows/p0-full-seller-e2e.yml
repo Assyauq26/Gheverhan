@@ -69,7 +69,10 @@ jobs:
             /tmp/p0-full-build/cosign sign-blob --yes --bundle "/tmp/p0-full-build/artifacts/$role.bundle.json" "/tmp/p0-full-build/artifacts/$role.tar.gz"
           done
           export P0_FIXTURE_SIGNER_IDENTITY="https://github.com/$GITHUB_WORKFLOW_REF"
+          git rev-parse HEAD > /tmp/p0-full-build/source-sha
           GITHUB_ACTIONS=true P0_FULL_VM_PAYLOAD=/tmp/p0-full-build go -C agent test ./internal/releaseprotocol -run '^TestBuildFullVMFixture$' -count=1
+          /tmp/p0-full-build/cosign sign-blob --yes --bundle /tmp/p0-full-build/channels/pilot/release.sigstore.json /tmp/p0-full-build/channels/pilot/release.json
+          /tmp/p0-full-build/cosign sign-blob --yes --bundle /tmp/p0-full-build/policy.sigstore.json /tmp/p0-full-build/policy.json
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go -C agent build -trimpath -o /tmp/p0-full-build/jetseller-setup ./cmd/jetseller-setup
           /tmp/p0-full-build/cosign sign-blob --yes --bundle /tmp/p0-full-build/setup.sigstore.json /tmp/p0-full-build/jetseller-setup
           go -C agent test -c -o /tmp/p0-vm-payload/installer.test ./internal/installer
@@ -81,7 +84,7 @@ jobs:
           sudo /tmp/p0-vm-payload/installer.test -test.run '^TestP0DatabaseScriptReadableButNotWritableByDatabaseUID$' -test.v
           test ! -e /root/p0-publication
           sudo install -d -m700 /root/p0-publication
-          for entry in root.json targets.json timestamp.json snapshot.json channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /root/p0-publication/; done
+          for entry in channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /root/p0-publication/; done
           sudo chown -R root:root /root/p0-publication
           sudo install -d -m700 /opt/p0-payload
           sudo install -m700 /tmp/p0-full-build/cosign /opt/p0-payload/cosign
@@ -100,6 +103,9 @@ jobs:
           printf '%s' "$signature_sha" > /tmp/p0-full-signature-sha
           cp /tmp/p0-full-build/setup.sigstore.json "/tmp/p0-full-artifacts/$signature_sha.sigstore.json"
           cp /tmp/p0-full-build/policy.json "/tmp/p0-full-artifacts/$policy_sha.policy.json"
+          policy_sig_sha=$(sha256sum /tmp/p0-full-build/policy.sigstore.json | cut -d' ' -f1)
+          printf '%s' "$policy_sig_sha" > /tmp/p0-full-policy-signature-sha
+          cp /tmp/p0-full-build/policy.sigstore.json "/tmp/p0-full-artifacts/$policy_sig_sha.sigstore.json"
           bundle_sha=$(node -p "require('/tmp/p0-full-archive-receipt.json').bundle_sha256")
           sudo install -m600 -o "$(id -u)" /root/p0-release.zip "/tmp/p0-full-artifacts/$bundle_sha.zip"
           npm ci --prefix platform/installer --ignore-scripts --no-audit --no-fund

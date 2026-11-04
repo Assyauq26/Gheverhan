@@ -15,13 +15,17 @@ import (
 )
 
 type VerificationReceipt struct {
-	BundleSHA256   string    `json:"bundle_sha256,omitempty"`
-	BundleBytes    int64     `json:"bundle_bytes,omitempty"`
-	Status         string    `json:"status"`
-	ReleaseID      string    `json:"release_id"`
-	ManifestSHA256 string    `json:"manifest_sha256"`
-	RootSHA256     string    `json:"root_sha256"`
-	ExpiresAt      time.Time `json:"expires_at"`
+	BundleSHA256    string                 `json:"bundle_sha256,omitempty"`
+	BundleBytes     int64                  `json:"bundle_bytes,omitempty"`
+	Status          string                 `json:"status"`
+	ReleaseID       string                 `json:"release_id"`
+	ManifestSHA256  string                 `json:"manifest_sha256"`
+	RootSHA256      string                 `json:"root_sha256"`
+	TrustMode       string                 `json:"trust_mode,omitempty"`
+	AuthoritySHA256 string                 `json:"authority_sha256,omitempty"`
+	SourceSHA       string                 `json:"source_sha,omitempty"`
+	TrustState      *releaseprotocol.State `json:"trust_state,omitempty"`
+	ExpiresAt       time.Time              `json:"expires_at"`
 }
 
 // VerifyPackage does not install or fetch anything. Its protected output is a
@@ -32,11 +36,11 @@ func VerifyPackage(ctx context.Context, policyFile, releaseDirectory, receiptFil
 	if e != nil || !filepath.IsAbs(receiptFile) || protectedDirectory(filepath.Dir(receiptFile)) != nil {
 		return ErrInstall
 	}
-	b, e := loadBundle(releaseDirectory, p.Trust.Channel)
+	b, e := loadBundle(releaseDirectory, p.Trust.Channel, p.Trust.Mode)
 	if e != nil {
 		return e
 	}
-	r, _, e := releaseprotocol.Verify(p.Trust, b, releaseprotocol.State{}, time.Now())
+	r, trust, e := verifyMetadata(ctx, p, b, releaseprotocol.State{}, filepath.Dir(receiptFile))
 	if e != nil {
 		return e
 	}
@@ -85,6 +89,12 @@ func VerifyPackage(ctx context.Context, policyFile, releaseDirectory, receiptFil
 		}
 	}
 	receipt := VerificationReceipt{Status: "VERIFIED", ReleaseID: m.ReleaseID, ManifestSHA256: r.SHA256(), RootSHA256: p.Trust.BootstrapRootSHA256, ExpiresAt: m.ExpiresAt}
+	if p.Trust.Mode == releaseprotocol.KeylessMode {
+		receipt.TrustMode = releaseprotocol.KeylessMode
+		receipt.AuthoritySHA256 = trust.AuthoritySHA256
+		receipt.SourceSHA = trust.SourceSHA
+		receipt.TrustState = &trust
+	}
 	raw, e := json.Marshal(receipt)
 	if e != nil {
 		return ErrInstall

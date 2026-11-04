@@ -43,6 +43,11 @@ func TestBuildFullVMFixture(t *testing.T) {
 	// These OCI reference names are synthetic; real archive/config digests are verified.
 	m.Image = "registry.fixture.example/installation/app@sha256:" + m.ImageConfigSHA256
 	m.MigrationImage = "registry.fixture.example/installation/migration@sha256:" + m.MigrationConfigSHA256
+	f.policy.Mode = KeylessMode
+	f.policy.BootstrapRootSHA256 = ""
+	f.policy.MinimumRootThreshold = 0
+	f.policy.ExpectedSourceSHA = read("source-sha")
+	f.policy.MinimumReleaseSequence = 1
 	targets := map[string]*metadata.TargetFiles{}
 	for _, name := range []string{m.ImageArchiveTarget, m.ImageBundleTarget, m.MigrationArchiveTarget, m.MigrationBundleTarget} {
 		tf, e := metadata.TargetFile().FromFile(filepath.Join(dir, name), "sha256")
@@ -51,11 +56,11 @@ func TestBuildFullVMFixture(t *testing.T) {
 		}
 		targets[name] = tf
 	}
-	b, _, e := Publish(Publication{Policy: f.policy, Root: f.bootstrap, Manifest: m, Version: 1, Keys: f.online, Artifacts: targets}, f.now)
+	rawManifest, e := PrepareKeyless(f.policy, m, targets, State{}, f.now)
 	if e != nil {
 		t.Fatal(e)
 	}
-	files := map[string][]byte{"root.json": b.BootstrapRoot, "targets.json": b.Targets, "snapshot.json": b.Snapshot, "timestamp.json": b.Timestamp, "channels/pilot/release.json": b.Manifest}
+	files := map[string][]byte{"channels/pilot/release.json": rawManifest}
 	for name, data := range files {
 		file := filepath.Join(dir, name)
 		if e = os.MkdirAll(filepath.Dir(file), 0700); e != nil {
@@ -65,7 +70,7 @@ func TestBuildFullVMFixture(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	policy := map[string]any{"version": 1, "artifact_origin": "https://127.0.0.1:3443", "trust": f.policy, "verifier_path": "/opt/p0-payload/cosign", "verifier_sha256": read("cosign-sha256"), "disk_budget": map[string]uint64{"download_bytes": 2 << 30, "expanded_bytes": 4 << 30, "update_bytes": 6 << 30, "database_bytes": 4 << 30, "media_bytes": 4 << 30, "reserve_bytes": 4 << 30}}
+	policy := map[string]any{"version": 2, "artifact_origin": "https://127.0.0.1:3443", "trust": f.policy, "verifier_path": "/opt/p0-payload/cosign", "verifier_sha256": read("cosign-sha256"), "disk_budget": map[string]uint64{"download_bytes": 2 << 30, "expanded_bytes": 4 << 30, "update_bytes": 6 << 30, "database_bytes": 4 << 30, "media_bytes": 4 << 30, "reserve_bytes": 4 << 30}}
 	raw, _ := json.Marshal(policy)
 	if e = os.WriteFile(filepath.Join(dir, "policy.json"), raw, 0600); e != nil {
 		t.Fatal(e)

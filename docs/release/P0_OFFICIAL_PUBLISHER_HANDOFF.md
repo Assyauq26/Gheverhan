@@ -1,5 +1,17 @@
 # Official publisher: owner setup and activation
 
+## Current owner decision: keyless production, no TUF root ceremony
+
+The owner explicitly removed the application TUF/root ceremony requirement and authorized full production execution. The production workflow now uses `deploy/release/prepare-keyless-official.mjs`, policy version2 / `keyless-v2`, GitHub Actions OIDC and Cosign. The offline-root and TUF-secret procedures below are historical v1 material, not production prerequisites. Do NOT generate a production root or configure TUF role secrets for the keyless release.
+
+The protected workflow identity remains `https://github.com/Assyauq26/Gheverhan/.github/workflows/btos-official-release.yml@refs/heads/main`, issuer `https://token.actions.githubusercontent.com`. It signs the complete source-bound manifest/target length/hash envelope, OCI digests, native bootstrap and policy. Mandatory pinned-verifier checks, seven-day maximum manifest lifetime, expiry, compatibility, authority/source binding, persistent monotonic sequence/hash state, clock rollback protection, PoP ownership and one-use download grants remain enforced. Switching back to v1 after accepting keyless state is rejected.
+
+First official publication uses reviewed exact main SHA, `genesis=true`, version1.0.0 and stable channel. No production signing secrets are needed; GitHub OIDC is ephemeral. Optional public variables can override the reviewed manifest; defaults match the owner-selected registry and signer. All16 latest exact-main GitHub Actions checks and protected environment/reviewer policy still gate publication. A prior successful official publication requires its verified `publication-state.private.json` as `BTOS_PREVIOUS_STATE_JSON`; counters may not be reset. Renew the signed release before its expiry.
+
+Initial bootstrap verifies the pinned upstream Cosign binary, installer signature and signed policy before privileged placement. Wizard commands contain fixed workflow/issuer pins and no curl-piped shell execution. A SHA256 `authority_sha256` identifies signer policy, not a root-key fingerprint. Root fingerprint for keyless production is NOT_APPLICABLE. Legacy TUF code remains only for compatibility/tests and is not selected by production policy2.
+
+Actual publication/deployment state must be taken from verified workflow output, never inferred from passing tests. Owner's go-live approval covers deployment and dashboard/landing changes, but public activation still requires successful real acceptance. No fixture key/signature, fake digest or bypass is permitted.
+
 PUBLIC_SELLER_ONBOARDING_READY: NOT_PROVEN. No production root fingerprint, official image digest or live installer endpoint is asserted. No production mutation or official publication has occurred. Read-only Helipod evidence and the merge-policy blocker are recorded in P0_PRE_MERGE_AUDIT.md.
 
 ## Public configuration selected by owner

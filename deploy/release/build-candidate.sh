@@ -44,4 +44,4 @@ printf '%s\n' "$repo/control@$control_digest" > "$out/control-image"
 "$cosign" verify-blob --bundle "$out/jetseller-setup.sigstore.json" --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" "$out/jetseller-setup" >/dev/null
 sha256sum "$out/jetseller-setup" > "$out/jetseller-setup.sha256"
 printf '%s\n' "$sha" > "$out/source-sha"
-echo 'Candidate archives signed and verified; TUF publication, independent verification receipt and HTTPS upload remain separately approved steps'
+echo 'Candidate archives signed and verified; signed metadata, verification receipt and HTTPS delivery remain required'

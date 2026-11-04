@@ -81,7 +81,7 @@ func protectedRead(name string, max int64, private bool) ([]byte, error) {
 func loadPolicy(file string) (Policy, error) {
 	var p Policy
 	b, e := protectedRead(file, 65536, true)
-	if e != nil || strictJSON(b, &p) != nil || p.Version != 1 || p.VerifierPath == "" || len(p.VerifierSHA256) != 64 {
+	if e != nil || strictJSON(b, &p) != nil || (p.Version != 1 && p.Version != 2) || (p.Version == 2) != (p.Trust.Mode == releaseprotocol.KeylessMode) || p.VerifierPath == "" || len(p.VerifierSHA256) != 64 {
 		return p, ErrInstall
 	}
 	if _, e = p.Budget.RequiredFreeBytes(); e != nil {
@@ -89,12 +89,23 @@ func loadPolicy(file string) (Policy, error) {
 	}
 	return p, nil
 }
-func loadBundle(directory string, channel string) (releaseprotocol.Bundle, error) {
+func loadBundle(directory string, channel string, modes ...string) (releaseprotocol.Bundle, error) {
 	var b releaseprotocol.Bundle
 	if protectedDirectory(directory) != nil {
 		return b, ErrInstall
 	}
 	var e error
+	if len(modes) == 1 && modes[0] == releaseprotocol.KeylessMode {
+		b.Manifest, e = protectedRead(filepath.Join(directory, "channels", channel, "release.json"), 64<<10, false)
+		if e != nil {
+			return b, ErrInstall
+		}
+		b.KeylessSignature, e = protectedRead(filepath.Join(directory, "channels", channel, "release.sigstore.json"), 4<<20, false)
+		if e != nil {
+			return b, ErrInstall
+		}
+		return b, nil
+	}
 	for name, dest := range map[string]*[]byte{"root.json": &b.BootstrapRoot, "timestamp.json": &b.Timestamp, "snapshot.json": &b.Snapshot, "targets.json": &b.Targets, "channels/" + channel + "/release.json": &b.Manifest} {
 		*dest, e = protectedRead(filepath.Join(directory, name), 2<<20, false)
 		if e != nil {

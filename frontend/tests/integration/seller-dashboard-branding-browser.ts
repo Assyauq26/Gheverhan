@@ -41,6 +41,7 @@ async function main() {
       const env = { ...original, ...fixture.env, DIRECT_URL: undefined, JETSELLER_STORE_DISPLAY_NAME: name,
         JWT_SECRET: randomBytes(48).toString("hex"), REGION_DATA_MODE: "snapshot", MAINTENANCE_MODE: "0", REGISTRATION_OTP_CLEANUP_DISABLED: "1",
         JNT_INTEGRATION_ENCRYPTION_KEY: randomBytes(32).toString("base64"), JNT_PRODUCTION_API_APPROVED: "no" };
+      await mkdir(env.STORAGE_LOCAL_ROOT, { recursive: true, mode: 0o700 });
       const log = createWriteStream(path.join(artifact, `store-${index}.log`));
       const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(fixture.internalPort)], { env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
       child.stdout!.pipe(log); child.stderr!.pipe(log);

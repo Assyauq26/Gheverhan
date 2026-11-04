@@ -29,7 +29,11 @@ export async function startPairingCli(t, { directory, origin, installationId }) 
   const child = spawn('docker', ['--host', 'unix:///var/run/docker.sock', 'run', '--name', name, ...common, 'pair', ...flags], { stdio: ['ignore', 'pipe', 'pipe'] });
   const stopped = new Promise(resolve => { child.once('error', () => resolve(null)); child.once('close', code => resolve(code)); });
   // Human code/fingerprint are read only into test memory, never logged/artifacted.
-  let terminal = ''; child.stderr.on('data', () => {});
+  let terminal = '', diagnostic = '';
+  // Whitelist public host diagnostics; never forward arbitrary CLI/Docker logs.
+  child.stderr.on('data', data => {
+    diagnostic = (diagnostic + data.toString()).slice(-4096);
+  });
   const session = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Real CLI did not reach private pairing checkpoint')), 45000);
     child.stdout.on('data', data => {
@@ -38,7 +42,12 @@ export async function startPairingCli(t, { directory, origin, installationId }) 
       const match = terminal.match(/Open (https:\/\/\S+) and enter ([A-HJ-NP-Z2-9]{5}-[A-HJ-NP-Z2-9]{5})\. Confirm device fingerprint ([A-Za-z0-9_-]{43})\./);
       if (match) { clearTimeout(timeout); resolve({ verification_uri: match[1], user_code: match[2], thumbprint: match[3] }); }
     });
-    stopped.then(() => { clearTimeout(timeout); reject(new Error('CLI exited before pairing checkpoint')); });
+    stopped.then(code => {
+      clearTimeout(timeout);
+      const host = diagnostic.match(/^preflight: os=[a-z]+ arch=[a-z0-9]+ release=[a-z0-9:.]* cpus=\d+ memory_bytes=\d+ free_bytes=\d+ free_inodes=\d+ ports_available=(?:true|false) existing_services=(?:true|false)$/m)?.[0];
+      const category = diagnostic.match(/\((host_preflight|private_state|operation_failed)\)/)?.[1] ?? 'unclassified';
+      reject(new Error(`CLI exited before pairing checkpoint; exit=${code}; category=${category}${host ? '; ' + host : ''}`));
+    });
   });
   t.after(() => {
     try {

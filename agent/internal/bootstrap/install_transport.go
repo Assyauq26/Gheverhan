@@ -30,10 +30,14 @@ func installProof(key ed25519.PrivateKey, method, endpoint, token, nonce string,
 	return content + "." + base64.RawURLEncoding.EncodeToString(ed25519.Sign(key, []byte(content))), nil
 }
 
+func installRouteAllowed(method, route string) bool {
+	return (method == "GET" && (route == "/agent/install-authorization" || route == "/agent/release-download-authorization")) || (method == "POST" && route == "/agent/install-progress")
+}
+
 // InstallRequest never follows an origin-changing redirect or prints response
 // bodies/tokens. The local paired origin, key and UUID must remain unchanged.
 func (c *PairingClient) InstallRequest(ctx context.Context, s *State, method, route string, body any, out any) error {
-	if c == nil || s == nil || !((method == "GET" && route == "/agent/install-authorization") || (method == "POST" && route == "/agent/install-progress")) {
+	if c == nil || s == nil || !installRouteAllowed(method, route) {
 		return ErrPairing
 	}
 	credential, e := s.PairedCredential()
@@ -49,15 +53,25 @@ func (c *PairingClient) InstallRequest(ctx context.Context, s *State, method, ro
 	if e != nil || credential.ControlOrigin != c.origin {
 		return ErrPairing
 	}
+	return c.installRequestWithCredential(ctx, s.PrivateKey(), credential, method, route, body, out)
+}
+
+// The transport is separate from root-state loading so its exact HTTP/PoP
+// boundary can be regression-tested without substituting authentication.
+func (c *PairingClient) installRequestWithCredential(ctx context.Context, key ed25519.PrivateKey, credential Credential, method, route string, body any, out any) error {
+	if c == nil || !installRouteAllowed(method, route) || credential.ControlOrigin != c.origin || len(key) != ed25519.PrivateKeySize {
+		return ErrPairing
+	}
 	var raw []byte
 	if method == "POST" {
+		var e error
 		raw, e = json.Marshal(body)
 		if e != nil || len(raw) > 4096 {
 			return ErrPairing
 		}
 	}
 	endpoint := c.origin + "/api/installer/v1" + route
-	proof, e := installProof(s.PrivateKey(), method, endpoint, credential.Token, credential.ManagementNonce, raw)
+	proof, e := installProof(key, method, endpoint, credential.Token, credential.ManagementNonce, raw)
 	if e != nil {
 		return e
 	}

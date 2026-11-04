@@ -139,7 +139,7 @@ guest 'sudo -n touch /root/p0-monitor-finished; sudo -n test ! -f /root/p0-resou
 collect_evidence
 guest 'sudo -n docker --host unix:///var/run/docker.sock version --format "{{json .}}"' > "$evidence/docker-version.json" || true
 guest 'sudo -n docker --host unix:///var/run/docker.sock stats --no-stream --format "{{json .}}"' > "$evidence/docker-final-stats.jsonl" || true
-guest 'sudo -n docker --host unix:///var/run/docker.sock inspect --format "{{.Name}} {{.State.OOMKilled}} {{.RestartCount}}" $(sudo -n docker --host unix:///var/run/docker.sock ps --all --quiet)' > "$evidence/docker-final-state.txt" || true
+guest 'sudo -n bash -s' < "$repo/deploy/self-hosted/tests/docker-final-state.sh" > "$evidence/docker-final-state.txt" || true
 python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$result" "$callback_present" <<'PY'
 import json,pathlib,sys
 root=pathlib.Path(sys.argv[1]);samples=[json.loads(line) for line in (root/'p0-resource-samples.jsonl').read_text().splitlines()]

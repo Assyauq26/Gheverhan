@@ -38,6 +38,11 @@ jobs:
         with: {node-version: '22'}
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with: {go-version: '1.27.3', cache: false}
+      - name: Targeted transport and collector regressions before expensive full VM
+        run: |
+          go -C agent test ./internal/bootstrap -run '^TestScopedDownloadAuthorizationTransport$' -count=1 -v
+          bash deploy/self-hosted/tests/docker-final-state.test.sh
+          bash -n deploy/self-hosted/tests/p0-vm.sh
       - name: Build outside2GiB VM and sign synthetic payloads with this TEST workflow identity
         run: |
           set -euo pipefail

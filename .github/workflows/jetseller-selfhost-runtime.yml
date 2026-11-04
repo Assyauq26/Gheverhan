@@ -1,4 +1,4 @@
-name: JetSeller self-hosted disposable runtime
+name: Buat Toko Online Sendiri self-hosted disposable runtime
 on:
   pull_request:
     paths:

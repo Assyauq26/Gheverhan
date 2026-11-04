@@ -25,9 +25,10 @@ test("JetSeller public pages use the new canonical origin and never claim legacy
 test("draft Caddy migrates landing while preserving Gheverhan and keeping portal isolated", () => {
   const caddy = fs.readFileSync(path.join(root, "deploy/Caddyfile.jetseller.DRAFT"), "utf8");
   assert.match(caddy, /gheverhan\.store\s*\{[\s\S]*?reverse_proxy app:3000/);
-  assert.match(caddy, /buattokosendiri\.web\.id\s*\{[\s\S]*?root \* \/data\/landing\/jetseller/);
+  assert.match(caddy, /buattokosendiri\.web\.id\s*\{[\s\S]*?root \* \/data\/landing\/buattokosendiri\/current/);
   assert.match(caddy, /www\.buattokosendiri\.web\.id\s*\{\s*redir https:\/\/buattokosendiri\.web\.id\{uri\} permanent/);
-  assert.match(caddy, /jetseller\.web\.id\s*\{\s*redir https:\/\/buattokosendiri\.web\.id\{uri\} permanent/);
+  assert.match(caddy, /\njetseller\.web\.id\s*\{\s*root \* \/data\/landing\/jetseller\s*file_server/);
+  assert.doesNotMatch(caddy, /jetseller\.web\.id\s*\{\s*redir https:\/\/buattokosendiri/);
   assert.ok(!/^[^\n]*\*\.buattokosendiri\.web\.id\s*\{/m.test(caddy), "no wildcard tenant routing");
   assert.ok(!/dashboard\.buattokosendiri\.web\.id\s*\{/m.test(caddy), "no unreviewed seller portal reverse proxy");
 });

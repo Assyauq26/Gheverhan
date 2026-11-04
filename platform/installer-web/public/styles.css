@@ -3,3 +3,5 @@
 @media(max-width:800px){.workspace{grid-template-columns:1fr}.topbar{padding:16px 20px;gap:16px}.workspace-label{display:none}.account-state{max-width:20ch}main{padding:28px 20px 40px}.page-heading{gap:16px}.page-heading h1{font-size:26px}.page-heading p{font-size:14px}.surface{padding:24px}.notice{padding:18px 20px}.facts>div{grid-template-columns:120px minmax(0,1fr)}footer{padding:0 20px 28px}}@media(max-width:400px){.surface{padding:20px}.input-action{flex-direction:column}.page-heading{flex-direction:column}.topbar{gap:12px}.account-state{max-width:17ch}}@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 .notice>.button{margin-top:16px}
 .checkbox-label{min-height:44px;padding:8px 0;align-items:center}.checkbox-label input{margin:0}
+
+.wordmark{max-width:22ch;white-space:normal;font-size:18px;line-height:1.25;letter-spacing:-.02em}.topbar{flex-wrap:wrap}

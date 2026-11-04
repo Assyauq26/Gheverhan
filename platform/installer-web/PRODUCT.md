@@ -1,4 +1,4 @@
-# JetSeller installation workspace
+# Buat Toko Online Sendiri installation workspace
 
 <!-- impeccable:product-schema 1 -->
 
@@ -24,7 +24,7 @@ Use real same-origin registry/session/pairing APIs with authenticated ownership 
 
 ## Brand Commitments
 
-JetSeller red and white with restrained black primary actions; Indonesian labels and practical operator copy. Inherit the existing store dashboard's familiar sans typography, simple controls and restrained hierarchy without copying its commerce authority.
+Buat Toko Online Sendiri red and white with restrained black primary actions; Indonesian labels and practical operator copy. Inherit the existing store dashboard's familiar sans typography, simple controls and restrained hierarchy without copying its commerce authority.
 
 ## Accessibility & Inclusion
 

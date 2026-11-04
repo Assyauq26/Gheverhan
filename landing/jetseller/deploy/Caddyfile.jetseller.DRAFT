@@ -19,7 +19,8 @@ www.buattokosendiri.web.id {
 
 buattokosendiri.web.id {
   encode zstd gzip
-  root * /data/landing/jetseller
+  # Separate versioned assets; never overwrite the legacy shared directory.
+  root * /data/landing/buattokosendiri/current
 
   # Asset names are not content-hashed yet: cache briefly and revalidate.
   @assets path /assets/*
@@ -47,11 +48,12 @@ buattokosendiri.web.id {
 # LEGACY CUTOVER (enable only after the new landing and all former portal
 # URL consumers have been verified; preserve the old domain's active TLS).
 www.jetseller.web.id {
-  redir https://buattokosendiri.web.id{uri} permanent
+  redir https://jetseller.web.id{uri} permanent
 }
 
 jetseller.web.id {
-  redir https://buattokosendiri.web.id{uri} permanent
+  root * /data/landing/jetseller
+  file_server
 }
 
 # No wildcard routing. This static landing DOES NOT host the seller portal.

@@ -1,4 +1,4 @@
-name: JetSeller signed disposable provisioning
+name: Buat Toko Online Sendiri signed disposable provisioning
 on:
   pull_request:
     paths:

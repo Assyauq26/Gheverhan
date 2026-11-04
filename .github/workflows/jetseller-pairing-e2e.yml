@@ -1,4 +1,4 @@
-name: JetSeller CLI and browser pairing E2E
+name: Buat Toko Online Sendiri CLI and browser pairing E2E
 on:
   pull_request:
     paths:
@@ -48,7 +48,7 @@ jobs:
         working-directory: platform/installer-web
       - run: npx playwright install --with-deps chromium
         working-directory: platform/installer-web
-      - name: Verify a real upstream signed artifact with this CLI (not a JetSeller release)
+      - name: Verify a real upstream signed artifact with this CLI (not a platform release)
         run: |
           set -euo pipefail
           fixture=$(mktemp -d /tmp/jetseller-e2e-sigstore.XXXXXXXX)

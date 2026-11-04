@@ -119,3 +119,10 @@ body#beranda .faq { border-color:#e9ebef; }
 @media (max-width:768px) {
   body#beranda .hero-visual { width:calc(100vw - 8px); max-width:none; margin-inline:0; justify-self:center; }
 }
+
+body#beranda .brand{font-size:1.15rem;letter-spacing:-.025em;max-width:17ch;white-space:normal}
+@media(max-width:600px){body#beranda .brand{font-size:1rem}}
+
+body#beranda .hero-visual{animation:none}
+
+body#beranda .step-num{color:#b3121a}

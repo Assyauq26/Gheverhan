@@ -3,6 +3,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pairingExitMessage } from './cli-diagnostics.mjs';
 
 const docker = args => execFileSync('docker', ['--host', 'unix:///var/run/docker.sock', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
 const imagePattern = /^ubuntu@sha256:[a-f0-9]{64}$/;
@@ -44,9 +45,7 @@ export async function startPairingCli(t, { directory, origin, installationId }) 
     });
     stopped.then(code => {
       clearTimeout(timeout);
-      const host = diagnostic.match(/^preflight: os=[a-z]+ arch=[a-z0-9]+ release=[a-z0-9:.]* cpus=\d+ memory_bytes=\d+ free_bytes=\d+ free_inodes=\d+ ports_available=(?:true|false) existing_services=(?:true|false)$/m)?.[0];
-      const category = diagnostic.match(/\((host_preflight|private_state|operation_failed)\)/)?.[1] ?? 'unclassified';
-      reject(new Error(`CLI exited before pairing checkpoint; exit=${code}; category=${category}${host ? '; ' + host : ''}`));
+      reject(new Error(pairingExitMessage(code, diagnostic)));
     });
   });
   t.after(() => {

@@ -1,3 +1,5 @@
+> Identitas produk diperbarui 4 November 2026. Identifier teknis lama tetap kompatibel; lihat `../rebranding-buattokosendiri/README.md`. Klaim kesiapan dalam spesifikasi ini tetap memerlukan bukti implementasi.
+
 # Security, Software Supply Chain, Operations & Recovery
 
 Companion to `PRD.md` and `ARCHITECTURE.md`. **Do not implement a remote root execution backdoor in order to make updates easy.**
@@ -78,7 +80,7 @@ Mandatory checks:
 
 ## 6. Backup policy
 
-Use PostgreSQL documented methods appropriate to data size and RPO/RTO (pg_dump for small installations and portability, base backup/WAL for larger production-grade recovery). Always include media uploads and encrypted application configuration secrets necessary for recovery. Seller owns backup endpoint/retention and encryption keys; off-VPS destination is strongly recommended. JetSeller central stores only status metadata, never raw backup by default.
+Use PostgreSQL documented methods appropriate to data size and RPO/RTO (pg_dump for small installations and portability, base backup/WAL for larger production-grade recovery). Always include media uploads and encrypted application configuration secrets necessary for recovery. Seller owns backup endpoint/retention and encryption keys; off-VPS destination is strongly recommended. Buat Toko Online Sendiri central stores only status metadata, never raw backup by default.
 
 First release test: disposable store with synthetic orders/media; take backup, corrupt/stop database in controlled environment, restore into fresh environment, verify checksums and critical flows. Record evidence in PR.
 

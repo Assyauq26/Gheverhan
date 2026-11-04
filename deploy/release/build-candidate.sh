@@ -28,5 +28,16 @@ for role in app migration; do
  "$cosign" sign-blob --yes --bundle "$out/artifacts/$role.bundle.json" "$out/artifacts/$role.tar.gz"
  "$cosign" verify-blob --bundle "$out/artifacts/$role.bundle.json" --certificate-identity "${RELEASE_SIGNER_IDENTITY:?approved identity required}" --certificate-oidc-issuer "${RELEASE_SIGNER_ISSUER:?approved issuer required}" "$out/artifacts/$role.tar.gz" >/dev/null
  done
+# Control-plane image is separate from store archives and signed by immutable digest.
+docker buildx build --platform linux/amd64 --file deploy/control-plane/Dockerfile --tag "$repo/control:$sha" --push --metadata-file "$out/control-build.json" .
+control_digest=$(node -e 'const d=require(process.argv[1])["containerimage.digest"];if(!/^sha256:[a-f0-9]{64}$/.test(d))process.exit(1);process.stdout.write(d)' "$out/control-build.json")
+printf '%s\n' "$repo/control@$control_digest" > "$out/control-image"
+"$cosign" sign --yes "$repo/control@$control_digest"
+"$cosign" verify --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" "$repo/control@$control_digest" >/dev/null
+# Seller bootstrap is a native binary, never a downloaded shell script.
+(cd agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o "$out/jetseller-setup" ./cmd/jetseller-setup)
+"$cosign" sign-blob --yes --bundle "$out/jetseller-setup.sigstore.json" "$out/jetseller-setup"
+"$cosign" verify-blob --bundle "$out/jetseller-setup.sigstore.json" --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" "$out/jetseller-setup" >/dev/null
+sha256sum "$out/jetseller-setup" > "$out/jetseller-setup.sha256"
 printf '%s\n' "$sha" > "$out/source-sha"
 echo 'Candidate archives signed and verified; TUF publication, independent verification receipt and HTTPS upload remain separately approved steps'

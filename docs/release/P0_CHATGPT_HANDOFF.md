@@ -1,4 +1,4 @@
-# P0 handoff — Buat Toko Online Sendiri
+# P0 handoff â€” Buat Toko Online Sendiri
 
 Branch: `feat/buattokosendiri-p0-mvp`, stacked on PR #170 branch `feat/jetseller-buattokosendiri-domain-cutover`, reference `77c25c361f388b3db0f92a60915c2344ad550252`. Read the implementation PR for current exact HEAD and CI; this document does not imply deployment approval.
 
@@ -68,3 +68,33 @@ New P0 runtime configs do not enable checkout: `SELF_HOSTED_CHECKOUT_APPROVED` i
 Fresh self-hosted appearance uses the authorized installation display name (maximum100characters) via private `JETSELLER_STORE_DISPLAY_NAME`; missing configuration uses neutral Toko Anda branding. Existing published merchant appearance remains authoritative and legacy-profile branding is preserved. Installer checkpoints bind the initial display name and reject a changed name during resume rather than rewriting an existing installation.
 
 Registry integration files share one dedicated schema and each exercises additive DDL/migration idempotency. They run sequentially to prevent one suite migrating tables while another holds business transaction locks. Each suite's concurrent request assertions remain concurrent, including double domain verification and OTP replay/consumption races.
+
+
+## Final sprint: Helipod coexistence (review only)
+
+Use `deploy/control-plane/compose.helipod.yml` ONLY for coexistence. It has no Caddy service or published port. Standalone compose.yml remains for independent hosts and must never be used for Helipod rollout. Topology: existing proxy → dedicated external INTERNAL network btos_control_ingress → btos-control-api:3100 → private database network → dedicated control DB. Existing proxy retains its original network and Caddy volumes; control never joins the Gheverhan database network.
+
+Capacity is BLOCKED for the last reported host without fresh evidence: existing limits512+900+128=1540MiB, new runtime384+256=640MiB, total2180MiB before OS; migration adds192MiB. Swap2GB is not extra physical RAM. Read-only coexist-preflight.sh requires896MiB currently available and12GiB Docker-filesystem free (6GiB images/pull/update,1GiB initial DB,1GiB logs,4GiB reserve). Reported9GB free is insufficient. Do not install until capacity is reviewed; no existing service limits may be reduced automatically. Do not build images on Helipod.
+
+After explicit final approval ONLY, operational sequence:
+1. Back up the exact current Caddyfile and its checksum privately; record existing proxy container ID/networks, control DB backup/restore evidence and approved immutable CONTROL_IMAGE.
+2. Validate config with Compose using production private paths (never print interpolated secrets). Initialize only the dedicated control volume; existing DB bootstrap is never altered.
+3. Create network `docker network create --internal btos_control_ingress` if absent after inspecting its driver/internal flag. Attach ONLY the existing proxy via `docker network connect btos_control_ingress deploy_proxy_1`; retain every existing network. This does not require restarting proxy. Review helipod-proxy-network.yml for persistence in the existing Compose source; do not recreate it automatically.
+4. `docker compose -f deploy/control-plane/compose.helipod.yml up -d --wait db`; `... run --rm migrate`; `... up -d --wait control`. Run verify-runtime.mjs via stdin from the runtime container (DML yes, schemaCREATE no). Secret files/UID1000 and PostgreSQL UID999 remain as documented above; never mount owner/bootstrap credentials in control.
+5. From existing proxy, check credentialless private /auth/status. Apply ONLY dashboard.Caddyfile.diff after matching the actual live dashboard503 block, validate the entire copied Caddyfile with existing Caddy, and obtain approval for limited reload. Never replace other hostnames or certificate storage. No Codex production operation has occurred.
+6. Smoke normal TLS without -k, real OTP/session/wizard, isolation/logout, pairing and store admin. Record actual run/host/source/image digests. Do not enable checkout/J&T.
+7. Rollback only dashboard hostname to its saved503 block, validate/reload after approval; stop control application if needed, preserve dedicated DB and all other volumes. Keep proxy attached until safe removal is separately reviewed. Never stop Gheverhan app/db/proxy.
+
+## Official publisher inputs required (no secrets in chat)
+
+Owner/ChatGPT must approve: OCI registry and repository write scope; release HTTPS origin and immutable object path convention; exact Sigstore OIDC issuer + workflow certificate identity; independent initial root SHA256 distribution channel; offline root quorum custody (minimum2) and approved online role public keys; online signer files or isolated signing service access; prior trusted publication state/sequence. Provision private keys through protected runner storage, not source/PR/chat. An initial empty publication state is permitted only for an explicitly approved genesis. Update state only after successful immutable publication; never reset it to reuse a version.
+
+Tooling now includes jetseller-publish (online TUF metadata, self-verifies against pinned root and previous state), deploy/release/build-candidate.sh (exact-source OCI build/push, immutable digest/config IDs, archive signing and standard Cosign verify), prepare-manifest.mjs (binds approved manifest template to built digests), package-candidate.mjs (constrained ZIP after private verification receipt). These are candidate tools, not evidence that official artifacts exist. No root/private key or production signature has been generated, and the build/push script has NOT been executed.
+
+On an approved isolated publisher runner: build pinned Go CLI; supply protected JSON publication configuration with Policy, RootFile, ManifestFile, PreviousStateFile, ArtifactDirectory, OutputDirectory, Version and Keys{targets,snapshot,timestamp}; each signer is approved Ed25519 PKCS8 private file0400/0600. Supply independently pinned Cosign binary/path/SHA and exact signer identity. Build candidate only with RELEASE_OWNER_APPROVED=signed-candidate-build, exact RELEASE_SOURCE_SHA, approved RELEASE_IMAGE_REPOSITORY, RELEASE_COSIGN_PATH/SHA256 and RELEASE_SIGNER_IDENTITY/ISSUER. This command writes registry images, so requires publisher approval even though it does not deploy a store.
+
+Generate the manifest using the approved version/channel/schema/compatibility template and actual build outputs; sign metadata with jetseller-publish. Assemble metadata plus the four exact signed artifacts in a protected directory. Run the existing root-owned jetseller-setup verify-release using independently pinned policy/Cosign, then package-candidate with its receipt. Upload only after review to an immutable HTTPS object. Do not publish candidate-state.json, private key paths/files or credentials. Verify remote download hash, signature and full metadata chain using seller installer before activating the protected release catalog. Initial installer binary signature/root bootstrap and limited per-device download grant delivery are STILL incomplete operational/publisher gates; a shared permanent URL must not be called a limited grant.
+
+## Required final gate status
+
+PUBLIC_SELLER_ONBOARDING_READY: NOT_PROVEN. Official signing/publication and full NEW installer2/2/40 journey remain BLOCKED. No app/media restart or publicTLS claim may be inferred from control database-only coexistence/restore fixtures. Real Resend delivery is owner-reported; live deployed onboarding remains unverified. Exact final-head checks are required after these code changes. Checkout/J&T remain disabled.

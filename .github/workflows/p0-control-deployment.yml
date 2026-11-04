@@ -39,3 +39,7 @@ jobs:
           dc run --rm --no-deps --entrypoint wget caddy -qO- http://control:3100/auth/status | grep -q email_otp
           dc restart control
           dc up -d --wait control
+      - name: Coexist with occupied80/443 and restore disposable control data
+        env:
+          CONTROL_DISPOSABLE_FIXTURE: 'yes'
+        run: bash deploy/control-plane/coexist-test.sh

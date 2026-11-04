@@ -1,0 +1,79 @@
+name: btos-control
+services:
+  db:
+    image: postgres@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+    environment:
+      POSTGRES_DB: jetseller_control_plane
+      POSTGRES_USER: control_bootstrap
+      POSTGRES_PASSWORD_FILE: /run/secrets/bootstrap_password
+    secrets: [bootstrap_password, owner_password, runtime_password]
+    volumes:
+      - control_database:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-control.sql:ro
+    networks: [database]
+    mem_limit: 384m
+    pids_limit: 128
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U control_bootstrap -d jetseller_control_plane']
+      interval: 10s
+      timeout: 3s
+      retries: 15
+  migrate:
+    image: ${CONTROL_IMAGE:?immutable control image digest required}
+    command: [node, src/migrate.mjs]
+    environment:
+      JETSELLER_CONTROL_MIGRATION_CONFIRM: dedicated-control-database
+      JETSELLER_CONTROL_DATABASE_URL_FILE: /etc/buattokosendiri/owner-database-url
+    volumes:
+      - ${CONTROL_MIGRATION_SECRETS_DIR:?private migration directory required}:/etc/buattokosendiri:ro
+    networks: [database]
+    depends_on:
+      db: {condition: service_healthy}
+    mem_limit: 192m
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  control:
+    image: ${CONTROL_IMAGE:?immutable control image digest required}
+    environment:
+      JETSELLER_CONTROL_CONFIG_FILE: /etc/buattokosendiri/control.json
+    volumes:
+      - ${CONTROL_RUNTIME_SECRETS_DIR:?private runtime directory required}:/etc/buattokosendiri:ro
+    networks:
+      database: {}
+      proxy:
+        aliases: [btos-control-api]
+      outbound: {}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    mem_limit: 256m
+    pids_limit: 64
+    cpus: 1.0
+    read_only: true
+    tmpfs: ['/tmp:size=16m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3100/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+networks:
+  database: {internal: true}
+  proxy:
+    external: true
+    name: btos_control_ingress
+  outbound: {}
+volumes:
+  control_database: {}
+secrets:
+  bootstrap_password:
+    file: ${CONTROL_DB_SECRETS_DIR:?private DB directory required}/bootstrap-password
+  owner_password:
+    file: ${CONTROL_DB_SECRETS_DIR:?private DB directory required}/owner-password
+  runtime_password:
+    file: ${CONTROL_DB_SECRETS_DIR:?private DB directory required}/runtime-password

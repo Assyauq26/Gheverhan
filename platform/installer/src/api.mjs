@@ -21,8 +21,8 @@ async function body(request) {
   const raw=Buffer.concat(chunks).toString('utf8');
   try { return JSON.parse(raw); } catch { fail(400,'INVALID_REQUEST'); }
 }
-function json(status, value) {
-  return Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'5'}:{})}});
+function json(status, value, headers={}) {
+  return Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'5'}:{}),...headers}});
 }
 async function own(client, id, seller, lock = false) {
   const result = await client.query(`SELECT i.*,d.id AS device_id FROM installer.installations i LEFT JOIN installer.devices d ON d.installation_id=i.id AND d.revoked_at IS NULL WHERE i.id=$1 AND i.seller_id=$2${lock?' FOR UPDATE OF i':''}`,[id,seller]);
@@ -35,7 +35,7 @@ function pairingPublic(pairing) {
     expires_at:pairing.expires_at,scopes,agent_version:pairing.agent_version,os:pairing.os,arch:pairing.arch };
 }
 
-export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verificationKey,domainLookup}) {
+export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verificationKey,domainLookup,installRelease}) {
   origin(controlOrigin);
   if (!signingKey) throw new Error('Agent signing key required');
   const authenticate = sellerAuthenticator(pool,sessionIssuer);
@@ -47,6 +47,14 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       if (!path.startsWith(prefix+'/')) fail(404,'NOT_FOUND');
       if (request.headers.get('content-length') && Number(request.headers.get('content-length'))>16384) fail(413,'BODY_TOO_LARGE');
       await rate(pool,'ip:'+clientAddress,120);
+      // The independent release module performs its own seller/device auth and
+      // scope checks. Only these fixed paths may cross the extension boundary.
+      if(installRelease&&((path===prefix+'/agent/install-authorization'&&request.method==='GET')||
+        (path===prefix+'/agent/install-progress'&&request.method==='POST')||
+        (/^\/api\/installer\/v1\/installations\/[^/]+\/(?:install-instructions|install-progress)$/.test(path)&&request.method==='GET'))) {
+        const releaseResponse=await installRelease(request,{clientAddress});
+        if(releaseResponse)return releaseResponse;
+      }
       if(path===prefix+'/agent/identity' && request.method==='GET') {
         return json(200,await transaction(pool,c=>agentIdentity(request,c,verificationKey,controlOrigin)));
       }
@@ -127,7 +135,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       if(path===prefix+'/session/logout' && request.method==='POST') {
         exact(await body(request),[]);
         await pool.query('UPDATE installer.sessions SET revoked_at=now() WHERE id=$1',[seller.session_id]);
-        return json(200,{status:'SIGNED_OUT'});
+        return json(200,{status:'SIGNED_OUT',scope:'local_portal_session'},{'Set-Cookie':'__Host-js_portal_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax'});
       }
       const proof=await domainProofRoute({request,path,pool,seller,own,readBody:body,lookup:domainLookup});
       if(proof)return json(proof.status,proof.body);

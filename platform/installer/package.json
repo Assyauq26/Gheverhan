@@ -7,7 +7,7 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "test": "node --test test/unit.test.mjs test/domain-proof.test.mjs",
+    "test": "node --test test/*.test.mjs",
     "test:integration": "node --test test/integration.mjs test/domain-integration.mjs",
     "start": "node src/server.mjs",
     "migrate": "node src/migrate.mjs"

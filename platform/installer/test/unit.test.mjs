@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { domain,installationInput,hash,origin } from '../src/common.mjs';
 import { deviceKey,pairingProof,sellerAuthenticator,requireCsrf } from '../src/auth.mjs';
 import { createPool } from '../src/db.mjs';
+import { createHandler } from '../src/api.mjs';
 
 test('canonical independent-store domain and strict input',()=>{
  assert.equal(domain('Toko.Example'),'toko.example');
@@ -19,6 +20,20 @@ test('refuses storefront database identity before connection',()=>{
 test('missing external identity provider and CSRF fail closed',async()=>{
  await assert.rejects(sellerAuthenticator({},null)(new Request('https://portal.example')),e=>e.code==='AUTH_UNAVAILABLE');
  assert.throws(()=>requireCsrf(new Request('https://portal.example',{headers:{origin:'https://evil.example','x-csrf-token':'x'}}),{csrf_token:'x'},'https://portal.example'));
+});
+test('release extension has fixed route boundary and does not bypass other authentication',async()=>{
+ const calls=[],pool={query:async()=>({rows:[{count:1}]})};
+ const handler=createHandler({pool,controlOrigin:'https://portal.example',signingKey:{},installRelease:async request=>{
+  calls.push(new URL(request.url).pathname);return Response.json({error:{code:'RELEASE_AUTH_REQUIRED'}},{status:401});
+ }});
+ for(const path of ['/api/installer/v1/agent/install-authorization','/api/installer/v1/installations/550e8400-e29b-41d4-a716-446655440000/install-progress']) {
+  const response=await handler(new Request('https://portal.example'+path));assert.equal(response.status,401);
+ }
+ assert.equal(calls.length,2);
+ for(const path of ['/api/installer/v1/installations','/api/installer/v1/agent/arbitrary-shell']) {
+  const response=await handler(new Request('https://portal.example'+path));assert.equal(response.status,503);
+ }
+ assert.equal(calls.length,2);
 });
 test('only public Ed25519 identity and fresh key-bound JOSE proof accepted',async()=>{
  const {privateKey,publicKey}=await generateKeyPair('EdDSA',{crv:'Ed25519',extractable:true});const jwk=await exportJWK(publicKey);

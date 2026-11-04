@@ -1,13 +1,24 @@
-import { lstat, readFile } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import path from 'node:path';
 import { importPKCS8 } from 'jose';
 import { createPublicKey } from 'node:crypto';
 import { exportJWK } from 'jose';
 import { origin } from './common.mjs';
 
 export async function privateFile(file) {
-  const info=await lstat(file);
-  if(!info.isFile()||info.isSymbolicLink()||info.size>65536||(process.platform!=='win32'&&(info.mode&0o077))) throw new Error('Private configuration required');
-  return readFile(file,'utf8');
+  if(typeof file!=='string'||!path.isAbsolute(file))throw new Error('Private configuration required');
+  // Validate the opened descriptor, not a pathname that can be swapped between
+  // lstat and readFile. Bounded reads also reject concurrent oversized files.
+  const handle=await open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+  try {
+    const info=await handle.stat();
+    if(!info.isFile()||info.size>65536||(process.platform!=='win32'&&((info.mode&0o077)||(info.uid!==process.getuid()&&info.uid!==0))))throw new Error('Private configuration required');
+    const buffer=Buffer.alloc(65537);let offset=0;
+    while(offset<buffer.length){const {bytesRead}=await handle.read(buffer,offset,buffer.length-offset,null);if(!bytesRead)break;offset+=bytesRead;}
+    if(offset>65536)throw new Error('Private configuration required');
+    return buffer.subarray(0,offset).toString('utf8');
+  }finally{await handle.close();}
 }
 export async function runtimeConfig(file) {
   const value=JSON.parse(await privateFile(file));
@@ -29,13 +40,14 @@ export async function runtimeConfig(file) {
   if(value.oidc) {
     if(value.sessionIssuer)throw new Error('Select one portal identity configuration');
     const o=value.oidc;
-    if(Object.keys(o).some(k=>!['issuer','clientId','authorizationEndpoint','tokenEndpoint','redirectUri','jwksFile','sessionSigningKeyFile'].includes(k)))throw new Error('Invalid OIDC configuration');
+    if(Object.keys(o).some(k=>!['issuer','clientId','authorizationEndpoint','registrationEndpoint','tokenEndpoint','tokenEndpointAuthMethod','clientSecretFile','redirectUri','jwksFile','sessionSigningKeyFile'].includes(k)))throw new Error('Invalid OIDC configuration');
     const pem=await privateFile(o.sessionSigningKeyFile);
     if(pem==signingPem)throw new Error('Independent session signing key required');
     const sessionSigningKey=await importPKCS8(pem,'EdDSA');
     const sessionJwk=await exportJWK(createPublicKey(pem));
     sessionIssuer={issuer:value.controlOrigin,audience:'jetseller-portal',jwks:{keys:[sessionJwk]}};
-    oidc={...o,jwks:JSON.parse(await privateFile(o.jwksFile)),sessionSigningKey};
+    const clientSecret=o.clientSecretFile?(await privateFile(o.clientSecretFile)).trim():undefined;
+    oidc={...o,...(clientSecret!==undefined?{clientSecret}:{}),jwks:JSON.parse(await privateFile(o.jwksFile)),sessionSigningKey};
   }
   return {controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,port};
 }

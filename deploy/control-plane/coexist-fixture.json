@@ -1,6 +1,6 @@
 {
   "admin": {
-    "disabled": true
+    "listen": "localhost:2019"
   },
   "apps": {
     "http": {

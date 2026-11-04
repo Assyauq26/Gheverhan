@@ -26,4 +26,15 @@ dc exec -T db pg_dump -U control_bootstrap -d jetseller_control_plane -Fc > /tmp
 dc exec -T db createdb -U control_bootstrap jetseller_control_restore
 dc exec -T db pg_restore -U control_bootstrap -d jetseller_control_restore < /tmp/control-fixture.dump
 dc exec -T db psql -U control_bootstrap -d jetseller_control_restore -Atc "SELECT count(*) FROM installer.sellers WHERE external_subject='coexist-persistence-fixture'" | grep -qx 1
-echo 'PASS: occupied ports, private proxy, unchanged existing proxy, DB restart/redeploy/migrations and disposable restore; SYNTHETIC_NOT_PRODUCTION'
+# Reload ONLY the synthetic dashboard route back to503, same proxy ID.
+node --input-type=module <<'JS'
+import {readFileSync,writeFileSync} from 'node:fs';
+const file='deploy/control-plane/coexist-fixture.json',v=JSON.parse(readFileSync(file));
+v.apps.http.servers.fixture.routes[0].handle=[{handler:'static_response',body:'Temporarily unavailable',status_code:503}];
+writeFileSync(file,JSON.stringify(v));
+JS
+docker exec existing-proxy-fixture caddy reload --config /etc/caddy/fixture.json
+test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: dashboard.buattokosendiri.web.id' http://127.0.0.1/)" = 503
+curl --fail http://127.0.0.1/ | grep -q existing-site-fixture
+test "$proxy_id" = "$(docker inspect -f '{{.Id}}' existing-proxy-fixture)"
+echo 'PASS: dashboard503 rollback, occupied ports, private proxy, unchanged existing proxy, DB restart/redeploy/migrations and disposable restore; SYNTHETIC_NOT_PRODUCTION'

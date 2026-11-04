@@ -33,6 +33,7 @@ After the four merges, freeze the resulting NEW main SHA and run all16 relevant 
 - Production CLI exposed an obsolete disposable-fixture command/flags. They are removed; marked fixtures remain in Go test binaries. No fixture trust root/local CA is compiled as a production trust default.
 - Wizard previously generated the experimental2GiB pairing profile. It now explicitly uses the existing production4/40 profile; full synthetic VM retains its explicit isolated P0 profile. Production minima are unchanged.
 - Dedicated control DB health uses TCP, excluding the temporary init server.
+- Limited-preview browser verification exposed author button CSS overriding the native hidden attribute. An explicit hidden rule now keeps the disabled portal entry invisible; desktop/mobile browser assertions cover registration and return-login pages.
 
 Targeted tests cover closed/pilot/public transitions, no denied-request DB/mail/artifact work, wrong pilot credentials, guarded identity, cryptographic key reuse rejection, fixture CLI rejection, public wizard commands and pilot proxy IP restrictions. Real Caddy/Compose CI tests pilot admission/reclosure with unchanged existing proxy ID/site and preserved control row. A fresh full VM run is required because release routing/CLI changed; no old debugging is repeated.
 

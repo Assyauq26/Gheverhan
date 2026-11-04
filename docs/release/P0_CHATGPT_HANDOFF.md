@@ -27,19 +27,19 @@ Apply additive001-005 through js_control_owner; do not reinitialize existing vol
 
 Use deploy/control-plane/compose.helipod.yml ONLY on shared Helipod; standalone compose.yml contains its own Caddy and is not suitable there. Dedicated DB/volume/secrets/networks; no public3100/5432. Existing proxy retains its networks and connects only to dedicated INTERNAL btos_control_ingress; upstream btos-control-api:3100. Never join the Gheverhan DB network.
 
-Owner update (4 November2026): Helipod upgraded to4GB RAM/60GB SSD and capacity preflight PASS. This supersedes the old2GB/9GB audit; capacity is no longer an outstanding blocker based on that old report. The agent has not accessed production to independently repeat the operational audit. Retain the normal read-only preflight before an approved installation; do not reduce limits or build on production.
+Owner update (4 November2026): Helipod upgraded to4GB RAM/60GB SSD and capacity preflight PASS. This supersedes the old2GB/9GB audit; capacity is no longer an outstanding blocker based on that old report. A subsequent authorized read-only audit independently observed 3.6GiB physical RAM, 2GiB unused swap, 2970996KiB MemAvailable and 30219276288 free Docker-filesystem bytes; existing proxy/app/DB remained running with zero restarts/OOM. Retain the normal read-only preflight immediately before an approved installation; do not reduce limits or build on production.
 
 After FINAL owner approval only:
 
 1. Privately back up exact Caddy config/checksum, network/container IDs, dedicated DB/secrets; verify encrypted disposable restore. Record approved immutable CONTROL_IMAGE and source SHA.
 2. Inspect/create dedicated internal ingress network. Attach only deploy_proxy_1 while retaining all existing networks; no proxy restart. Review helipod-proxy-network.yml for persistent source configuration.
 3. Validate Compose; start dedicated DB; run migration owner; verify runtime cannot CREATE; start control and private health. Do not alter Gheverhan DB/volume or reinitialize an existing control database.
-4. Verify private credentialless /auth/status says configured email_otp. Activate verified artifact directory/catalog only after separate publication and transfer checks.
+4. Verify private credentialless /auth/status says method=email_otp, configured=false, release_mode=closed and null login/registration links. After separately approved pilot admission, an admitted request must say configured=true. Activate verified artifact directory/catalog only after separate publication and transfer checks.
 5. Apply ONLY dashboard.Caddyfile.diff against actual live dashboard503 block, validate full Caddyfile, then separately approved reload. Preserve all other hostnames/certificate volumes.
 6. Smoke normal public TLS without -k, real OTP registration/immediate wizard, returning OTP, logout revocation, cross-seller denial, TXT, PoP pairing, scoped download, local admin/product/photo/restart. Record exact source/image/release SHA and actual results.
 7. Rollback only dashboard to saved503 block, validate/reload after approval; retain all volumes/keys/UUIDs. Never stop/replace Gheverhan proxy/app/DB, prune volumes or restore stale identity data casually.
 
-CI coexistence/backup/503 rollback evidence is synthetic disposable evidence. Capacity PASS is owner-reported; actual encrypted production backup/disposable restore evidence remains an operational gate.
+CI coexistence/backup/503 rollback evidence is synthetic disposable evidence. Capacity was owner-reported and independently checked read-only; actual encrypted production backup/disposable restore evidence remains an operational gate.
 
 ## Final gate boundaries
 

@@ -98,12 +98,14 @@ jobs:
           sudo --preserve-env=ACTIONS_ID_TOKEN_REQUEST_URL,ACTIONS_ID_TOKEN_REQUEST_TOKEN,GITHUB_ACTIONS "$RELEASE_COSIGN_PATH" sign-blob --yes --bundle /root/btos-publication/staged/release-manifest.sigstore.json /root/btos-publication/staged/release-manifest.json
           sudo "$RELEASE_COSIGN_PATH" verify-blob --offline --bundle /root/btos-publication/staged/release-manifest.sigstore.json --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" /root/btos-publication/staged/release-manifest.json
           sudo install -m600 /root/btos-publication/metadata/candidate-state.json /root/btos-publication/staged/publication-state.private.json
-          sudo chown -R "$(id -u):$(id -g)" /root/btos-publication/staged
+          test ! -e /tmp/btos-approved-output
+          sudo cp -a /root/btos-publication/staged /tmp/btos-approved-output
+          sudo chown -R "$(id -u):$(id -g)" /tmp/btos-approved-output
       - name: Retain verified publication handoff (no HTTP activation or production deployment)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: approved-official-publication-${{ inputs.release_sha }}
-          path: /root/btos-publication/staged/**
+          path: /tmp/btos-approved-output/**
           retention-days: 7
           if-no-files-found: error
       - name: Remove online signing inputs and registry auth from disposable runner

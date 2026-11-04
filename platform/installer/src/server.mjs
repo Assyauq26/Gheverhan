@@ -33,10 +33,12 @@ export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,
         return;
       }
       if(req.url?.startsWith('/bootstrap/')){
-        res.setTimeout(20*60*1000,()=>res.destroy());
-        const response=delivery?await delivery.handle(new Request(new URL(req.url,config.controlOrigin),{method:req.method})):new Response(null,{status:404});
-        res.writeHead(response.status,Object.fromEntries(response.headers));
-        if(response.body)await pipeline(Readable.fromWeb(response.body),res);else res.end();
+        const deadline=setTimeout(()=>res.destroy(),20*60*1000);
+        try {
+          const response=delivery?await delivery.handle(new Request(new URL(req.url,config.controlOrigin),{method:req.method})):new Response(null,{status:404});
+          res.writeHead(response.status,Object.fromEntries(response.headers));
+          if(response.body)await pipeline(Readable.fromWeb(response.body),res);else res.end();
+        } finally {clearTimeout(deadline);}
         return;
       }
       if(dashboard && !req.url?.startsWith('/api/') && !req.url?.startsWith('/auth/') && await dashboard(req,res))return;

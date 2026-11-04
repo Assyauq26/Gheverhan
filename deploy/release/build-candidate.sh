@@ -24,6 +24,8 @@ for role in app migration; do
  docker tag "$repo/$role@$digest" "$image"
  docker image inspect "$repo/$role@$digest" --format '{{.Id}}' > "$out/$role-config-digest"
  printf '%s\n' "$repo/$role@$digest" > "$out/$role-image"
+ "$cosign" sign --yes "$repo/$role@$digest"
+ "$cosign" verify --certificate-identity "${RELEASE_SIGNER_IDENTITY:?approved identity required}" --certificate-oidc-issuer "${RELEASE_SIGNER_ISSUER:?approved issuer required}" "$repo/$role@$digest" >/dev/null
  docker save "$image" | gzip -n > "$out/artifacts/$role.tar.gz"
  "$cosign" sign-blob --yes --bundle "$out/artifacts/$role.bundle.json" "$out/artifacts/$role.tar.gz"
  "$cosign" verify-blob --bundle "$out/artifacts/$role.bundle.json" --certificate-identity "${RELEASE_SIGNER_IDENTITY:?approved identity required}" --certificate-oidc-issuer "${RELEASE_SIGNER_ISSUER:?approved issuer required}" "$out/artifacts/$role.tar.gz" >/dev/null

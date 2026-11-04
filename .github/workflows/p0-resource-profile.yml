@@ -2,6 +2,7 @@ name: P0 disposable resource profile
 on:
   pull_request:
     paths: ['agent/**', 'deploy/self-hosted/**', '.github/workflows/p0-resource-profile.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:

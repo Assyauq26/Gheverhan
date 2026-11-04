@@ -49,6 +49,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       // The independent release module performs its own seller/device auth and
       // scope checks. Only these fixed paths may cross the extension boundary.
       if(installRelease&&((path===prefix+'/agent/install-authorization'&&request.method==='GET')||
+        (path===prefix+'/agent/release-download-authorization'&&request.method==='GET')||
         (path===prefix+'/agent/install-progress'&&request.method==='POST')||
         (path===prefix+'/agent/credential/refresh'&&request.method==='POST')||
         (/^\/api\/installer\/v1\/installations\/[^/]+\/(?:install-instructions|install-progress)$/.test(path)&&request.method==='GET'))) {

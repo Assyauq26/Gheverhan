@@ -9,7 +9,10 @@ const api=async route=>{const r=await fetch('https://api.github.com/repos/'+repo
 const protection=await api('/environments/btos-installer-production');
 if(!protection.protection_rules?.some(r=>r.type==='required_reviewers'&&r.prevent_self_review===true&&r.reviewers?.length>0)||!protection.deployment_branch_policy?.protected_branches)throw Error('Protected environment and reviewer separation required');
 const checks=await api('/commits/'+env.RELEASE_SOURCE_SHA+'/check-runs?per_page=100');
-for(const name of ['installer-tests','registry-tests','private-control-stack','metadata-and-package','full-synthetic-seller'])if(!checks.check_runs?.some(c=>c.name===name&&c.head_sha===env.RELEASE_SOURCE_SHA&&c.conclusion==='success'))throw Error('Required exact-SHA evidence missing: '+name);
+for(const name of ['installer-tests','registry-tests','private-control-stack','metadata-and-package','full-synthetic-seller','unit-tests','dashboard-contracts','dashboard-browser-integration','cli-browser-pairing','privileged-boundaries','resource-vm','disposable-runtime','signed-fixture-provision','visual-regression','isolated-integration-browser','build-and-deploy']){
+ const latest=checks.check_runs?.filter(c=>c.name===name&&c.head_sha===env.RELEASE_SOURCE_SHA).sort((a,b)=>b.id-a.id)[0];
+ if(!latest||latest.conclusion!=='success')throw Error('Latest exact-SHA check missing or not successful: '+name);
+}
 if(env.APPROVED_GHCR_PREFIX!=='ghcr.io/assyauq26/buattokosendiri')throw Error('Registry namespace approval missing');
 const raw=env.TUF_PUBLIC_ROOT_JSON??'',pin=createHash('sha256').update(raw).digest('hex');if(!/^[a-f0-9]{64}$/.test(env.APPROVED_ROOT_SHA256??'')||pin!==env.APPROVED_ROOT_SHA256)throw Error('Independent production root pin required');
 const updates=JSON.parse(env.TUF_ROOT_UPDATES_JSON||'[]');if(!Array.isArray(updates)||updates.length>64||updates.some(x=>typeof x!=='string'))throw Error('Bounded public root chain required');

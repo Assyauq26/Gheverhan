@@ -4,6 +4,7 @@ on:
     paths:
       - agent/**
       - .github/workflows/jetseller-disposable-provisioning.yml
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:

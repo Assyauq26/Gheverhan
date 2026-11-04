@@ -7,6 +7,7 @@ import { createHandler } from '../src/api.mjs';
 import { hash, opaque } from '../src/common.mjs';
 import { reserveDomain } from '../src/domain-reservation.mjs';
 import { transaction } from '../src/db.mjs';
+import { domainProofRoute } from '../src/domain-proof.mjs';
 
 test('dedicated PostgreSQL domain consent is seller-scoped, idempotent, expiring and race-safe',async()=>{
   const connection=process.env.JETSELLER_CONTROL_TEST_DATABASE_URL;
@@ -42,7 +43,16 @@ test('dedicated PostgreSQL domain consent is seller-scoped, idempotent, expiring
     assert.equal((await call('POST',verify,{})).status,202);
     assert.equal((await call('POST',verify,{},users[1])).status,404);
     observed=true;
-    const results=await Promise.all([call('POST',verify,{}),call('POST',verify,{})]);assert.deepEqual(results.map(r=>r.status),[200,200]);
+    // Deterministically hold one route after its initial installation read.
+    // The real authenticated requests commit before it reads the challenge.
+    const staleInstallation=(await pool.query('SELECT * FROM installer.installations WHERE id=$1',[installation.installation_id])).rows[0];
+    let releaseStale,started;const held=new Promise(r=>releaseStale=r),entered=new Promise(r=>started=r);let reads=0;
+    const delayed=domainProofRoute({request:new Request(controlOrigin+'/api/installer/v1'+verify,{method:'POST'}),path:'/api/installer/v1'+verify,pool,seller:{seller_id:users[0].seller},readBody:async()=>({}),lookup:async()=>true,
+      own:async(client,id,seller,lock)=>{if(++reads===1){started();await held;return staleInstallation;}return (await client.query('SELECT * FROM installer.installations WHERE id=$1 AND seller_id=$2'+(lock?' FOR UPDATE':''),[id,seller])).rows[0];}});
+    await entered;
+    const results=await Promise.all([call('POST',verify,{}),call('POST',verify,{})]);releaseStale();
+    const resumed=await delayed;assert.equal(resumed.status,200);assert.equal(resumed.body.challenge.domain_claim_active,true);
+    assert.deepEqual(results.map(r=>r.status),[200,200]);
     assert.ok(results.every(r=>r.body.challenge.status==='OWNERSHIP_VERIFIED'&&r.body.challenge.https_verified===false&&r.body.challenge.installed===false));
     assert.equal(results[0].body.challenge.verified_at,results[1].body.challenge.verified_at);
     assert.equal((await call('GET',route)).body.challenge.status,'OWNERSHIP_VERIFIED');

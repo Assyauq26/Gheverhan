@@ -67,8 +67,12 @@ export async function domainProofRoute({ request, path, pool, seller, own, readB
   const row = (await pool.query('SELECT * FROM installer.domain_challenges WHERE id=$1 AND installation_id=$2 AND domain=$3', [challengeId, id, installation.domain])).rows[0];
   if (!row) fail(404, 'NOT_FOUND');
   if (row.verified_at) {
-    if (installation.reserved_domain !== row.domain) fail(409, 'DOMAIN_RESERVATION_REQUIRED');
-    return { status: 200, body: { challenge: publicChallenge(row,installation),...(claimActive(row,installation)?{}:{next_action:'REQUEST_NEW_CHALLENGE'}) } };
+    // Another verification can commit between the two reads above. Never
+    // compare its new challenge state with the old unreserved installation.
+    const current = await own(pool, id, seller.seller_id); active(current);
+    if (current.domain !== row.domain) fail(409, 'DOMAIN_CHANGED');
+    if (current.reserved_domain !== row.domain) fail(409, 'DOMAIN_RESERVATION_REQUIRED');
+    return { status: 200, body: { challenge: publicChallenge(row,current),...(claimActive(row,current)?{}:{next_action:'REQUEST_NEW_CHALLENGE'}) } };
   }
   if (new Date(row.expires_at) <= new Date()) fail(410, 'CHALLENGE_EXPIRED');
   const found = await lookup(row.domain, row.txt_value);

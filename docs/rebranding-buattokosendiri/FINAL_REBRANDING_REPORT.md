@@ -2,7 +2,7 @@
 
 Tanggal: 4 November 2026. PR [#170](https://github.com/Assyauq26/Gheverhan/pull/170), branch `feat/jetseller-buattokosendiri-domain-cutover`, base `feat/jetseller-rc-release-workstreams`.
 
-Kode kandidat: `077a06d0ce2c65b6a51699f319288fae5a622772`. Commit setelahnya pada laporan ini hanya dokumentasi; SHA HEAD final dan hasil check terkini harus dibaca dari PR, bukan diasumsikan sama dengan snapshot ini.
+Snapshot pengujian kode: `077a06d0ce2c65b6a51699f319288fae5a622772`. Perbaikan setelah snapshot mencakup footer yang membaca identitas merchant dan normalisasi line ending. SHA HEAD final beserta hasil check terkini harus dibaca dari PR, bukan diasumsikan sama dengan snapshot ini.
 
 | Bagian | Hasil dan batas bukti |
 |---|---|

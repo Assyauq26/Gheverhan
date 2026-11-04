@@ -14,15 +14,16 @@ const setup=protectedFile(plan.installer_file,64*1024**2),signature=protectedFil
 protectedFile(policy.verifier_path,256*1024**2);if(await sha(policy.verifier_path)!==policy.verifier_sha256)throw Error('Independent verifier pin mismatch');
 execFileSync(policy.verifier_path,['verify-blob','--offline','--bundle',plan.installer_signature_file,'--certificate-identity',policy.trust.SignerIdentity,'--certificate-oidc-issuer',policy.trust.SignerIssuer,plan.installer_file],{stdio:'pipe',timeout:60000});
 const info=lstatSync(plan.bundle_file);if(!info.isFile()||info.isSymbolicLink()||info.size<1||info.size>2*1024**3)throw Error('Bounded ZIP required');
+const signatureSHA=createHash('sha256').update(signature).digest('hex');
 const setupSHA=createHash('sha256').update(setup).digest('hex'),bundleSHA=await sha(plan.bundle_file),policySHA=createHash('sha256').update(policyBytes).digest('hex');
 if(receipt.bundle_sha256!==bundleSHA||receipt.bundle_bytes!==info.size)throw Error('ZIP not bound to archive verification receipt');
 if(!/^[a-f0-9]{64}$/.test(receipt.manifest_sha256)||!Number.isFinite(Date.parse(receipt.expires_at)))throw Error('Invalid receipt');
 // Receipt must come from verify-release-archive, binding this exact ZIP.
 // Remote round-trip verification is still required before activation.
 if(resolve(plan.output_directory)!==plan.output_directory)throw Error('Fresh absolute output required');mkdirSync(plan.output_directory,{mode:0o700});
-for(const [name,bytes] of [[setupSHA+'.setup',setup],[setupSHA+'.sigstore.json',signature],[setupSHA+'.policy.json',policyBytes]])writeFileSync(join(plan.output_directory,name),bytes,{mode:0o600,flag:'wx'});
+for(const [name,bytes] of [[setupSHA+'.setup',setup],[signatureSHA+'.sigstore.json',signature],[policySHA+'.policy.json',policyBytes]])writeFileSync(join(plan.output_directory,name),bytes,{mode:0o600,flag:'wx'});
 copyFileSync(plan.bundle_file,join(plan.output_directory,bundleSHA+'.zip'),constants.COPYFILE_EXCL);chmodSync(join(plan.output_directory,bundleSHA+'.zip'),0o600);
 const base=plan.control_origin+'/bootstrap/'+setupSHA;
-const catalog={version:1,release_id:receipt.release_id,expires_at:receipt.expires_at,manifest_sha256:receipt.manifest_sha256,root_sha256:receipt.root_sha256,policy_sha256:policySHA,policy_url:base+'/policy.json',installer:{url:base+'/jetseller-setup',sha256:setupSHA,signature_url:base+'/signature.json'},release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:info.size},verification_receipt:receipt};
+const catalog={version:1,release_id:receipt.release_id,expires_at:receipt.expires_at,manifest_sha256:receipt.manifest_sha256,root_sha256:receipt.root_sha256,policy_sha256:policySHA,policy_url:plan.control_origin+'/bootstrap/'+policySHA+'/policy.json',installer:{url:base+'/jetseller-setup',sha256:setupSHA,signature_url:plan.control_origin+'/bootstrap/'+signatureSHA+'/signature.json',signature_sha256:signatureSHA},release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:info.size},verification_receipt:receipt};
 writeFileSync(join(plan.output_directory,'catalog.private.json'),JSON.stringify(catalog,null,2)+'\n',{flag:'wx',mode:0o600});
 console.log('Publication staged only; verify round-trip extraction, then obtain activation approval. Root pin must be distributed independently.');

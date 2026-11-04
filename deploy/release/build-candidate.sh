@@ -29,7 +29,7 @@ for role in app migration; do
  "$cosign" verify-blob --bundle "$out/artifacts/$role.bundle.json" --certificate-identity "${RELEASE_SIGNER_IDENTITY:?approved identity required}" --certificate-oidc-issuer "${RELEASE_SIGNER_ISSUER:?approved issuer required}" "$out/artifacts/$role.tar.gz" >/dev/null
  done
 # Control-plane image is separate from store archives and signed by immutable digest.
-docker buildx build --platform linux/amd64 --file deploy/control-plane/Dockerfile --tag "$repo/control:$sha" --push --metadata-file "$out/control-build.json" .
+docker buildx build --platform linux/amd64 --file deploy/control-plane/Dockerfile --label "org.opencontainers.image.revision=$sha" --tag "$repo/control:$sha" --push --metadata-file "$out/control-build.json" .
 control_digest=$(node -e 'const d=require(process.argv[1])["containerimage.digest"];if(!/^sha256:[a-f0-9]{64}$/.test(d))process.exit(1);process.stdout.write(d)' "$out/control-build.json")
 printf '%s\n' "$repo/control@$control_digest" > "$out/control-image"
 "$cosign" sign --yes "$repo/control@$control_digest"

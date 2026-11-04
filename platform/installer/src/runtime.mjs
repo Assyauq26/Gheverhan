@@ -67,7 +67,7 @@ export async function runtimeConfig(file) {
   }
   const getCatalog=value.releaseCatalogFile?async()=>{
     const c=JSON.parse(await privateFile(value.releaseCatalogFile));
-    if(c.release_bundle?.delivery!=='scoped'||!value.artifactDirectory)throw Error('Scoped artifact delivery required');
+    if(c.release_bundle?.delivery!=='scoped'||!value.artifactDirectory||!/^[a-f0-9]{64}$/.test(c.installer?.signature_sha256??''))throw Error('Scoped artifact delivery required');
     return c;
   }:async()=>null;
   return {artifactDirectory:value.artifactDirectory,getCatalog,controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port,listenHost};

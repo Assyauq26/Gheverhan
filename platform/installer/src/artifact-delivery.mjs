@@ -36,7 +36,7 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
    const catalog=validateReleaseCatalog(await getCatalog());if(catalog.release_bundle.delivery!=='scoped')throw Error('Scoped delivery required');
    await directory(artifactDirectory);
    if(bootstrap){
-    const [, ,sha,name]=u.pathname.split('/');if(sha!==catalog.installer.sha256)throw Error('Retired bootstrap');
+    const [, ,sha,name]=u.pathname.split('/');const expected=name==='jetseller-setup'?catalog.installer.sha256:name==='signature.json'?(catalog.installer.signature_sha256??catalog.installer.sha256):catalog.policy_sha256;if(sha!==expected)throw Error('Retired bootstrap');
     const spec={ 'jetseller-setup':['.setup','application/octet-stream',64*1024**2], 'signature.json':['.sigstore.json','application/json',4*1024**2], 'policy.json':['.policy.json','application/json',65536] }[name];
     file=await open(path.join(artifactDirectory,sha+spec[0]),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
     const st=await file.stat();if(!st.isFile()||st.size<1||st.size>spec[2]||(process.platform!=='win32'&&((st.mode&0o022)||![0,process.getuid()].includes(st.uid))))throw Error('Invalid bootstrap');
@@ -46,7 +46,7 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
    file=await open(path.join(artifactDirectory,catalog.release_bundle.sha256+'.zip'),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
    const st=await file.stat();if(!st.isFile()||st.size!==catalog.release_bundle.bytes||st.size<1||st.size>maxBytes||(process.platform!=='win32'&&((st.mode&0o022)||![0,process.getuid()].includes(st.uid))))throw Error('Invalid artifact');
    const grant=await transaction(pool,async client=>{
-    // Match unpair's installationÃ¢â€ â€™device lock order; consume with a CAS so
+    // Match unpair's installationÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢device lock order; consume with a CAS so
     // concurrent GETs cannot share the capability even after an earlier read.
     const tokenHash=hash(u.pathname.slice('/bootstrap/downloads/'.length));
     const row=(await client.query('SELECT * FROM installer.download_grants WHERE token_hash=$1',[tokenHash])).rows[0];

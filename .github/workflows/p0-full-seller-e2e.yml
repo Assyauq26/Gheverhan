@@ -78,8 +78,11 @@ jobs:
           setup_sha=$(sha256sum /tmp/p0-full-build/jetseller-setup | cut -d' ' -f1)
           printf '%s' "$setup_sha" > /tmp/p0-full-setup-sha
           cp /tmp/p0-full-build/jetseller-setup "/tmp/p0-full-artifacts/$setup_sha.setup"
-          cp /tmp/p0-full-build/setup.sigstore.json "/tmp/p0-full-artifacts/$setup_sha.sigstore.json"
-          cp /tmp/p0-full-build/policy.json "/tmp/p0-full-artifacts/$setup_sha.policy.json"
+          signature_sha=$(sha256sum /tmp/p0-full-build/setup.sigstore.json | cut -d' ' -f1)
+          policy_sha=$(sha256sum /tmp/p0-full-build/policy.json | cut -d' ' -f1)
+          printf '%s' "$signature_sha" > /tmp/p0-full-signature-sha
+          cp /tmp/p0-full-build/setup.sigstore.json "/tmp/p0-full-artifacts/$signature_sha.sigstore.json"
+          cp /tmp/p0-full-build/policy.json "/tmp/p0-full-artifacts/$policy_sha.policy.json"
           bundle_sha=$(node -p "require('/tmp/p0-full-archive-receipt.json').bundle_sha256")
           sudo install -m600 -o "$(id -u)" /opt/p0-release.zip "/tmp/p0-full-artifacts/$bundle_sha.zip"
           npm ci --prefix platform/installer --ignore-scripts --no-audit --no-fund

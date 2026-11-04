@@ -5,6 +5,8 @@ dc() { docker compose -f deploy/control-plane/compose.helipod.yml "$@"; }
 docker network create --internal btos_control_ingress
 # Existing proxy starts FIRST and owns both ports. No production host is contacted.
 docker run -d --name existing-proxy-fixture --network btos_control_ingress -p80:80 -p443:443 -v "$PWD/deploy/control-plane/coexist-fixture.Caddyfile:/etc/caddy/Caddyfile:ro" caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a
+docker network connect bridge existing-proxy-fixture
+trap 'docker logs existing-proxy-fixture --tail 30 2>&1' ERR
 proxy_id=$(docker inspect -f '{{.Id}}' existing-proxy-fixture)
 dc up -d --wait control
 curl --fail --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1/ | grep -q existing-site-fixture

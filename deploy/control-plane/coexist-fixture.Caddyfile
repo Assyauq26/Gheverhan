@@ -1,7 +1,7 @@
 {
   auto_https off
 }
-:80, :443 {
+http://:80, http://:443 {
   @dashboard host dashboard.buattokosendiri.web.id
   handle @dashboard {
     reverse_proxy btos-control-api:3100

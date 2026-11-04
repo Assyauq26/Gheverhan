@@ -186,10 +186,10 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	}
 
 	if !fresh && j.Next >= 1 {
-		valid := func(id, config, ref string) bool {
-			return id == "sha256:"+config || id == ref[strings.LastIndex(ref, "@")+1:]
+		valid := func(id, config, ref, archive string) bool {
+			return id == "sha256:"+config || id == ref[strings.LastIndex(ref, "@")+1:] || (archive != "" && id == "sha256:"+archive)
 		}
-		if !valid(j.App, manifest.ImageConfigSHA256, manifest.Image) || !valid(j.Migration, manifest.MigrationConfigSHA256, manifest.MigrationImage) {
+		if !valid(j.App, manifest.ImageConfigSHA256, manifest.Image, manifest.ImageArchiveSHA256) || !valid(j.Migration, manifest.MigrationConfigSHA256, manifest.MigrationImage, manifest.MigrationArchiveSHA256) {
 			return ErrInstall
 		}
 	}
@@ -332,11 +332,11 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 				return e
 			}
 		}
-		j.App, e = loadedImage(ctx, d, manifest.ImageConfigSHA256, manifest.Image)
+		j.App, e = loadedImage(ctx, d, manifest.ImageConfigSHA256, manifest.Image, manifest.ImageArchiveSHA256)
 		if e != nil {
 			return e
 		}
-		j.Migration, e = loadedImage(ctx, d, manifest.MigrationConfigSHA256, manifest.MigrationImage)
+		j.Migration, e = loadedImage(ctx, d, manifest.MigrationConfigSHA256, manifest.MigrationImage, manifest.MigrationArchiveSHA256)
 		if e != nil {
 			return e
 		}
@@ -458,12 +458,15 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	j.Next = 8
 	return save()
 }
-func loadedImage(ctx context.Context, d docker, config, reference string) (string, error) {
+func loadedImage(ctx context.Context, d docker, config, reference, archive string) (string, error) {
 	pins := []string{"sha256:" + config, reference[strings.LastIndex(reference, "@")+1:]}
+	if archive != "" {
+		pins = append(pins, "sha256:"+archive)
+	}
 	for _, pin := range pins {
 		raw, e := d.run(ctx, "image", "inspect", "--format", "{{.Id}}", pin)
 		id := strings.TrimSpace(string(raw))
-		if e == nil && (id == pins[0] || id == pins[1]) {
+		if e == nil && id == pin {
 			return id, nil
 		}
 	}

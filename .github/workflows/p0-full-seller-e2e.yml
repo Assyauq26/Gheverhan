@@ -41,7 +41,10 @@ jobs:
       - name: Targeted transport and collector regressions before expensive full VM
         run: |
           go -C agent test ./internal/bootstrap -run '^TestScopedDownloadAuthorizationTransport$' -count=1 -v
+          go -C agent test ./internal/installer -run '^TestLoadedImageRequiresAnApprovedExactDigest$' -count=1 -v
+          go -C agent test ./internal/releaseprotocol -run '^TestArchiveManifestPinsArePairedValidatedSignedFields$' -count=1 -v
           node --test deploy/self-hosted/tests/guest-command.test.mjs
+          python3 deploy/release/normalize-image-archive.test.py
           bash deploy/self-hosted/tests/docker-final-state.test.sh
           bash -n deploy/self-hosted/tests/p0-vm.sh
       - name: Build outside2GiB VM and sign synthetic payloads with this TEST workflow identity
@@ -58,8 +61,10 @@ jobs:
           for role in app migration; do
             target=runtime; test "$role" != migration || target=migration
             docker build --target "$target" -t "p0-full-$role:fixture" /tmp/p0-full-build/context
-            docker image inspect "p0-full-$role:fixture" --format '{{.Id}}' > "/tmp/p0-full-build/$role-config-digest"
-            docker save "p0-full-$role:fixture" | gzip -n > "/tmp/p0-full-build/artifacts/$role.tar.gz"
+            docker save "p0-full-$role:fixture" | gzip -n > "/tmp/p0-full-build/$role.raw.tar.gz"
+            python3 deploy/release/normalize-image-archive.py "/tmp/p0-full-build/$role.raw.tar.gz" "/tmp/p0-full-build/artifacts/$role.tar.gz" > "/tmp/p0-full-build/$role-archive-identity.json"
+            node -e 'const fs=require("fs"),p=process.argv[1],v=require(p+"-archive-identity.json");fs.writeFileSync(p+"-config-digest","sha256:"+v.config_sha256);fs.writeFileSync(p+"-archive-manifest-digest",v.archive_manifest_sha256)' "/tmp/p0-full-build/$role"
+            rm "/tmp/p0-full-build/$role.raw.tar.gz"
             /tmp/p0-full-build/cosign sign-blob --yes --bundle "/tmp/p0-full-build/artifacts/$role.bundle.json" "/tmp/p0-full-build/artifacts/$role.tar.gz"
           done
           export P0_FIXTURE_SIGNER_IDENTITY="https://github.com/$GITHUB_WORKFLOW_REF"

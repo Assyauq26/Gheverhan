@@ -48,10 +48,12 @@ type Manifest struct {
 	Platform                 string    `json:"platform"`
 	OS                       string    `json:"os"`
 	Image                    string    `json:"image"`
+	ImageArchiveSHA256       string    `json:"image_archive_manifest_sha256,omitempty"`
 	ImageConfigSHA256        string    `json:"image_config_sha256"`
 	ImageArchiveTarget       string    `json:"image_archive_target"`
 	ImageBundleTarget        string    `json:"image_bundle_target"`
 	MigrationImage           string    `json:"migration_image"`
+	MigrationArchiveSHA256   string    `json:"migration_archive_manifest_sha256,omitempty"`
 	MigrationConfigSHA256    string    `json:"migration_config_sha256"`
 	MigrationArchiveTarget   string    `json:"migration_archive_target"`
 	MigrationBundleTarget    string    `json:"migration_bundle_target"`
@@ -217,6 +219,9 @@ func Verify(p Policy, b Bundle, previous State, now time.Time) (TrustedRelease, 
 	return TrustedRelease{manifest: m, digest: current.ManifestSHA256, targets: protectedTargets, maxArtifactBytes: p.MaxArtifactBytes}, current, nil
 }
 func validateManifest(p Policy, m Manifest, now time.Time) error {
+	if (m.ImageArchiveSHA256 == "") != (m.MigrationArchiveSHA256 == "") || (m.ImageArchiveSHA256 != "" && (!hex64.MatchString(m.ImageArchiveSHA256) || !hex64.MatchString(m.MigrationArchiveSHA256))) {
+		return ErrRelease
+	}
 	if !hex64.MatchString(m.ImageConfigSHA256) || !hex64.MatchString(m.MigrationConfigSHA256) || m.SchemaVersion != "1" || m.Sequence == 0 || !appVersionPattern.MatchString(m.AppVersion) || m.ReleaseID != "rel-"+m.AppVersion+"-"+p.Channel || m.Channel != p.Channel || m.Platform != "linux/amd64" || m.OS != "ubuntu:24.04" || m.ProtocolVersion != 1 || m.ComposeTemplateVersion != 1 || m.SignerIssuer != p.SignerIssuer || m.SignerIdentity != p.SignerIdentity || m.Revoked {
 		return ErrRelease
 	}

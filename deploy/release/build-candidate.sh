@@ -22,11 +22,13 @@ for role in app migration; do
  digest=$(node -e 'const v=require(process.argv[1]);const d=v["containerimage.digest"];if(!/^sha256:[a-f0-9]{64}$/.test(d))process.exit(1);process.stdout.write(d)' "$out/$role-build.json")
  docker pull "$repo/$role@$digest" >/dev/null
  docker tag "$repo/$role@$digest" "$image"
- docker image inspect "$repo/$role@$digest" --format '{{.Id}}' > "$out/$role-config-digest"
  printf '%s\n' "$repo/$role@$digest" > "$out/$role-image"
  "$cosign" sign --yes "$repo/$role@$digest"
  "$cosign" verify --certificate-identity "${RELEASE_SIGNER_IDENTITY:?approved identity required}" --certificate-oidc-issuer "${RELEASE_SIGNER_ISSUER:?approved issuer required}" "$repo/$role@$digest" >/dev/null
- docker save "$image" | gzip -n > "$out/artifacts/$role.tar.gz"
+ docker save "$image" | gzip -n > "$out/$role.raw.tar.gz"
+ python3 deploy/release/normalize-image-archive.py "$out/$role.raw.tar.gz" "$out/artifacts/$role.tar.gz" > "$out/$role-archive-identity.json"
+ node -e 'const fs=require("fs"),p=process.argv[1],v=require(p+"-archive-identity.json");fs.writeFileSync(p+"-config-digest","sha256:"+v.config_sha256);fs.writeFileSync(p+"-archive-manifest-digest",v.archive_manifest_sha256)' "$out/$role"
+ rm "$out/$role.raw.tar.gz"
  "$cosign" sign-blob --yes --bundle "$out/artifacts/$role.bundle.json" "$out/artifacts/$role.tar.gz"
  "$cosign" verify-blob --bundle "$out/artifacts/$role.bundle.json" --certificate-identity "${RELEASE_SIGNER_IDENTITY:?approved identity required}" --certificate-oidc-issuer "${RELEASE_SIGNER_ISSUER:?approved issuer required}" "$out/artifacts/$role.tar.gz" >/dev/null
  done

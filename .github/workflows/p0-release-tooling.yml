@@ -21,3 +21,5 @@ jobs:
       - run: go test -race ./internal/releaseprotocol ./cmd/jetseller-publish
         working-directory: agent
       - run: bash -n deploy/release/build-candidate.sh && node --test deploy/release/package-candidate.test.mjs
+
+      - run: python3 deploy/release/normalize-image-archive.test.py

@@ -36,6 +36,8 @@ func TestBuildFullVMFixture(t *testing.T) {
 		}
 		return strings.TrimSpace(string(b))
 	}
+	m.ImageArchiveSHA256 = read("app-archive-manifest-digest")
+	m.MigrationArchiveSHA256 = read("migration-archive-manifest-digest")
 	m.ImageConfigSHA256 = strings.TrimPrefix(read("app-config-digest"), "sha256:")
 	m.MigrationConfigSHA256 = strings.TrimPrefix(read("migration-config-digest"), "sha256:")
 	// These OCI reference names are synthetic; real archive/config digests are verified.

@@ -5,6 +5,7 @@
   "signingKeyFile": "/etc/buattokosendiri/agent-signing-key.pem",
   "listenHost": "0.0.0.0",
   "authMode": "email_otp",
+  "releaseAccess": {"mode":"closed"},
   "emailAuth": {
     "resendApiKeyFile": "/etc/buattokosendiri/resend-api-key",
     "otpPepperFile": "/etc/buattokosendiri/otp-pepper",

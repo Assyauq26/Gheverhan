@@ -9,6 +9,7 @@ import { runtimeConfig } from './runtime.mjs';
 import { createOidcHandler } from './oidc.mjs';
 import { createEmailAuthHandler } from './email-auth.mjs';
 import { pathToFileURL } from 'node:url';
+import {releaseRequestAllowed,releaseUnavailable} from './release-access.mjs';
 import { serveDashboard } from '../../installer-web/dashboard.mjs';
 
 export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,domainLookup,installRelease}={}) {
@@ -31,6 +32,9 @@ export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,
           res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'}).end('{"status":"ready"}');
         } catch {res.writeHead(503,{'Cache-Control':'no-store'}).end();}
         return;
+      }
+      if(!releaseRequestAllowed(config.releaseAccess,req.headers)){
+        releaseUnavailable(req,res,config.releaseAccess?.mode);return;
       }
       if(req.url?.startsWith('/bootstrap/')){
         const deadline=setTimeout(()=>res.destroy(),20*60*1000);

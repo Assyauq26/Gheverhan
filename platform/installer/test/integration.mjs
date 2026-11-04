@@ -153,7 +153,7 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   const portalJwk=await exportJWK(portalSigner.publicKey);
   let authNonce,challenge,exchanges=0,verifiedEmail=true,emailClaim='seller@fixture.example';
   const oidc={issuer,clientId:'fixture-client',authorizationEndpoint:issuer+'/authorize',registrationEndpoint:issuer+'/register',tokenEndpoint:issuer+'/token',redirectUri:controlOrigin+'/auth/callback',jwks:{keys:[publicJwk]},sessionSigningKey:portalSigner.privateKey};
-  const server=createControlServer({...options,sessionIssuer:{issuer:controlOrigin,audience:'jetseller-portal',jwks:{keys:[portalJwk]}},oidc},pool,{oidcFetch:async(endpoint,init)=>{
+  const server=createControlServer({releaseAccess:{mode:"public"},...options,sessionIssuer:{issuer:controlOrigin,audience:'jetseller-portal',jwks:{keys:[portalJwk]}},oidc},pool,{oidcFetch:async(endpoint,init)=>{
    assert.equal(endpoint,oidc.tokenEndpoint);assert.equal(init.redirect,'error');assert.equal(init.method,'POST');
    const params=new URLSearchParams(init.body);assert.equal(params.get('grant_type'),'authorization_code');assert.equal(params.get('client_id'),oidc.clientId);
    assert.equal(Buffer.from(hash(params.get('code_verifier')),'hex').toString('base64url'),challenge);

@@ -6,6 +6,12 @@ import { createPublicKey } from 'node:crypto';
 import { exportJWK } from 'jose';
 import { origin } from './common.mjs';
 import { validateEmailAuth } from './email-auth.mjs';
+import {loadReleaseAccess} from './release-access.mjs';
+
+function requireIndependentSessionKey(pem,agentPublicKey) {
+  const publicBytes=key=>key.export({type:'spki',format:'der'});
+  if(publicBytes(createPublicKey(pem)).equals(publicBytes(agentPublicKey)))throw Error('Independent session signing key required');
+}
 
 export async function privateFile(file) {
   if(typeof file!=='string'||!path.isAbsolute(file))throw new Error('Private configuration required');
@@ -23,7 +29,8 @@ export async function privateFile(file) {
 }
 export async function runtimeConfig(file) {
   const value=JSON.parse(await privateFile(file));
-  if(Object.keys(value).some(k=>!['releaseCatalogFile','controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port','listenHost','artifactDirectory'].includes(k))) throw new Error('Invalid configuration');
+  if(Object.keys(value).some(k=>!['releaseAccess','releaseCatalogFile','controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port','listenHost','artifactDirectory'].includes(k))) throw new Error('Invalid configuration');
+  const releaseAccess=await loadReleaseAccess(value.releaseAccess,privateFile);
   origin(value.controlOrigin);
   if(value.artifactDirectory!==undefined&&(typeof value.artifactDirectory!=='string'||!path.isAbsolute(value.artifactDirectory)))throw Error('Absolute artifact directory required');
   const listenHost=value.listenHost??'127.0.0.1';
@@ -41,7 +48,7 @@ export async function runtimeConfig(file) {
     const e=value.emailAuth;
     if(Object.keys(e).some(k=>!['resendApiKeyFile','otpPepperFile','from','sessionSigningKeyFile'].includes(k)))throw new Error('Invalid email authentication configuration');
     const pem=await privateFile(e.sessionSigningKeyFile);
-    if(pem===signingPem)throw new Error('Independent session signing key required');
+    requireIndependentSessionKey(pem,verificationKey);
     const sessionSigningKey=await importPKCS8(pem,'EdDSA'),sessionJwk=await exportJWK(createPublicKey(pem));
     emailAuth={resendApiKey:(await privateFile(e.resendApiKeyFile)).trim(),otpPepper:(await privateFile(e.otpPepperFile)).trim(),from:e.from,sessionSigningKey};
     validateEmailAuth(emailAuth);
@@ -58,7 +65,7 @@ export async function runtimeConfig(file) {
     const o=value.oidc;
     if(Object.keys(o).some(k=>!['issuer','clientId','authorizationEndpoint','registrationEndpoint','tokenEndpoint','tokenEndpointAuthMethod','clientSecretFile','redirectUri','jwksFile','sessionSigningKeyFile'].includes(k)))throw new Error('Invalid OIDC configuration');
     const pem=await privateFile(o.sessionSigningKeyFile);
-    if(pem==signingPem)throw new Error('Independent session signing key required');
+    requireIndependentSessionKey(pem,verificationKey);
     const sessionSigningKey=await importPKCS8(pem,'EdDSA');
     const sessionJwk=await exportJWK(createPublicKey(pem));
     sessionIssuer={issuer:value.controlOrigin,audience:'jetseller-portal',jwks:{keys:[sessionJwk]}};
@@ -70,5 +77,5 @@ export async function runtimeConfig(file) {
     if(c.release_bundle?.delivery!=='scoped'||!value.artifactDirectory||!/^[a-f0-9]{64}$/.test(c.installer?.signature_sha256??''))throw Error('Scoped artifact delivery required');
     return c;
   }:async()=>null;
-  return {artifactDirectory:value.artifactDirectory,getCatalog,controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port,listenHost};
+  return {releaseAccess,artifactDirectory:value.artifactDirectory,getCatalog,controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port,listenHost};
 }

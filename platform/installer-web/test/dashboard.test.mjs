@@ -191,7 +191,7 @@ test('wizard composes only fixed UUID-bound commands and keeps local readiness d
   fixture.document.querySelector('.installation-item').click(); await wait();
   assert.equal(fixture.document.querySelectorAll('.wizard-steps li').length, 8);
   assert.match(fixture.document.getElementById('install-command').textContent, /--confirm-install 550e8400-e29b-41d4-a716-446655440000/);
-  assert.match(fixture.document.getElementById('pair-command').textContent, /^sudo \/usr\/local\/bin\/jetseller-setup pair --profile p0-2-2-40 --state \/var\/lib\/jetseller-agent/);
+  assert.match(fixture.document.getElementById('pair-command').textContent, /^sudo \/usr\/local\/bin\/jetseller-setup pair --profile legacy-4-40 --state \/var\/lib\/jetseller-agent/);
   assert.doesNotMatch(fixture.document.getElementById('install-command').textContent, /curl|attacker|\|/);
   assert.match(fixture.document.getElementById('installer-status').textContent, /verifikasi independen/);
   assert.equal(fixture.document.getElementById('local-admin').hidden, true);

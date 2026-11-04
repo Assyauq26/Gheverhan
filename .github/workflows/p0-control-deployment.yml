@@ -18,6 +18,7 @@ jobs:
           node-version: '22'
       - name: Prepare isolated secrets and immutable local image
         run: |
+          node --test deploy/control-plane/render-pilot-caddy.test.mjs
           docker build -f deploy/control-plane/Dockerfile -t p0-control-fixture .
           sudo env GITHUB_ACTIONS=true CONTROL_DISPOSABLE_FIXTURE=yes node deploy/control-plane/test-fixture.mjs /tmp/p0-control-fixture
           echo "CONTROL_IMAGE=$(docker image inspect p0-control-fixture --format '{{.Id}}')" >> "$GITHUB_ENV"
@@ -44,3 +45,7 @@ jobs:
         env:
           CONTROL_DISPOSABLE_FIXTURE: 'yes'
         run: bash deploy/control-plane/coexist-test.sh
+      - name: Verify closed rollout, real Caddy pilot scope and non-destructive rollback
+        env:
+          CONTROL_DISPOSABLE_FIXTURE: 'yes'
+        run: bash deploy/control-plane/release-access-test.sh

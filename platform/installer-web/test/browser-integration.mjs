@@ -77,7 +77,7 @@ test(realCli ? 'real Go CLI preflight, email OTP browser verification and Postgr
     sessionIssuer: { issuer: origin, audience: 'jetseller-portal', jwks: { keys: [await exportJWK(sessionKeys.publicKey)] } },
     emailAuth: {resendApiKey:'synthetic-resend-key',otpPepper:'a'.repeat(64),from:'Buat Toko Online Sendiri <noreply@fixture.example>',sessionSigningKey:sessionKeys.privateKey} };
   let dnsPublished=false;
-  control = createControlServer(config, pool, { domainLookup: async()=>dnsPublished, emailFetch: async (endpoint, options) => { assert.equal(endpoint,'https://api.resend.com/emails'); return trustedFetch(cert)(mailOrigin+'/emails', options); }, dashboard: serveDashboard });
+  control = createControlServer({...config,releaseAccess:{mode:"public"}}, pool, { domainLookup: async()=>dnsPublished, emailFetch: async (endpoint, options) => { assert.equal(endpoint,'https://api.resend.com/emails'); return trustedFetch(cert)(mailOrigin+'/emails', options); }, dashboard: serveDashboard });
   const spki = createHash('sha256').update(new X509Certificate(cert).publicKey.export({type:'spki',format:'der'})).digest('base64');
   const browser = await chromium.launch({ headless: true, args:['--ignore-certificate-errors-spki-list='+spki] }); t.after(() => browser.close());
   // This synthetic test certificate is not a deployment certificate or public ACME proof.

@@ -1,6 +1,6 @@
 # Official publisher: owner setup and activation
 
-PUBLIC_SELLER_ONBOARDING_READY: NOT_PROVEN. No production root fingerprint, official image digest or live installer endpoint is asserted. No production operation has occurred.
+PUBLIC_SELLER_ONBOARDING_READY: NOT_PROVEN. No production root fingerprint, official image digest or live installer endpoint is asserted. No production mutation or official publication has occurred. Read-only Helipod evidence and the merge-policy blocker are recorded in P0_PRE_MERGE_AUDIT.md.
 
 ## Public configuration selected by owner
 
@@ -90,3 +90,23 @@ PASS requires all stages in full-seller-summary.json, public-product.png and RAM
 Owner still handles actual capacity, backup/restore, Resend secret placement, public DNS/TLS and approved deployment/smoke. Owner reports4GB RAM/60GB SSD upgrade and capacity preflight PASS (4 November2026), superseding the old capacity blocker. Actual production backup/restore and integrated smoke remain required. Use compose.helipod.yml, retain existing proxy/DB/volumes and dashboard-only503 rollback.
 
 PUBLIC_SELLER_ONBOARDING_READY remains NOT_PROVEN until full engineering evidence, approved real publication, capacity/backup and integrated public normalTLS/realOTP/store smoke pass. Checkout and production J&T stay disabled.
+
+## Root ceremony and online handoff acceptance
+
+Do not execute ceremony on this online Codex workstation, GitHub Actions, Helipod or a seller VPS. Owner first approves a physically offline Linux station and encrypted custody media. Prebuild audited tools from the final approved source with module/toolchain checksums; transfer only verified tooling. Have two custodians independently verify the public root signature/quorum/expiry and byte SHA256 on a second offline station. Both record their results, root version/expiry, custody/recovery locations and owner approval. Record the actual resulting fingerprint only then; current production fingerprint remains NOT_SET.
+
+Separate all3 root keys into approved offline custody; never transfer the whole ceremony directory to an online workstation. Export only the3 distinct online role keys plus public metadata through an approved encrypted transfer. At an approved online secret-loading station with no root private keys, load ONLY TUF_TARGETS_PKCS8/TUF_SNAPSHOT_PKCS8/TUF_TIMESTAMP_PKCS8 into btos-release-publisher using secret-management tooling/stdin, never CLI argument values or chat. Configure public variables from the exact reviewed public bytes. Verify the root variable's bytes hash to the approved fingerprint; do not strip newlines/reformat JSON silently. Environment API audit must show reviewer separation and exact-main policy before export.
+
+Owner must also select actual release version/channel, compatible agent/schema/template values, expiry, initial publication sequence and explicit genesis approval, plus approve GHCR namespace visibility/access. Existing examples/fixture rel-1.0.0-pilot are not approved production values. Preserve highest sequence and TUF role versions after publication; no reset for convenience. The main-only workflow validates all inputs and checks before its first registry push, but that validation does not replace owner dispatch/publisher approval.
+
+For approved publication evidence retain: exact main source SHA,3 registry image digests, bootstrap SHA, bundle SHA/length, release/manifest SHA, approved root fingerprint, current TUF versions/sequence, actual certificate identity/issuer, successful standard Cosign verification and independent archive verification receipts. The workflow stages a verified artifact for approved HTTPS transfer; staging alone is not OFFICIAL_INSTALLER_READY:PROVEN. Verify real HTTPS delivery and an actual one-use seller download before adopting that status.
+
+## Real seller clean-host prerequisites
+
+The native CLI does not silently install a trusted verifier or Docker from an unreviewed script. Before the approved real pilot on clean Ubuntu24.04 amd64, install Docker Engine/Compose from Docker's signed official Ubuntu apt repository using the reviewed procedure already exercised by disposable VM CI. Do not build images on the seller VPS. Confirm no existing services/volumes are being replaced. Standard wizard now uses legacy-4-40 (production4GiB/40GiB); only the explicit isolated CI experiment uses p0-2-2-40.
+
+Obtain the independently approved Cosign binary/hash and install it root-owned at /usr/local/lib/buattokosendiri/cosign (root-owned non-writable ancestors). Before executing any downloaded bootstrap, independently check its approved SHA and run pretrusted Cosign verify-blob --offline with the actual approved official workflow identity/issuer and signature bundle. Do not use an unverified bootstrap to establish its own trust. Verify the signed release manifest and policy digest, and independently compare policy BootstrapRootSHA256 to the approved offline fingerprint.
+
+Install verified bootstrap at /usr/local/bin/jetseller-setup, create private /etc/buattokosendiri and /var/lib/jetseller-agent root0700, and install reviewed release-policy.json root0600 at the exact wizard path. Keep public trust metadata apart from private device identity. Use wizard commands with the seller's actual installation UUID and verified domain; the CLI still enforces PoP, fresh domain approval, scope, signature/length/freshness/compatibility and immutable image identity. Actual initial source/image digests must come from the approved publication, not the synthetic report. These prerequisites and the real pilot remain pending owner approval/input, not claimed as executed.
+
+Primary operator references: [Docker Ubuntu installation](https://docs.docker.com/engine/install/ubuntu/), [Cosign verification](https://docs.sigstore.dev/cosign/verifying/verify/). Keep all production acceptance on normal trusted TLS.

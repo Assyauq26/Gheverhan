@@ -18,6 +18,15 @@ export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,
     createEmailAuthHandler({pool,controlOrigin:config.controlOrigin,config:config.emailAuth,...(emailFetch?{fetchImpl:emailFetch}:{})});
   const server=createServer(async (req,res)=>{
     try {
+      if(req.method==='GET' && req.url==='/healthz') {
+        try {
+          await pool.query('SELECT email_hash FROM installer.sellers LIMIT 0');
+          await pool.query('SELECT authenticated_at FROM installer.sessions LIMIT 0');
+          await pool.query('SELECT domain_verified_at FROM installer.installations LIMIT 0');
+          res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'}).end('{"status":"ready"}');
+        } catch {res.writeHead(503,{'Cache-Control':'no-store'}).end();}
+        return;
+      }
       if(dashboard && !req.url?.startsWith('/api/') && !req.url?.startsWith('/auth/') && await dashboard(req,res))return;
       const chunks=[];let bytes=0;
       for await(const chunk of req){bytes+=chunk.length;if(bytes>16384){res.writeHead(413,{'Cache-Control':'no-store'}).end();req.destroy();return;}chunks.push(chunk);}
@@ -43,7 +52,7 @@ async function main() {
   const version=await pool.query('SELECT version FROM installer.schema_version');
   if(version.rows.length!==1||version.rows[0].version!==1) throw new Error('Schema unavailable');
   const server=createControlServer(config,pool,{dashboard:serveDashboard});
-  server.listen(config.port,'127.0.0.1',()=>console.log('Installer control API listening on loopback; deployment approval remains required'));
+  server.listen(config.port,config.listenHost,()=>console.log('Installer control API listening; deployment approval remains required'));
   const stop=()=>server.close(()=>{void pool.end();});
   process.on('SIGTERM',stop);process.on('SIGINT',stop);
 }

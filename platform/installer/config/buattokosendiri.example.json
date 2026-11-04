@@ -2,5 +2,13 @@
   "controlOrigin": "https://dashboard.buattokosendiri.web.id",
   "port": 3100,
   "databaseUrlFile": "/etc/buattokosendiri/control-database-url",
-  "signingKeyFile": "/etc/buattokosendiri/agent-signing-key.pem"
+  "signingKeyFile": "/etc/buattokosendiri/agent-signing-key.pem",
+  "listenHost": "0.0.0.0",
+  "authMode": "email_otp",
+  "emailAuth": {
+    "resendApiKeyFile": "/etc/buattokosendiri/resend-api-key",
+    "otpPepperFile": "/etc/buattokosendiri/otp-pepper",
+    "sessionSigningKeyFile": "/etc/buattokosendiri/session-signing-key.pem",
+    "from": "Buat Toko Online Sendiri <otp@buattokosendiri.web.id>"
+  }
 }

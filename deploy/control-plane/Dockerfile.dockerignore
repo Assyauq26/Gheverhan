@@ -1,0 +1,10 @@
+**
+!platform/
+!platform/installer/
+!platform/installer/src/**
+!platform/installer/migrations/**
+!platform/installer/package.json
+!platform/installer/package-lock.json
+!platform/installer-web/
+!platform/installer-web/dashboard.mjs
+!platform/installer-web/public/**

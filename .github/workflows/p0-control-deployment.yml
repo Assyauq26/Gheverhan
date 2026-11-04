@@ -1,0 +1,39 @@
+name: P0 control deployment fixture
+on:
+  pull_request:
+    paths: ['platform/installer/**', 'platform/installer-web/**', 'deploy/control-plane/**', '.github/workflows/p0-control-deployment.yml']
+permissions:
+  contents: read
+jobs:
+  private-control-stack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Prepare isolated secrets and immutable local image
+        run: |
+          docker build -f deploy/control-plane/Dockerfile -t p0-control-fixture .
+          sudo env GITHUB_ACTIONS=true CONTROL_DISPOSABLE_FIXTURE=yes node deploy/control-plane/test-fixture.mjs /tmp/p0-control-fixture
+          echo "CONTROL_IMAGE=$(docker image inspect p0-control-fixture --format '{{.Id}}')" >> "$GITHUB_ENV"
+          echo 'CONTROL_DB_SECRETS_DIR=/tmp/p0-control-fixture/db' >> "$GITHUB_ENV"
+          echo 'CONTROL_MIGRATION_SECRETS_DIR=/tmp/p0-control-fixture/owner' >> "$GITHUB_ENV"
+          echo 'CONTROL_RUNTIME_SECRETS_DIR=/tmp/p0-control-fixture/runtime' >> "$GITHUB_ENV"
+      - name: Verify private networking, role separation, migration idempotency and health
+        run: |
+          set -euo pipefail
+          dc() { docker compose -f deploy/control-plane/compose.yml "$@"; }
+          dc up -d --wait db
+          dc run --rm migrate
+          dc run --rm migrate
+          dc up -d --wait control
+          test -z "$(dc port control 3100)"
+          test -z "$(dc port db 5432)"
+          dc exec -T control node --input-type=module -e "const r=await fetch('http://control:3100/auth/status');const v=await r.json();if(!r.ok||!v.configured||v.method!=='email_otp')process.exit(1)"
+          dc exec -T control node --input-type=module < deploy/control-plane/verify-runtime.mjs
+          dc restart control
+          dc up -d --wait control

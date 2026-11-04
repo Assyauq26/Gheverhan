@@ -144,7 +144,8 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
         headers: { "Content-Type": "application/json" }, body: JSON.stringify({ environment, endpoint,
           ...(endpoint === "tariff" ? { destinationDistrictCode: district, weightGram: Number(weight) } : {}) }) });
       const data = await response.json();
-      if (response.ok && data.success && data.data.configurationUpdatedAt !== status?.updatedAt) {
+      if (response.ok && data.success && (data.data.configurationUpdatedAt !== status?.updatedAt ||
+        data.data.environment !== environment || data.data.scope !== "local_store" || !Number.isFinite(Date.parse(data.data.testedAt)))) {
         setProbeStatus({}); setProbeEvidence(null);
         setNotice("Konfigurasi tersimpan berubah. Muat ulang halaman sebelum menguji kembali.");
         return;
@@ -257,7 +258,7 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
           <div>
             <div className="text-sm font-semibold">{loading ? "Memeriksa konfigurasi..." : probeStatus.tariff === "CONNECTED" && probeEvidence ? `${probeEvidence.environment === "sandbox" ? "Sandbox" : "Production"} Check Fee terverifikasi` : probeStatus.tariff === "FAILED" ? "Memerlukan verifikasi" : status?.configured ? "Konfigurasi tersimpan" : "Belum dikonfigurasi"}</div>
             <div className="text-xs text-zinc-500">{status?.updatedAt ? "Diperbarui " + new Date(status.updatedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) : "Belum ada perubahan tersimpan"}</div>
-            {localStore && <p className="mt-1 text-xs text-zinc-600">Checkout/Order belum diizinkan. {probeEvidence ? `Uji ${probeEvidence.environment} · scope ${probeEvidence.scope} · ${new Date(probeEvidence.testedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}. Hasil sesi ini, bukan UAT Production.` : "Belum ada bukti uji Check Fee pada sesi ini."}</p>}
+            {localStore && <p className="mt-1 text-xs text-zinc-600">Checkout/Order belum diizinkan. {probeEvidence ? `Uji ${probeEvidence.environment === "sandbox" ? "Sandbox" : "Production"} · cakupan toko ini · ${new Date(probeEvidence.testedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}. Hasil sesi ini, bukan UAT Production.` : "Belum ada bukti uji Check Fee pada sesi ini."}</p>}
           </div>
         </div>
         <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">

@@ -118,8 +118,9 @@ systemctl enable --now docker
 test -z "$(docker --host unix:///var/run/docker.sock ps --all --quiet)"
 P0_RESOURCE_PROBE=isolated-2-2-40-fixture /opt/p0-payload/resource-probe.test -test.run '^TestP0RealHostEvidence$' -test.v
 GUEST
-callback_seconds=0; result=0
+callback_seconds=0; callback_present=0; result=0
 if [[ -f "$repo/deploy/self-hosted/tests/p0-guest-integration.sh" ]]; then
+  callback_present=1
   scp "${ssh_flags[@]}" -P "$port" "$repo/deploy/self-hosted/tests/p0-guest-integration.sh" ubuntu@127.0.0.1:/home/ubuntu/p0-guest-integration.sh >/dev/null
   guest 'sudo -n install -m700 /home/ubuntu/p0-guest-integration.sh /root/p0-guest-integration.sh'
   callback_start=$SECONDS
@@ -131,10 +132,10 @@ collect_evidence
 guest 'sudo -n docker --host unix:///var/run/docker.sock version --format "{{json .}}"' > "$evidence/docker-version.json" || true
 guest 'sudo -n docker --host unix:///var/run/docker.sock stats --no-stream --format "{{json .}}"' > "$evidence/docker-final-stats.jsonl" || true
 guest 'sudo -n docker --host unix:///var/run/docker.sock inspect --format "{{.Name}} {{.State.OOMKilled}} {{.RestartCount}}" $(sudo -n docker --host unix:///var/run/docker.sock ps --all --quiet)' > "$evidence/docker-final-state.txt" || true
-python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$result" <<'PY'
+python3 - "$evidence" "$boot_seconds" "$callback_seconds" "$result" "$callback_present" <<'PY'
 import json,pathlib,sys
 root=pathlib.Path(sys.argv[1]);samples=[json.loads(line) for line in (root/'p0-resource-samples.jsonl').read_text().splitlines()]
-summary={'evidence':'ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS','vcpus':2,'allocated_memory_bytes':2*1024**3,'virtual_disk_bytes':40_000_000_000,'boot_seconds':int(sys.argv[2]),'callback_seconds':int(sys.argv[3]),'callback_exit':int(sys.argv[4]),'sample_count':len(samples),'oom_kills':max((s['oom_kills_since_start'] for s in samples),default=0),'max_swap_used_bytes':max((s['swap_used_bytes'] for s in samples),default=0),'min_available_memory_bytes':min((s['mem_available_bytes'] for s in samples),default=0),'min_disk_free_bytes':min((s['disk_free_bytes'] for s in samples),default=0),'installation_result':'CALLBACK_RESULT_ONLY; RESOURCE_PROBE_IS_NOT_INSTALLER_E2E'}
+summary={'evidence':'ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS','vcpus':2,'allocated_memory_bytes':2*1024**3,'virtual_disk_bytes':40_000_000_000,'boot_seconds':int(sys.argv[2]),'callback_seconds':int(sys.argv[3]),'callback_exit':int(sys.argv[4]),'callback_present':sys.argv[5]=='1','sample_count':len(samples),'oom_kills':max((s['oom_kills_since_start'] for s in samples),default=0),'max_swap_used_bytes':max((s['swap_used_bytes'] for s in samples),default=0),'max_swap_available_bytes':max((s['swap_total_bytes'] for s in samples),default=0),'min_available_memory_bytes':min((s['mem_available_bytes'] for s in samples),default=0),'min_disk_free_bytes':min((s['disk_free_bytes'] for s in samples),default=0),'installation_result':'CALLBACK_RESULT_ONLY; NOT_PUBLIC_VPS' if sys.argv[5]=='1' else 'NOT_TESTED; RESOURCE_PREFLIGHT_ONLY'}
 (root/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 print(json.dumps(summary))
 PY

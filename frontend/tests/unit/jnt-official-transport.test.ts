@@ -89,6 +89,44 @@ describe("official J&T API transport (network mocked)", () => {
     mock.mockResolvedValueOnce(respond({ success: true, detail: [{ orderid: "GHV-TEST-001", status: "Sukses" }] }));
     await expect(cancelJntOrder("GHV-TEST-001", "Cancelled by seller")).resolves.toMatchObject({ cancelled: true });
   });
+  it("handles sanitized real-shaped production history without exposing private delivery data", async () => {
+    const fixture = {
+      awb: "JO9001348812", orderid: "SYNTHETIC-ORDER",
+      detail: {
+        actual_amount: 11900, services_code: "EZ",
+        receiver: { name: "PRIVATE-RECEIVER", addr: "PRIVATE-ADDRESS" },
+        delivDriver: { phone: "PRIVATE-DRIVER-PHONE" },
+      },
+      history: [
+        { status_code: 101, status: "Manifes", city_name: "BATANG", date_time: "2026-10-21 10:09:54" },
+        { status_code: 100, status: "Paket dalam perjalanan", city_name: "SEMARANG", date_time: "2026-10-21 23:21:16" },
+        { status_code: 150, status: "Paket disimpan di gudang", city_name: "CIBINONG", date_time: "2026-10-23 07:03:05" },
+        { status_code: 100, status: "Paket akan dikirim", city_name: "CIBINONG", date_time: "2026-10-23 07:06:15" },
+        { status_code: 200, status: "Paket telah diterima", city_name: "CIBINONG",
+          date_time: "2026-10-23 09:39:49", receiver: "PRIVATE-RECEIVER", driverPhone: "PRIVATE-DRIVER-PHONE" },
+      ],
+    };
+    const mock = vi.fn().mockResolvedValue(respond(fixture));
+    vi.stubGlobal("fetch", mock);
+    const result = await trackJntOrder(fixture.awb, "SYNTHETIC-ORDER");
+    expect(result.events).toHaveLength(5);
+    expect(result.events.map(event => event.status)).toEqual([
+      "Manifes", "Paket dalam perjalanan", "Paket disimpan di gudang",
+      "Paket akan dikirim", "Paket telah diterima",
+    ]);
+    expect(result.events.at(-1)).toEqual({
+      status: "Paket telah diterima", time: "2026-10-23 09:39:49", note: "CIBINONG",
+    });
+    for (const secret of ["PRIVATE-RECEIVER", "PRIVATE-DRIVER-PHONE", "PRIVATE-ADDRESS"]) {
+      expect(JSON.stringify(result)).not.toContain(secret);
+    }
+    mock.mockResolvedValueOnce(respond({ awb: fixture.awb, history: fixture.history }));
+    await expect(trackJntOrder(fixture.awb, "SYNTHETIC-ORDER")).rejects.toThrow(/tidak cocok/);
+    mock.mockResolvedValueOnce(respond({ ...fixture, orderid: "OTHER-ORDER" }));
+    await expect(trackJntOrder(fixture.awb, "SYNTHETIC-ORDER")).rejects.toThrow(/tidak cocok/);
+    mock.mockResolvedValueOnce(respond({ error_id: "404", error_message: "Invalid AWB number", awb: fixture.awb }));
+    await expect(trackJntOrder(fixture.awb, "SYNTHETIC-ORDER")).rejects.toThrow();
+  });
   it("uses Basic Authorization for tracking and keeps AWB in JSON body", async () => {
     const mock = vi.fn().mockResolvedValue(respond({ awb: "JO9001348812", orderid: "GH-TEST-ID", detail: { receiver: { phone: "SECRET-PHONE" } }, history: [{ status: "Paket diproses", date_time: "2026-10-31 10:30:00", city_name: "JAKARTA", driverPhone: "SECRET-PHONE" }] }));
     vi.stubGlobal("fetch", mock);

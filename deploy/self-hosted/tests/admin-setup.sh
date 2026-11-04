@@ -49,6 +49,35 @@ p=pathlib.Path(sys.argv[1]); who='one' if (p/'one.status').read_text()=='303' el
 PY
 test "$(curl_setup -H 'Origin: https://store.fixture.example' -H 'Content-Type: application/json' --data-binary "@$work/login.json" -c "$work/cookies" -o "$work/login-response.json" -w '%{http_code}' https://store.fixture.example/api/v1/auth/login)" = 200
 test "$(curl_setup -b "$work/cookies" -o "$work/admin.html" -w '%{http_code}' https://store.fixture.example/admin)" = 200
+# A newly activated independent store must expose a real product editor and
+# stage a seller-owned image on its own local media volume.
+test "$(curl_setup -b "$work/cookies" -o "$work/product-editor.html" -w '%{http_code}' https://store.fixture.example/admin/products/new)" = 200
+python3 - "$work" <<'PY'
+import base64,pathlib,sys,uuid
+p=pathlib.Path(sys.argv[1])
+(p/'product-image.png').write_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO38XOcAAAAASUVORK5CYII='))
+(p/'image-request-id').write_text(str(uuid.uuid4()))
+PY
+image_request_id=$(cat "$work/image-request-id")
+test "$(curl_setup -b "$work/cookies" -H 'Origin: https://store.fixture.example' -F "requestId=$image_request_id" -F 'purpose=gallery' -F "image=@$work/product-image.png;type=image/png" -o "$work/staged-image.json" -w '%{http_code}' https://store.fixture.example/api/v1/admin/product-media)" = 201
+python3 - "$work" <<'PY'
+import json,pathlib,sys,uuid
+p=pathlib.Path(sys.argv[1]);resp=json.loads((p/'staged-image.json').read_text())
+assert resp['success'] is True
+value=resp['data'];uuid.UUID(value['id'])
+assert value['url'].startswith('/api/v1/admin/product-media/')
+(p/'staged-image-id').write_text(value['id'])
+PY
+image_id=$(cat "$work/staged-image-id")
+test "$(curl_setup -b "$work/cookies" -o "$work/staged-image-read.json" -w '%{http_code}' "https://store.fixture.example/api/v1/admin/product-media?ids=$image_id")" = 200
+python3 - "$work" <<'PY'
+import json,pathlib,sys
+p=pathlib.Path(sys.argv[1]);value=json.loads((p/'staged-image-read.json').read_text())
+assert value['success'] is True and len(value['data'])==1
+assert value['data'][0]['id']==(p/'staged-image-id').read_text()
+PY
+test "$(curl_setup -o /dev/null -w '%{http_code}' "https://store.fixture.example/api/v1/admin/product-media?ids=$image_id")" = 401
+echo 'Local admin product editor and authenticated image staging/ownership PASS'
 test "$(post one)" = 409
 test "$(curl_setup -o /dev/null -w '%{http_code}' "$url")" = 404
 counts=$(dc exec -T db psql -U js_bootstrap -d "$(sed -n 's/^JETSELLER_DATABASE_NAME=//p' "$stack/.env")" -Atc 'SELECT count(*) FROM "UserRole" u JOIN "Role" r ON r.id=u."roleId" WHERE r.name='\''Admin'\''')

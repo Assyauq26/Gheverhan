@@ -84,6 +84,12 @@ func pairingClient(origin string, client *http.Client) (*PairingClient, error) {
 	return &PairingClient{origin: origin, client: &copy}, nil
 }
 func (c *PairingClient) request(ctx context.Context, endpoint string, body any, result any) (int, error) {
+	return c.agentRequest(ctx, endpoint, body, result, "", "")
+}
+func (c *PairingClient) agentRequest(ctx context.Context, endpoint string, body any, result any, token, proof string) (int, error) {
+	if (token == "") != (proof == "") {
+		return 0, ErrPairing
+	}
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return 0, ErrPairing
@@ -94,6 +100,10 @@ func (c *PairingClient) request(ctx context.Context, endpoint string, body any, 
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "DPoP "+token)
+		req.Header.Set("DPoP", proof)
+	}
 	res, err := c.client.Do(req)
 	if err != nil {
 		return 0, ErrPairing

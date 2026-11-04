@@ -194,6 +194,19 @@ jobs:
         id: operations_browser
         run: npm run test:e2e:operations
 
+      - name: Bind disposable store DB alias to runner PostgreSQL loopback
+        # Simulate Docker Compose's private 'db' hostname only inside this
+        # short-lived CI runner. No production DNS or network changes.
+        run: |
+          echo '127.0.0.1 db' | sudo tee -a /etc/hosts >/dev/null
+          getent hosts db | grep -q '127.0.0.1'
+
+      - name: Chromium local seller J&T settings and authorization (no carrier calls)
+        env:
+          JNT_SELF_HOSTED_TESTS: '1'
+          SPRINT1_ARTIFACT_DIR: /tmp/gheverhan-jnt-settings-${{ github.run_id }}
+        run: node --import tsx tests/integration/jnt-settings-browser.ts
+
       - name: Registration email OTP lifecycle on disposable PostgreSQL
         run: node --import tsx --test tests/integration/registration-otp.test.ts
 
@@ -248,5 +261,7 @@ jobs:
             /tmp/gheverhan-auth-ui-*/*.png
             /tmp/gheverhan-jnt-settings-*/jnt-settings/*.json
             /tmp/gheverhan-jnt-settings-*/jnt-settings/*.png
+            /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.json
+            /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.png
           if-no-files-found: error
           retention-days: 7

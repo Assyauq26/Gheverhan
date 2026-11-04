@@ -6,13 +6,13 @@ import { AppearanceProvider, StoreLogo } from "@/components/appearance/context";
 import { makeDefault } from "@/modules/appearance/schema";
 import { contrastErrors } from "@/modules/appearance/contrast";
 afterEach(cleanup);
-it("uses the two-color demo mark only on compatible white surfaces", () => {
+it("renders merchant identity without substituting the platform wordmark", () => {
  const config=makeDefault();
  const view=()=>createElement(AppearanceProvider,{config,children:createElement(StoreLogo)});
  const result=render(view());
- expect(result.container.querySelector(".jetseller-wordmark")).not.toBeNull();
+ expect(result.container.textContent).toBe("Toko Anda");
  config.colors.header="#E1251B";config.colors.headerText="#FFFFFF";result.rerender(view());
- expect(result.container.querySelector(".jetseller-wordmark")).toBeNull();expect(result.container.textContent).toBe("JetSeller");
+ expect(result.container.querySelector(".jetseller-wordmark")).toBeNull();expect(result.container.textContent).toBe("Toko Anda");
  config.identity.name="Independent Store";result.rerender(view());expect(result.container.textContent).toBe("Independent Store");
 });
 for (const target of ["header", "footer"] as const) {
@@ -25,7 +25,7 @@ for (const target of ["header", "footer"] as const) {
    children: createElement("div", { style: { color: config.gradients[target].foreground } }, createElement(StoreLogo)),
   }));
   expect(result.container.querySelector(".jetseller-wordmark")).toBeNull();
-  expect(result.container.textContent).toBe("JetSeller");
-  expect(result.getByText("JetSeller").style.color).toBe("");
+  expect(result.container.textContent).toBe("Toko Anda");
+  expect(result.getByText("Toko Anda").style.color).toBe("");
  });
 }

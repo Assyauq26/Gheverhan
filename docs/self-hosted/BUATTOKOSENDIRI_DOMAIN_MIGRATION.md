@@ -1,8 +1,8 @@
-# JetSeller domain migration — buattokosendiri.web.id
+# Buat Toko Online Sendiri — domain migration — buattokosendiri.web.id
 
 **Status: REVIEW ONLY.** This document and the Caddy draft are NOT deployed. Do not merge to main or apply production VPS config without a scoped release approval, verified backup/rollback, health checks, and a separate portal deployment plan.
 
-**Owner confirmed:** new domain purchased at Domainesia; screenshot shows DNS editor with new records. The screenshot is **not proof** records were saved, propagated, or that HTTPS endpoints respond. Do not report the new domain as live until independently measured.
+**Owner-reported state, 4 November 2026:** apex HTTPS 200, www 301 to apex, legacy sites 200, Let’s Encrypt certificates issued. This session did not independently probe production. Do not repeat DNS/Caddy/certificate configuration unnecessarily.
 
 ## Desired URL mapping
 
@@ -14,7 +14,7 @@
 | Staging | `staging.jetseller.web.id` | `staging.buattokosendiri.web.id` | Domainesia A to 43.173.41.24; requires independent Caddy/TLS staging vhost |
 | Seller storefront | Seller-owned domain | **Unchanged** | Each seller still uses their own VPS, domain, PostgreSQL, media and `/admin` path |
 
-JetSeller is still the **product name**. Changing public URLs does not rename code packages or convert self-hosted architecture into wildcard tenant hosting.
+**Final identity decision (4 November 2026): Buat Toko Online Sendiri.** The previous brand is retired. Technical identifiers remain compatible; this does not convert self-hosted architecture into wildcard tenant hosting. See `../rebranding-buattokosendiri/README.md` for the current release plan and evidence.
 
 ## Step-by-step gated cutover
 
@@ -34,10 +34,10 @@ JetSeller is still the **product name**. Changing public URLs does not rename co
 
 ## Source changes in this PR
 
-- Change JetSeller landing canonical + Open Graph URLs and 404 references to new apex.
+- Change platform landing canonical + Open Graph URLs and 404 references to new apex.
 - Change default Go setup CLI control origin to dedicated new `dashboard` HTTPS host.
-- Update Caddy **draft** to new static apex/www and **delayed** legacy apex/www redirects; explicitly leaves the dashboard route absent pending real portal deployment.
-- Test static metadata, old redirect intent and installer origin. Keep historical audit reports and old release-script rollback test fixtures unchanged as evidence.
+- Update Caddy **draft** to new static apex/www and preserved legacy apex/www hosting; explicitly leaves the dashboard route absent pending real portal deployment.
+- Test static metadata, legacy-origin preservation and installer origin. Keep historical audit reports and old release-script rollback test fixtures unchanged as evidence.
 
 ## Public release acceptance
 

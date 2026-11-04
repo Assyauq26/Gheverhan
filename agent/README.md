@@ -1,4 +1,4 @@
-# JetSeller verified installer foundation
+# Buat Toko Online Sendiri verified installer foundation
 
 Status: IMPLEMENTED_PENDING_CI. This is a local Go CLI foundation, not a public installer release, installed agent daemon or completed store provisioning flow. No functional public one-line command is published. No artifact execution, package installation, Compose apply, DNS mutation, host shell endpoint or privileged helper exists in this slice.
 
@@ -16,7 +16,7 @@ Targets `/api/installer/v1/agent/pairing/device` and `/agent/pairing/token` on t
 
 ## Verification
 
-Go formatting, vet, portable unit tests and Linux cross-build are local checks. Ubuntu CI executes race-enabled Linux state/concurrency/resume and TLS pairing fixtures. The dedicated integration test uses the actual Cosign v3.1.4 signed upstream checksum bundle, pinned binary/artifact/bundle hashes, exact public signer and issuer, then rejects modified bytes even with their matching SHA256 and rejects a wrong signer. This is real upstream signature validation, not a mocked verifier or a JetSeller release-signing proof.
+Go formatting, vet, portable unit tests and Linux cross-build are local checks. Ubuntu CI executes race-enabled Linux state/concurrency/resume and TLS pairing fixtures. The dedicated integration test uses the actual Cosign v3.1.4 signed upstream checksum bundle, pinned binary/artifact/bundle hashes, exact public signer and issuer, then rejects modified bytes even with their matching SHA256 and rejects a wrong signer. This is real upstream signature validation, not a mocked verifier or a Buat Toko Online Sendiri release-signing proof.
 
 Local Windows result: six portable tests PASS; two Linux-only fixtures skipped; actual upstream Cosign signed/tamper/wrong-signer integration PASS. Linux workflow results are reported on the PR. No live VPS, production secret, database, DNS or deployment access is involved.
 
@@ -39,7 +39,7 @@ Older interrupted credentials without the new local origin field can be recovere
 
 `apply-disposable-fixture` now performs actual fixed Compose operations only for root-run marked `/tmp/jetseller-runtime.*/stack` with its state under the same fixture parent. It never accepts a production path, arbitrary shell operation, package install or mutable image reference. An independently supplied root SHA256 pins official go-tuf/v2 trustedmetadata root/timestamp/snapshot/targets validation; target length/hash authenticates the strict fixture plan, which hashes all profile/config/secret input files. Top-level expiry, wrong root, rollback, same-version equivocation, altered files and unknown command fields fail before operations.
 
-The helper stages verified inputs privately, validates normalized services/images/ports/mounts/networks and exclusive per-service secrets, then checkpoints database, migration, grants, media, app, proxy and readiness. Completed checkpoints are not repeated after interruption; an already-complete plan must still recheck live readiness. It never deletes a volume or database. PostgreSQL and app secrets retain their dedicated container UID ownership; root-only local fixture signing keys are test inputs, not an approved JetSeller production trust root.
+The helper stages verified inputs privately, validates normalized services/images/ports/mounts/networks and exclusive per-service secrets, then checkpoints database, migration, grants, media, app, proxy and readiness. Completed checkpoints are not repeated after interruption; an already-complete plan must still recheck live readiness. It never deletes a volume or database. PostgreSQL and app secrets retain their dedicated container UID ownership; root-only local fixture signing keys are test inputs, not an approved Buat Toko Online Sendiri production trust root.
 
 Dedicated Ubuntu CI builds images from immutable reviewed packaging commit `4b7c24c728e453c7d4d1acca550212a49000e3d2`, verifies genuine TUF signatures, interrupts after migration, resumes without repeating completed DB work, preserves media, validates real app readiness and internal-CA hostname/chain TLS, rejects tampered Compose before another Docker call, and checks the installation lock. The root-required integration is explicitly skipped in ordinary local tests and is run separately in disposable CI. No main or production branch is merged by this workflow.
 

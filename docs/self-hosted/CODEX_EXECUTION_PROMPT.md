@@ -1,10 +1,10 @@
-# MASTER PROMPT CODEX — JetSeller Self-Hosted Installer and Central Updates
+# MASTER PROMPT CODEX — Buat Toko Online Sendiri Self-Hosted Installer and Central Updates
 
 > Jalankan instruksi ini dari repository resmi `Assyauq26/Gheverhan`. **Dokumen PRD telah diunggah ke repository**, bukan sekadar disediakan sebagai lampiran chat. Codex wajib membaca file langsung dari GitHub/checkout branch dokumentasi sebelum melakukan audit atau membuat PR. **Tidak ada izin deploy atau mutasi production.**
 
 ---
 
-Anda adalah **Principal Software Architect, Senior Full-Stack Engineer (Next.js/TypeScript), Go Systems Engineer, DevSecOps Engineer, dan QA Lead** untuk JetSeller.
+Anda adalah **Principal Software Architect, Senior Full-Stack Engineer (Next.js/TypeScript), Go Systems Engineer, DevSecOps Engineer, dan QA Lead** untuk Buat Toko Online Sendiri.
 
 ## CANONICAL REPOSITORY & MANDATORY READ (DO THIS FIRST)
 
@@ -35,14 +35,14 @@ Anda adalah **Principal Software Architect, Senior Full-Stack Engineer (Next.js/
 
 ## Product baseline — MUST FOLLOW
 
-Kami mengubah konsep platform JetSeller. **Bukan SaaS multi-tenant pada satu server**, melainkan platform distribusi **aplikasi toko mandiri/self-hosted**:
+Kami mengubah konsep platform Buat Toko Online Sendiri. **Bukan SaaS multi-tenant pada satu server**, melainkan platform distribusi **aplikasi toko mandiri/self-hosted**:
 
 - Seller membeli VPS dan domain dari provider sendiri.
 - Seller registrasi di `jetseller.web.id`, membuka wizard installer, dan **menjalankan satu perintah bootstrap yang terverifikasi** di VPS Linux miliknya sendiri.
-- Pairing installer menggunakan device-style one-time code dengan persetujuan akun seller. JetSeller **tidak meminta/menyimpan password SSH**.
-- Installer memasang aplikasi toko JetSeller (Next.js storefront + `/admin` dashboard seller), PostgreSQL lokal terpisah, Caddy/HTTPS, persistent storage dan update agent.
+- Pairing installer menggunakan device-style one-time code dengan persetujuan akun seller. Buat Toko Online Sendiri **tidak meminta/menyimpan password SSH**.
+- Installer memasang aplikasi toko Buat Toko Online Sendiri (Next.js storefront + `/admin` dashboard seller), PostgreSQL lokal terpisah, Caddy/HTTPS, persistent storage dan update agent.
 - Semua toko punya domain, VPS, database, user, data customer, media, pengiriman, dan runtime sendiri.
-- **Satu master codebase private** digunakan untuk build immutable signed OCI image; JetSeller pusat mengelola versi, registrasi, peluncuran update, monitoring metadata, dan audit.
+- **Satu master codebase private** digunakan untuk build immutable signed OCI image; Buat Toko Online Sendiri pusat mengelola versi, registrasi, peluncuran update, monitoring metadata, dan audit.
 - Update agent hanya outbound HTTPS dengan scoped device credentials, verifikasi signed metadata/artifact dan rollback/recovery. Tidak boleh menjalankan arbitrary remote commands dari pusat.
 - J&T API credentials **dikelola per seller di server tokonya sendiri** dan tidak boleh dikirim ke pusat.
 - `gheverhan.store` adalah website existing yang saat ini dianggap live; **jangan ubah production, DNS, DB, deployment, appearance, atau secrets**. Uji pada VPS disposable dengan synthetic data.
@@ -71,7 +71,7 @@ Before editing application code:
 - Use branch + PR for each milestone. Preserve existing production behavior and public website; docs-only PR first.
 - Incremental changes over wholesale rewrite; no refactor of unrelated seller app features. Keep existing commerce logic and data models unless justified and tested.
 - Use dependency injection and interfaces to isolate portal, agent and store. Strict TypeScript, versioned JSON contracts, runtime validation, Go tests, integration tests in disposable Postgres.
-- Frontend: JetSeller brand red-white, premium minimal, mobile-first; accessible, friendly Indonesian copy, stepper/progress persistent, error remediation. Never overbuild decorative mockups instead of working states.
+- Frontend: Buat Toko Online Sendiri brand red-white, premium minimal, mobile-first; accessible, friendly Indonesian copy, stepper/progress persistent, error remediation. Never overbuild decorative mockups instead of working states.
 - No hardcoded credentials, real customer data, real J&T order requests, registry tokens, IP addresses, sensitive URLs or rates.
 - Test both success and failure; no “happy path only” implementation.
 - Do not weaken security checks to pass CI. Do not use blind `curl | sh` or generic remote shell endpoint.

@@ -1,0 +1,51 @@
+name: JetSeller signed disposable provisioning
+on:
+  pull_request:
+    paths:
+      - agent/**
+      - .github/workflows/jetseller-disposable-provisioning.yml
+permissions:
+  contents: read
+concurrency:
+  group: jetseller-provision-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  signed-fixture-provision:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Obtain immutable current RC runtime profile for combined-head verification
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: fixture-profile
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Verify dependencies, vet and test signed metadata boundaries
+        working-directory: agent
+        run: |
+          go mod verify
+          go vet ./...
+          go test -race -count=1 ./...
+          go test -c -o /tmp/jetseller-provision.test ./internal/bootstrap
+      - name: Build current-RC fixture application and migration images
+        run: |
+          set -euo pipefail
+          test "$(git -C fixture-profile rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          context_parent=$(mktemp -d /tmp/jetseller-provision-build.XXXXXXXX)
+          node fixture-profile/deploy/self-hosted/prepare.mjs context "$context_parent/context"
+          docker build --target runtime -t jetseller-fixture:app "$context_parent/context"
+          docker build --target migration -t jetseller-fixture:migration "$context_parent/context"
+      - name: Apply signed fixture, interrupt, resume and verify real services
+        run: |
+          set -euo pipefail
+          sudo env PATH="$PATH" JETSELLER_DISPOSABLE_PROVISION_TESTS=1 JETSELLER_PROVISION_PROFILE="$GITHUB_WORKSPACE/fixture-profile" /tmp/jetseller-provision.test -test.v -test.run '^TestDisposableTUFProvisioningAndInterruptedResume$' -test.timeout=12m

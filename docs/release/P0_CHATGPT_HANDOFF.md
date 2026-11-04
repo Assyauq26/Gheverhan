@@ -45,3 +45,7 @@ Full synthetic VM E2E workflow must actually finish every stage and report resou
 ## Publisher environment audit
 
 Read-only GitHub audit confirms btos-release-publisher exists, requires an independent reviewer with prevent-self-review, and has exactly one custom deployment policy: branch main. Workflow/input validation must use this actual environment and accept only that exact main-only policy (or protected-branches policy with existing main-only workflow guards). No environment secrets or variables were configured at the audit snapshot. Owner must privately supply the listed ONLINE TUF role keys and approved public variables in the publisher handoff; offline root keys must never enter GitHub. No environment configuration was changed by this audit.
+
+## Engineering evidence snapshot
+
+Full synthetic seller journey PASS at89d4fcb792900b5f5f830ba1f0e00cfae6e9d765: run41810599049, artifact13312103804; repository evidence docs/release/evidence/p0/full-vm-89d4fcb7.json. This includes real Docker29 dual-layout image identification, DB/migrations, local admin, product/photo, restart and persistent inventory/media/session. OOM0, swap0. It does not attest official artifacts, public ACME, real Resend integration or sustained capacity. Require all latest exact-final-SHA CI checks after the final CI repairs before approval. Manual Helipod validation must use build_only=true; never use a deploy confirmation to obtain a build check.

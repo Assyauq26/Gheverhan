@@ -1,0 +1,78 @@
+{
+  "run": "https://github.com/Assyauq26/Gheverhan/actions/runs/41810599049",
+  "artifact": "https://github.com/Assyauq26/Gheverhan/actions/runs/41810599049/artifacts/13312103804",
+  "journey": {
+    "scope": "SYNTHETIC_OTP_LOCAL_DNS_AUTHORITY_LOCAL_CA_NOT_PUBLIC_HTTPS",
+    "dns_queries": 2,
+    "control_plane_location": "disposable CI runner outside seller VM",
+    "installer_engine": "actual Install/FetchRelease/ActivateAdmin; test-only Caddy internal CA template",
+    "steps": [
+      {
+        "step": "register-otp-wizard",
+        "status": "PASS",
+        "at": "2026-11-04T10:03:03.655Z"
+      },
+      {
+        "step": "domain-intent-ownership",
+        "status": "PASS",
+        "at": "2026-11-04T10:03:03.982Z"
+      },
+      {
+        "step": "verified-bootstrap",
+        "status": "PASS",
+        "at": "2026-11-04T10:03:04.882Z"
+      },
+      {
+        "step": "actual-vm-pairing",
+        "status": "PASS",
+        "at": "2026-11-04T10:03:11.535Z"
+      },
+      {
+        "step": "scoped-download-tuf-cosign",
+        "status": "PASS",
+        "at": "2026-11-04T10:03:22.981Z"
+      },
+      {
+        "step": "provision-and-retry",
+        "status": "PASS",
+        "at": "2026-11-04T10:04:16.410Z"
+      },
+      {
+        "step": "activate-admin",
+        "status": "PASS",
+        "at": "2026-11-04T10:04:19.803Z"
+      },
+      {
+        "step": "product-photo-publication",
+        "status": "PASS",
+        "at": "2026-11-04T10:04:22.232Z"
+      },
+      {
+        "step": "restart-persistence-retry",
+        "status": "PASS",
+        "at": "2026-11-04T10:04:30.852Z"
+      }
+    ],
+    "result": "PASS",
+    "source_sha": "89d4fcb792900b5f5f830ba1f0e00cfae6e9d765",
+    "production_ready": false
+  },
+  "resources": {
+    "evidence": "ISOLATED_QEMU_GUEST_NOT_PUBLIC_VPS",
+    "vcpus": 2,
+    "allocated_memory_bytes": 2147483648,
+    "virtual_disk_bytes": 40000000000,
+    "boot_seconds": 19,
+    "callback_seconds": 91,
+    "callback_exit": 0,
+    "callback_present": true,
+    "sample_count": 64,
+    "oom_kills": 0,
+    "max_swap_used_bytes": 0,
+    "max_swap_available_bytes": 0,
+    "min_available_memory_bytes": 1359609856,
+    "min_disk_free_bytes": 31346442240,
+    "installation_result": "CALLBACK_RESULT_ONLY; NOT_PUBLIC_VPS"
+  },
+  "limits": "Synthetic OTP, local DNS authority and locally trusted fixture CA. No public ACME/live Resend or production publisher claim. Short synthetic journey, not a sustained load benchmark."
+}

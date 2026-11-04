@@ -87,7 +87,8 @@ jobs:
           sudo install -m600 -o "$(id -u)" /opt/p0-release.zip "/tmp/p0-full-artifacts/$bundle_sha.zip"
           npm ci --prefix platform/installer --ignore-scripts --no-audit --no-fund
           npm ci --prefix platform/installer-web --ignore-scripts --no-audit --no-fund
-          cd platform/installer-web && npx playwright install --with-deps chromium
+          (cd platform/installer-web && npx playwright install --with-deps chromium)
+          sudo apt-get install -y -qq libnss3-tools
       - name: Full real installer engine in clean2CPU2GiB40GB Ubuntu24.04 VM
         env:
           P0_DISPOSABLE_CI_CONFIRM: only-disposable-ci

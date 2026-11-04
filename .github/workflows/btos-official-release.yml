@@ -94,6 +94,9 @@ jobs:
           sudo "$(command -v node)" deploy/release/package-candidate.mjs /opt/btos-publication/metadata /opt/btos-publication/directory-receipt.json /opt/btos-publication/release.zip
           sudo /tmp/btos-release-build/jetseller-setup verify-release-archive --policy /opt/btos-publication/policy.json --artifact /opt/btos-publication/release.zip --receipt /opt/btos-publication/archive-receipt.json
           sudo "$(command -v node)" deploy/release/stage-publication.mjs /tmp/btos-publication-input/staging.json
+          sudo --preserve-env=RELEASE_SOURCE_SHA,RELEASE_SIGNER_IDENTITY,RELEASE_SIGNER_ISSUER,GITHUB_RUN_ID "$(command -v node)" deploy/release/final-manifest.mjs
+          sudo --preserve-env=ACTIONS_ID_TOKEN_REQUEST_URL,ACTIONS_ID_TOKEN_REQUEST_TOKEN,GITHUB_ACTIONS "$RELEASE_COSIGN_PATH" sign-blob --yes --bundle /opt/btos-publication/staged/release-manifest.sigstore.json /opt/btos-publication/staged/release-manifest.json
+          sudo "$RELEASE_COSIGN_PATH" verify-blob --offline --bundle /opt/btos-publication/staged/release-manifest.sigstore.json --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" /opt/btos-publication/staged/release-manifest.json
           sudo install -m600 /opt/btos-publication/metadata/candidate-state.json /opt/btos-publication/staged/publication-state.private.json
           sudo chown -R "$(id -u):$(id -g)" /opt/btos-publication/staged
       - name: Retain verified publication handoff (no HTTP activation or production deployment)

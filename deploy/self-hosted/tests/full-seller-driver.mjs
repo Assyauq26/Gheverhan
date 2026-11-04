@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict';
 import {createServer,request} from 'node:https';
 import {once} from 'node:events';
-import {createHash,randomUUID,X509Certificate} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {readFile,writeFile,mkdtemp,mkdir} from 'node:fs/promises';
+import {existsSync} from 'node:fs';
 import {execFileSync,spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import path from 'node:path';
@@ -24,16 +25,22 @@ let stage='setup',browser,storeBrowser,pool,mail,gateway,tunnel,pairChild,forwar
 const steps=[];const done=label=>{steps.push({step:label,status:'PASS',at:new Date().toISOString()});console.log('PASS '+label);};
 try {
  const dir=await mkdtemp(path.join(os.tmpdir(),'p0-full-browser-'));
- execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','1','-subj','/CN=127.0.0.1','-addext','subjectAltName=IP:127.0.0.1','-keyout',dir+'/key.pem','-out',dir+'/cert.pem'],{stdio:'ignore'});
- const key=await readFile(dir+'/key.pem'),cert=await readFile(dir+'/cert.pem');
- const spki=c=>createHash('sha256').update(new X509Certificate(c).publicKey.export({type:'spki',format:'der'})).digest('base64');
+ execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','1','-subj','/CN=P0 Fixture Root','-addext','basicConstraints=critical,CA:TRUE','-keyout',dir+'/ca-key.pem','-out',dir+'/ca.pem'],{stdio:'ignore'});
+ execFileSync('openssl',['req','-newkey','rsa:2048','-nodes','-subj','/CN=127.0.0.1','-keyout',dir+'/key.pem','-out',dir+'/server.csr'],{stdio:'ignore'});
+ await writeFile(dir+'/extensions','subjectAltName=IP:127.0.0.1\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n');
+ execFileSync('openssl',['x509','-req','-days','1','-in',dir+'/server.csr','-CA',dir+'/ca.pem','-CAkey',dir+'/ca-key.pem','-CAcreateserial','-extfile',dir+'/extensions','-out',dir+'/cert.pem'],{stdio:'ignore'});
+ const key=await readFile(dir+'/key.pem'),serverCert=await readFile(dir+'/cert.pem'),cert=await readFile(dir+'/ca.pem');
+ const nss=path.join(os.homedir(),'.pki/nssdb');await mkdir(nss,{recursive:true,mode:0o700});
+ if(!existsSync(nss+'/cert9.db'))execFileSync('certutil',['-N','-d','sql:'+nss,'--empty-password'],{stdio:'pipe'});
+ const trustCA=file=>execFileSync('certutil',['-A','-d','sql:'+nss,'-n','P0-Fixture-'+randomUUID(),'-t','C,,','-i',file],{stdio:'pipe'});
+ trustCA(dir+'/ca.pem');
  const fetchTrusted=(url,options={},ca=cert)=>new Promise((resolve,reject)=>{
   const q=request(url,{method:options.method||'GET',headers:options.headers,ca,rejectUnauthorized:true,lookup:(host,opts,cb)=>opts.all?cb(null,[{address:'127.0.0.1',family:4}]):cb(null,'127.0.0.1',4)},r=>{const chunks=[];let n=0;r.on('data',c=>{n+=c.length;if(n>64*1024*1024)q.destroy(Error('bounded response'));else chunks.push(c)});r.on('end',()=>resolve(new Response(Buffer.concat(chunks),{status:r.statusCode,headers:(()=>{const h=new Headers();for(const [k,v]of Object.entries(r.headers)){if(Array.isArray(v))for(const x of v)h.append(k,x);else if(v!==undefined)h.set(k,v);}return h;})()})));});q.on('error',reject);q.end(options.body);
  });
  pool=createPool(connection.toString());await migrate(pool);
  const sessionKeys=await jose.generateKeyPair('EdDSA'),agentKeys=await jose.generateKeyPair('EdDSA');
  let otp=null,dnsPublished=false,mailOrigin;
- mail=createServer({key,cert},async(req,res)=>{try{let raw='';for await(const c of req){raw+=c;if(raw.length>16384)throw Error('size')};const b=JSON.parse(raw);otp=b.text.match(/: (\d{6})\n/)[1];res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify({id:randomUUID()}));}catch{res.writeHead(400).end();}});
+ mail=createServer({key,cert:serverCert},async(req,res)=>{try{let raw='';for await(const c of req){raw+=c;if(raw.length>16384)throw Error('size')};const b=JSON.parse(raw);otp=b.text.match(/: (\d{6})\n/)[1];res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify({id:randomUUID()}));}catch{res.writeHead(400).end();}});
  mail.listen(0,'127.0.0.1');await once(mail,'listening');mailOrigin='https://127.0.0.1:'+mail.address().port;
  const origin='https://127.0.0.1:3443',artifactDirectory='/tmp/p0-full-artifacts';
  const receipt=JSON.parse(await readFile('/tmp/p0-full-archive-receipt.json','utf8'));
@@ -42,10 +49,10 @@ try {
  const setupSHA=(await readFile('/tmp/p0-full-setup-sha','utf8')).trim(),policySHA=createHash('sha256').update(await readFile('/tmp/p0-full-policy.json')).digest('hex');
  const catalog={version:1,release_id:receipt.release_id,manifest_sha256:receipt.manifest_sha256,root_sha256:receipt.root_sha256,expires_at:receipt.expires_at,verification_receipt:receipt,policy_sha256:policySHA,policy_url:origin+'/bootstrap/'+policySHA+'/policy.json',installer:{url:origin+'/bootstrap/'+setupSHA+'/jetseller-setup',sha256:setupSHA,signature_url:origin+'/bootstrap/'+signatureSHA+'/signature.json',signature_sha256:signatureSHA},release_bundle:{delivery:'scoped',sha256:receipt.bundle_sha256,bytes:receipt.bundle_bytes}};
  const control=createControlServer({controlOrigin:origin,authMode:'email_otp',signingKey:agentKeys.privateKey,verificationKey:agentKeys.publicKey,sessionIssuer:{issuer:origin,audience:'jetseller-portal',jwks:{keys:[await jose.exportJWK(sessionKeys.publicKey)]}},emailAuth:{resendApiKey:'synthetic-not-production-key',otpPepper:'a'.repeat(64),from:'Fixture <otp@fixture.example>',sessionSigningKey:sessionKeys.privateKey},artifactDirectory,getCatalog:async()=>catalog},pool,{dashboard:serveDashboard,domainLookup:async()=>dnsPublished,emailFetch:(_url,opts)=>fetchTrusted(mailOrigin+'/emails',opts)});
- gateway=createServer({key,cert},(req,res)=>control.emit('request',req,res));gateway.listen(3443,'127.0.0.1');await once(gateway,'listening');
+ gateway=createServer({key,cert:serverCert},(req,res)=>control.emit('request',req,res));gateway.listen(3443,'127.0.0.1');await once(gateway,'listening');
  ssh('sudo -n install -m644 /dev/stdin /usr/local/share/ca-certificates/p0-control-fixture.crt',cert);ssh('sudo -n update-ca-certificates >/dev/null; sudo -n install -d -m700 /var/lib/jetseller-agent');
  tunnel=spawn('ssh',[...sshFlags,'-N','-o','ExitOnForwardFailure=yes','-R','3443:127.0.0.1:3443','ubuntu@127.0.0.1'],{stdio:'ignore'});await sleep(1000);
- browser=await chromium.launch({args:['--no-proxy-server','--ignore-certificate-errors-spki-list='+spki(cert)]});
+ browser=await chromium.launch({args:['--no-proxy-server']});
  const ctx=await browser.newContext({ignoreHTTPSErrors:false}),page=await ctx.newPage();
  stage='register-otp-wizard';await page.goto(origin+'/daftar');await page.getByLabel('Nama Anda',{exact:true}).fill('Full VM Seller');await page.getByLabel('Nama toko pertama',{exact:true}).fill('Full VM Store');await page.getByLabel('Alamat email',{exact:true}).fill('full-'+randomUUID()+'@fixture.example');await page.getByRole('button',{name:'Kirim kode verifikasi',exact:true}).click();await page.locator('#email-verify-form:not([hidden])').waitFor();assert.match(otp,/^\d{6}$/);await page.getByLabel('Kode 6 digit dari email',{exact:true}).fill(otp);otp=null;await page.getByRole('button',{name:'Verifikasi dan lanjutkan',exact:true}).click();await page.locator('#workspace:not([hidden])').waitFor();assert.equal(new URL(page.url()).pathname,'/');done(stage);
  stage='domain-intent-ownership';await page.getByLabel('Nama toko',{exact:true}).fill('Full VM Store');await page.getByLabel('Domain toko',{exact:true}).fill('store.fixture.example');await page.getByRole('button',{name:'Buat rencana instalasi'}).click();await page.locator('#installation-detail:not([hidden])').waitFor();const id=(await page.locator('#detail-id').textContent()).trim();assert.match(id,/^[a-f0-9-]{36}$/);await page.getByRole('button',{name:'Buat instruksi TXT',exact:true}).click();await page.locator('#domain-proof-record:not([hidden])').waitFor();dnsPublished=true;await page.getByRole('button',{name:'Periksa rekaman TXT',exact:true}).click();await page.locator('#domain-proof-status').filter({hasText:'Kendali domain terverifikasi'}).waitFor();done(stage);
@@ -60,7 +67,8 @@ try {
  stage='activate-admin';action('activate');const claim=JSON.parse(ssh('sudo -n cat /var/lib/jetseller-agent/local-admin-claim.json'));assert.equal(typeof claim.claim,'string');
  forward=spawn('sudo',['-n','ssh',...sshFlags,'-N','-o','ExitOnForwardFailure=yes','-L','127.0.0.1:443:127.0.0.1:443','ubuntu@127.0.0.1'],{stdio:'ignore'});await sleep(1000);
  execFileSync('sudo',['-n','tee','-a','/etc/hosts'],{input:'\n127.0.0.1 store.fixture.example\n',stdio:['pipe','ignore','pipe']});
- storeBrowser=await chromium.launch({args:['--no-proxy-server','--host-resolver-rules=MAP store.fixture.example 127.0.0.1','--ignore-certificate-errors-spki-list='+spki(ca)]});
+ await writeFile(dir+'/store-ca.pem',ca,{mode:0o600});trustCA(dir+'/store-ca.pem');
+ storeBrowser=await chromium.launch({args:['--no-proxy-server','--host-resolver-rules=MAP store.fixture.example 127.0.0.1']});
  const store=await storeBrowser.newContext({ignoreHTTPSErrors:false}),admin=await store.newPage(),base='https://store.fixture.example';
  const form=new URLSearchParams({claim:claim.claim,name:'Full VM Owner',email:'owner@fixture.example',password:'Synthetic-VM-Password-001',confirmation:'Synthetic-VM-Password-001'});
  const setup=await fetchTrusted(base+'/admin/setup',{method:'POST',headers:{origin:base,'content-type':'application/x-www-form-urlencoded'},body:form.toString()},ca);assert.equal(setup.status,303);

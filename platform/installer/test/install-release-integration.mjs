@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp,writeFile,rm,readFile } from 'node:fs/promises';
 import { generateKeyPair, exportJWK, calculateJwkThumbprint, SignJWT } from 'jose';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {createArtifactDelivery} from '../src/artifact-delivery.mjs';
 import { createPool, migrate } from '../src/db.mjs';
 import { createHandler } from '../src/api.mjs';
 import { createInstallReleaseHandler } from '../src/install-release.mjs';
@@ -15,7 +18,7 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
   assert.equal(parsed.pathname,'/js_control_fixture');assert.ok(['127.0.0.1','localhost'].includes(parsed.hostname));
   const pool=createPool(connection),controlOrigin='https://portal.release-fixture.example';
   const fixture=randomUUID(),installationId=randomUUID(),deviceId=randomUUID(),domain='release-'+fixture+'.example';
-  const sellers=[];
+  const sellers=[];const artifactDirectory=await mkdtemp(path.join(tmpdir(),'p0-artifact-'));
   try {
     await migrate(pool);
     // Idempotent additive DDL only in the guarded disposable control database.
@@ -40,7 +43,8 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
       installer:{url:'https://releases.fixture.example/setup',sha256:'d'.repeat(64),signature_url:'https://releases.fixture.example/setup.sigstore.json'},
       verification_receipt:{status:'VERIFIED',release_id:'rel-1.0.0-internal',manifest_sha256:'a'.repeat(64),root_sha256:'b'.repeat(64),expires_at:new Date(Date.now()+900000).toISOString()}});
     let catalogOutage=false;
-    const installRelease=createInstallReleaseHandler({pool,signingKey:agentKeys.privateKey,verificationKey:agentKeys.publicKey,controlOrigin,sessionIssuer,getCatalog:async()=>{
+    const delivery=createArtifactDelivery({pool,controlOrigin,getCatalog:async()=>catalog,artifactDirectory});
+    const installRelease=createInstallReleaseHandler({pool,issueDownloadGrant:delivery.issue,signingKey:agentKeys.privateKey,verificationKey:agentKeys.publicKey,controlOrigin,sessionIssuer,getCatalog:async()=>{
       if(catalogOutage)throw Error('Synthetic private publication service outage');return catalog;
     }});
     const handler=createHandler({pool,controlOrigin,sessionIssuer,signingKey:agentKeys.privateKey,verificationKey:agentKeys.publicKey,installRelease});
@@ -117,12 +121,30 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     const refreshProof=async()=>new SignJWT({nonce,operation:'refresh_installation_credential',request_hash:hash(JSON.stringify({installation_id:installationId,device_id:deviceId}))}).setProtectedHeader({alg:'EdDSA',typ:'jetseller-management+jwt'}).setAudience(controlOrigin).setIssuedAt().setExpirationTime('60s').setJti(randomUUID()).sign(deviceKeys.privateKey);
     const refresh=async(proof)=>{const r=await handler(new Request(controlOrigin+'/api/installer/v1'+refreshPath,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({installation_id:installationId,device_id:deviceId,proof})}),{clientAddress:'refresh-'+fixture});return {status:r.status,body:await r.json()};};
     const keyProof=await refreshProof(),refreshed=await refresh(keyProof);assert.equal(refreshed.status,200);assert.equal(refreshed.body.installation_id,installationId);assert.equal(refreshed.body.public_key_thumbprint,thumbprint);assert.equal((await refresh(keyProof)).status,409);
+    // Real authenticated PoP issuance, one-use concurrent download, expiry,
+    // current publication and device revocation checks. Synthetic bytes only.
+    const artifactBytes=Buffer.alloc(256*1024,7),bundleSHA=hash(artifactBytes);
+    await writeFile(path.join(artifactDirectory,bundleSHA+'.zip'),artifactBytes,{mode:0o600});
+    catalog={...availableCatalog(),release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:artifactBytes.length}};
+    const grant=async()=>{const r=await call(authorization,{proof:await proofFor({path:authorization})});assert.equal(r.status,200);assert.match(r.body.release_bundle_url,/\/downloads\/[A-Za-z0-9_-]{43}$/);return r.body.release_bundle_url;};
+    assert.equal((await call(authorization)).status,401);
+    const url=await grant();const fetched=await Promise.all([delivery.handle(new Request(url)),delivery.handle(new Request(url))]);
+    assert.deepEqual(fetched.map(r=>r.status).sort(),[200,404]);
+    assert.deepEqual(Buffer.from(await fetched.find(r=>r.status===200).arrayBuffer()),artifactBytes);
+    assert.equal((await delivery.handle(new Request(url))).status,404);
+    const expiredURL=await grant();await pool.query("UPDATE installer.download_grants SET expires_at=now()-interval '1 second' WHERE token_hash=$1",[hash(expiredURL.split('/').at(-1))]);assert.equal((await delivery.handle(new Request(expiredURL))).status,404);
+    const changedURL=await grant();catalog={...catalog,manifest_sha256:'f'.repeat(64),verification_receipt:{...catalog.verification_receipt,manifest_sha256:'f'.repeat(64)}};assert.equal((await delivery.handle(new Request(changedURL))).status,404);
+    catalog={...availableCatalog(),release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:artifactBytes.length}};
+    const revokedURL=await grant();
     await pool.query('UPDATE installer.devices SET revoked_at=now() WHERE id=$1',[deviceId]);
+    assert.equal((await delivery.handle(new Request(revokedURL))).status,404);
     assert.equal((await call(authorization,{proof:await proofFor({path:authorization})})).status,401);
     assert.equal((await send({phase:'LOCAL_READINESS',sequence:8})).status,401);
     assert.equal((await refresh(await refreshProof())).status,401);
   }finally {
     // Delete only fixture-owned rows from an explicitly isolated local database.
+    await pool.query('DELETE FROM installer.download_grants WHERE installation_id=$1',[installationId]).catch(()=>{});
+    await rm(artifactDirectory,{recursive:true,force:true});
     await pool.query('DELETE FROM installer.install_progress WHERE installation_id=$1',[installationId]).catch(()=>{});
     await pool.query('DELETE FROM installer.devices WHERE installation_id=$1',[installationId]).catch(()=>{});
     await pool.query('DELETE FROM installer.domain_challenges WHERE installation_id=$1',[installationId]).catch(()=>{});

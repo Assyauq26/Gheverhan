@@ -1,4 +1,7 @@
 import { createServer } from 'node:http';
+import {Readable} from 'node:stream';
+import {pipeline} from 'node:stream/promises';
+import {createArtifactDelivery} from './artifact-delivery.mjs';
 import { createInstallReleaseHandler } from './install-release.mjs';
 import { createHandler } from './api.mjs';
 import { createPool } from './db.mjs';
@@ -9,7 +12,8 @@ import { pathToFileURL } from 'node:url';
 import { serveDashboard } from '../../installer-web/dashboard.mjs';
 
 export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,domainLookup,installRelease}={}) {
-  const releases=installRelease??createInstallReleaseHandler({pool,...config});
+  const delivery=config.artifactDirectory?createArtifactDelivery({pool,...config}):null;
+  const releases=installRelease??createInstallReleaseHandler({pool,...config,issueDownloadGrant:delivery?.issue});
   const handle=createHandler({pool,...config,domainLookup,installRelease:releases});
   // Legacy OIDC remains available only when explicitly selected/configured.
   // Direct fixture callers may pass oidc; runtime defaults to email_otp.
@@ -23,8 +27,16 @@ export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,
           await pool.query('SELECT email_hash FROM installer.sellers LIMIT 0');
           await pool.query('SELECT authenticated_at FROM installer.sessions LIMIT 0');
           await pool.query('SELECT domain_verified_at FROM installer.installations LIMIT 0');
+          if(config.artifactDirectory)await pool.query('SELECT token_hash FROM installer.download_grants LIMIT 0');
           res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'}).end('{"status":"ready"}');
         } catch {res.writeHead(503,{'Cache-Control':'no-store'}).end();}
+        return;
+      }
+      if(req.url?.startsWith('/downloads/')){
+        res.setTimeout(20*60*1000,()=>res.destroy());
+        const response=delivery?await delivery.handle(new Request(new URL(req.url,config.controlOrigin),{method:req.method})):new Response(null,{status:404});
+        res.writeHead(response.status,Object.fromEntries(response.headers));
+        if(response.body)await pipeline(Readable.fromWeb(response.body),res);else res.end();
         return;
       }
       if(dashboard && !req.url?.startsWith('/api/') && !req.url?.startsWith('/auth/') && await dashboard(req,res))return;
@@ -41,7 +53,7 @@ export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,
       const responseHeaders=Object.fromEntries(response.headers);
       if(response.headers.getSetCookie().length)responseHeaders['set-cookie']=response.headers.getSetCookie();
       res.writeHead(response.status,responseHeaders);res.end(Buffer.from(await response.arrayBuffer()));
-    }catch{res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'}).end('{"error":{"code":"CONTROL_UNAVAILABLE"}}');}
+    }catch{if(res.headersSent){res.destroy();return;}res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'}).end('{"error":{"code":"CONTROL_UNAVAILABLE"}}');}
   });
   server.requestTimeout=5000;server.headersTimeout=5000;server.maxRequestsPerSocket=100;
   return server;

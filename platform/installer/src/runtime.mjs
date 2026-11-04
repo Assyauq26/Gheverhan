@@ -23,8 +23,9 @@ export async function privateFile(file) {
 }
 export async function runtimeConfig(file) {
   const value=JSON.parse(await privateFile(file));
-  if(Object.keys(value).some(k=>!['releaseCatalogFile','controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port','listenHost'].includes(k))) throw new Error('Invalid configuration');
+  if(Object.keys(value).some(k=>!['releaseCatalogFile','controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port','listenHost','artifactDirectory'].includes(k))) throw new Error('Invalid configuration');
   origin(value.controlOrigin);
+  if(value.artifactDirectory!==undefined&&(typeof value.artifactDirectory!=='string'||!path.isAbsolute(value.artifactDirectory)))throw Error('Absolute artifact directory required');
   const listenHost=value.listenHost??'127.0.0.1';
   if(!['127.0.0.1','0.0.0.0'].includes(listenHost))throw new Error('Invalid bind address');
   const port=value.port??3100;
@@ -64,6 +65,10 @@ export async function runtimeConfig(file) {
     const clientSecret=o.clientSecretFile?(await privateFile(o.clientSecretFile)).trim():undefined;
     oidc={...o,...(clientSecret!==undefined?{clientSecret}:{}),jwks:JSON.parse(await privateFile(o.jwksFile)),sessionSigningKey};
   }
-  const getCatalog=value.releaseCatalogFile?async()=>JSON.parse(await privateFile(value.releaseCatalogFile)):async()=>null;
-  return {getCatalog,controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port,listenHost};
+  const getCatalog=value.releaseCatalogFile?async()=>{
+    const c=JSON.parse(await privateFile(value.releaseCatalogFile));
+    if(c.release_bundle?.delivery!=='scoped'||!value.artifactDirectory)throw Error('Scoped artifact delivery required');
+    return c;
+  }:async()=>null;
+  return {artifactDirectory:value.artifactDirectory,getCatalog,controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port,listenHost};
 }

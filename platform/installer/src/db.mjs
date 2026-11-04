@@ -13,7 +13,7 @@ export async function migrate(pool) {
   try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(9148327)');
-    for(const file of ['001_registry.sql','002_install_release.sql','003_email_auth.sql','004_verified_domain_claims.sql']) await client.query(await readFile(new URL('../migrations/'+file, import.meta.url), 'utf8'));
+    for(const file of ['001_registry.sql','002_install_release.sql','003_email_auth.sql','004_verified_domain_claims.sql','005_download_grants.sql']) await client.query(await readFile(new URL('../migrations/'+file, import.meta.url), 'utf8'));
     await client.query("DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='js_control_runtime') THEN GRANT USAGE ON SCHEMA installer TO js_control_runtime; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA installer TO js_control_runtime; GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA installer TO js_control_runtime; END IF; END $$");
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }

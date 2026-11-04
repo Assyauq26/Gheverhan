@@ -42,6 +42,7 @@ services:
       JETSELLER_CONTROL_CONFIG_FILE: /etc/buattokosendiri/control.json
     volumes:
       - ${CONTROL_RUNTIME_SECRETS_DIR:?private runtime directory required}:/etc/buattokosendiri:ro
+      - ${CONTROL_ARTIFACT_DIR:-./empty-artifacts}:/opt/btos/releases:ro
     networks: [database, proxy, outbound]
     depends_on:
       migrate: {condition: service_completed_successfully}

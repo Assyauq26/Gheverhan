@@ -6,7 +6,7 @@ export function loadPrivateConfig(file, mode = 'runtime') {
   const st = lstatSync(file);
   if (!st.isFile() || st.isSymbolicLink() || st.size > 16384 || (process.platform !== 'win32' && (st.mode & 0o007))) throw new Error('Invalid private configuration');
   const config = JSON.parse(readFileSync(file, 'utf8'));
-  const allowed = new Set(['JETSELLER_STORE_PROFILE', 'JETSELLER_INSTALLATION_MODE', 'JETSELLER_INSTALLATION_ID', 'JETSELLER_STORE_DOMAIN', 'APP_ORIGIN', 'STORAGE_PROVIDER', 'STORAGE_APP_NAME', 'STORAGE_LOCAL_ROOT', 'DATABASE_URL', 'JWT_SECRET', 'AUTH_COOKIE_NAME', 'PASSWORD_RESET_FROM', 'PASSWORD_RESET_BASE_URL', 'JETSELLER_MIGRATION_IDENTITY', 'RESEND_API_KEY', 'SELF_HOSTED_CHECKOUT_APPROVED']);
+  const allowed = new Set(['JETSELLER_STORE_PROFILE', 'JETSELLER_INSTALLATION_MODE', 'JETSELLER_INSTALLATION_ID', 'JETSELLER_STORE_DOMAIN', 'JETSELLER_STORE_DISPLAY_NAME', 'APP_ORIGIN', 'STORAGE_PROVIDER', 'STORAGE_APP_NAME', 'STORAGE_LOCAL_ROOT', 'DATABASE_URL', 'JWT_SECRET', 'AUTH_COOKIE_NAME', 'PASSWORD_RESET_FROM', 'PASSWORD_RESET_BASE_URL', 'JETSELLER_MIGRATION_IDENTITY', 'RESEND_API_KEY', 'SELF_HOSTED_CHECKOUT_APPROVED']);
   if (mode === 'migration') allowed.add('DIRECT_URL');
   else { allowed.add('JNT_CONFIG_SCOPE'); allowed.add('JNT_INTEGRATION_ENCRYPTION_KEY'); }
   if (!config || Array.isArray(config) || typeof config !== 'object' || Object.entries(config).some(([k,v]) => !allowed.has(k) || typeof v !== 'string' || /[\x00-\x1f\x7f]/.test(v))) throw new Error('Invalid private configuration');

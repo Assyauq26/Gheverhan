@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -64,6 +65,19 @@ func TestSellerDomainCannotTargetProductionOrInjectConfiguration(t *testing.T) {
 	for _, domain := range []string{"store.fixture.example", "shop-owner.example", "xn--bcher-kva.example"} {
 		if !validDomain(domain) {
 			t.Fatalf("canonical seller domain rejected: %q", domain)
+		}
+	}
+}
+
+func TestDisplayNameBoundary(t *testing.T) {
+	for _, name := range []string{"Kopi Nusantara", "Toko & Kawan", "Kedai"} {
+		if !validDisplayName(name) {
+			t.Fatalf("valid name rejected")
+		}
+	}
+	for _, name := range []string{"", " leading", "bad\nname", string([]byte{0xff}), strings.Repeat("x", 101)} {
+		if validDisplayName(name) {
+			t.Fatalf("unsafe name accepted")
 		}
 	}
 }

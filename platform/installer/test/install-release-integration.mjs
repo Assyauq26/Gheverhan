@@ -73,7 +73,7 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     const challenge=randomUUID();
     await pool.query("INSERT INTO installer.domain_challenges(id,installation_id,client_request_id,domain,txt_value,expires_at,verified_at) VALUES($1,$2,$3,$4,$5,now()+interval '5 minutes',now())",[challenge,installationId,randomUUID(),domain,'jetseller-verification='+opaque()]);
     const authProof=await proofFor({path:authorization});const authorized=await call(authorization,{proof:authProof});assert.equal(authorized.status,200);
-    assert.equal(authorized.body.installation_id,installationId);assert.equal(authorized.body.device_id,deviceId);assert.equal(authorized.body.domain,domain);
+    assert.equal(authorized.body.installation_id,installationId);assert.equal(authorized.body.device_id,deviceId);assert.equal(authorized.body.domain,domain);assert.equal(authorized.body.display_name,"Synthetic release store");
     assert.equal(authorized.body.release_id,catalog.release_id);assert.equal(authorized.body.manifest_sha256,catalog.manifest_sha256);
     assert.ok(Date.parse(authorized.body.expires_at)>Date.now()&&Date.parse(authorized.body.expires_at)<=Date.now()+120000);
     assert.equal((await call(authorization,{proof:authProof})).status,409);

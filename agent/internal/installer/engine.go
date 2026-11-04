@@ -32,6 +32,7 @@ type Authorization struct {
 	InstallationID   string    `json:"installation_id"`
 	DeviceID         string    `json:"device_id"`
 	Domain           string    `json:"domain"`
+	DisplayName      string    `json:"display_name"`
 	ReleaseID        string    `json:"release_id"`
 	ManifestSHA256   string    `json:"manifest_sha256"`
 	ExpiresAt        time.Time `json:"expires_at"`
@@ -41,6 +42,7 @@ type journal struct {
 	Version        int       `json:"version"`
 	InstallationID string    `json:"installation_id"`
 	Domain         string    `json:"domain"`
+	DisplayName    string    `json:"display_name"`
 	ReleaseSHA     string    `json:"release_sha"`
 	ReleaseID      string    `json:"release_id"`
 	App            string    `json:"app"`
@@ -136,7 +138,7 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 		var a Authorization
 		e := client.InstallRequest(ctx, o.State, "GET", "/agent/install-authorization", nil, &a)
 		now := time.Now()
-		if e != nil || a.InstallationID != o.State.Identity.InstallationID || a.DeviceID != credential.DeviceID || !validDomain(a.Domain) || !a.ExpiresAt.After(now) || a.ExpiresAt.After(now.Add(125*time.Second)) || a.DomainVerifiedAt.After(now.Add(5*time.Second)) || a.DomainVerifiedAt.Before(now.Add(-30*time.Minute)) {
+		if e != nil || a.InstallationID != o.State.Identity.InstallationID || a.DeviceID != credential.DeviceID || !validDomain(a.Domain) || !validDisplayName(a.DisplayName) || !a.ExpiresAt.After(now) || a.ExpiresAt.After(now.Add(125*time.Second)) || a.DomainVerifiedAt.After(now.Add(5*time.Second)) || a.DomainVerifiedAt.Before(now.Add(-30*time.Minute)) {
 			return a, ErrInstall
 		}
 		return a, nil
@@ -148,7 +150,7 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	var j journal
 	e = o.State.ReadInstallRecord(bootstrap.InstallJournalRecord, &j)
 	fresh := bootstrap.IsMissingInstallRecord(e)
-	if !fresh && (e != nil || j.Version != 1 || j.InstallationID != auth.InstallationID || j.Domain != auth.Domain || j.ReleaseSHA != auth.ManifestSHA256 || j.ReleaseID != auth.ReleaseID || j.Next < 0 || j.Next > 8 || j.Reported < 0 || j.Reported > len(phases)) {
+	if !fresh && (e != nil || j.Version != 1 || j.InstallationID != auth.InstallationID || j.Domain != auth.Domain || j.DisplayName != auth.DisplayName || j.ReleaseSHA != auth.ManifestSHA256 || j.ReleaseID != auth.ReleaseID || j.Next < 0 || j.Next > 8 || j.Reported < 0 || j.Reported > len(phases)) {
 		return ErrInstall
 	}
 	var oldTrust releaseprotocol.State
@@ -230,7 +232,7 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 		return ErrInstall
 	}
 	if fresh {
-		j = journal{Version: 1, InstallationID: auth.InstallationID, Domain: auth.Domain, ReleaseSHA: trusted.SHA256(), ReleaseID: manifest.ReleaseID}
+		j = journal{Version: 1, InstallationID: auth.InstallationID, Domain: auth.Domain, DisplayName: auth.DisplayName, ReleaseSHA: trusted.SHA256(), ReleaseID: manifest.ReleaseID}
 		if save() != nil {
 			return ErrInstall
 		}
@@ -280,7 +282,7 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	// Reverify expiry/current control approval before every privileged phase.
 	freshAuthority := func() error {
 		a, e := authorize()
-		if e != nil || a.ManifestSHA256 != j.ReleaseSHA || a.Domain != j.Domain {
+		if e != nil || a.ManifestSHA256 != j.ReleaseSHA || a.Domain != j.Domain || a.DisplayName != j.DisplayName {
 			return ErrInstall
 		}
 		b, e := loadBundle(o.ReleaseDirectory, policy.Trust.Channel)
@@ -357,7 +359,7 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 		if e != nil || parse != nil || uid < 1 || uid > 65535 {
 			return ErrInstall
 		}
-		if render(o.State, stack, auth.Domain, j.App, j.Migration, uid) != nil {
+		if render(o.State, stack, auth.Domain, j.DisplayName, j.App, j.Migration, uid) != nil {
 			return ErrInstall
 		}
 		j.Next = 2

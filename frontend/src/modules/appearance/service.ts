@@ -11,6 +11,8 @@ import {
   type StoreAppearanceV1,
 } from "./schema";
 
+import { initialPublishedAppearance } from "./initial";
+
 type Tx = Prisma.TransactionClient;
 export const asJson = (value: StoreAppearanceV1) =>
   value as unknown as Prisma.InputJsonValue;
@@ -32,7 +34,7 @@ export async function readPublishedUncached() {
     where: { key: "primary" },
     select: { published: true, publishedVersion: true },
   });
-  const config = row ? parseAppearance(row.published) : legacyDefault();
+  const config = row ? parseAppearance(row.published) : initialPublishedAppearance();
   return {
     config,
     version: row?.publishedVersion ?? 0,
@@ -44,8 +46,8 @@ export async function readDraft() {
     where: { key: "primary" },
   });
   return {
-    config: row ? parseAppearance(row.draft) : makeDefault(),
-    publishedConfig: row ? parseAppearance(row.published) : legacyDefault(),
+    config: row ? parseAppearance(row.draft) : (process.env.JETSELLER_STORE_PROFILE === "self-hosted" ? initialPublishedAppearance() : makeDefault()),
+    publishedConfig: row ? parseAppearance(row.published) : initialPublishedAppearance(),
     draftVersion: row?.draftVersion ?? 0,
     publishedVersion: row?.publishedVersion ?? 0,
   };
@@ -56,9 +58,9 @@ async function locked(tx: Tx) {
     where: { key: "primary" },
     create: {
       key: "primary",
-      // Match readDraft() on first boot; never implicitly change the published legacy storefront.
-      draft: asJson(makeDefault()),
-      published: asJson(legacyDefault()),
+      // Match the empty-store fallback; existing merchant records are never overwritten.
+      draft: asJson(process.env.JETSELLER_STORE_PROFILE === "self-hosted" ? initialPublishedAppearance() : makeDefault()),
+      published: asJson(initialPublishedAppearance()),
     },
     update: {},
   });

@@ -30,11 +30,11 @@ ChatGPT/owner must verify Resend account/sender readiness and actual delivery. C
 
 | Component | Gate | Evidence/remaining work |
 |---|---|---|
-| OTP adapter and direct-session UX | Implemented; CI pending | Real PostgreSQL/HTTPS transport OTP + browser + real Go pairing passed at code402705bf (runs41774960048/41774960472/41774960087); fixture delivery is not live Resend inbox proof |
+| OTP adapter and direct-session UX | READY (code/fixture scope) | Real PostgreSQL/HTTPS transport OTP + browser + real Go pairing passed at code402705bf (runs41774960048/41774960472/41774960087); fixture delivery is not live Resend inbox proof |
 | Production Resend and sender DNS | BLOCKED | Operational configuration and real delivery verification required |
-| Session/CSRF/owner isolation/re-auth | Implemented; CI pending | Revocable PostgreSQL sessions; one-use HMAC OTP, 10-minute TTL, five attempts, cooldown/IP/email limits |
-| Verified domain claim | Implemented; CI pending | Typed/pairing domain intent alone is nonexclusive; fresh TXT proof acquires a limited lease |
-| Real CLI pairing | CI pending | OTP browser consent plus real Go CLI, preserving key/UUID binding |
+| Session/CSRF/owner isolation/re-auth | READY (code/fixture scope) | Revocable PostgreSQL sessions; one-use HMAC OTP, 10-minute TTL, five attempts, cooldown/IP/email limits |
+| Verified domain claim | READY (code/fixture scope) | Typed/pairing domain intent alone is nonexclusive; fresh TXT proof acquires a limited lease |
+| Real CLI pairing | READY (code/fixture scope) | OTP browser consent plus real Go CLI, preserving key/UUID binding |
 | Signed installer executor | NOT_TESTED | Fixed-operation candidate, TUF + pinned Cosign archive verification, checkpointed DB/migrations/media/app/Caddy; full runtime acceptance still required |
 | 2/2/40 production installation | NOT_TESTED | Actual QEMU resource-only test passed: 2vCPU/2147483648bytes RAM/40000000000bytes disk, boot14s, 17samples, OOM0, swap0, min available1535725568bytes, min free35114160128bytes. No application containers ran in this resource-only proof; full provisioning remains NOT_TESTED |
 | Store admin/product/photo/restart | NOT_TESTED for integrated P0 | Existing app features are retained; the full new installer-to-product journey must still be demonstrated |
@@ -63,3 +63,8 @@ The installer has fixed `pair --profile p0-2-2-40`, `fetch-release`, `verify-rel
 ChatGPT/owner must provide a real approved signed release package (root custody and metadata, image archives+Sigstore bundles), a trusted initial installer/verifier/policy bootstrap, protected catalog/receipt, actual artifact delivery endpoint, official Docker/Compose prerequisites, and verified Resend sender before the complete operational journey can be tested. No fixture root, test receipt or synthetic sender may be promoted to production. `LOCAL_READINESS` is a device report, not central proof that a public storefront, uploaded photo, payments or J&T orders are verified.
 
 New P0 runtime configs do not enable checkout: `SELF_HOSTED_CHECKOUT_APPROVED` is deliberately absent. A later local owner-reviewed payment/shipping release is required to enable transactions. Legacy Gheverhan behavior is preserved. No paid checkout or production J&T order was activated.
+
+
+Fresh self-hosted appearance uses the authorized installation display name (maximum100characters) via private `JETSELLER_STORE_DISPLAY_NAME`; missing configuration uses neutral Toko Anda branding. Existing published merchant appearance remains authoritative and legacy-profile branding is preserved. Installer checkpoints bind the initial display name and reject a changed name during resume rather than rewriting an existing installation.
+
+Registry integration files share one dedicated schema and each exercises additive DDL/migration idempotency. They run sequentially to prevent one suite migrating tables while another holds business transaction locks. Each suite's concurrent request assertions remain concurrent, including double domain verification and OTP replay/consumption races.

@@ -14,6 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/Assyauq26/Gheverhan/agent/internal/bootstrap"
 	"github.com/Assyauq26/Gheverhan/agent/internal/releaseprotocol"
@@ -180,7 +183,21 @@ func directory(name string) error {
 	}
 	return protectedDirectory(name)
 }
-func render(s *bootstrap.State, stack, domain, app, migration string, pgUID int) error {
+func validDisplayName(s string) bool {
+	if !utf8.ValidString(s) || s != strings.TrimSpace(s) || len(s) == 0 || len(s) > 400 || len(utf16.Encode([]rune(s))) > 100 {
+		return false
+	}
+	for _, c := range s {
+		if unicode.IsControl(c) {
+			return false
+		}
+	}
+	return true
+}
+func render(s *bootstrap.State, stack, domain, displayName, app, migration string, pgUID int) error {
+	if !validDisplayName(displayName) {
+		return ErrInstall
+	}
 	var master struct {
 		Seed string `json:"seed"`
 	}
@@ -216,7 +233,7 @@ func render(s *bootstrap.State, stack, domain, app, migration string, pgUID int)
 			return ErrInstall
 		}
 	}
-	config := map[string]string{"JETSELLER_STORE_PROFILE": "self-hosted", "JETSELLER_INSTALLATION_MODE": "new", "JETSELLER_INSTALLATION_ID": id, "JETSELLER_STORE_DOMAIN": domain, "APP_ORIGIN": "https://" + domain, "STORAGE_PROVIDER": "local", "STORAGE_APP_NAME": "js_" + id[:8], "STORAGE_LOCAL_ROOT": "/var/lib/jetseller/media", "DATABASE_URL": "postgresql://js_runtime:" + secret("runtime") + "@db:5432/" + database + "?schema=public", "JETSELLER_MIGRATION_IDENTITY": "js_migrate", "JWT_SECRET": secret("jwt"), "AUTH_COOKIE_NAME": "js_" + id[:8] + "_session", "PASSWORD_RESET_FROM": "Toko <noreply@" + domain + ">", "PASSWORD_RESET_BASE_URL": "https://" + domain, "JNT_CONFIG_SCOPE": "local_store"}
+	config := map[string]string{"JETSELLER_STORE_PROFILE": "self-hosted", "JETSELLER_INSTALLATION_MODE": "new", "JETSELLER_INSTALLATION_ID": id, "JETSELLER_STORE_DOMAIN": domain, "JETSELLER_STORE_DISPLAY_NAME": displayName, "APP_ORIGIN": "https://" + domain, "STORAGE_PROVIDER": "local", "STORAGE_APP_NAME": "js_" + id[:8], "STORAGE_LOCAL_ROOT": "/var/lib/jetseller/media", "DATABASE_URL": "postgresql://js_runtime:" + secret("runtime") + "@db:5432/" + database + "?schema=public", "JETSELLER_MIGRATION_IDENTITY": "js_migrate", "JWT_SECRET": secret("jwt"), "AUTH_COOKIE_NAME": "js_" + id[:8] + "_session", "PASSWORD_RESET_FROM": "Toko <noreply@" + domain + ">", "PASSWORD_RESET_BASE_URL": "https://" + domain, "JNT_CONFIG_SCOPE": "local_store"}
 	key, _ := hex.DecodeString(secret("jnt"))
 	config["JNT_INTEGRATION_ENCRYPTION_KEY"] = base64.StdEncoding.EncodeToString(key)
 	files := map[string][]byte{"bootstrap_password": []byte(secret("bootstrap") + "\n"), "migration_password": []byte(secret("migration") + "\n"), "runtime_password": []byte(secret("runtime") + "\n")}

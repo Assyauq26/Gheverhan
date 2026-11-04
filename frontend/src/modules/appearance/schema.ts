@@ -196,7 +196,7 @@ export const appearanceSchema = z
     schemaVersion: z.literal(1),
     identity: z
       .object({
-        name: label,
+        name: z.string().trim().min(1).max(100),
         tagline: z.string().max(160),
         mode: z.enum(["text", "image", "both"]),
         logoAssetId: z.string().uuid().nullable(),

@@ -70,6 +70,7 @@ jobs:
           sudo install -d -m700 /opt/p0-payload
           for entry in root.json targets.json timestamp.json snapshot.json channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /opt/p0-payload/; done
           sudo chown -R root:root /opt/p0-payload
+          sudo env GITHUB_ACTIONS=true P0_PUBLICATION_VERIFY_FIXTURE=isolated-full-seller /tmp/p0-vm-payload/installer.test -test.run ^TestP0PublicationFixtureVerification$ -test.v -test.timeout=10m
           sudo /opt/p0-payload/jetseller-setup verify-release --policy /opt/p0-payload/policy.json --release-directory /opt/p0-payload --receipt /opt/p0-payload/verified.json
           sudo "$(command -v node)" deploy/release/package-candidate.mjs /opt/p0-payload /opt/p0-payload/verified.json /opt/p0-release.zip
           sudo /opt/p0-payload/jetseller-setup verify-release-archive --policy /opt/p0-payload/policy.json --artifact /opt/p0-release.zip --receipt /opt/p0-archive-receipt.json

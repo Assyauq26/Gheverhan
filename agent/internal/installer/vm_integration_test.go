@@ -56,6 +56,9 @@ func TestFullVMInstaller(t *testing.T) {
 	case "first-install":
 		e = Install(ctx, o)
 		if !errors.Is(e, ErrHTTPSPending) {
+			var j journal
+			_ = s.ReadInstallRecord(bootstrap.InstallJournalRecord, &j)
+			t.Logf("VM_CHECKPOINT next=%d reported=%d", j.Next, j.Reported)
 			t.Fatal("expected initial untrusted fixture CA checkpoint", e)
 		}
 		return

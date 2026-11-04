@@ -41,6 +41,7 @@ jobs:
       - name: Targeted transport and collector regressions before expensive full VM
         run: |
           go -C agent test ./internal/bootstrap -run '^TestScopedDownloadAuthorizationTransport$' -count=1 -v
+          node --test deploy/self-hosted/tests/guest-command.test.mjs
           bash deploy/self-hosted/tests/docker-final-state.test.sh
           bash -n deploy/self-hosted/tests/p0-vm.sh
       - name: Build outside2GiB VM and sign synthetic payloads with this TEST workflow identity

@@ -43,7 +43,8 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   assert.equal((await call('POST','/installations',{...input,display_name:'Changed'},a,{'idempotency-key':idempotency})).status,409);
   assert.equal((await call('POST','/installations',input,b,{'idempotency-key':randomUUID()})).status,201);
   assert.equal((await call('GET','/installations/'+installation.installation_id,undefined,b)).status,404);
-  assert.deepEqual((await call('GET','/installations',undefined,b)).body.installations,[]);
+  const bInstallations=(await call('GET','/installations',undefined,b)).body.installations;
+  assert.equal(bInstallations.length,1);assert.ok(bInstallations.every(item=>item.installation_id!==installation.installation_id),'Seller B cannot list Seller A installation');
   assert.equal((await call('GET','/installations',undefined,null)).status,401);
   assert.equal((await call('POST','/installations',input,a,{'x-csrf-token':'wrong','idempotency-key':randomUUID()})).status,403);
   assert.equal((await call('PATCH','/installations/'+installation.installation_id,{display_name:'Changed',domain:input.domain},a,{'if-match':'99'})).status,409);

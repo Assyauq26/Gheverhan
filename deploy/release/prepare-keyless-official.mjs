@@ -30,7 +30,7 @@ if(!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-rc\.[1-9][0-9]*)?$/.t
 const sequence=(previous.highest_release_sequence??0)+1;
 if(!Number.isSafeInteger(sequence)||sequence<1)throw Error('Monotonic release sequence required');
 const manifest=env.RELEASE_MANIFEST_JSON?JSON.parse(env.RELEASE_MANIFEST_JSON):{
- schema_version:'1',release_id:'rel-'+version+'-'+channel,sequence,app_version:version,channel,platform:'linux/amd64',os:'ubuntu:24.04',
+ schema_version:'1',release_id:'rel-'+version+'-'+channel,sequence,app_version:version,channel,platform:'linux/amd64',os:'ubuntu:22.04',
  signer_identity:identity,signer_issuer:issuer,min_agent_version:'0.1.0',max_agent_version:'0.9.0',protocol_version:1,compose_template_version:1,
  min_store_schema_version:0,max_store_schema_version:20,target_schema_version:20,migration_policy:'compatible_expand_only',
  not_before:new Date(Date.now()-60000).toISOString(),expires_at:new Date(Date.now()+6*86400000).toISOString(),requires_backup:false,requires_operator_approval:true,revoked:false

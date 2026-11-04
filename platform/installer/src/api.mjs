@@ -80,7 +80,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
         await rate(pool,'device-ip:'+clientAddress,10);
         const b=exact(await body(request),['installation_hint','public_key','protocol_version','os','arch','agent_version']);
         const install=uuid(b.installation_hint);
-        if (b.protocol_version!=='1'||b.os!=='ubuntu-24.04'||b.arch!=='amd64') fail(400,'UNSUPPORTED_PROFILE');
+        if (b.protocol_version!=='1'||!['ubuntu-22.04','ubuntu-24.04'].includes(b.os)||b.arch!=='amd64') fail(400,'UNSUPPORTED_PROFILE');
         text(b.agent_version,1,32);
         const identity=await deviceKey(b.public_key);
         await rate(pool,'device-install:'+install,5,600);

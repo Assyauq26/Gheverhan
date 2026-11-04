@@ -17,6 +17,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -155,6 +156,10 @@ func (c *PairingClient) Start(ctx context.Context, state *State) (DeviceSession,
 	if state.Journal.Phase != "PREFLIGHT_OK" && state.Journal.Phase != "PAIR_EXPIRED" {
 		return session, ErrPairing
 	}
+	release, err := CurrentOSRelease()
+	if err != nil {
+		return session, ErrPairing
+	}
 	body := struct {
 		InstallationID string `json:"installation_hint"`
 		PublicKey      JWK    `json:"public_key"`
@@ -162,7 +167,7 @@ func (c *PairingClient) Start(ctx context.Context, state *State) (DeviceSession,
 		OS             string `json:"os"`
 		Arch           string `json:"arch"`
 		Version        string `json:"agent_version"`
-	}{state.Identity.InstallationID, publicJWK(state.PrivateKey()), "1", "ubuntu-24.04", "amd64", "0.1.0"}
+	}{state.Identity.InstallationID, publicJWK(state.PrivateKey()), "1", strings.ReplaceAll(release, ":", "-"), "amd64", "0.1.0"}
 	status, err := c.request(ctx, "/agent/pairing/device", body, &session)
 	if err != nil || status != 201 || session.SessionID == "" || !secretPattern.MatchString(session.DeviceCode) || !secretPattern.MatchString(session.Nonce) || !codePattern.MatchString(session.UserCode) || session.ExpiresIn < 1 || session.ExpiresIn > 600 || session.Interval < 5 || session.Interval > 60 {
 		return DeviceSession{}, ErrPairing

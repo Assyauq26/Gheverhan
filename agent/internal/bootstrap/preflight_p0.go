@@ -51,7 +51,7 @@ func (b DiskBudget) RequiredFreeBytes() (uint64, error) {
 // evidence. 1792 MiB is usable RAM, not a claim that 1792 MiB is 2 GiB physical.
 func ValidateP0Host(f P0HostFacts, budget DiskBudget) error {
 	needed, err := budget.RequiredFreeBytes()
-	if err != nil || f.OS != "linux" || f.Arch != "amd64" || f.Release != "ubuntu:24.04" || f.CPUs < 2 || f.PhysicalMemoryBytes < 2*GiB || f.MemoryBytes < 1792<<20 || f.EffectiveMemoryBytes < 1792<<20 || f.EffectiveMemoryBytes > f.MemoryBytes || f.TotalDiskBytes < 40_000_000_000 || f.FreeBytes > f.TotalDiskBytes || f.FreeBytes < needed || f.FreeInodes < 10000 || !f.PortsAvailable || f.ExistingServices || f.MemorySource == "" || f.DiskSource == "" {
+	if err != nil || f.OS != "linux" || f.Arch != "amd64" || !SupportedUbuntuRelease(f.Release) || f.CPUs < 2 || f.PhysicalMemoryBytes < 2*GiB || f.MemoryBytes < 1792<<20 || f.EffectiveMemoryBytes < 1792<<20 || f.EffectiveMemoryBytes > f.MemoryBytes || f.TotalDiskBytes < 40_000_000_000 || f.FreeBytes > f.TotalDiskBytes || f.FreeBytes < needed || f.FreeInodes < 10000 || !f.PortsAvailable || f.ExistingServices || f.MemorySource == "" || f.DiskSource == "" {
 		return ErrPreflight
 	}
 	return nil

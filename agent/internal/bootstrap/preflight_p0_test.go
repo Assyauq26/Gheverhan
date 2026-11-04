@@ -30,7 +30,7 @@ func TestP0ProfileAccountsForPhysicalUsableMemoryAndCompleteDiskBudget(t *testin
 		"insufficient budget":        func(f *P0HostFacts) { f.FreeBytes = 24*GiB - 1 },
 		"impossible disk facts":      func(f *P0HostFacts) { f.FreeBytes = f.TotalDiskBytes + 1 },
 		"inodes":                     func(f *P0HostFacts) { f.FreeInodes = 9999 }, "ports busy": func(f *P0HostFacts) { f.PortsAvailable = false },
-		"existing installation": func(f *P0HostFacts) { f.ExistingServices = true }, "wrong OS": func(f *P0HostFacts) { f.Release = "ubuntu:22.04" },
+		"existing installation": func(f *P0HostFacts) { f.ExistingServices = true }, "wrong OS": func(f *P0HostFacts) { f.Release = "ubuntu:20.04" },
 	}
 	for name, modify := range cases {
 		t.Run(name, func(t *testing.T) {

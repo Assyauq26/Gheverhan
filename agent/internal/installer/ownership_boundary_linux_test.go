@@ -4,7 +4,9 @@ package installer
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -21,6 +23,42 @@ func rootBoundaryFixture(t *testing.T) string {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir
+}
+
+func TestP0DatabaseScriptReadableButNotWritableByDatabaseUID(t *testing.T) {
+	root := rootBoundaryFixture(t)
+	// Model the container-side bind mount parent, not the private host path.
+	if err := os.Chmod(root, 0755); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(root, "init-db.sh")
+	content := []byte("# fixed synthetic code; no credentials\n")
+	if err := stableFile(file, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+	read := func() error {
+		cmd := exec.Command("/bin/sh", "-c", "cat \"$1\" >/dev/null && test ! -w \"$1\"", "fixture", file)
+		cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: 65534, Gid: 65534}}
+		return cmd.Run()
+	}
+	if read() == nil {
+		t.Fatal("old root0600 code unexpectedly readable")
+	}
+	if err := stableTemplate(file, content); err != nil {
+		t.Fatal(err)
+	}
+	if err := read(); err != nil {
+		t.Fatal("database UID cannot read fixed template")
+	}
+	if err := stableTemplate(file, content); err != nil {
+		t.Fatal("safe repeat refused", err)
+	}
+	if err := os.Chmod(file, 0666); err != nil {
+		t.Fatal(err)
+	}
+	if stableTemplate(file, content) == nil {
+		t.Fatal("mutable code accepted")
+	}
 }
 
 func TestP0ProtectedReadRejectsForeignOwnershipAndMutableAncestors(t *testing.T) {

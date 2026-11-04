@@ -34,8 +34,8 @@ func (d vmDiagnosticDocker) run(ctx context.Context, args ...string) ([]byte, er
 	category := "ok"
 	if e != nil {
 		category = "unclassified"
-		text := strings.ToLower(diagnostic.String())
-		for _, known := range []string{"no such image", "no space left", "permission denied", "invalid tar", "content digest", "failed to extract", "failed to unpack", "not found", "cannot connect", "no matching manifest"} {
+		text := strings.ToLower(diagnostic.String() + out.String())
+		for _, known := range []string{"no such image", "no space left", "permission denied", "password authentication failed", "startup validation failed", "p1000", "p1010", "invalid tar", "content digest", "failed to extract", "failed to unpack", "not found", "cannot connect", "no matching manifest"} {
 			if strings.Contains(text, known) {
 				category = strings.ReplaceAll(known, " ", "_")
 				break

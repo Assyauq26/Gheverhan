@@ -33,7 +33,7 @@ Rotation: reviewed versionN+1 public metadata and future expiry; `jetseller-root
 
 ## Protected workflow and public variables
 
-`.github/workflows/btos-official-release.yml` is workflow_dispatch only, main only, concurrency1/non-cancelling. Environment `btos-installer-production` must have required reviewers, prevent-self-review, protected-branch restriction BEFORE secrets. Dispatch and approval therefore need separate principals. Do not assume an environment is protected merely because a workflow names it.
+`.github/workflows/btos-official-release.yml` is workflow_dispatch only, main only, concurrency1/non-cancelling. Environment `btos-release-publisher` must have required reviewers, prevent-self-review, exact main-only custom branch policy (or protected branches with the workflow main-only guard) BEFORE secrets. Dispatch and approval therefore need separate principals. Do not assume an environment is protected merely because a workflow names it.
 
 Job permissions: content/check/action read, package/id-token write. It reads protection metadata and requires the LATEST successful result of all16 named exact-main-SHA checks. Missing, running or failed check refuses publication. Do not dispatch the Helipod production deploy workflow merely to obtain a build check; main pushes already run its build-only path.
 
@@ -87,6 +87,6 @@ Fixture root keys exist only in Go test memory. Sigstore uses the distinct E2E w
 
 PASS requires all stages in full-seller-summary.json, public-product.png and RAM/swap/disk/OOM evidence from actual run. Failure retains failed_stage/checkpoints, not readiness. Resource-only success or adding a workflow is insufficient.
 
-Owner still handles actual capacity, backup/restore, Resend secret placement, public DNS/TLS and approved deployment/smoke. Last reported9GB free and combined2180MiB limits before OS remain a capacity blocker. Use compose.helipod.yml, retain existing proxy/DB/volumes and dashboard-only503 rollback.
+Owner still handles actual capacity, backup/restore, Resend secret placement, public DNS/TLS and approved deployment/smoke. Owner reports4GB RAM/60GB SSD upgrade and capacity preflight PASS (4 November2026), superseding the old capacity blocker. Actual production backup/restore and integrated smoke remain required. Use compose.helipod.yml, retain existing proxy/DB/volumes and dashboard-only503 rollback.
 
 PUBLIC_SELLER_ONBOARDING_READY remains NOT_PROVEN until full engineering evidence, approved real publication, capacity/backup and integrated public normalTLS/realOTP/store smoke pass. Checkout and production J&T stay disabled.

@@ -77,6 +77,7 @@ jobs:
       - name: Verify complete signed directory and ZIP before scoped HTTPS serving
         run: |
           set -euo pipefail
+          sudo /tmp/p0-vm-payload/installer.test -test.run '^TestP0DatabaseScriptReadableButNotWritableByDatabaseUID$' -test.v
           test ! -e /root/p0-publication
           sudo install -d -m700 /root/p0-publication
           for entry in root.json targets.json timestamp.json snapshot.json channels artifacts cosign policy.json jetseller-setup; do sudo cp -a "/tmp/p0-full-build/$entry" /root/p0-publication/; done

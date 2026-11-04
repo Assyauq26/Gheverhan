@@ -7,8 +7,10 @@ for secret in "$runtime_password" "$migration_password"; do
  [ "${#secret}" -eq 64 ] || exit 1
 done
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<SQL
-CREATE ROLE js_migrate LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '$migration_password';
-CREATE ROLE js_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE BYPASSRLS PASSWORD '$runtime_password';
+SELECT 'CREATE ROLE js_migrate LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD ''$migration_password'''
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname='js_migrate') \gexec
+SELECT 'CREATE ROLE js_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE BYPASSRLS PASSWORD ''$runtime_password'''
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname='js_runtime') \gexec
 ALTER DATABASE "$POSTGRES_DB" OWNER TO js_migrate;
 ALTER SCHEMA public OWNER TO js_migrate;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;

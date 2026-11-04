@@ -23,3 +23,4 @@ jobs:
       - run: bash -n deploy/release/build-candidate.sh && node --test deploy/release/package-candidate.test.mjs
 
       - run: python3 deploy/release/normalize-image-archive.test.py
+      - run: node --test deploy/release/publisher-environment.test.mjs

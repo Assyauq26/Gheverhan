@@ -24,7 +24,7 @@ Apply additive001-005 through js_control_owner; do not reinitialize existing vol
 
 Use deploy/control-plane/compose.helipod.yml ONLY on shared Helipod; standalone compose.yml contains its own Caddy and is not suitable there. Dedicated DB/volume/secrets/networks; no public3100/5432. Existing proxy retains its networks and connects only to dedicated INTERNAL btos_control_ingress; upstream btos-control-api:3100. Never join the Gheverhan DB network.
 
-Last reported host is BLOCKED pending fresh capacity evidence: existing container limits1540MiB plus new runtime640MiB=2180MiB before OS; migration adds192MiB. Swap is not physical RAM. Read-only coexist-preflight.sh requires896MiB MemAvailable and12GiB Docker-filesystem free; reported9GB free is insufficient. Do not reduce existing service limits or build images on this VPS automatically.
+Owner update (4 November2026): Helipod upgraded to4GB RAM/60GB SSD and capacity preflight PASS. This supersedes the old2GB/9GB audit; capacity is no longer an outstanding blocker based on that old report. The agent has not accessed production to independently repeat the operational audit. Retain the normal read-only preflight before an approved installation; do not reduce limits or build on production.
 
 After FINAL owner approval only:
 
@@ -36,8 +36,12 @@ After FINAL owner approval only:
 6. Smoke normal public TLS without -k, real OTP registration/immediate wizard, returning OTP, logout revocation, cross-seller denial, TXT, PoP pairing, scoped download, local admin/product/photo/restart. Record exact source/image/release SHA and actual results.
 7. Rollback only dashboard to saved503 block, validate/reload after approval; retain all volumes/keys/UUIDs. Never stop/replace Gheverhan proxy/app/DB, prune volumes or restore stale identity data casually.
 
-CI coexistence/backup/503 rollback evidence is synthetic disposable evidence, not proof of actual Helipod capacity or production backups. Operator must obtain those results independently before installation.
+CI coexistence/backup/503 rollback evidence is synthetic disposable evidence. Capacity PASS is owner-reported; actual encrypted production backup/disposable restore evidence remains an operational gate.
 
 ## Final gate boundaries
 
 Full synthetic VM E2E workflow must actually finish every stage and report resources; adding it or passing component tests is insufficient. Its fixture OTP/DNS/local CA and test-only Caddy template must never be called live Resend/public ACME or official production root evidence. Actual official publication/HTTP activation and integrated public smoke require separate approvals. See linked current publisher handoff for all setup inputs and commands.
+
+## Publisher environment audit
+
+Read-only GitHub audit confirms btos-release-publisher exists, requires an independent reviewer with prevent-self-review, and has exactly one custom deployment policy: branch main. Workflow/input validation must use this actual environment and accept only that exact main-only policy (or protected-branches policy with existing main-only workflow guards). No environment secrets or variables were configured at the audit snapshot. Owner must privately supply the listed ONLINE TUF role keys and approved public variables in the publisher handoff; offline root keys must never enter GitHub. No environment configuration was changed by this audit.

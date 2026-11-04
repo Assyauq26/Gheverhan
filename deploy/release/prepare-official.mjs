@@ -2,12 +2,14 @@
 import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {createHash,createPrivateKey,createPublicKey} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {validatePublisherEnvironment} from './publisher-environment.mjs';
 const env=process.env,dir='/tmp/btos-publication-input',repo='Assyauq26/Gheverhan',identity='https://github.com/'+repo+'/.github/workflows/btos-official-release.yml@refs/heads/main';
 if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!==repo||env.GITHUB_REF!=='refs/heads/main'||env.GITHUB_WORKFLOW_REF!==repo+'/.github/workflows/btos-official-release.yml@refs/heads/main')throw Error('Dedicated main workflow required');
 if(!/^[a-f0-9]{40}$/.test(env.RELEASE_SOURCE_SHA??'')||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()!==env.RELEASE_SOURCE_SHA||env.GITHUB_SHA!==env.RELEASE_SOURCE_SHA)throw Error('Exact main source required');
 const api=async route=>{const r=await fetch('https://api.github.com/repos/'+repo+route,{headers:{authorization:'Bearer '+env.GH_TOKEN,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28'},redirect:'error'});if(!r.ok)throw Error('Approval metadata unavailable');return r.json();};
-const protection=await api('/environments/btos-installer-production');
-if(!protection.protection_rules?.some(r=>r.type==='required_reviewers'&&r.prevent_self_review===true&&r.reviewers?.length>0)||!protection.deployment_branch_policy?.protected_branches)throw Error('Protected environment and reviewer separation required');
+const protection=await api('/environments/btos-release-publisher');
+const policies=protection.deployment_branch_policy?.custom_branch_policies?(await api('/environments/btos-release-publisher/deployment-branch-policies?per_page=100')).branch_policies:undefined;
+validatePublisherEnvironment(protection,policies);
 const checks=await api('/commits/'+env.RELEASE_SOURCE_SHA+'/check-runs?per_page=100');
 for(const name of ['installer-tests','registry-tests','private-control-stack','metadata-and-package','full-synthetic-seller','unit-tests','dashboard-contracts','dashboard-browser-integration','cli-browser-pairing','privileged-boundaries','resource-vm','disposable-runtime','signed-fixture-provision','visual-regression','isolated-integration-browser','build-and-deploy']){
  const latest=checks.check_runs?.filter(c=>c.name===name&&c.head_sha===env.RELEASE_SOURCE_SHA).sort((a,b)=>b.id-a.id)[0];

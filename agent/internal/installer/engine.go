@@ -384,6 +384,11 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	steps := []func() error{
 		func() error { return run("up", "-d", "--wait", "db") },
 		func() error {
+			// Recover an interrupted entrypoint init without deleting a volume or
+			// replacing existing passwords. The installation's seed is unchanged.
+			if e := run("exec", "-T", "db", "sh", "/docker-entrypoint-initdb.d/10-jetseller.sh"); e != nil {
+				return e
+			}
 			if e := run("run", "--rm", "migrate"); e != nil {
 				return e
 			}

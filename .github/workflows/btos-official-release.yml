@@ -21,7 +21,7 @@ jobs:
     if: github.repository == 'Assyauq26/Gheverhan' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    environment: btos-installer-production
+    environment: btos-release-publisher
     permissions:
       contents: read
       checks: read

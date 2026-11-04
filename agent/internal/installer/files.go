@@ -127,12 +127,15 @@ func stableFile(name string, b []byte, mode os.FileMode) error {
 	return stableOwnedFile(name, b, mode, 0)
 }
 func stableOwnedFile(name string, b []byte, mode os.FileMode, uid int) error {
+	return stableFilePermissions(name, b, mode, uid, 0077)
+}
+func stableFilePermissions(name string, b []byte, mode os.FileMode, uid int, mask os.FileMode) error {
 	if protectedDirectory(filepath.Dir(name)) != nil {
 		return ErrInstall
 	}
 	info, e := os.Lstat(name)
 	if e == nil {
-		if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || (!ownedByUID(info, uid) && !ownedByRoot(info)) || info.Size() != int64(len(b)) {
+		if !info.Mode().IsRegular() || info.Mode().Perm()&mask != 0 || (!ownedByUID(info, uid) && !ownedByRoot(info)) || info.Size() != int64(len(b)) {
 			return ErrInstall
 		}
 		f, e := os.Open(name)
@@ -179,6 +182,18 @@ func stableOwnedFile(name string, b []byte, mode os.FileMode, uid int) error {
 	}
 	defer dir.Close()
 	return dir.Sync()
+}
+func databaseScript(name string) bool { return name == "init-db.sh" || name == "grant-runtime.sh" }
+func stableTemplate(name string, b []byte) error {
+	if !databaseScript(filepath.Base(name)) {
+		return stableFile(name, b, 0600)
+	}
+	// Fixed code contains no secrets. Root retains write ownership; the DB's
+	// non-root user must read the read-only bind mount during entrypoint init.
+	if stableFilePermissions(name, b, 0644, 0, 0022) != nil {
+		return ErrInstall
+	}
+	return os.Chmod(name, 0644)
 }
 func directory(name string) error {
 	if e := os.Mkdir(name, 0700); e != nil && !os.IsExist(e) {
@@ -232,7 +247,7 @@ func render(s *bootstrap.State, stack, domain, displayName, app, migration strin
 	}
 	for _, name := range []string{"compose.yml", "compose.p0-2-2-40.yml", "Caddyfile", "init-db.sh", "grant-runtime.sh"} {
 		b, e := templates.ReadFile("templates/" + name)
-		if e != nil || stableFile(filepath.Join(stack, name), b, 0600) != nil {
+		if e != nil || stableTemplate(filepath.Join(stack, name), b) != nil {
 			return ErrInstall
 		}
 	}
@@ -268,7 +283,7 @@ func checkTemplates(stack string) error {
 		if e != nil {
 			return ErrInstall
 		}
-		actual, e := protectedRead(filepath.Join(stack, name), 128<<10, true)
+		actual, e := protectedRead(filepath.Join(stack, name), 128<<10, !databaseScript(name))
 		if e != nil || !bytes.Equal(expected, actual) {
 			return ErrInstall
 		}

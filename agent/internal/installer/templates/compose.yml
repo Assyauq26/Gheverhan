@@ -16,7 +16,7 @@ services:
       - ./grant-runtime.sh:/opt/jetseller/grant-runtime.sh:ro
     networks: [database]
     healthcheck:
-      test: [CMD-SHELL, 'pg_isready -U js_bootstrap -d "$$POSTGRES_DB"']
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U js_bootstrap -d "$$POSTGRES_DB"']
       interval: 5s
       timeout: 3s
       retries: 30

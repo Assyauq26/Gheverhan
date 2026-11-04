@@ -78,6 +78,9 @@ func run() error {
 	if e = decode(raw, &c); e != nil {
 		return e
 	}
+	if c.Policy.Mode == releaseprotocol.KeylessMode {
+		return prepareKeyless(c)
+	}
 	root, e := read(c.RootFile, false)
 	if e != nil {
 		return e

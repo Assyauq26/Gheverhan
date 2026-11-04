@@ -28,7 +28,7 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
  };
  const handle=async request=>{
   const u=new URL(request.url),bootstrap=u.pathname.startsWith('/bootstrap/')&&!u.pathname.startsWith('/bootstrap/downloads/');if(!u.pathname.startsWith('/bootstrap/downloads/')&&!bootstrap)return null;
-  if(u.origin!==controlOrigin||request.method!=='GET'||u.search||u.hash||!(bootstrap?/^\/bootstrap\/[a-f0-9]{64}\/(jetseller-setup|signature.json|policy.json)$/.test(u.pathname):/^\/bootstrap\/downloads\/[A-Za-z0-9_-]{43}$/.test(u.pathname)))return denied();
+  if(u.origin!==controlOrigin||request.method!=='GET'||u.search||u.hash||!(bootstrap?/^\/bootstrap\/[a-f0-9]{64}\/(jetseller-setup|signature.json|policy.json|policy-signature.json)$/.test(u.pathname):/^\/bootstrap\/downloads\/[A-Za-z0-9_-]{43}$/.test(u.pathname)))return denied();
   if(active>=maxConcurrent)return new Response(null,{status:429,headers:{'retry-after':'5','cache-control':'no-store'}});
   active++;let file,stream,finished=false;
   const finish=()=>{if(!finished){finished=true;active--;}};
@@ -36,8 +36,8 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
    const catalog=validateReleaseCatalog(await getCatalog());if(catalog.release_bundle.delivery!=='scoped')throw Error('Scoped delivery required');
    await directory(artifactDirectory);
    if(bootstrap){
-    const [, ,sha,name]=u.pathname.split('/');const expected=name==='jetseller-setup'?catalog.installer.sha256:name==='signature.json'?(catalog.installer.signature_sha256??catalog.installer.sha256):catalog.policy_sha256;if(sha!==expected)throw Error('Retired bootstrap');
-    const spec={ 'jetseller-setup':['.setup','application/octet-stream',64*1024**2], 'signature.json':['.sigstore.json','application/json',4*1024**2], 'policy.json':['.policy.json','application/json',65536] }[name];
+    const [, ,sha,name]=u.pathname.split('/');const expected=name==='jetseller-setup'?catalog.installer.sha256:name==='signature.json'?(catalog.installer.signature_sha256??catalog.installer.sha256):name==='policy-signature.json'?catalog.policy_signature_sha256:catalog.policy_sha256;if(sha!==expected)throw Error('Retired bootstrap');
+    const spec={ 'jetseller-setup':['.setup','application/octet-stream',64*1024**2], 'signature.json':['.sigstore.json','application/json',4*1024**2], 'policy-signature.json':['.sigstore.json','application/json',4*1024**2], 'policy.json':['.policy.json','application/json',65536] }[name];
     file=await open(path.join(artifactDirectory,sha+spec[0]),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
     const st=await file.stat();if(!st.isFile()||st.size<1||st.size>spec[2]||(process.platform!=='win32'&&((st.mode&0o022)||![0,process.getuid()].includes(st.uid))))throw Error('Invalid bootstrap');
     stream=file.createReadStream({highWaterMark:65536,autoClose:true});file=undefined;stream.once('close',finish);stream.once('error',finish);

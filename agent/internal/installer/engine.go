@@ -160,11 +160,11 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 	if e = o.State.ReadInstallRecord(bootstrap.ReleaseTrustRecord, &oldTrust); e != nil && !bootstrap.IsMissingInstallRecord(e) {
 		return ErrInstall
 	}
-	bundle, e := loadBundle(o.ReleaseDirectory, policy.Trust.Channel)
+	bundle, e := loadBundle(o.ReleaseDirectory, policy.Trust.Channel, policy.Trust.Mode)
 	if e != nil {
 		return e
 	}
-	trusted, trust, e := releaseprotocol.Verify(policy.Trust, bundle, oldTrust, time.Now())
+	trusted, trust, e := verifyMetadata(ctx, policy, bundle, oldTrust, o.StateDirectory)
 	if e != nil || trusted.SHA256() != auth.ManifestSHA256 || trusted.Manifest().ReleaseID != auth.ReleaseID {
 		return ErrInstall
 	}
@@ -288,11 +288,11 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 		if e != nil || a.ManifestSHA256 != j.ReleaseSHA || a.Domain != j.Domain || a.DisplayName != j.DisplayName {
 			return ErrInstall
 		}
-		b, e := loadBundle(o.ReleaseDirectory, policy.Trust.Channel)
+		b, e := loadBundle(o.ReleaseDirectory, policy.Trust.Channel, policy.Trust.Mode)
 		if e != nil {
 			return e
 		}
-		current, _, e := releaseprotocol.Verify(policy.Trust, b, trust, time.Now())
+		current, _, e := verifyMetadata(ctx, policy, b, trust, o.StateDirectory)
 		if e != nil || current.SHA256() != j.ReleaseSHA || current.Manifest().ReleaseID != j.ReleaseID {
 			return ErrInstall
 		}

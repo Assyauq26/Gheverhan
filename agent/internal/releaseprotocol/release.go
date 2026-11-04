@@ -29,14 +29,17 @@ var appVersionPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(
 // Policy comes from independently provisioned, locally protected configuration;
 // none of these authority fields may be supplied by an untrusted portal request.
 type Policy struct {
-	BootstrapRootSHA256  string
-	Channel              string
-	Registry             string
-	RepositoryPrefix     string
-	SignerIssuer         string
-	SignerIdentity       string
-	MinimumRootThreshold int
-	MaxArtifactBytes     int64
+	Mode                   string `json:",omitempty"`
+	ExpectedSourceSHA      string `json:",omitempty"`
+	MinimumReleaseSequence uint64 `json:",omitempty"`
+	BootstrapRootSHA256    string
+	Channel                string
+	Registry               string
+	RepositoryPrefix       string
+	SignerIssuer           string
+	SignerIdentity         string
+	MinimumRootThreshold   int
+	MaxArtifactBytes       int64
 }
 
 type Manifest struct {
@@ -78,15 +81,19 @@ type Manifest struct {
 // separately streamed through VerifyTarget; large image archives are not loaded
 // into this object. RootUpdates are sequential N+1 roots, never a replacement pin.
 type Bundle struct {
-	BootstrapRoot []byte
-	RootUpdates   [][]byte
-	Timestamp     []byte
-	Snapshot      []byte
-	Targets       []byte
-	Manifest      []byte
+	KeylessSignature []byte
+	BootstrapRoot    []byte
+	RootUpdates      [][]byte
+	Timestamp        []byte
+	Snapshot         []byte
+	Targets          []byte
+	Manifest         []byte
 }
 
 type State struct {
+	TrustMode              string    `json:"trust_mode,omitempty"`
+	AuthoritySHA256        string    `json:"authority_sha256,omitempty"`
+	SourceSHA              string    `json:"source_sha,omitempty"`
 	BootstrapRootSHA256    string    `json:"bootstrap_root_sha256"`
 	RootVersion            int64     `json:"root_version"`
 	RootSHA256             string    `json:"root_sha256"`
@@ -129,11 +136,14 @@ func decode(raw []byte, out any) error {
 	return nil
 }
 func validPolicy(p Policy) bool {
-	return hex64.MatchString(p.BootstrapRootSHA256) && (p.Channel == "internal" || p.Channel == "pilot" || p.Channel == "stable") &&
+	return (p.Mode == "" || p.Mode == "tuf-v1") && hex64.MatchString(p.BootstrapRootSHA256) && validAuthority(p) && p.MinimumRootThreshold >= 2
+}
+func validAuthority(p Policy) bool {
+	return (p.Channel == "internal" || p.Channel == "pilot" || p.Channel == "stable") &&
 		p.Registry != "" && !strings.ContainsAny(p.Registry, "/@?#\\ \t\r\n") && p.RepositoryPrefix != "" &&
 		imagePattern.MatchString(p.Registry+"/"+p.RepositoryPrefix+"/probe@sha256:"+strings.Repeat("0", 64)) &&
 		strings.HasPrefix(p.SignerIssuer, "https://") && strings.HasPrefix(p.SignerIdentity, "https://") &&
-		p.MinimumRootThreshold >= 2 && p.MaxArtifactBytes > 0 && p.MaxArtifactBytes <= 8<<30
+		p.MaxArtifactBytes > 0 && p.MaxArtifactBytes <= 8<<30
 }
 func monotonic(version, old int64, digest, oldDigest string) bool {
 	return version >= old && (version != old || oldDigest == "" || digest == oldDigest)
@@ -142,6 +152,9 @@ func clone(raw []byte) []byte { return append([]byte(nil), raw...) }
 
 func Verify(p Policy, b Bundle, previous State, now time.Time) (TrustedRelease, State, error) {
 	fail := func() (TrustedRelease, State, error) { return TrustedRelease{}, previous, ErrRelease }
+	if previous.TrustMode == KeylessMode || previous.AuthoritySHA256 != "" {
+		return fail()
+	}
 	if !validPolicy(p) || now.IsZero() || now.Year() < 2026 || now.Year() > 2200 || len(b.BootstrapRoot) > 2<<20 || len(b.RootUpdates) > 64 || len(b.Timestamp) > 2<<20 || len(b.Snapshot) > 2<<20 || len(b.Targets) > 2<<20 || len(b.Manifest) > 64<<10 {
 		return fail()
 	}

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 import { createApi, createEmailAuth, mountDashboard, safeErrorMessage, statusLabel } from '../public/app.js';
 import { serveDashboard } from '../dashboard.mjs';
@@ -177,6 +178,20 @@ test('email registration is offered only at the configured same-origin entry and
 
 const canonicalStore = { ...installation, installation_id: '550e8400-e29b-41d4-a716-446655440000', display_name: 'Independent Store', domain: 'synthetic.example', status: 'PAIRED' };
 const release = (store = canonicalStore) => ({ installation_id: store.installation_id, available: true, release_id: 'rel-1.0.0-internal', installer: { url: 'https://releases.fixture.example/setup', sha256: 'a'.repeat(64), signature_url: 'https://releases.fixture.example/setup.sigstore.json' }, control_origin: 'https://portal.fixture.example', policy_url: 'https://releases.fixture.example/policy.json', policy_sha256: 'b'.repeat(64), root_sha256: 'c'.repeat(64), manifest_sha256: 'd'.repeat(64) });
+
+test('keyless wizard verifies binary and policy using pinned Cosign identity before installing them', async t=>{
+ const value={...release(),trust_mode:'keyless-v2',authority_sha256:'c'.repeat(64),policy_signature_sha256:'e'.repeat(64),policy_signature_url:'https://portal.fixture.example/bootstrap/'+'e'.repeat(64)+'/policy-signature.json',policy_url:'https://portal.fixture.example/bootstrap/'+'b'.repeat(64)+'/policy.json',installer:{sha256:'a'.repeat(64),signature_sha256:'f'.repeat(64),url:'https://portal.fixture.example/bootstrap/'+'a'.repeat(64)+'/jetseller-setup',signature_url:'https://portal.fixture.example/bootstrap/'+'f'.repeat(64)+'/signature.json'}};
+ delete value.root_sha256;
+ const fixture=await setup(t,url=>url.endsWith('/session')?response({authenticated:true,csrf_token:'synthetic-csrf'}):url.endsWith('/installations')?response({installations:[canonicalStore]}):url.endsWith('/install-instructions')?response(value):url.endsWith('/install-progress')?response({installation_id:canonicalStore.installation_id,phase:'NOT_STARTED',sequence:0,updated_at:null}):response({installation:canonicalStore}));
+ fixture.document.querySelector('.installation-item').click();await wait();
+ const command=fixture.document.getElementById('bootstrap-command').textContent;
+ assert.match(command,/cosign\/releases\/download\/v3\.1\.4/);assert.match(command,/424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa/);
+ assert.match(command,/btos-official-release\.yml@refs\/heads\/main/);assert.equal((command.match(/verify-blob --offline/g)||[]).length,2);
+ assert(command.indexOf('verify-blob')<command.indexOf('sudo install'));
+ assert.doesNotMatch(command,/\|\s*(?:sh|bash)(?:\s|$)|curl -k|root\.json/);
+ const syntax=spawnSync(process.platform==='win32'?'C:/Program Files/Git/bin/bash.exe':'bash',['-n'],{input:command,encoding:'utf8'});assert.equal(syntax.status,0,syntax.stderr);
+ assert.equal(fixture.document.getElementById('installer-release').hidden,false);
+});
 
 test('wizard composes only fixed UUID-bound commands and keeps local readiness distinct from public storefront verification', async t => {
   let phase = 'DATABASE';

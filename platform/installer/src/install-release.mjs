@@ -10,9 +10,14 @@ function https(value){const u=new URL(value);if(u.protocol!=='https:'||u.usernam
 // The catalog is operator-owned publication configuration plus a receipt from
 // the independently trusted offline verifier. Browser clients never select roots.
 export function validateReleaseCatalog(value,now=Date.now()) {
- if(!value||value.version!==1||!/^rel-[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?-(internal|pilot|stable)$/.test(value.release_id)||!digest.test(value.manifest_sha256)||!digest.test(value.root_sha256)||!digest.test(value.policy_sha256)||!digest.test(value.installer?.sha256)||!value.verification_receipt||(!Number.isFinite(Date.parse(value.expires_at))||Date.parse(value.expires_at)<=now))fail(503,'RELEASE_UNAVAILABLE');
+ if(!value||![1,2].includes(value.version)||!/^rel-[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?-(internal|pilot|stable)$/.test(value.release_id)||!digest.test(value.manifest_sha256)||!digest.test(value.policy_sha256)||!digest.test(value.installer?.sha256)||!value.verification_receipt||(!Number.isFinite(Date.parse(value.expires_at))||Date.parse(value.expires_at)<=now))fail(503,'RELEASE_UNAVAILABLE');
  const receipt=value.verification_receipt;
- if(receipt.status!=='VERIFIED'||receipt.manifest_sha256!==value.manifest_sha256||receipt.root_sha256!==value.root_sha256||receipt.release_id!==value.release_id||Date.parse(receipt.expires_at)<Date.parse(value.expires_at)||!Number.isFinite(Date.parse(receipt.expires_at)))fail(503,'RELEASE_UNAVAILABLE');
+ if(receipt.status!=='VERIFIED'||receipt.manifest_sha256!==value.manifest_sha256||receipt.release_id!==value.release_id||Date.parse(receipt.expires_at)<Date.parse(value.expires_at)||!Number.isFinite(Date.parse(receipt.expires_at)))fail(503,'RELEASE_UNAVAILABLE');
+ if(value.version===2){
+  if(!digest.test(value.policy_signature_sha256)||!digest.test(value.installer.signature_sha256))fail(503,'RELEASE_UNAVAILABLE');
+  https(value.policy_signature_url);
+  if(value.trust_mode!=='keyless-v2'||!digest.test(value.authority_sha256)||!/^[a-f0-9]{40}$/.test(value.source_sha??'')||value.root_sha256!==undefined||receipt.trust_mode!=='keyless-v2'||receipt.root_sha256!==''||receipt.authority_sha256!==value.authority_sha256||receipt.source_sha!==value.source_sha||receipt.trust_state?.source_sha!==value.source_sha||receipt.trust_state?.manifest_sha256!==value.manifest_sha256||receipt.trust_state?.authority_sha256!==value.authority_sha256||receipt.trust_state?.trust_mode!=='keyless-v2')fail(503,'RELEASE_UNAVAILABLE');
+ }else if(!digest.test(value.root_sha256)||receipt.root_sha256!==value.root_sha256)fail(503,'RELEASE_UNAVAILABLE');
  if(!value.release_bundle||!digest.test(value.release_bundle.sha256))fail(503,'RELEASE_UNAVAILABLE');
  if(value.release_bundle.delivery==='scoped'){if(!Number.isSafeInteger(value.release_bundle.bytes)||value.release_bundle.bytes<1||value.release_bundle.bytes>2*1024**3)fail(503,'RELEASE_UNAVAILABLE');}else https(value.release_bundle.url);
  for(const link of [value.installer.url,value.installer.signature_url,value.policy_url])https(link);
@@ -34,7 +39,7 @@ export function createInstallReleaseHandler({pool,verificationKey,controlOrigin,
      return response(200,{installation_id:id,phase:progress?.phase??'NOT_STARTED',sequence:Number(progress?.sequence??0),updated_at:progress?.updated_at??null,error_code:progress?.error_code??null,store_origin:'https://'+record.domain,evidence_source:'DEVICE_REPORT_NOT_PUBLIC_TLS_ATTESTATION'});
     }
     let catalog;try{catalog=validateReleaseCatalog(await getCatalog());}catch{return response(200,{installation_id:id,available:false,reason:'RELEASE_UNAVAILABLE'});}
-    return response(200,{installation_id:id,available:true,release_bundle_available:true,release_id:catalog.release_id,installer:catalog.installer,control_origin:controlOrigin,policy_url:catalog.policy_url,policy_sha256:catalog.policy_sha256,root_sha256:catalog.root_sha256,manifest_sha256:catalog.manifest_sha256});
+    return response(200,{installation_id:id,available:true,release_bundle_available:true,release_id:catalog.release_id,installer:catalog.installer,control_origin:controlOrigin,policy_url:catalog.policy_url,policy_sha256:catalog.policy_sha256,policy_signature_url:catalog.policy_signature_url,policy_signature_sha256:catalog.policy_signature_sha256,root_sha256:catalog.root_sha256,trust_mode:catalog.trust_mode,authority_sha256:catalog.authority_sha256,source_sha:catalog.source_sha,manifest_sha256:catalog.manifest_sha256});
    }
    const downloadPath=path===prefix+'/agent/release-download-authorization';
    if(([prefix+'/agent/install-authorization',prefix+'/agent/release-download-authorization'].includes(path)&&request.method!=='GET')||(path===prefix+'/agent/install-progress'&&request.method!=='POST'))fail(405,'METHOD_NOT_ALLOWED');

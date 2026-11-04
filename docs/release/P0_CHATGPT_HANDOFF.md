@@ -1,5 +1,11 @@
 # P0 ChatGPT operational handoff
 
+## Current execution authorization and trust model
+
+Owner has authorized production publication/deployment/routes/migrations and public onboarding only after production acceptance. Owner subsequently removed the application TUF/root ceremony process. Production now uses policy2 `keyless-v2`, protected GitHub Actions OIDC/Cosign and source-bound signed metadata. No root key/fingerprint or online TUF secrets are required. Root/TUF prerequisites and pre-integration status statements below are historical; use the current PR/workflow execution evidence for exact SHA and actual digests. Preserve all isolation, secret-file, backup, migration, Caddy coexistence and rollback procedures below.
+
+Do not declare LIVE until actual signed artifacts are available and real OTP/domain/pairing/installation/admin/product/media/restart checks pass. No new expenditure, data deletion, weakening of authentication/signatures, or unvalidated checkout/J&T activation is authorized. Existing Gheverhan remains running. First publisher dispatch uses actual approved main SHA, `genesis=true`, version1.0.0/stable; retain protected environment reviewer separation. Follow the keyless section at the start of P0_OFFICIAL_PUBLISHER_HANDOFF.md, not the superseded root ceremony.
+
 Current final audit: [P0_PRE_MERGE_AUDIT.md](P0_PRE_MERGE_AUDIT.md). Main remains913d5454bada484f3b6b9319d5b1abfb130c3b23. New release safety repairs must pass exact-HEAD CI before owner review. PRE_MERGE_READY is blocked by main's squash-only ruleset; no merge approval has been received. The14/16 CI proof at41a3152d and run41817017471 is the audited baseline, not a substitute for repair-HEAD checks.
 
 PUBLIC_SELLER_ONBOARDING_READY: NOT_PROVEN. No merge or production access/deployment/restart/DNS/firewall/SSH change is authorized by this document. Checkout and production J&T stay disabled.

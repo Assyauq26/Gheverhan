@@ -155,7 +155,7 @@ func extractPackage(archive, stage, channel string, max uint64) error {
 			return ErrInstall
 		}
 		seen[name] = true
-		allowed := name == "root.json" || name == "timestamp.json" || name == "snapshot.json" || name == "targets.json" || name == "channels/"+channel+"/release.json" || rootUpdate.MatchString(name) || artifact.MatchString(name)
+		allowed := name == "root.json" || name == "timestamp.json" || name == "snapshot.json" || name == "targets.json" || name == "channels/"+channel+"/release.json" || name == "channels/"+channel+"/release.sigstore.json" || rootUpdate.MatchString(name) || artifact.MatchString(name)
 		if !allowed || !entry.Mode().IsRegular() || entry.UncompressedSize64 > max-total {
 			return ErrInstall
 		}

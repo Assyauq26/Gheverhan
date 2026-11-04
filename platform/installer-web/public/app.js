@@ -144,7 +144,7 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
     provisionRequest++;
     el('installer-release').hidden = true;
     for (const id of ['installer-download','installer-signature','installer-policy','local-admin','local-products','local-storefront','activate-command']) { el(id).hidden = true; el(id).removeAttribute('href'); }
-    for (const id of ['installer-release-id','installer-sha','installer-policy-sha','installer-root-sha','installer-manifest-sha','pair-command','fetch-command','install-command','activate-command','progress-contact','progress-error']) text(id, '');
+    for (const id of ['installer-release-id','installer-sha','installer-policy-sha','installer-root-sha','installer-manifest-sha','bootstrap-command','pair-command','fetch-command','install-command','activate-command','progress-contact','progress-error']) text(id, '');
     text('installer-status', 'Rilis installer belum tersedia. Jangan jalankan script yang belum diverifikasi.');
     text('progress-status', 'Belum ada laporan installer.'); el('progress-error').hidden = true;
     text('wizard-installer', 'Menunggu rilis'); text('wizard-progress', 'Belum dimulai');
@@ -162,11 +162,35 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
   }
   function showInstructions(value) {
     if (value?.installation_id !== selected || value.available !== true) return;
-    const hashes = ['policy_sha256','root_sha256','manifest_sha256'];
+    const keyless = value.trust_mode === 'keyless-v2';
+    const hashes = ['policy_sha256',keyless?'authority_sha256':'root_sha256','manifest_sha256'];
     if (typeof value.release_id !== 'string' || value.release_id.length > 120 || !/^[a-zA-Z0-9._-]+$/.test(value.release_id) || !value.installer || !/^[a-f0-9]{64}$/.test(value.installer.sha256) || hashes.some(key => !/^[a-f0-9]{64}$/.test(value[key]))) throw new Error('Invalid release metadata');
     const urls = [releaseUrl(value.installer.url), releaseUrl(value.installer.signature_url), releaseUrl(value.policy_url)];
     const commands = installCommands(value, document.URL);
-    text('installer-release-id', value.release_id); text('installer-sha', value.installer.sha256); text('installer-policy-sha', value.policy_sha256); text('installer-root-sha', value.root_sha256); text('installer-manifest-sha', value.manifest_sha256);
+    if(keyless){
+      const signatureUrl=releaseUrl(value.policy_signature_url);
+      if(!/^[a-f0-9]{64}$/.test(value.policy_signature_sha256)||!/^[a-f0-9]{64}$/.test(value.installer.signature_sha256))throw new Error('Invalid policy signature');
+      const paths=['/bootstrap/'+value.installer.sha256+'/jetseller-setup','/bootstrap/'+value.installer.signature_sha256+'/signature.json','/bootstrap/'+value.policy_sha256+'/policy.json','/bootstrap/'+value.policy_signature_sha256+'/policy-signature.json'];
+      if([...urls,signatureUrl].some((url,i)=>new URL(url).origin!==value.control_origin||new URL(url).pathname!==paths[i]))throw new Error('Invalid immutable bootstrap URL');
+      const q=v=>"'"+v.replaceAll("'","'\"'\"'")+"'";
+      const authority="--certificate-identity 'https://github.com/Assyauq26/Gheverhan/.github/workflows/btos-official-release.yml@refs/heads/main' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'";
+      const download=(url,file)=>'curl --fail --location --proto "=https" --tlsv1.2 '+q(url)+' -o "$btos_tmp/'+file+'"';
+      const verify=(sha,file)=>'printf '+q(sha+'  %s\\n')+' "$btos_tmp/'+file+'" | sha256sum -c -';
+      text('bootstrap-command',[
+        '(', 'set -eu', 'sudo docker compose version >/dev/null', 'test -z "$(sudo docker ps -aq)"', 'sudo test ! -e /var/lib/jetseller-agent',
+        'btos_tmp=$(mktemp -d)', 'chmod 700 "$btos_tmp"',
+        'trap \'rm -f "$btos_tmp/cosign" "$btos_tmp/setup" "$btos_tmp/setup.sigstore.json" "$btos_tmp/policy.json" "$btos_tmp/policy.sigstore.json"; rmdir "$btos_tmp"\' EXIT',
+        download('https://github.com/sigstore/cosign/releases/download/v3.1.4/cosign-linux-amd64','cosign'),verify('424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa','cosign'),'chmod 700 "$btos_tmp/cosign"',
+        download(urls[0],'setup'),verify(value.installer.sha256,'setup'),download(urls[1],'setup.sigstore.json'),verify(value.installer.signature_sha256,'setup.sigstore.json'),
+        '"$btos_tmp/cosign" verify-blob --offline --bundle "$btos_tmp/setup.sigstore.json" '+authority+' "$btos_tmp/setup"',
+        download(urls[2],'policy.json'),verify(value.policy_sha256,'policy.json'),download(signatureUrl,'policy.sigstore.json'),verify(value.policy_signature_sha256,'policy.sigstore.json'),
+        '"$btos_tmp/cosign" verify-blob --offline --bundle "$btos_tmp/policy.sigstore.json" '+authority+' "$btos_tmp/policy.json"',
+        'sudo install -d -o 0 -g 0 -m 755 /usr/local/lib/buattokosendiri', 'sudo install -o 0 -g 0 -m 755 "$btos_tmp/cosign" /usr/local/lib/buattokosendiri/cosign',
+        'sudo install -o 0 -g 0 -m 755 "$btos_tmp/setup" /usr/local/bin/jetseller-setup', 'sudo install -d -o 0 -g 0 -m 700 /etc/buattokosendiri',
+        'sudo install -o 0 -g 0 -m 600 "$btos_tmp/policy.json" /etc/buattokosendiri/release-policy.json', ')'
+      ].join('\n'));
+    }
+    text('installer-release-id', value.release_id); text('installer-sha', value.installer.sha256); text('installer-policy-sha', value.policy_sha256); text('installer-root-sha', keyless?value.authority_sha256:value.root_sha256); text('installer-manifest-sha', value.manifest_sha256);
     for (const [index, id] of ['installer-download','installer-signature','installer-policy'].entries()) { el(id).href = urls[index]; el(id).hidden = false; }
     text('fetch-command', commands.fetch); text('pair-command', commands.pair); text('install-command', commands.install); text('activate-command', commands.activate);
     text('installer-status', 'Rilis disediakan. Selesaikan verifikasi independen sebelum menjalankan installer.');

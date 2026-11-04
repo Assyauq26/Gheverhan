@@ -7,10 +7,21 @@ on:
         required: true
         type: string
       genesis:
-        description: First publication only; requires independent approved root pin
+        description: Explicit first keyless production publication; rejected after an earlier successful publication
         required: true
         default: false
         type: boolean
+      release_version:
+        description: Production application version
+        required: true
+        default: '1.0.0'
+        type: string
+      release_channel:
+        description: Production release channel
+        required: true
+        default: stable
+        type: choice
+        options: [stable, pilot]
 permissions:
   contents: read
 concurrency:
@@ -43,27 +54,21 @@ jobs:
         with: {node-version: '22'}
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with: {go-version: '1.27.3', cache: false}
-      - name: Validate independent root, exact-SHA checks, approved identity and protected environment
+      - name: Validate exact-SHA checks, keyless signing authority and protected environment
         env:
           GH_TOKEN: ${{ github.token }}
           APPROVED_GHCR_PREFIX: ${{ vars.APPROVED_GHCR_PREFIX }}
-          APPROVED_ROOT_SHA256: ${{ vars.APPROVED_ROOT_SHA256 }}
-          TUF_ROOT_UPDATES_JSON: ${{ vars.TUF_ROOT_UPDATES_JSON }}
-          TUF_PUBLIC_ROOT_JSON: ${{ vars.TUF_PUBLIC_ROOT_JSON }}
-          TUF_PREVIOUS_STATE_JSON: ${{ vars.TUF_PREVIOUS_STATE_JSON }}
+          BTOS_PREVIOUS_STATE_JSON: ${{ vars.BTOS_PREVIOUS_STATE_JSON }}
           RELEASE_MANIFEST_JSON: ${{ vars.RELEASE_MANIFEST_JSON }}
           GENESIS_RELEASE: ${{ inputs.genesis }}
-          GENESIS_APPROVED_PIN: ${{ vars.GENESIS_APPROVED_PIN }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
           REVIEWED_COSIGN_SHA256: ${{ vars.REVIEWED_COSIGN_SHA256 }}
-          TUF_TARGETS_PKCS8: ${{ secrets.TUF_TARGETS_PKCS8 }}
-          TUF_SNAPSHOT_PKCS8: ${{ secrets.TUF_SNAPSHOT_PKCS8 }}
-          TUF_TIMESTAMP_PKCS8: ${{ secrets.TUF_TIMESTAMP_PKCS8 }}
         run: |
           umask077() { umask 077; }
           umask077
-          node deploy/release/prepare-official.mjs
+          node deploy/release/prepare-keyless-official.mjs
           go -C agent build -trimpath -o /tmp/jetseller-publish ./cmd/jetseller-publish
-          /tmp/jetseller-publish check-root /tmp/btos-publication-input/publication.json
       - name: Obtain independently reviewed verifier and authenticate approved GHCR namespace
         env:
           GH_TOKEN: ${{ github.token }}
@@ -87,9 +92,13 @@ jobs:
           node deploy/release/prepare-manifest.mjs /tmp/btos-publication-input/manifest-template.json /tmp/btos-release-build /tmp/btos-publication-input/manifest.json
           sudo install -d -m700 /root/btos-publication
           sudo /tmp/jetseller-publish /tmp/btos-publication-input/publication.json
+          channel="${{ inputs.release_channel }}"
+          sudo --preserve-env=ACTIONS_ID_TOKEN_REQUEST_URL,ACTIONS_ID_TOKEN_REQUEST_TOKEN,GITHUB_ACTIONS "$RELEASE_COSIGN_PATH" sign-blob --yes --bundle "/root/btos-publication/metadata/channels/$channel/release.sigstore.json" "/root/btos-publication/metadata/channels/$channel/release.json"
+          sudo "$RELEASE_COSIGN_PATH" verify-blob --offline --bundle "/root/btos-publication/metadata/channels/$channel/release.sigstore.json" --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" "/root/btos-publication/metadata/channels/$channel/release.json"
           sudo cp -a /tmp/btos-release-build/artifacts /root/btos-publication/metadata/
           sudo chown -R root:root /root/btos-publication/metadata
           sudo install -m600 /tmp/btos-publication-input/policy.json /root/btos-publication/policy.json
+          sudo --preserve-env=ACTIONS_ID_TOKEN_REQUEST_URL,ACTIONS_ID_TOKEN_REQUEST_TOKEN,GITHUB_ACTIONS "$RELEASE_COSIGN_PATH" sign-blob --yes --bundle /tmp/btos-release-build/policy.sigstore.json /root/btos-publication/policy.json
           sudo /tmp/btos-release-build/jetseller-setup verify-release --policy /root/btos-publication/policy.json --release-directory /root/btos-publication/metadata --receipt /root/btos-publication/directory-receipt.json
           sudo "$(command -v node)" deploy/release/package-candidate.mjs /root/btos-publication/metadata /root/btos-publication/directory-receipt.json /root/btos-publication/release.zip
           sudo /tmp/btos-release-build/jetseller-setup verify-release-archive --policy /root/btos-publication/policy.json --artifact /root/btos-publication/release.zip --receipt /root/btos-publication/archive-receipt.json
@@ -97,7 +106,6 @@ jobs:
           sudo --preserve-env=RELEASE_SOURCE_SHA,RELEASE_SIGNER_IDENTITY,RELEASE_SIGNER_ISSUER,GITHUB_RUN_ID "$(command -v node)" deploy/release/final-manifest.mjs
           sudo --preserve-env=ACTIONS_ID_TOKEN_REQUEST_URL,ACTIONS_ID_TOKEN_REQUEST_TOKEN,GITHUB_ACTIONS "$RELEASE_COSIGN_PATH" sign-blob --yes --bundle /root/btos-publication/staged/release-manifest.sigstore.json /root/btos-publication/staged/release-manifest.json
           sudo "$RELEASE_COSIGN_PATH" verify-blob --offline --bundle /root/btos-publication/staged/release-manifest.sigstore.json --certificate-identity "$RELEASE_SIGNER_IDENTITY" --certificate-oidc-issuer "$RELEASE_SIGNER_ISSUER" /root/btos-publication/staged/release-manifest.json
-          sudo install -m600 /root/btos-publication/metadata/candidate-state.json /root/btos-publication/staged/publication-state.private.json
           test ! -e /tmp/btos-approved-output
           sudo cp -a /root/btos-publication/staged /tmp/btos-approved-output
           sudo chown -R "$(id -u):$(id -g)" /tmp/btos-approved-output
@@ -108,8 +116,7 @@ jobs:
           path: /tmp/btos-approved-output/**
           retention-days: 7
           if-no-files-found: error
-      - name: Remove online signing inputs and registry auth from disposable runner
+      - name: Remove registry auth from disposable runner
         if: always()
         run: |
-          rm -f /tmp/btos-publication-input/targets.pem /tmp/btos-publication-input/snapshot.pem /tmp/btos-publication-input/timestamp.pem
           docker logout ghcr.io >/dev/null 2>&1 || true

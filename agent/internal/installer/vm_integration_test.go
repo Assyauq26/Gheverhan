@@ -127,13 +127,13 @@ func TestP0PublicationFixtureVerification(t *testing.T) {
 		_, be := parsed.Budget.RequiredFreeBytes()
 		t.Fatalf("POLICY_FIELDS version=%d verifierHashLen=%d budgetError=%v", parsed.Version, len(parsed.VerifierSHA256), be)
 	}
-	b, e := loadBundle("/root/p0-publication", p.Trust.Channel)
+	b, e := loadBundle("/root/p0-publication", p.Trust.Channel, p.Trust.Mode)
 	if e != nil {
 		t.Fatal("METADATA_READ", e)
 	}
-	r, _, e := releaseprotocol.Verify(p.Trust, b, releaseprotocol.State{}, time.Now())
+	r, _, e := verifyMetadata(context.Background(), p, b, releaseprotocol.State{}, "/root/p0-publication")
 	if e != nil {
-		t.Fatal("TUF", e)
+		t.Fatal("SIGNED_METADATA", e)
 	}
 	m := r.Manifest()
 	var total, largest uint64

@@ -5,6 +5,7 @@ import { importPKCS8 } from 'jose';
 import { createPublicKey } from 'node:crypto';
 import { exportJWK } from 'jose';
 import { origin } from './common.mjs';
+import { validateEmailAuth } from './email-auth.mjs';
 
 export async function privateFile(file) {
   if(typeof file!=='string'||!path.isAbsolute(file))throw new Error('Private configuration required');
@@ -22,7 +23,7 @@ export async function privateFile(file) {
 }
 export async function runtimeConfig(file) {
   const value=JSON.parse(await privateFile(file));
-  if(Object.keys(value).some(k=>!['controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','port'].includes(k))) throw new Error('Invalid configuration');
+  if(Object.keys(value).some(k=>!['controlOrigin','databaseUrlFile','signingKeyFile','sessionIssuer','oidc','emailAuth','authMode','port'].includes(k))) throw new Error('Invalid configuration');
   origin(value.controlOrigin);
   const port=value.port??3100;
   if(!Number.isInteger(port)||port<1024||port>65535) throw new Error('Invalid configuration');
@@ -30,7 +31,19 @@ export async function runtimeConfig(file) {
   const signingPem=await privateFile(value.signingKeyFile);
   const signingKey=await importPKCS8(signingPem,'EdDSA');
   const verificationKey=createPublicKey(signingPem);
-  let sessionIssuer;
+  const authMode=value.authMode??'email_otp';
+  if(!['email_otp','oidc'].includes(authMode)||(authMode==='email_otp'&&(value.oidc||value.sessionIssuer))||(authMode==='oidc'&&value.emailAuth))throw new Error('Explicit single identity mode required');
+  let sessionIssuer,emailAuth;
+  if(value.emailAuth) {
+    const e=value.emailAuth;
+    if(Object.keys(e).some(k=>!['resendApiKeyFile','otpPepperFile','from','sessionSigningKeyFile'].includes(k)))throw new Error('Invalid email authentication configuration');
+    const pem=await privateFile(e.sessionSigningKeyFile);
+    if(pem===signingPem)throw new Error('Independent session signing key required');
+    const sessionSigningKey=await importPKCS8(pem,'EdDSA'),sessionJwk=await exportJWK(createPublicKey(pem));
+    emailAuth={resendApiKey:(await privateFile(e.resendApiKeyFile)).trim(),otpPepper:(await privateFile(e.otpPepperFile)).trim(),from:e.from,sessionSigningKey};
+    validateEmailAuth(emailAuth);
+    sessionIssuer={issuer:value.controlOrigin,audience:'jetseller-portal',jwks:{keys:[sessionJwk]}};
+  }
   if(value.sessionIssuer) {
     const s=value.sessionIssuer;
     if(Object.keys(s).some(k=>!['issuer','audience','jwksFile'].includes(k))) throw new Error('Invalid configuration');
@@ -49,5 +62,5 @@ export async function runtimeConfig(file) {
     const clientSecret=o.clientSecretFile?(await privateFile(o.clientSecretFile)).trim():undefined;
     oidc={...o,...(clientSecret!==undefined?{clientSecret}:{}),jwks:JSON.parse(await privateFile(o.jwksFile)),sessionSigningKey};
   }
-  return {controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,port};
+  return {controlOrigin:value.controlOrigin,databaseUrl,signingKey,verificationKey,sessionIssuer,oidc,emailAuth,authMode,port};
 }

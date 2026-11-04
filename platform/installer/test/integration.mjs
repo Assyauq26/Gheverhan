@@ -25,7 +25,7 @@ test('real isolated PostgreSQL ownership, durability, atomic pairing, proof bind
   for(let i=0;i<2;i++){
    const seller=randomUUID(),sid=randomUUID(),csrf=opaque(),subject='fixture-'+randomUUID();
    await pool.query('INSERT INTO installer.sellers(id,external_subject,email_verified) VALUES($1,$2,true)',[seller,subject]);
-   await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[sid,seller,hash(csrf)]);
+   await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at,authenticated_at) VALUES($1,$2,$3,now()+interval '1 hour',now())",[sid,seller,hash(csrf)]);
    const token=await new SignJWT({sid,csrf,email_verified:true}).setProtectedHeader({alg:'EdDSA'}).setSubject(subject).setIssuer(issuer).setAudience('jetseller-portal').setIssuedAt().setExpirationTime('1h').sign(authKeys.privateKey);
    users.push({seller,sid,csrf,token});
   }

@@ -51,6 +51,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       // scope checks. Only these fixed paths may cross the extension boundary.
       if(installRelease&&((path===prefix+'/agent/install-authorization'&&request.method==='GET')||
         (path===prefix+'/agent/install-progress'&&request.method==='POST')||
+        (path===prefix+'/agent/credential/refresh'&&request.method==='POST')||
         (/^\/api\/installer\/v1\/installations\/[^/]+\/(?:install-instructions|install-progress)$/.test(path)&&request.method==='GET'))) {
         const releaseResponse=await installRelease(request,{clientAddress});
         if(releaseResponse)return releaseResponse;
@@ -131,7 +132,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       const seller=await authenticate(request);
       if(request.method!=='GET') requireCsrf(request,seller,controlOrigin);
       await rate(pool,'seller:'+seller.seller_id,60);
-      if(path===prefix+'/session' && request.method==='GET') return json(200,{authenticated:true,seller_id:seller.seller_id,csrf_token:seller.csrf_token});
+      if(path===prefix+'/session' && request.method==='GET') return json(200,{authenticated:true,seller_id:seller.seller_id,csrf_token:seller.csrf_token,profile:seller.profile});
       if(path===prefix+'/session/logout' && request.method==='POST') {
         exact(await body(request),[]);
         await pool.query('UPDATE installer.sessions SET revoked_at=now() WHERE id=$1',[seller.session_id]);
@@ -217,6 +218,7 @@ export function createHandler({pool,controlOrigin,sessionIssuer,signingKey,verif
       }
       const unpairMatch=path.match(/^\/api\/installer\/v1\/installations\/([^/]+)\/unpair$/);
       if(unpairMatch && request.method==='POST') {
+        if(!seller.authenticated_at||Date.parse(seller.authenticated_at)<Date.now()-300000)fail(403,'REAUTHENTICATION_REQUIRED');
         exact(await body(request),[]);
         const result=await transaction(pool,async c=>{
           const record=await own(c,uuid(unpairMatch[1]),seller.seller_id,true);

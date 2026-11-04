@@ -89,7 +89,7 @@ export function createOidcHandler({pool,controlOrigin,config,fetchImpl=fetch}) {
         const sid=randomUUID(),csrf=opaque(),subject=hash(config.issuer+'\0'+payload.sub);
         const seller=await transaction(pool,async c=>{
           const record=(await c.query('INSERT INTO installer.sellers(id,external_subject,email_verified) VALUES($1,$2,true) ON CONFLICT(external_subject) DO UPDATE SET email_verified=true RETURNING id',[randomUUID(),subject])).rows[0];
-          await c.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[sid,record.id,hash(csrf)]);
+          await c.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at,authenticated_at) VALUES($1,$2,$3,now()+interval '1 hour',now())",[sid,record.id,hash(csrf)]);
           return record.id;
         });
         const token=await new SignJWT({sid,csrf,email_verified:true}).setProtectedHeader({alg:'EdDSA'}).setSubject(subject).setIssuer(controlOrigin).setAudience('jetseller-portal').setIssuedAt().setExpirationTime('1h').sign(config.sessionSigningKey);

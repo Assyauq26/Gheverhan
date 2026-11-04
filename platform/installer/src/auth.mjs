@@ -19,11 +19,12 @@ export function sellerAuthenticator(pool, config) {
     catch { fail(401,'AUTH_REQUIRED'); }
     if (payload.email_verified !== true) fail(403,'ACCOUNT_NOT_VERIFIED');
     uuid(payload.sid); text(payload.csrf,32,128); text(payload.sub,1,200);
-    const result = await pool.query(`SELECT s.id,s.seller_id,s.csrf_hash FROM installer.sessions s JOIN installer.sellers a ON a.id=s.seller_id
+    const result = await pool.query(`SELECT s.id,s.seller_id,s.csrf_hash,s.authenticated_at,a.display_name,a.store_name FROM installer.sessions s JOIN installer.sellers a ON a.id=s.seller_id
       WHERE s.id=$1 AND a.external_subject=$2 AND a.email_verified=true AND s.expires_at>now() AND s.revoked_at IS NULL`,[payload.sid,payload.sub]);
     const session = result.rows[0];
     if (!session || session.csrf_hash !== hash(payload.csrf)) fail(401,'AUTH_REQUIRED');
-    return { seller_id:session.seller_id,session_id:session.id,csrf_token:payload.csrf };
+    return { seller_id:session.seller_id,session_id:session.id,csrf_token:payload.csrf,authenticated_at:session.authenticated_at,
+      profile:{name:session.display_name??null,store_name:session.store_name??null} };
   };
 }
 export function requireCsrf(request, session, controlOrigin) {

@@ -1,4 +1,40 @@
-# P0 — konfigurasi autentikasi untuk handoff operasional
+# P0 — email OTP untuk handoff autentikasi operasional
+
+**Keputusan terbaru:** alur utama memakai email OTP melalui Resend. OIDC bukan syarat MVP, tidak aktif secara default, dan hanya dipertahankan untuk kompatibilitas konfigurasi lama yang memilih `authMode: "oidc"` secara eksplisit. Bagian OIDC historis di bawah tidak mengubah keputusan ini.
+
+Tidak ada credential/email production, DNS, VPS atau data toko yang diakses oleh implementasi ini. Provider production belum diverifikasi workstream coding. Nilai secret tidak boleh ditulis di chat, PR, repository atau URL.
+
+## Konfigurasi mode email (default)
+
+Config runtime privat memiliki `authMode: "email_otp"` (atau tidak diisi), `controlOrigin`, `databaseUrlFile`, `signingKeyFile`, dan `emailAuth` dengan hanya:
+
+| Field emailAuth | Kebutuhan |
+|---|---|
+| resendApiKeyFile | Path berkas lokal privat berisi Resend API key untuk sender yang sudah diverifikasi operator |
+| otpPepperFile | Path berkas lokal privat berisi 32 byte random dalam hex 64 karakter; berbeda dari key agent/session dan tidak dibagikan ke toko |
+| from | Sender terverifikasi, contoh display-name Buat Toko Online Sendiri, tanpa mengubah DNS pengiriman otomatis |
+| sessionSigningKeyFile | Path private key Ed25519 khusus sesi platform, berbeda dari agent signing key |
+
+Semua berkas config/secret harus regular file privat 0600, bukan symlink, owned service user/root. Pembacaan descriptor dibatasi 64 KiB. JSON tidak menerima API key/pepper inline atau URL sink/provider alternatif. Adapter production selalu POST ke `https://api.resend.com/emails`, HTTPS normal, redirect ditolak, timeout 10 detik. Bila konfigurasi tidak tersedia, auth status false dan tidak ada fallback dummy/OIDC otomatis.
+
+`POST /auth/email/start` menerima `{mode:"register",name,email,store_name}` untuk daftar; returning login `{mode:"login",email}`. Kedua mode menghasilkan response generik `{status:"OTP_SENT",challenge_id,expires_in:600,resend_after:60}` bila provider menerima pengiriman, tanpa membocorkan apakah akun sudah ada. Nama toko disimpan sebagai profil, bukan membuat instalasi/DB toko secara otomatis. Semua POST mensyaratkan Origin exact.
+
+`POST /auth/email/verify` menerima `{challenge_id,code}` dan cookie preauth `__Host-js_email_flow`. Kode enam digit berasal dari crypto RNG, disimpan sebagai HMAC SHA256 dengan pepper privat dan bound ke UUID challenge. Batas 10 menit, 5 percobaan, resend minimal 60 detik, dan rate-limit IP/email di PostgreSQL. Konsumsi atomik/challenge row lock mencegah replay/concurrent account creation. Verifikasi sukses langsung menghasilkan sesi `__Host-js_portal_session` Secure/HttpOnly/SameSite=Lax dan `{status:"AUTHENTICATED"}`; frontend mengambil CSRF/session lalu masuk wizard, tanpa login kedua.
+
+Returning email yang sudah terverifikasi memperoleh seller UUID dan instalasi yang sama. Login pada email yang belum memiliki profil tetap menerima email generik; sesudah pemilik membuktikan email, server mengembalikan `PROFILE_REQUIRED` agar pendaftaran dilengkapi. Tidak ada enumerasi akun sebelum email dibuktikan. Akun OIDC tidak digabung otomatis berdasarkan email.
+
+`GET /api/installer/v1/session` menampilkan profile `{name,store_name}` hanya kepada sesi pemilik yang sah. Logout tetap POST dengan CSRF/Origin, mencabut sesi di DB dan menghapus cookie. Unpair device membutuhkan `authenticated_at` dari DB dalam 5 menit terakhir; OTP baru memberi sesi fresh. Endpoint email-change/transfer tidak diaktifkan. Migrasi tidak menjadikan sesi lama seolah baru diautentikasi.
+
+`GET /auth/status` mode email menampilkan `method:"email_otp"`, configured boolean, `registration_url:"/daftar"`/`login_url:"/masuk"` hanya bila konfigurasi siap. Read-only CORS hanya untuk origin landing resmi, tanpa credentials. UI tidak boleh mengklaim email production berfungsi hanya dari keberadaan config.
+
+## Pengujian dan batas bukti
+
+Migrasi additive `003_email_auth.sql` hanya untuk control PostgreSQL yang terpisah. Unit menguji fail-closed, config, Origin, dan penolakan delivery double di luar fixture. Integrasi memanggil adapter HTTP Resend dengan server HTTPS loopback dan CA yang dipercaya eksplisit; OTP ditangkap hanya dalam memory, lalu dipakai untuk uji PostgreSQL/JOSE/session, brute-force, expiry, replay, concurrency, returning identity, CSRF/logout, unpair reauth dan provider outage. Override transport hanya dapat dipakai bila database exact loopback `/js_control_fixture` dan `JETSELLER_CONTROL_TEST_CONFIRM=isolated-control-fixture`; runtime production tidak menerima sink URL atau transport custom.
+
+Pengujian ini tidak mengirim email Resend nyata dan bukan bukti deliverability production. Operator/ChatGPT harus memverifikasi sender/key, pengiriman mailbox nyata, callback halaman portal, serta approval deployment secara terpisah. Hapus challenge kedaluwarsa sesuai retention operasional yang disetujui; jangan menghapus audit/DB merchant.
+
+## Referensi OIDC kompatibilitas (bukan kebutuhan P0)
+
 
 Ini adalah kontrak kode, bukan konfigurasi yang telah dipasang. Provider production belum diverifikasi oleh workstream coding ini. Tidak ada akun, endpoint production, DNS, credential atau VPS yang diubah.
 

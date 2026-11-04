@@ -27,7 +27,7 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     for(let i=0;i<2;i++) {
       const sellerId=randomUUID(),sid=randomUUID(),csrf=opaque(),subject=fixture+':'+i;
       await pool.query('INSERT INTO installer.sellers(id,external_subject,email_verified) VALUES($1,$2,true)',[sellerId,subject]);
-      await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[sid,sellerId,hash(csrf)]);
+      await pool.query("INSERT INTO installer.sessions(id,seller_id,csrf_hash,expires_at,authenticated_at) VALUES($1,$2,$3,now()+interval '1 hour',now())",[sid,sellerId,hash(csrf)]);
       const token=await new SignJWT({sid,csrf,email_verified:true}).setProtectedHeader({alg:'EdDSA'}).setSubject(subject).setIssuer(controlOrigin).setAudience('jetseller-portal').setIssuedAt().setExpirationTime('1h').sign(sessionKeys.privateKey);
       sellers.push({sellerId,sid,csrf,token});
     }

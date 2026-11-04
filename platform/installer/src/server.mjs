@@ -3,12 +3,17 @@ import { createHandler } from './api.mjs';
 import { createPool } from './db.mjs';
 import { runtimeConfig } from './runtime.mjs';
 import { createOidcHandler } from './oidc.mjs';
+import { createEmailAuthHandler } from './email-auth.mjs';
 import { pathToFileURL } from 'node:url';
 import { serveDashboard } from '../../installer-web/dashboard.mjs';
 
-export function createControlServer(config,pool,{oidcFetch,dashboard,domainLookup,installRelease}={}) {
+export function createControlServer(config,pool,{oidcFetch,emailFetch,dashboard,domainLookup,installRelease}={}) {
   const handle=createHandler({pool,...config,domainLookup,installRelease});
-  const oidc=createOidcHandler({pool,controlOrigin:config.controlOrigin,config:config.oidc,...(oidcFetch?{fetchImpl:oidcFetch}:{})});
+  // Legacy OIDC remains available only when explicitly selected/configured.
+  // Direct fixture callers may pass oidc; runtime defaults to email_otp.
+  const auth=config.authMode==='oidc'||(!config.authMode&&config.oidc)?
+    createOidcHandler({pool,controlOrigin:config.controlOrigin,config:config.oidc,...(oidcFetch?{fetchImpl:oidcFetch}:{})}):
+    createEmailAuthHandler({pool,controlOrigin:config.controlOrigin,config:config.emailAuth,...(emailFetch?{fetchImpl:emailFetch}:{})});
   const server=createServer(async (req,res)=>{
     try {
       if(dashboard && !req.url?.startsWith('/api/') && !req.url?.startsWith('/auth/') && await dashboard(req,res))return;
@@ -21,7 +26,7 @@ export function createControlServer(config,pool,{oidcFetch,dashboard,domainLooku
         const value=req.headers[name];if(typeof value==='string')headers.set(name,value);
       }
       const request=new Request(new URL(req.url,config.controlOrigin),{method,headers,...(!['GET','HEAD'].includes(method)?{body:Buffer.concat(chunks)}:{})});
-      const response=await (new URL(request.url).pathname.startsWith('/auth/')?oidc:handle)(request,{clientAddress:req.socket.remoteAddress??'unknown'});
+      const response=await (new URL(request.url).pathname.startsWith('/auth/')?auth:handle)(request,{clientAddress:req.socket.remoteAddress??'unknown'});
       const responseHeaders=Object.fromEntries(response.headers);
       if(response.headers.getSetCookie().length)responseHeaders['set-cookie']=response.headers.getSetCookie();
       res.writeHead(response.status,responseHeaders);res.end(Buffer.from(await response.arrayBuffer()));

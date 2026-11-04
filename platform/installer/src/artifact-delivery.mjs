@@ -27,18 +27,26 @@ export function createArtifactDelivery({pool,controlOrigin,getCatalog,artifactDi
   return controlOrigin+'/downloads/'+token;
  };
  const handle=async request=>{
-  const u=new URL(request.url);if(!u.pathname.startsWith('/downloads/'))return null;
-  if(u.origin!==controlOrigin||request.method!=='GET'||u.search||u.hash||!/^\/downloads\/[A-Za-z0-9_-]{43}$/.test(u.pathname))return denied();
+  const u=new URL(request.url),bootstrap=u.pathname.startsWith('/bootstrap/');if(!u.pathname.startsWith('/downloads/')&&!bootstrap)return null;
+  if(u.origin!==controlOrigin||request.method!=='GET'||u.search||u.hash||!(bootstrap?/^\/bootstrap\/[a-f0-9]{64}\/(jetseller-setup|signature.json|policy.json)$/.test(u.pathname):/^\/downloads\/[A-Za-z0-9_-]{43}$/.test(u.pathname)))return denied();
   if(active>=maxConcurrent)return new Response(null,{status:429,headers:{'retry-after':'5','cache-control':'no-store'}});
   active++;let file,stream,finished=false;
   const finish=()=>{if(!finished){finished=true;active--;}};
   try {
    const catalog=validateReleaseCatalog(await getCatalog());if(catalog.release_bundle.delivery!=='scoped')throw Error('Scoped delivery required');
    await directory(artifactDirectory);
+   if(bootstrap){
+    const [, ,sha,name]=u.pathname.split('/');if(sha!==catalog.installer.sha256)throw Error('Retired bootstrap');
+    const spec={ 'jetseller-setup':['.setup','application/octet-stream',64*1024**2], 'signature.json':['.sigstore.json','application/json',4*1024**2], 'policy.json':['.policy.json','application/json',65536] }[name];
+    file=await open(path.join(artifactDirectory,sha+spec[0]),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+    const st=await file.stat();if(!st.isFile()||st.size<1||st.size>spec[2]||(process.platform!=='win32'&&((st.mode&0o022)||![0,process.getuid()].includes(st.uid))))throw Error('Invalid bootstrap');
+    stream=file.createReadStream({highWaterMark:65536,autoClose:true});file=undefined;stream.once('close',finish);stream.once('error',finish);
+    return new Response(Readable.toWeb(stream),{headers:{'content-type':spec[1],'content-length':String(st.size),'cache-control':'no-store','referrer-policy':'no-referrer','x-content-type-options':'nosniff'}});
+   }
    file=await open(path.join(artifactDirectory,catalog.release_bundle.sha256+'.zip'),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
    const st=await file.stat();if(!st.isFile()||st.size!==catalog.release_bundle.bytes||st.size<1||st.size>maxBytes||(process.platform!=='win32'&&((st.mode&0o022)||![0,process.getuid()].includes(st.uid))))throw Error('Invalid artifact');
    const grant=await transaction(pool,async client=>{
-    // Match unpair's installation→device lock order; consume with a CAS so
+    // Match unpair's installationâ†’device lock order; consume with a CAS so
     // concurrent GETs cannot share the capability even after an earlier read.
     const tokenHash=hash(u.pathname.slice('/downloads/'.length));
     const row=(await client.query('SELECT * FROM installer.download_grants WHERE token_hash=$1',[tokenHash])).rows[0];

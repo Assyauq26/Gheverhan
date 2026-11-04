@@ -59,6 +59,13 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+	if os.Args[1] == "verify-release-archive" {
+		if err := installer.VerifyReleaseArchive(ctx, *policyFile, *artifact, *receiptFile); err != nil {
+			return err
+		}
+		fmt.Println("ZIP rilis dan seluruh signature terverifikasi; receipt privat tersimpan. Tidak menjalankan instalasi.")
+		return nil
+	}
 	if os.Args[1] == "verify-release" {
 		if err := installer.VerifyPackage(ctx, *policyFile, *releaseDirectory, *receiptFile); err != nil {
 			return err

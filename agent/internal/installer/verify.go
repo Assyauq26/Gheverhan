@@ -15,6 +15,8 @@ import (
 )
 
 type VerificationReceipt struct {
+	BundleSHA256   string    `json:"bundle_sha256,omitempty"`
+	BundleBytes    int64     `json:"bundle_bytes,omitempty"`
 	Status         string    `json:"status"`
 	ReleaseID      string    `json:"release_id"`
 	ManifestSHA256 string    `json:"manifest_sha256"`
@@ -84,6 +86,57 @@ func VerifyPackage(ctx context.Context, policyFile, releaseDirectory, receiptFil
 	}
 	receipt := VerificationReceipt{Status: "VERIFIED", ReleaseID: m.ReleaseID, ManifestSHA256: r.SHA256(), RootSHA256: p.Trust.BootstrapRootSHA256, ExpiresAt: m.ExpiresAt}
 	raw, e := json.Marshal(receipt)
+	if e != nil {
+		return ErrInstall
+	}
+	return stableFile(receiptFile, append(raw, '\n'), 0600)
+}
+
+// VerifyReleaseArchive exercises the SAME constrained extraction, TUF and
+// pinned Cosign chain as a seller download, before catalog activation.
+func VerifyReleaseArchive(ctx context.Context, policyFile, archive, receiptFile string) error {
+	p, e := loadPolicy(policyFile)
+	if e != nil || !filepath.IsAbs(archive) || protectedDirectory(filepath.Dir(archive)) != nil || !filepath.IsAbs(receiptFile) || protectedDirectory(filepath.Dir(receiptFile)) != nil {
+		return ErrInstall
+	}
+	st, e := os.Lstat(archive)
+	if e != nil || !st.Mode().IsRegular() || !ownedByRoot(st) || st.Mode().Perm()&0022 != 0 || st.Size() < 1 || uint64(st.Size()) >= p.Budget.DownloadBytes {
+		return ErrInstall
+	}
+	f, e := os.Open(archive)
+	if e != nil {
+		return ErrInstall
+	}
+	h := sha256.New()
+	n, e := io.Copy(h, io.LimitReader(f, st.Size()+1))
+	f.Close()
+	if e != nil || n != st.Size() {
+		return ErrInstall
+	}
+	temp, e := os.MkdirTemp(filepath.Dir(receiptFile), "archive-verify-")
+	if e != nil {
+		return ErrInstall
+	}
+	defer os.RemoveAll(temp)
+	stage := filepath.Join(temp, "payload")
+	if directory(stage) != nil || extractPackage(archive, stage, p.Trust.Channel, p.Budget.DownloadBytes-uint64(n)) != nil {
+		return ErrInstall
+	}
+	inner := filepath.Join(temp, "inner.json")
+	if VerifyPackage(ctx, policyFile, stage, inner) != nil {
+		return ErrInstall
+	}
+	raw, e := protectedRead(inner, 65536, true)
+	if e != nil {
+		return ErrInstall
+	}
+	var receipt VerificationReceipt
+	if strictJSON(raw, &receipt) != nil {
+		return ErrInstall
+	}
+	receipt.BundleSHA256 = hex.EncodeToString(h.Sum(nil))
+	receipt.BundleBytes = n
+	raw, e = json.Marshal(receipt)
 	if e != nil {
 		return ErrInstall
 	}

@@ -128,6 +128,10 @@ test('PostgreSQL release authorization binds verified owner/domain/device and mo
     catalog={...availableCatalog(),release_bundle:{delivery:'scoped',sha256:bundleSHA,bytes:artifactBytes.length}};
     const grant=async()=>{const r=await call(authorization,{proof:await proofFor({path:authorization})});assert.equal(r.status,200);assert.match(r.body.release_bundle_url,/\/downloads\/[A-Za-z0-9_-]{43}$/);return r.body.release_bundle_url;};
     assert.equal((await call(authorization)).status,401);
+    await writeFile(path.join(artifactDirectory,catalog.installer.sha256+'.setup'),Buffer.from('SYNTHETIC BOOTSTRAP DATA ONLY'),{mode:0o600});
+    const bootstrapURL=controlOrigin+'/bootstrap/'+catalog.installer.sha256+'/jetseller-setup';
+    const bootstrapResponse=await delivery.handle(new Request(bootstrapURL));assert.equal(bootstrapResponse.status,200);assert.equal(await bootstrapResponse.text(),'SYNTHETIC BOOTSTRAP DATA ONLY');
+    assert.equal((await delivery.handle(new Request(controlOrigin+'/bootstrap/'+'0'.repeat(64)+'/jetseller-setup'))).status,404);
     const url=await grant();const fetched=await Promise.all([delivery.handle(new Request(url)),delivery.handle(new Request(url))]);
     assert.deepEqual(fetched.map(r=>r.status).sort(),[200,404]);
     assert.deepEqual(Buffer.from(await fetched.find(r=>r.status===200).arrayBuffer()),artifactBytes);

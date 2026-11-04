@@ -272,15 +272,18 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
       if (selected && result.installations.some(item => item.installation_id === selected)) await selectInstallation(selected);
     } finally { el('registry-loading').hidden = true; }
   }
-  async function start() {
-    clearSession(); notice('Memeriksa layanan instalasi…'); text('account-state', 'Memeriksa sesi…');
+  async function start({fromOTP=false}={}) {
+    clearSession(); const sessionGeneration=generation; notice('Memeriksa layanan instalasi…'); text('account-state', 'Memeriksa sesi…');
     const button = el('refresh'); button.disabled = true;
     try {
       const result = await request('/session');
+      if(sessionGeneration!==generation)return;
       if (result.authenticated !== true || !result.csrf_token) throw Object.assign(new Error('AUTH_REQUIRED'), { code: 'AUTH_REQUIRED' });
       csrf = result.csrf_token; text('account-state', 'Akun seller terverifikasi');
       if (typeof result.profile?.store_name === 'string' && result.profile.store_name.length <= 100 && !el('store-name').value) el('store-name').value = result.profile.store_name;
-      el('workspace').hidden = false; el('sign-out').hidden = false; await loadInstallations();
+      await loadInstallations(); if(sessionGeneration!==generation)return;
+      if(fromOTP)document.defaultView?.history.replaceState(null, '', '/');
+      el('workspace').hidden = false; el('sign-out').hidden = false;
       notice('Registry terhubung. Pilih toko atau buat rencana instalasi.');
     } catch (error) {
       notice(safeErrorMessage(error.code), 'error'); text('account-state', 'Tidak terhubung');
@@ -310,9 +313,8 @@ export function mountDashboard(document, fetcher = globalThis.fetch.bind(globalT
       const result = await emailRequest('/auth/email/verify', {challenge_id:emailChallenge,code:el('email-code').value.trim()});
       if (current !== emailGeneration) return;
       if (result.status !== 'AUTHENTICATED') throw Object.assign(new Error('Invalid account response'), {code:'AUTH_REQUIRED'});
-      await start();
+      await start({fromOTP:true});
       if (!csrf) throw Object.assign(new Error('Session unavailable'), {code:'AUTH_REQUIRED'});
-      document.defaultView?.history.replaceState(null, '', '/');
       if (storeName) { el('store-name').value = storeName; el('store-domain').focus(); }
       text('action-announcement', 'Email terverifikasi. Lanjutkan pembuatan toko tanpa login ulang.');
     } catch(error) {

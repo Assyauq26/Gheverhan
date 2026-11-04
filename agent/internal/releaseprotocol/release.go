@@ -110,7 +110,14 @@ type TrustedRelease struct {
 
 func (r TrustedRelease) Manifest() Manifest { return r.manifest }
 func (r TrustedRelease) SHA256() string     { return r.digest }
-func hash(b []byte) string                  { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+func (r TrustedRelease) TargetSize(name string) (int64, error) {
+	tf := r.targets[name]
+	if r.digest == "" || tf == nil || tf.Length <= 0 || tf.Length > r.maxArtifactBytes {
+		return 0, ErrRelease
+	}
+	return tf.Length, nil
+}
+func hash(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func decode(raw []byte, out any) error {
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()

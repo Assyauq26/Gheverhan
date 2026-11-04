@@ -36,6 +36,7 @@ func run() error {
 		return fmt.Errorf("command required")
 	}
 	flags := flag.NewFlagSet("jetseller-setup", flag.ContinueOnError)
+	receiptFile := flags.String("receipt", "", "new root-private verification receipt file")
 	policyFile := flags.String("policy", "/etc/buattokosendiri/release-policy.json", "independently trusted root-private release policy")
 	releaseDirectory := flags.String("release-directory", "/var/lib/jetseller-agent/release", "root-owned signed release package")
 	confirmation := flags.String("confirm-install", "", "confirm canonical installation UUID before local provisioning")
@@ -57,6 +58,13 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+	if os.Args[1] == "verify-release" {
+		if err := installer.VerifyPackage(ctx, *policyFile, *releaseDirectory, *receiptFile); err != nil {
+			return err
+		}
+		fmt.Println("Metadata dan signature arsip rilis terverifikasi; receipt privat tersimpan. Tidak menjalankan instalasi.")
+		return nil
+	}
 	if os.Args[1] == "install" || os.Args[1] == "activate-admin" {
 		if *confirmation != *installation {
 			return fmt.Errorf("installation confirmation required")

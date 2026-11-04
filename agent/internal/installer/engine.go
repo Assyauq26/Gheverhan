@@ -139,6 +139,22 @@ func install(ctx context.Context, o Options, d docker, probe *http.Client) error
 		return ErrInstall
 	}
 	manifest := trusted.Manifest()
+	var archiveTotal, archiveLargest uint64
+	for _, target := range []string{manifest.ImageArchiveTarget, manifest.MigrationArchiveTarget} {
+		n, e := trusted.TargetSize(target)
+		if e != nil {
+			return ErrInstall
+		}
+		archiveTotal += uint64(n)
+		if uint64(n) > archiveLargest {
+			archiveLargest = uint64(n)
+		}
+	}
+	verifierInfo, e := os.Stat(policy.VerifierPath)
+	if e != nil || verifierInfo.Size() < 1 || archiveTotal+archiveLargest+uint64(verifierInfo.Size())+(32<<20) > policy.Budget.DownloadBytes {
+		return ErrInstall
+	}
+
 	if !fresh && j.Next >= 1 {
 		valid := func(id, config, ref string) bool {
 			return id == "sha256:"+config || id == ref[strings.LastIndex(ref, "@")+1:]

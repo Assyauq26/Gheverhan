@@ -13,13 +13,14 @@ import (
 // Publication signs online roles only. It never creates roots, publishes bytes,
 // generates production keys, or substitutes a root pin from the release itself.
 type Publication struct {
-	Policy    Policy
-	Root      []byte
-	Manifest  Manifest
-	Previous  State
-	Version   int64
-	Artifacts map[string]*metadata.TargetFiles
-	Keys      map[string]ed25519.PrivateKey
+	RootUpdates [][]byte
+	Policy      Policy
+	Root        []byte
+	Manifest    Manifest
+	Previous    State
+	Version     int64
+	Artifacts   map[string]*metadata.TargetFiles
+	Keys        map[string]ed25519.PrivateKey
 }
 
 func publishSign[T metadata.RootType | metadata.TimestampType | metadata.SnapshotType | metadata.TargetsType](m *metadata.Metadata[T], key ed25519.PrivateKey) ([]byte, error) {
@@ -86,7 +87,7 @@ func Publish(p Publication, now time.Time) (Bundle, State, error) {
 	if e != nil {
 		return bad()
 	}
-	b := Bundle{BootstrapRoot: p.Root, Targets: rt, Snapshot: rs, Timestamp: rts, Manifest: raw}
+	b := Bundle{BootstrapRoot: p.Root, RootUpdates: p.RootUpdates, Targets: rt, Snapshot: rs, Timestamp: rts, Manifest: raw}
 	_, state, e := Verify(p.Policy, b, p.Previous, now)
 	if e != nil {
 		return bad()

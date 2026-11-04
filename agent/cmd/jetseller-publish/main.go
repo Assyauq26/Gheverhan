@@ -18,6 +18,7 @@ import (
 )
 
 type config struct {
+	RootUpdateFiles                                                               []string
 	Policy                                                                        releaseprotocol.Policy
 	RootFile, ManifestFile, PreviousStateFile, ArtifactDirectory, OutputDirectory string
 	Version                                                                       int64
@@ -56,7 +57,15 @@ func run() error {
 		if e != nil {
 			return e
 		}
-		return releaseprotocol.VerifyBootstrapRoot(root, c.Policy.BootstrapRootSHA256, c.Policy.MinimumRootThreshold, time.Now())
+		var updates [][]byte
+		for _, file := range c.RootUpdateFiles {
+			b, e := read(file, false)
+			if e != nil {
+				return e
+			}
+			updates = append(updates, b)
+		}
+		return releaseprotocol.VerifyRootChain(root, c.Policy.BootstrapRootSHA256, c.Policy.MinimumRootThreshold, updates, time.Now())
 	}
 	if len(os.Args) != 2 {
 		return fmt.Errorf("publication config required")
@@ -90,6 +99,13 @@ func run() error {
 		return e
 	}
 	p := releaseprotocol.Publication{Policy: c.Policy, Root: root, Manifest: m, Previous: previous, Version: c.Version, Keys: map[string]ed25519.PrivateKey{}, Artifacts: map[string]*metadata.TargetFiles{}}
+	for _, file := range c.RootUpdateFiles {
+		b, e := read(file, false)
+		if e != nil {
+			return e
+		}
+		p.RootUpdates = append(p.RootUpdates, b)
+	}
 	for _, role := range []string{"targets", "snapshot", "timestamp"} {
 		b, e := read(c.Keys[role], true)
 		if e != nil {
@@ -135,6 +151,13 @@ func run() error {
 		return e
 	}
 	files := map[string][]byte{"root.json": b.BootstrapRoot, "targets.json": b.Targets, "snapshot.json": b.Snapshot, "timestamp.json": b.Timestamp, "channels/" + m.Channel + "/release.json": b.Manifest}
+	for _, raw := range b.RootUpdates {
+		root, e := metadata.Root().FromBytes(raw)
+		if e != nil {
+			return e
+		}
+		files[fmt.Sprintf("%d.root.json", root.Signed.Version)] = raw
+	}
 	sb, _ := json.Marshal(state)
 	files["candidate-state.json"] = sb
 	for name, data := range files {

@@ -48,6 +48,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           APPROVED_GHCR_PREFIX: ${{ vars.APPROVED_GHCR_PREFIX }}
           APPROVED_ROOT_SHA256: ${{ vars.APPROVED_ROOT_SHA256 }}
+          TUF_ROOT_UPDATES_JSON: ${{ vars.TUF_ROOT_UPDATES_JSON }}
           TUF_PUBLIC_ROOT_JSON: ${{ vars.TUF_PUBLIC_ROOT_JSON }}
           TUF_PREVIOUS_STATE_JSON: ${{ vars.TUF_PREVIOUS_STATE_JSON }}
           RELEASE_MANIFEST_JSON: ${{ vars.RELEASE_MANIFEST_JSON }}

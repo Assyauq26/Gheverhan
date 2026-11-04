@@ -11,9 +11,6 @@ import type { PrismaClient } from "@prisma/client";
 
 type Server = ReturnType<typeof createHttpServer>;
 type SSLServer = ReturnType<typeof createHttpsServer>;
-const domain = "store.example";
-const id = "550e8400-e29b-41d4-a716-446655440000";
-const dbname = "js_" + id.replaceAll("-", "");
 
 function listen(server: Server | SSLServer, port: number) {
   return new Promise<void>((resolve, reject) => {
@@ -30,10 +27,18 @@ async function closeServer(server: Server | SSLServer) {
  * CONNECT is allowed only to one synthetic origin, forwarded exclusively to a
  * loopback TLS proxy; it never forwards arbitrary external HTTP destinations.
  */
-export async function createLocalStoreBrowserFixture(root: string, admin: PrismaClient, dbUrl: URL) {
+export async function createLocalStoreBrowserFixture(root: string, admin: PrismaClient, dbUrl: URL,
+  options: { id: string; domain: string; tlsPort: number; internalPort: number; proxyPort: number } = {
+    id: "550e8400-e29b-41d4-a716-446655440000", domain: "store.example", tlsPort: 3102, internalPort: 3103, proxyPort: 3104,
+  }) {
   assert.equal(process.env.GHEVERHAN_ISOLATED_TESTS, "1");
   assert.equal(dbUrl.hostname, "127.0.0.1");
   assert.equal(dbUrl.pathname, "/gheverhan_sprint1_test");
+  const { id, domain, tlsPort, internalPort, proxyPort } = options;
+  assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.match(domain, /^[a-z-]+\.example$/);
+  for (const port of [tlsPort, internalPort, proxyPort]) assert.ok(Number.isInteger(port) && port >= 3102 && port <= 3124);
+  const dbname = "js_" + id.replaceAll("-", "");
 
   // An isolated DB with a canonical store name is required by the actual
   // parseSelfHostedConfig path used for auth issuer and CSRF-origin checks.
@@ -61,7 +66,7 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
     APP_ORIGIN: origin,
     STORAGE_PROVIDER: "local",
     STORAGE_APP_NAME: "js_" + id.slice(0, 8),
-    STORAGE_LOCAL_ROOT: "/tmp/jetseller-jnt-https-fixture",
+    STORAGE_LOCAL_ROOT: "/tmp/jetseller-jnt-https-fixture-" + id,
     DATABASE_URL: runtimeDB.toString(),
     JETSELLER_MIGRATION_IDENTITY: "js_migrate",
     JWT_SECRET: "a".repeat(64),
@@ -91,7 +96,7 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
     key: readFileSync(keyFile), cert: readFileSync(certFile),
   }, (request, response) => {
     const upstream = httpRequest({
-      hostname: "127.0.0.1", port: 3103, path: request.url, method: request.method,
+      hostname: "127.0.0.1", port: internalPort, path: request.url, method: request.method,
       headers: { ...request.headers, host: domain, "x-forwarded-proto": "https" },
     }, result => { response.writeHead(result.statusCode || 502, result.headers); result.pipe(response); });
     upstream.on("error", () => { if (!response.headersSent) response.writeHead(502); response.end(); });
@@ -104,7 +109,7 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
   });
   proxy.on("connect", (request, client, head) => {
     if (request.url !== domain + ":443") { client.destroy(); return; }
-    const upstream = netConnect(3102, "127.0.0.1", () => {
+    const upstream = netConnect(tlsPort, "127.0.0.1", () => {
       client.write("HTTP/1.1 200 Connection Established\r\n\r\n");
       if (head.length) upstream.write(head);
       upstream.pipe(client); client.pipe(upstream);
@@ -116,13 +121,13 @@ export async function createLocalStoreBrowserFixture(root: string, admin: Prisma
   });
   https.on("connection", track);
   proxy.on("connection", track);
-  await listen(https, 3102);
-  try { await listen(proxy, 3104); }
+  await listen(https, tlsPort);
+  try { await listen(proxy, proxyPort); }
   catch (error) { await closeServer(https); rmSync(certRoot, { recursive: true, force: true }); throw error; }
 
   return {
-    origin, env, database: direct.toString(), internalPort: 3103,
-    proxy: "http://127.0.0.1:3104",
+    origin, env, database: direct.toString(), internalPort,
+    proxy: "http://127.0.0.1:" + proxyPort,
     cookieName: env.AUTH_COOKIE_NAME, domain,
     close: async () => {
       // CONNECT tunnels are upgraded TCP sockets: server.closeAllConnections

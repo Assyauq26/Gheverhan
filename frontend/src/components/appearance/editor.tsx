@@ -13,6 +13,7 @@ import {
 import { Controls, TABS, type Change } from "./controls";
 import { useDirtyGuard } from "./use-dirty-guard";
 import { Button } from "@/components/ui/button";
+import { notifyDashboardIdentityChanged } from "@/components/brand/dashboard-identity";
 type Snapshot = {
   config: StoreAppearanceV1;
   publishedConfig?: StoreAppearanceV1;
@@ -213,6 +214,7 @@ export function AppearanceEditor({
       if (r.ok && r.data) {
         setSaved(r.data);
         if (kind !== "rollback") setDraft(r.data.config);
+        notifyDashboardIdentityChanged();
         setMessage(
           kind === "publish" || kind === "rollback"
             ? "Tampilan published diperbarui."

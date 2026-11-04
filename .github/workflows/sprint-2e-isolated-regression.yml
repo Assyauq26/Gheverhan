@@ -194,6 +194,11 @@ jobs:
         id: operations_browser
         run: npm run test:e2e:operations
 
+      - name: Independent seller dashboard draft branding and integration navigation
+        env:
+          SPRINT1_ARTIFACT_DIR: /tmp/gheverhan-seller-dashboard-${{ github.run_id }}
+        run: node --import tsx tests/integration/seller-dashboard-branding-browser.ts
+
       - name: Bind disposable store DB alias to runner PostgreSQL loopback
         # Simulate Docker Compose's private 'db' hostname only inside this
         # short-lived CI runner. No production DNS or network changes.
@@ -263,5 +268,7 @@ jobs:
             /tmp/gheverhan-jnt-settings-*/jnt-settings/*.png
             /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.json
             /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.png
+            /tmp/gheverhan-seller-dashboard-*/seller-dashboard/*.json
+            /tmp/gheverhan-seller-dashboard-*/seller-dashboard/*.png
           if-no-files-found: error
           retention-days: 7

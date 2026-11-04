@@ -22,13 +22,13 @@ const links = [
   { href: "/admin/categories", label: "Kategori", icon: LayoutGrid, permission: PERMISSIONS.PRODUCT_READ },
   { href: "/admin/payments", label: "Pembayaran", icon: CreditCard, permission: PERMISSIONS.PAYMENT_READ },
   { href: "/admin/shipping", label: "Pengiriman", icon: Truck, permission: PERMISSIONS.SHIPPING_READ },
-  { href: "/admin/integrations/jnt", label: "Integrasi J&T Express", icon: PlugZap, permission: null },
+  { href: "/admin/integrations", label: "Integrasi", icon: PlugZap, permission: null },
   { href: "/admin/bank-accounts", label: "Rekening Bank", icon: Landmark, permission: PERMISSIONS.BANK_MANAGE },
   { href: "/admin/audit", label: "Audit Log", icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
 ] as const;
 
 function allowed(permissions: string[], item: (typeof links)[number], platformOwner: boolean) {
-  if (item.href === "/admin/integrations/jnt") return platformOwner;
+  if (item.href === "/admin/integrations") return platformOwner;
   if (item.href === "/admin/marketing")
     return permissions.includes(PERMISSIONS.PROMOTION_CREATE) || permissions.includes(PERMISSIONS.PROMOTION_UPDATE);
   return !item.permission || permissions.includes(item.permission);
@@ -53,7 +53,7 @@ export function AdminNav({ permissions, platformOwner = false }: { permissions: 
             <Link
               href={item.href}
               prefetch={false}
-              aria-current={active ? "page" : undefined}
+              aria-current={active && (item.href !== "/admin/integrations" || pathname === item.href) ? "page" : undefined}
               data-testid={`adminnav-${item.label.toLowerCase().replaceAll(" ", "-")}`}
               className={cn(
                 "group flex min-h-11 items-center gap-3 whitespace-nowrap rounded-xl text-sm font-medium transition-colors",
@@ -65,6 +65,11 @@ export function AdminNav({ permissions, platformOwner = false }: { permissions: 
               <span className="flex-1">{("display" in item && item.display) || item.label}</span>
               {item.href !== "/admin" && <ChevronRight size={15} className={active ? "text-white/80" : "text-zinc-400"} aria-hidden="true" />}
             </Link>
+            {item.href === "/admin/integrations" && <Link href="/admin/integrations/jnt" prefetch={false}
+              data-testid="adminnav-jnt-express" aria-current={pathname === "/admin/integrations/jnt" ? "page" : undefined}
+              className={cn("ml-8 flex min-h-11 items-center rounded-xl px-3 text-sm", pathname === "/admin/integrations/jnt" ? "font-semibold text-black" : "text-zinc-600 hover:bg-zinc-100")}>
+              J&T Express
+            </Link>}
           </div>
         );
       })}

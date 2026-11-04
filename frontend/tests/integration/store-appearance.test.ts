@@ -359,3 +359,26 @@ test("appearance lifecycle, transaction races, rollback and media privacy", asyn
     assert.equal(results.filter((r) => r.status === "fulfilled").length, 2);
   });
 });
+
+test("self-hosted reset and baseline rollback retain this installation's identity", async () => {
+  await db.storeAppearanceRevision.deleteMany(); await db.storeAppearance.deleteMany();
+  process.env.JETSELLER_STORE_PROFILE = "self-hosted";
+  process.env.JETSELLER_STORE_DISPLAY_NAME = "Toko Mawar";
+  try {
+    let snapshot = await svc.readDraft();
+    assert.equal(snapshot.config.identity.name, "Toko Mawar");
+    const config = structuredClone(snapshot.config); config.identity.name = "Mawar Baru";
+    snapshot = await svc.changeAppearance({ kind: "save", draftVersion: 0, publishedVersion: 0, config }, actor, session);
+    assert.equal(snapshot.config.identity.name, "Mawar Baru");
+    assert.equal(snapshot.publishedConfig.identity.name, "Toko Mawar");
+    snapshot = await svc.changeAppearance({ kind: "publish", draftVersion: snapshot.draftVersion, publishedVersion: snapshot.publishedVersion }, actor, session);
+    assert.equal(snapshot.publishedConfig.identity.name, "Mawar Baru");
+    snapshot = await svc.changeAppearance({ kind: "rollback", draftVersion: snapshot.draftVersion, publishedVersion: snapshot.publishedVersion, revision: 0 }, actor, session);
+    assert.equal(snapshot.publishedConfig.identity.name, "Toko Mawar");
+    assert.equal(snapshot.config.identity.name, "Mawar Baru", "rollback must preserve the independent draft");
+    snapshot = await svc.changeAppearance({ kind: "discard", draftVersion: snapshot.draftVersion, publishedVersion: snapshot.publishedVersion }, actor, session);
+    assert.equal(snapshot.config.identity.name, "Toko Mawar");
+    snapshot = await svc.changeAppearance({ kind: "reset", draftVersion: snapshot.draftVersion, publishedVersion: snapshot.publishedVersion }, actor, session);
+    assert.equal(snapshot.config.identity.name, "Toko Mawar");
+  } finally { delete process.env.JETSELLER_STORE_PROFILE; delete process.env.JETSELLER_STORE_DISPLAY_NAME; }
+});

@@ -143,7 +143,7 @@ export async function changeAppearance(
           where: { version: 0 },
           create: {
             version: 0,
-            config: asJson(legacyDefault()),
+            config: process.env.JETSELLER_STORE_PROFILE === "self-hosted" ? asJson(parseAppearance(row.published)) : asJson(legacyDefault()),
             actorId,
             action: "baseline",
           },
@@ -151,7 +151,7 @@ export async function changeAppearance(
         });
         let config: StoreAppearanceV1;
         if (input.kind === "save") config = parseAppearance(input.config);
-        else if (input.kind === "reset") config = makeDefault();
+        else if (input.kind === "reset") config = process.env.JETSELLER_STORE_PROFILE === "self-hosted" ? initialPublishedAppearance() : makeDefault();
         else if (input.kind === "discard")
           config = parseAppearance(row.published);
         else if (input.kind === "rollback") {

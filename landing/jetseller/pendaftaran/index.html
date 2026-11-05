@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Pendaftaran — Buat Toko Online Sendiri</title>
-  <meta name="description" content="Isi informasi toko, simpan pendaftaran, dan baca panduan Git Clone. Tanpa akun, password, atau OTP.">
+  <meta name="description" content="Isi informasi toko dan simpan pendaftaran. Panduan instalasi akan tersedia menyusul. Tanpa akun, password, atau OTP.">
   <link rel="canonical" href="https://buattokosendiri.web.id/pendaftaran">
   <link rel="icon" href="/assets/img/favicon.svg"><meta name="theme-color" content="#E1251B">
   <link rel="stylesheet" href="/assets/css/registration.css">
@@ -11,14 +11,14 @@
 </head>
 <body>
   <a class="skip-link" href="#registration">Lewati ke formulir</a>
-  <header class="registration-header"><a class="wordmark" href="/">Buat Toko<br>Online Sendiri<span aria-hidden="true">.</span></a><a href="/panduan">Panduan instalasi <span aria-hidden="true">↗</span></a></header>
+  <header class="registration-header"><a class="wordmark" href="/">Buat Toko<br>Online Sendiri<span aria-hidden="true">.</span></a><a href="/">Kembali ke Beranda</a></header>
   <main id="registration" class="registration-shell">
-    <div class="page-intro"><h1>Mulai toko milikmu sendiri.</h1><p>Isi informasi singkat, lalu ikuti panduan instalasi di server pilihanmu.<br>Tanpa membuat akun, password, atau OTP.</p></div>
+    <div class="page-intro"><h1>Mulai toko milikmu sendiri.</h1><p>Isi informasi singkat untuk mencatat pendaftaran tokomu.<br>Tanpa membuat akun, password, atau OTP.</p></div>
     <ol class="stepper" aria-label="Langkah pendaftaran">
       <li aria-current="step"><span class="step-number">1</span><span>Isi Data</span></li>
       <li><span class="step-number">2</span><span>Info Toko</span></li>
       <li><span class="step-number">3</span><span>Konfirmasi</span></li>
-      <li><span class="step-number">4</span><span>Panduan</span></li>
+      <li><span class="step-number">4</span><span>Berhasil</span></li>
     </ol>
     <form id="registration-form" class="form-card" novalidate>
       <div id="form-error" class="error-summary" role="alert" tabindex="-1" hidden></div>
@@ -58,15 +58,11 @@
     </form>
     <section id="success" class="form-card success" aria-labelledby="heading-4" hidden>
       <svg class="success-icon" viewBox="0 0 80 80" aria-hidden="true"><path d="M14 31h44v32H14zM10 31l7-17h38l7 17M25 63V43h16v20"/><path d="M10 31c0 11 13 11 13 0 0 11 13 11 13 0 0 11 13 11 13 0 0 11 13 11 13 0"/><circle cx="59" cy="56" r="16"/><path d="m51 56 6 6 10-12"/></svg>
-      <h2 id="heading-4" tabindex="-1">Pendaftaran Berhasil!</h2><p>Terima kasih sudah mendaftar. Sekarang kamu bisa mengunduh aplikasi toko online dan memasangnya di server milikmu sendiri.</p>
-      <div class="receipt"><strong id="registered-store"></strong><span>Nomor referensi pendaftaran</span><code id="reference-code"></code><p>Informasi tersimpan. Aplikasi toko belum diinstal.</p></div>
-      <h3>Cara Memasang Toko Online</h3>
-      <ol class="guide-steps"><li><h4>Siapkan VPS</h4><p>Gunakan Ubuntu 22.04/24.04 amd64, minimal 2 vCPU, RAM 4 GiB, dan ruang kosong SSD 40 GiB. Docker dan PostgreSQL diperlukan; shared hosting PHP belum tentu kompatibel.</p></li><li><h4>Clone GitHub</h4><p>Unduh source code resmi. Jangan menyalin database, media, atau kredensial toko demo.</p><pre><code id="clone-command">git clone --depth 1 https://github.com/Assyauq26/Gheverhan.git
-cd Gheverhan</code></pre><div class="inline-actions"><button type="button" id="copy-command" class="button secondary">Salin Perintah</button><a href="https://github.com/Assyauq26/Gheverhan" target="_blank" rel="noopener noreferrer">Buka Repository GitHub ↗</a></div></li><li><h4>Instal Aplikasi</h4><p>Baca batas dukungan dan konfigurasi pada panduan. Git Clone mengunduh kode; perintah itu belum memasang toko. Jangan jalankan fixture pengujian sebagai installer produksi.</p></li><li><h4>Kelola Toko</h4><p>Setelah instalasi terverifikasi, gunakan admin lokal untuk mengatur brand, kategori, produk, foto, stok, dan dekorasi. Integrasi J&amp;T memerlukan konfigurasi dan otorisasi tersendiri.</p></li></ol>
-      <div class="form-actions"><a class="button primary" href="/panduan">Lihat Panduan Lengkap</a><a class="button secondary" href="https://github.com/Assyauq26/Gheverhan" target="_blank" rel="noopener noreferrer">Buka GitHub</a></div>
-      <p id="copy-status" role="status" class="hint"></p>
+      <h2 id="heading-4" tabindex="-1">Pendaftaran Berhasil!</h2><p>Terima kasih telah mendaftar di Buat Toko Online Sendiri. Panduan instalasi aplikasi akan segera tersedia.</p>
+      <div class="receipt"><strong id="registered-store"></strong><span>Nomor referensi pendaftaran</span><code id="reference-code"></code><p>Data pendaftaran berhasil dicatat.</p></div>
+      <div class="success-actions"><button class="button primary" type="button" id="download-guide" disabled aria-describedby="guide-status">Download Panduan — Menyusul</button><p id="guide-status" class="hint">Panduan instalasi sedang disiapkan.</p><a class="button secondary" href="/">Kembali ke Beranda</a></div>
     </section>
-    <noscript><p class="error-summary">Aktifkan JavaScript untuk mengisi formulir. <a href="/panduan">Panduan instalasi</a> tetap dapat dibaca tanpa JavaScript.</p></noscript>
+    <noscript><p class="error-summary">Aktifkan JavaScript untuk mengisi dan mengirim formulir pendaftaran.</p></noscript>
     <p class="form-footer">Data digunakan untuk layanan pendaftaran. <a href="/kebijakan-privasi">Baca kebijakan privasi</a>.</p>
   </main>
 </body>

@@ -10,7 +10,7 @@ function prepare(sha, destination, mode = 'source') {
   const git = args => execFileSync('git', ['-C', repository, ...args], { maxBuffer: 16 * 1024 * 1024 });
   if (git(['rev-parse', sha + '^{commit}']).toString().trim() !== sha) throw new Error('Commit unavailable');
   const prefix = 'landing/jetseller/';
-  const files = ['index.html', '404.html', 'daftar/index.html', 'masuk/index.html', 'pendaftaran/index.html', 'panduan/index.html', 'kebijakan-privasi/index.html', 'assets/css/main.css', 'assets/css/refactor.css', 'assets/css/registration.css', 'assets/css/fonts.css', 'assets/fonts/plus-jakarta-sans-latin.woff2', 'assets/fonts/OFL-Plus-Jakarta-Sans.txt', 'assets/js/registration.js', 'assets/js/main.js', 'assets/js/portal-entry.js', 'portal-config.json', 'assets/img/favicon.svg', 'assets/img/apple-touch-icon.png', 'assets/img/hero-self-hosted.svg', 'assets/img/icons/step-register.svg', 'assets/img/icons/step-launch.svg'];
+  const files = ['index.html', '404.html', 'daftar/index.html', 'masuk/index.html', 'pendaftaran/index.html', 'kebijakan-privasi/index.html', 'assets/css/main.css', 'assets/css/refactor.css', 'assets/css/registration.css', 'assets/css/fonts.css', 'assets/fonts/plus-jakarta-sans-latin.woff2', 'assets/fonts/OFL-Plus-Jakarta-Sans.txt', 'assets/js/registration.js', 'assets/js/main.js', 'assets/js/portal-entry.js', 'portal-config.json', 'assets/img/favicon.svg', 'assets/img/apple-touch-icon.png', 'assets/img/hero-self-hosted.svg', 'assets/img/icons/step-register.svg', 'assets/img/icons/step-launch.svg'];
   const output = path.join(destination, sha);
   if (existsSync(output)) throw new Error('Output already exists; never overwrite a release');
   const contents = files.map(file => {

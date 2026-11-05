@@ -22,7 +22,7 @@ const front=createServer(async(req,res)=>{try{
   const path=new URL(req.url,origin).pathname;
   if(path.startsWith('/api/')){const headers={...req.headers,host:new URL(origin).host,'x-btos-registration-proxy':proxyToken,'x-btos-client-ip':clientIP};const upstream=httpRequest(apiOrigin+req.url,{method:req.method,headers},response=>{res.writeHead(response.statusCode,response.headers);response.pipe(res);});upstream.on('error',()=>res.writeHead(503).end());req.pipe(upstream);return;}
   if(['/daftar','/daftar/','/masuk','/masuk/'].includes(path)){res.writeHead(308,{Location:'/pendaftaran'}).end();return;}
-  const file=['/','/pendaftaran','/pendaftaran/','/panduan','/panduan/','/kebijakan-privasi','/kebijakan-privasi/'].includes(path)?resolve(base,'.'+path,'index.html'):resolve(base,'.'+path);
+  const file=['/','/pendaftaran','/pendaftaran/','/kebijakan-privasi','/kebijakan-privasi/'].includes(path)?resolve(base,'.'+path,'index.html'):resolve(base,'.'+path);
   if(!file.startsWith(base+'/')&&!file.startsWith(base+'\\')){res.writeHead(404).end();return;}
   const bytes=await readFile(file);res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.woff2':'font/woff2','.svg':'image/svg+xml','.png':'image/png'})[extname(file)]||'text/plain'}).end(bytes);
 }catch{res.writeHead(404).end();}});
@@ -33,7 +33,7 @@ try{
     clientIP='192.0.2.'+(220+index);const context=await browser.newContext({viewport:{width,height:960},reducedMotion:'reduce'});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',async response=>{if(response.url().includes('/api/')&&!response.ok())console.log('Fixture API',response.status(),await response.text().catch(()=>''));});
     assert.equal((await page.goto(origin)).status(),200);await page.evaluate(()=>document.fonts.ready);await page.locator('.hero-artwork img').evaluate(i=>i.decode());
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('a[href*="dashboard.buattokosendiri"],a[href="/masuk/"],a[href="/daftar/"]').count(),0);
-    assert.equal(await page.locator('.faq').count(),7);assert.equal(await page.locator('.steps .step').count(),5);
+    assert.equal(await page.locator('.faq').count(),7);assert.equal(await page.locator('.steps .step').count(),4);
     if(width<901){await page.locator('.nav-toggle').click();assert.equal(await page.locator('.nav-toggle').getAttribute('aria-expanded'),'true');await page.keyboard.press('Escape');assert.equal(await page.locator('.nav-toggle').getAttribute('aria-expanded'),'false');}
     await page.screenshot({path:resolve(evidence,`landing-${width}.png`),fullPage:true});
     await page.locator('.hero-cta a[href="/pendaftaran"]').click();assert.equal(new URL(page.url()).pathname,'/pendaftaran');assert.equal((await page.reload()).status(),200);await page.evaluate(()=>document.fonts.ready);
@@ -51,7 +51,7 @@ try{
     const row=await owner.query('SELECT reference_code,status FROM registration.entries WHERE email=$1',[email]);assert.equal(row.rowCount,1);assert.equal(row.rows[0].reference_code,reference);assert.equal(row.rows[0].status,'REGISTERED');
     assert(!page.url().includes(email));assert.equal((await context.cookies()).length,0);assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:resolve(evidence,`success-${width}.png`),fullPage:true});
-    await page.getByRole('link',{name:'Lihat Panduan Lengkap'}).click();assert.equal(new URL(page.url()).pathname,'/panduan');assert(await page.getByRole('heading',{name:'Panduan Git Clone & Toko Mandiri'}).isVisible());
+    const guideButton=page.getByRole('button',{name:'Download Panduan — Menyusul'});assert(await guideButton.isDisabled());assert.equal(await guideButton.getAttribute('href'),null);assert.equal(await page.locator('a[download],a[href*=github],a[href="/panduan"]').count(),0);assert(await page.getByText('Panduan instalasi sedang disiapkan.',{exact:true}).isVisible());await page.getByRole('link',{name:'Kembali ke Beranda',exact:true}).last().click();assert.equal(new URL(page.url()).pathname,'/');
     assert.equal((await page.goto(origin+'/kebijakan-privasi')).status(),200);assert(await page.getByRole('link',{name:'m.rifatsyauqii@gmail.com'}).isVisible());
     assert.equal((await page.goto(origin+'/daftar/')).status(),200);assert.equal(new URL(page.url()).pathname,'/pendaftaran');
     assert.deepEqual(errors,[]);results.push({width,result:'PASS',database:'real isolated PostgreSQL',data:'synthetic',referenceCode:reference,noCookies:true,noPiiInURL:true});await context.close();

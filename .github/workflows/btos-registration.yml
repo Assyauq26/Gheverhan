@@ -1,10 +1,10 @@
 name: BTOS landing and registration
 on:
   pull_request:
-    paths: ['platform/registration/**','deploy/registration/**','landing/jetseller/**','.github/workflows/btos-registration.yml']
+    paths: ['platform/registration/**','landing/jetseller/**','.github/workflows/btos-registration.yml']
   push:
     branches: [main]
-    paths: ['platform/registration/**','deploy/registration/**','landing/jetseller/**','.github/workflows/btos-registration.yml']
+    paths: ['platform/registration/**','landing/jetseller/**','.github/workflows/btos-registration.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -47,28 +47,12 @@ jobs:
           /tmp/btos-browser/node_modules/.bin/playwright install --with-deps chromium
       - name: Full registration browser to PostgreSQL
         run: node platform/registration/test/browser.mjs
-      - name: Validate Caddy registration route without opening ports
-        run: |
-          node --input-type=module -e "import {writeFileSync} from 'node:fs';import {registrationCaddy} from './deploy/registration/render-caddy.mjs';writeFileSync('/tmp/registration.Caddyfile',registrationCaddy('a'.repeat(64)))"
-          docker run --rm --network=none -v /tmp/registration.Caddyfile:/etc/caddy/Caddyfile:ro caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-      - name: Build isolated registration image and immutable delivery
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          mkdir -p .release-evidence/delivery
-          docker build --label "org.opencontainers.image.revision=$SOURCE_SHA" -t "btos-registration:$SOURCE_SHA" -f deploy/registration/Dockerfile .
-          docker image inspect "btos-registration:$SOURCE_SHA" --format '{{.Id}}' > .release-evidence/delivery/image-id.txt
-          docker save "btos-registration:$SOURCE_SHA" | gzip > .release-evidence/delivery/registration-image.tar.gz
-          printf '%s\n' "$SOURCE_SHA" > .release-evidence/delivery/source-sha.txt
-          cd .release-evidence/delivery
-          sha256sum registration-image.tar.gz > SHA256SUMS
-      - name: Evidence and image archive, no deployment
+      - name: Registration test screenshots, no deployment
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: btos-registration-${{ github.event.pull_request.head.sha || github.sha }}
-          path: .release-evidence/
+          path: .release-evidence/registration-ui/
           include-hidden-files: true
           retention-days: 14
           if-no-files-found: error

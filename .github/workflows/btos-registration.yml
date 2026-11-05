@@ -50,7 +50,7 @@ jobs:
       - name: Validate Caddy registration route without opening ports
         run: |
           node --input-type=module -e "import {writeFileSync} from 'node:fs';import {registrationCaddy} from './deploy/registration/render-caddy.mjs';writeFileSync('/tmp/registration.Caddyfile',registrationCaddy('a'.repeat(64)))"
-          docker run --rm --network=none -v /tmp/registration.Caddyfile:/etc/caddy/Caddyfile:ro caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm --network=none -v /tmp/registration.Caddyfile:/etc/caddy/Caddyfile:ro caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Build isolated registration image and immutable delivery
         env:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}

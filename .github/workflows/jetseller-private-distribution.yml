@@ -1,0 +1,52 @@
+name: JetSeller private distribution capability
+on:
+  pull_request:
+    paths: ['platform/distribution/**', '.github/workflows/jetseller-private-distribution.yml']
+permissions:
+  contents: read
+concurrency:
+  group: private-distribution-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  private-harbor-registry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_DB: js_distribution_fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-distribution-ci-only
+        ports: ['127.0.0.1:5433:5432']
+        options: --health-cmd="pg_isready -U fixture -d js_distribution_fixture" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: platform/distribution
+      - run: npm test
+        working-directory: platform/distribution
+      - name: Verify official signed Harbor package and create isolated registry
+        run: bash platform/distribution/test/setup-harbor.sh
+      - name: Real registry scoped grants, expiry, rotation, revocation and durable broker
+        working-directory: platform/distribution
+        run: |
+          set -euo pipefail
+          export JETSELLER_HARBOR_FIXTURE=$(cat "$RUNNER_TEMP/jetseller-harbor-path")
+          export NODE_EXTRA_CA_CERTS="$JETSELLER_HARBOR_FIXTURE/certs/registry.crt"
+          npm run test:integration
+        env:
+          JETSELLER_DISTRIBUTION_TEST_CONFIRM: isolated-private-registry
+          JETSELLER_DISTRIBUTION_TEST_DATABASE_URL: postgresql://fixture:synthetic-distribution-ci-only@127.0.0.1:5433/js_distribution_fixture
+      - name: Stop fixture only and retain volumes
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/jetseller-harbor-path"; then
+            fixture=$(cat "$RUNNER_TEMP/jetseller-harbor-path")
+            case "$fixture" in /tmp/jetseller-harbor.*) test ! -f "$fixture/harbor/docker-compose.yml" || sudo docker compose -f "$fixture/harbor/docker-compose.yml" stop ;; *) exit 1;; esac
+          fi

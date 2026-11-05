@@ -1,5 +1,26 @@
 # P0 ChatGPT operational handoff
 
+## Superseding owner decision — 5 November 2026
+
+The active product is now **landing + contact registration + public Git Clone
+guide**. It has no central seller account, password, OTP, dashboard, pairing,
+provisioning or monitoring. Registration must persist as REGISTERED in the
+separate platform PostgreSQL schema, without creating a store or account.
+
+Use [LANDING_REGISTRATION_RUNBOOK.md](LANDING_REGISTRATION_RUNBOOK.md) for the
+current release, private secret layout, scoped Caddy routing, additive migration,
+backup/restore, production fixture and non-destructive rollback. The older
+publisher/OTP/pairing sections below are retained as historical engineering
+records and are **not deployment instructions for this registration release**.
+Do not reactivate those flows, fabricate an installer, or enable checkout/J&T.
+
+Target gate is `LANDING_AND_REGISTRATION_LIVE`, only after public normal-TLS
+routes, backend persistence, reference matching and public guide are verified.
+Code and synthetic tests alone do not satisfy it. Exact deployed SHA/image and
+execution evidence must be taken from the successful new registration release,
+not the older releases listed below. Owner approved Apache-2.0 and the privacy
+contact/one production fixture email `m.rifatsyauqii@gmail.com`.
+
 ## Current execution authorization and trust model
 
 Owner has authorized production publication/deployment/routes/migrations and public onboarding only after production acceptance. Owner subsequently removed the application TUF/root ceremony process. Production now uses policy2 `keyless-v2`, protected GitHub Actions OIDC/Cosign and source-bound signed metadata. No root key/fingerprint or online TUF secrets are required. Root/TUF prerequisites and pre-integration status statements below are historical; use the current PR/workflow execution evidence for exact SHA and actual digests. Preserve all isolation, secret-file, backup, migration, Caddy coexistence and rollback procedures below.

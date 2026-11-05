@@ -6,15 +6,15 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const pages = [
   ["index.html", "/"],
-  ["daftar/index.html", "/daftar/"],
-  ["masuk/index.html", "/masuk/"],
+  ["daftar/index.html", "/pendaftaran"],
+  ["masuk/index.html", "/pendaftaran"],
 ];
 
 test("JetSeller public pages use the new canonical origin and never claim legacy canonical URLs", () => {
   for (const [name, route] of pages) {
     const html = fs.readFileSync(path.join(root, name), "utf8");
     assert.ok(html.includes(`<link rel="canonical" href="https://buattokosendiri.web.id${route}"`), name);
-    assert.ok(html.includes(`<meta property="og:url" content="https://buattokosendiri.web.id${route}"`), name);
+    if(name === "index.html") assert.ok(html.includes(`<meta property="og:url" content="https://buattokosendiri.web.id${route}"`), name);
     assert.ok(!html.includes("https://jetseller.web.id"), name);
   }
   const notFound = fs.readFileSync(path.join(root, "404.html"), "utf8");

@@ -1,0 +1,74 @@
+name: BTOS landing and registration
+on:
+  pull_request:
+    paths: ['platform/registration/**','deploy/registration/**','landing/jetseller/**','.github/workflows/btos-registration.yml']
+  push:
+    branches: [main]
+    paths: ['platform/registration/**','deploy/registration/**','landing/jetseller/**','.github/workflows/btos-registration.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: btos-registration-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  registration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres@sha256:2cd2c0f809604aaeff6f0ec8f40aecbd025613107561015c69369a1a7f1d3416
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-registration-only
+          POSTGRES_DB: registration_fixture
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fixture -d registration_fixture"
+          --health-interval 5s --health-timeout 3s --health-retries 30
+    env:
+      BTOS_REGISTRATION_TEST_CONFIRM: isolated-registration-fixture
+      BTOS_REGISTRATION_TEST_DATABASE_URL: postgresql://fixture:synthetic-registration-only@127.0.0.1:5432/registration_fixture
+      PLAYWRIGHT_MODULE: /tmp/btos-browser/node_modules/playwright/index.mjs
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false,ref: '${{ github.event.pull_request.head.sha || github.sha }}'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - run: npm ci --ignore-scripts --no-audit --no-fund --prefix platform/registration
+      - name: Unit and database boundaries
+        run: |
+          node --test platform/registration/test/*.test.mjs
+          node platform/registration/test/integration.mjs
+          node --test landing/jetseller/tests/refactor.test.cjs landing/jetseller/tests/domain-cutover.test.cjs landing/jetseller/tests/identity.test.cjs landing/jetseller/tests/limited-preview.test.cjs landing/jetseller/tests/portal-entry.test.cjs
+      - name: Browser prerequisites
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --prefix /tmp/btos-browser playwright@1.63.0
+          /tmp/btos-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Full registration browser to PostgreSQL
+        run: node platform/registration/test/browser.mjs
+      - name: Validate Caddy registration route without opening ports
+        run: |
+          node --input-type=module -e "import {writeFileSync} from 'node:fs';import {registrationCaddy} from './deploy/registration/render-caddy.mjs';writeFileSync('/tmp/registration.Caddyfile',registrationCaddy('a'.repeat(64)))"
+          docker run --rm --network=none -v /tmp/registration.Caddyfile:/etc/caddy/Caddyfile:ro caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Build isolated registration image and immutable delivery
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/delivery
+          docker build --label "org.opencontainers.image.revision=$SOURCE_SHA" -t "btos-registration:$SOURCE_SHA" -f deploy/registration/Dockerfile .
+          docker image inspect "btos-registration:$SOURCE_SHA" --format '{{.Id}}' > .release-evidence/delivery/image-id.txt
+          docker save "btos-registration:$SOURCE_SHA" | gzip > .release-evidence/delivery/registration-image.tar.gz
+          printf '%s\n' "$SOURCE_SHA" > .release-evidence/delivery/source-sha.txt
+          cd .release-evidence/delivery
+          sha256sum registration-image.tar.gz > SHA256SUMS
+      - name: Evidence and image archive, no deployment
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: btos-registration-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .release-evidence/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error

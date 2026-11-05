@@ -1,0 +1,34 @@
+name: btos-registration
+services:
+  registration:
+    image: ${BTOS_REGISTRATION_IMAGE:?exact sha256 image ID required}
+    pull_policy: never
+    user: '1000:1000'
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.35
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m,uid=1000,gid=1000']
+    secrets: [database-url,registration-secret,proxy-token]
+    networks:
+      database: {}
+      ingress: {aliases: [btos-registration-api]}
+    healthcheck:
+      test: [CMD,node,-e,"fetch('http://127.0.0.1:3200/healthz',{signal:AbortSignal.timeout(3500)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options: {max-size: 5m,max-file: '2'}
+networks:
+  database: {external: true,name: btos-control_database}
+  ingress: {external: true,name: btos_control_ingress}
+secrets:
+  database-url: {file: '${BTOS_REGISTRATION_SECRETS:?private secret directory required}/database-url'}
+  registration-secret: {file: '${BTOS_REGISTRATION_SECRETS}/registration-secret'}
+  proxy-token: {file: '${BTOS_REGISTRATION_SECRETS}/proxy-token'}

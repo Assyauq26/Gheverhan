@@ -126,3 +126,6 @@ body#beranda .brand{font-size:1.15rem;letter-spacing:-.025em;max-width:17ch;whit
 body#beranda .hero-visual{animation:none}
 
 body#beranda .step-num{color:#b3121a}
+
+/* Five ordered steps retain the existing card and icon vocabulary. */
+body#beranda .steps{grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}body#beranda .step{padding:44px 16px 24px;justify-content:flex-start}body#beranda .step:not(:last-child)::after{display:none}@media(max-width:1100px){body#beranda .steps{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){body#beranda .steps{grid-template-columns:1fr}body#beranda .step{padding:22px 20px 22px 56px}}

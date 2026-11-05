@@ -17,15 +17,15 @@ assert.match(html, /class="hero-artwork"/);
 assert.match(html, /hero-self-hosted\.svg/);
 assert.doesNotMatch(html, /class="(?:laptop|phone|shipping-truck)"/);
 assert.match(html, /href="https:\/\/gheverhan\.store" target="_blank" rel="noopener noreferrer"/);
-assert.match(html, /href="\/daftar\/"/);
-assert.match(html, /href="\/masuk\/"/);
+assert.match(html, /href="\/pendaftaran"/);
+assert.doesNotMatch(html, /href="\/masuk\/"/);
 assert.match(html, /id="faq"/);
 assert.doesNotMatch(html, /Apakah JetSeller sama dengan Gheverhan\?/);
-assert.equal((html.match(/<summary>/g) || []).length, 5, 'Only five FAQ entries should remain');
+assert.equal((html.match(/<summary>/g) || []).length, 7, 'Seven Git Clone FAQ entries must be present');
 assert.match(css, /prefers-reduced-motion:reduce/);
 assert.doesNotMatch(css, /url\(https?:/);
 assert.doesNotMatch(html, /<script[^>]+src="https?:/);
-for(const route of ['index.html','404.html','daftar/index.html','masuk/index.html']) {
+for(const route of ['index.html','404.html']) {
   const page=fs.readFileSync(path.join(base,route),'utf8');
   assert.match(page,/rel="icon"[^>]+favicon\.svg\?v=identity-2/);
   assert.match(page,/rel="apple-touch-icon"[^>]+apple-touch-icon\.png\?v=identity-2/);

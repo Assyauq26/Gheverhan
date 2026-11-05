@@ -12,7 +12,7 @@ test('active platform pages and artwork carry only the official product identity
   const landing = fs.readFileSync(path.join(root, 'landing/jetseller/index.html'), 'utf8');
   assert.match(landing, /<h1[^>]*>Punya Toko Online Sendiri<\/h1>/);
   assert.doesNotMatch(landing, /10 menit|Coba Gratis|Daftar Gratis|Langsung Live|hero-desktop\.png/);
-  assert.match(landing, /VPS dan domain disediakan serta dikelola oleh pemilik toko/);
+  assert.match(landing, /VPS, domain, dan layanan pihak ketiga memiliki biaya masing-masing/);
 });
 test('merchant identity and cryptographic compatibility remain independent', () => {
   const read = file => fs.readFileSync(path.join(root, file), 'utf8');

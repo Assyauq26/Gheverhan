@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateRegistration,CONSENT_VERSION} from '../src/validation.mjs';
+const valid={fullName:'Seller Sintetis',email:'fixture@example.test',whatsapp:'081234567890',storeName:'Toko Uji',category:'Fashion',domain:'',noDomain:true,city:'Bandung',description:'Toko uji',consent:true,consentVersion:CONSENT_VERSION,website:''};
+test('normalizes optional Indonesian contact, no account or password',()=>{const r=validateRegistration(valid);assert.deepEqual(r.errors,{});assert.equal(r.data.whatsapp,'+6281234567890');assert.equal(r.data.domain,null);assert.equal(Object.hasOwn(r.data,'password'),false);});
+test('rejects invalid, excessive and injected fields',()=>{for(const patch of [{fullName:'A'},{fullName:'<script>'},{email:'a@b'},{whatsapp:'+15555555555'},{category:'Unknown'},{description:'x'.repeat(501)},{domain:'https://shop.example.com',noDomain:false},{domain:'127.0.0.1',noDomain:false},{domain:'store.example.com',noDomain:true},{consent:false},{consentVersion:'old'},{website:'spam'},{password:'unexpected'}])assert(Object.keys(validateRegistration({...valid,...patch}).errors).length,JSON.stringify(Object.keys(patch)));});
+test('optional fields may be omitted, consent is explicit',()=>{const r=validateRegistration({...valid,whatsapp:undefined,city:undefined,description:undefined});assert.deepEqual(r.errors,{});assert.equal(r.data.whatsapp,null);});

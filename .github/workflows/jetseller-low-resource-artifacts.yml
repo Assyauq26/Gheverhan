@@ -1,0 +1,61 @@
+name: JetSeller LOW_RESOURCE_STAGING artifacts
+on:
+  pull_request:
+    paths: ['.github/workflows/jetseller-low-resource-artifacts.yml']
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+concurrency:
+  group: jetseller-low-resource-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  verified-staging-artifacts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 267d334e68779700e4d2eb9c40973f5811fc689b
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Build immutable RC source only on disposable CI
+        env:
+          RC_SOURCE: 267d334e68779700e4d2eb9c40973f5811fc689b
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RC_SOURCE"
+          mkdir -p out/profile
+          context_parent=$(mktemp -d /tmp/jetseller-lr-build.XXXXXXXX)
+          node deploy/self-hosted/prepare.mjs context "$context_parent/context"
+          docker build --target runtime -t jetseller-lr:runtime "$context_parent/context"
+          docker build --target migration -t jetseller-lr:migration "$context_parent/context"
+          docker run --rm --entrypoint node jetseller-lr:runtime --version
+          docker image inspect jetseller-lr:runtime jetseller-lr:migration --format '{{.Id}} {{index .RepoTags 0}}' > out/image-ids.txt
+          docker save jetseller-lr:runtime jetseller-lr:migration | gzip -1 > out/rc01-images.tar.gz
+          cp -a deploy/self-hosted/. out/profile/
+          (cd agent && go mod verify && go test ./... && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o ../out/jetseller-setup ./cmd/jetseller-setup)
+          printf '%s\n' "$RC_SOURCE" > out/RC_SOURCE
+          printf '%s\n' 'LOW_RESOURCE_STAGING only; no production release approval or preflight waiver' > out/SCOPE
+          tar -czf out/rc01-tools.tar.gz -C out profile jetseller-setup RC_SOURCE SCOPE image-ids.txt
+          (cd out && sha256sum rc01-images.tar.gz rc01-tools.tar.gz > SHA256SUMS)
+      - name: Sign build provenance for experimental artifacts
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        with:
+          subject-path: 'out/rc01-*.tar.gz'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jetseller-rc01-low-resource-267d334e
+          path: |
+            out/rc01-images.tar.gz
+            out/rc01-tools.tar.gz
+            out/SHA256SUMS
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error

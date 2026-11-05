@@ -5,7 +5,8 @@ import { readPublishedUncached } from "./service";
 import { legacyDefault } from "./schema";
 import { initialPublishedAppearance } from "./initial";
 export const APPEARANCE_TAG = "store-appearance-v1";
-const cached = unstable_cache(readPublishedUncached, [APPEARANCE_TAG], {
+const storeScope = process.env.JETSELLER_STORE_PROFILE === "self-hosted" ? process.env.JETSELLER_INSTALLATION_ID ?? "unconfigured" : "legacy";
+const cached = unstable_cache(readPublishedUncached, [APPEARANCE_TAG, storeScope], {
   tags: [APPEARANCE_TAG],
   revalidate: 60,
 });

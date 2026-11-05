@@ -33,7 +33,7 @@ function setup() {
   vi.stubEnv("PASSWORD_RESET_FROM", "JetSeller <noreply@store.example>");
   vi.stubEnv("PASSWORD_RESET_BASE_URL", "https://store.example");
   s.user = { id: "local-admin", roles: ["Admin"], permissions: ["shipping.update"] };
-  s.state = { enabled: true, config: { seller: { warehouse: { originSite: "SYNTHETIC CITY" },
+  s.state = { enabled: true, updatedAt: new Date("2026-01-01T00:00:00Z"), config: { seller: { warehouse: { originSite: "SYNTHETIC CITY" },
     services: [{ code: "EZ", validUntil: "2030-01-01T00:00:00Z" }] }, credentials: { orderKey: "NEVER-RETURN-THIS-KEY" } } };
   s.rate.mockResolvedValue([{ courier: "J&T Express", service: "EZ", cost: 10000 }]);
 }

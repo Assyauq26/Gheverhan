@@ -201,6 +201,11 @@ jobs:
           echo '127.0.0.1 db' | sudo tee -a /etc/hosts >/dev/null
           getent hosts db | grep -q '127.0.0.1'
 
+      - name: Independent seller dashboard draft branding and integration navigation
+        env:
+          SPRINT1_ARTIFACT_DIR: /tmp/gheverhan-seller-dashboard-${{ github.run_id }}
+        run: node --import tsx tests/integration/seller-dashboard-branding-browser.ts
+
       - name: Chromium local seller J&T settings and authorization (no carrier calls)
         env:
           JNT_SELF_HOSTED_TESTS: '1'
@@ -263,5 +268,7 @@ jobs:
             /tmp/gheverhan-jnt-settings-*/jnt-settings/*.png
             /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.json
             /tmp/gheverhan-jnt-settings-*/jnt-seller-settings/*.png
+            /tmp/gheverhan-seller-dashboard-*/seller-dashboard/*.json
+            /tmp/gheverhan-seller-dashboard-*/seller-dashboard/*.png
           if-no-files-found: error
           retention-days: 7

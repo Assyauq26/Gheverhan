@@ -3,6 +3,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import "@/components/auth/lumen/styles.css";
 import "@/components/auth/auth.css";
+import { getPublishedAppearance } from "@/modules/appearance/published";
+export const dynamic = "force-dynamic";
+export async function generateMetadata() {
+  const { config } = await getPublishedAppearance();
+  return { title: { default: config.identity.name, template: `%s | ${config.identity.name}` } };
+}
 export default function AuthLayout({
   children,
 }: {

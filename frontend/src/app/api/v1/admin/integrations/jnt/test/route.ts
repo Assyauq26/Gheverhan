@@ -51,9 +51,13 @@ export async function POST(req: Request) {
       }
       status = "CONNECTED";
     }
+    const testedAt = new Date().toISOString();
+    const configurationUpdatedAt = state.updatedAt.toISOString();
     await writeAudit({ userId: user.id, action: "jnt.integration.tested", entity: "JntPlatformIntegration",
-      entityId: value.environment, meta: { environment: value.environment, endpoint: value.endpoint, status } });
+      entityId: value.environment, meta: { environment: value.environment, endpoint: value.endpoint, status,
+        scope: "local_store", configurationUpdatedAt, testedAt } });
     const response = NextResponse.json({ success: true, data: { endpoint: value.endpoint, status,
+      environment: value.environment, scope: "local_store", configurationUpdatedAt, testedAt,
       message: status === "CONNECTED" ? "Check Fee resmi merespons. Ini bukan persetujuan checkout atau UAT Production." :
         "Belum tersedia probe autentikasi tanpa efek samping yang terverifikasi untuk endpoint ini. Tidak ada permintaan J&T dikirim." } });
     response.headers.set("Cache-Control", "private, no-store"); response.headers.set("Vary", "Cookie");

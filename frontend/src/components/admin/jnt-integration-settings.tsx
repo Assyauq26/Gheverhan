@@ -62,6 +62,7 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
   const [weight, setWeight] = useState("1000");
   const [testing, setTesting] = useState(false);
   const [probeStatus, setProbeStatus] = useState<Partial<Record<Endpoint, string>>>({});
+  const [probeEvidence, setProbeEvidence] = useState<{ environment: Env; testedAt: string; scope: string } | null>(null);
   const [environment, setEnvironment] = useState<Env>("sandbox");
   const [endpoints, setEndpoints] = useState<Endpoints>(defaults("sandbox"));
   const [secrets, setSecrets] = useState<Secrets>({ ...emptySecrets });
@@ -81,6 +82,7 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
     setWarehouse({ ...emptyWarehouse }); setServiceReference(""); setServiceExpiry("");
     setDistrict("");
     setProbeStatus({});
+    setProbeEvidence(null);
     fetch("/api/v1/admin/integrations/jnt?environment=" + environment, { cache: "no-store", signal: controller.signal })
       .then(async response => {
         const json = await response.json();
@@ -104,7 +106,7 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
   }, [environment]);
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving || loading) return;
+    if (saving || loading || testing) return;
     setSaving(true);
     setNotice("");
     try {
@@ -121,6 +123,7 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
       if (!response.ok || !json.success) throw new Error(json.error?.message || "Gagal menyimpan");
       setSecrets({ ...emptySecrets });
       setProbeStatus({});
+      setProbeEvidence(null);
       setStatus(previous => ({
         configured: true,
         enabled: json.data.enabled,
@@ -141,9 +144,16 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
         headers: { "Content-Type": "application/json" }, body: JSON.stringify({ environment, endpoint,
           ...(endpoint === "tariff" ? { destinationDistrictCode: district, weightGram: Number(weight) } : {}) }) });
       const data = await response.json();
+      if (response.ok && data.success && (data.data.configurationUpdatedAt !== status?.updatedAt ||
+        data.data.environment !== environment || data.data.scope !== "local_store" || !Number.isFinite(Date.parse(data.data.testedAt)))) {
+        setProbeStatus({}); setProbeEvidence(null);
+        setNotice("Konfigurasi tersimpan berubah. Muat ulang halaman sebelum menguji kembali.");
+        return;
+      }
       setProbeStatus(previous => ({ ...previous, [endpoint]: response.ok && data.success ? data.data.status : "FAILED" }));
+      if (endpoint === "tariff") setProbeEvidence(response.ok && data.success && data.data.status === "CONNECTED" ? data.data : null);
       setNotice(response.ok && data.success ? data.data.message : data.error?.message || "Uji gagal");
-    } catch { setNotice("Uji tidak dapat diselesaikan. Tidak ada status koneksi yang dikonfirmasi."); }
+    } catch { setProbeStatus(previous => ({ ...previous, [endpoint]: "FAILED" })); if (endpoint === "tariff") setProbeEvidence(null); setNotice("Uji tidak dapat diselesaikan. Tidak ada status koneksi yang dikonfirmasi."); }
     finally { setTesting(false); }
   }
   return <div className="space-y-6">
@@ -177,11 +187,10 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
           <summary className="min-h-11 cursor-pointer py-3 font-medium">Verifikasi Order</summary>
           <div className="space-y-3 pt-3">        {localStore && <button type="button" disabled={loading || saving || testing || !status?.configured} onClick={() => testEndpoint(group.endpoint)}
           className="min-h-11 rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold disabled:opacity-50">{testing ? "Memeriksa..." : "Periksa verifikasi Order"}</button>}
-        {localStore && <p className="text-sm text-zinc-600">Hasil uji: {({ CONNECTED: "Check Fee berhasil; checkout masih menunggu verifikasi lengkap", SAFE_PROBE_UNAVAILABLE: "Memerlukan verifikasi; uji aman belum tersedia", FAILED: "Belum berhasil dikonfirmasi" } as Record<string, string>)[probeStatus[group.endpoint] || ""] || "Belum diuji"}</p>}
 </div>
         </details> : <>        {localStore && <button type="button" disabled={loading || saving || testing || !status?.configured} onClick={() => testEndpoint(group.endpoint)}
           className="min-h-11 rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold disabled:opacity-50">{testing ? "Memeriksa..." : (group.endpoint === "tariff" ? "Uji koneksi Check Fee" : "Periksa verifikasi " + ({ order: "Order", tracking: "Tracking", cancellation: "Cancel" } as Record<string, string>)[group.endpoint])}</button>}
-        {localStore && <p className="text-sm text-zinc-600">Hasil uji: {({ CONNECTED: "Check Fee berhasil; checkout masih menunggu verifikasi lengkap", SAFE_PROBE_UNAVAILABLE: "Memerlukan verifikasi; uji aman belum tersedia", FAILED: "Belum berhasil dikonfirmasi" } as Record<string, string>)[probeStatus[group.endpoint] || ""] || "Belum diuji"}</p>}
+        {localStore && <p className="text-sm text-zinc-600">Hasil uji: {({ CONNECTED: "Check Fee merespons; bukan persetujuan seluruh endpoint", SAFE_PROBE_UNAVAILABLE: "Tidak tersedia uji aman untuk endpoint ini", FAILED: "Belum berhasil dikonfirmasi" } as Record<string, string>)[probeStatus[group.endpoint] || ""] || "Belum diuji"}</p>}
 </>}
         {localStore ? <details className="text-sm text-zinc-600">
           <summary className="min-h-11 cursor-pointer py-3 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Pengaturan teknis endpoint</summary>
@@ -247,15 +256,16 @@ export function JntIntegrationSettings({ localStore = false }: { localStore?: bo
         <div className="flex items-center gap-2">
           {status?.configured ? <CheckCircle2 className="text-emerald-600" size={21}/> : <KeyRound size={21}/>}
           <div>
-            <div className="text-sm font-semibold">{loading ? "Memeriksa konfigurasi..." : probeStatus.tariff === "CONNECTED" ? "Check Fee berhasil" : probeStatus.tariff === "FAILED" ? "Memerlukan verifikasi" : status?.configured ? "Konfigurasi tersimpan" : "Belum dikonfigurasi"}</div>
+            <div className="text-sm font-semibold">{loading ? "Memeriksa konfigurasi..." : probeStatus.tariff === "CONNECTED" && probeEvidence ? `${probeEvidence.environment === "sandbox" ? "Sandbox" : "Production"} Check Fee terverifikasi` : probeStatus.tariff === "FAILED" ? "Memerlukan verifikasi" : status?.configured ? "Konfigurasi tersimpan" : "Belum dikonfigurasi"}</div>
             <div className="text-xs text-zinc-500">{status?.updatedAt ? "Diperbarui " + new Date(status.updatedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) : "Belum ada perubahan tersimpan"}</div>
+            {localStore && <p className="mt-1 text-xs text-zinc-600">Checkout/Order belum diizinkan. {probeEvidence ? `Uji ${probeEvidence.environment === "sandbox" ? "Sandbox" : "Production"} · cakupan toko ini · ${new Date(probeEvidence.testedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}. Hasil sesi ini, bukan UAT Production.` : "Belum ada bukti uji Check Fee pada sesi ini."}</p>}
           </div>
         </div>
         <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
           <input type="checkbox" checked={enabled} onChange={event => setEnabled(event.target.checked)} disabled={loading} className="size-4 accent-black"/>
           Izinkan penggunaan kredensial tersimpan {environment === "sandbox" ? "Testing" : "Production"}
         </label>
-        {localStore && <button type="button" disabled={loading || saving || testing || !status?.configured} onClick={() => testEndpoint("tariff")} className="min-h-11 rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50">{testing ? "Memeriksa..." : "Uji Koneksi"}</button>}
+        {localStore && <button type="button" disabled={loading || saving || testing || !status?.configured} onClick={() => testEndpoint("tariff")} className="min-h-11 rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50">{testing ? "Memeriksa..." : "Uji Check Fee"}</button>}
       </div>
       {notice && <p role="status" className="rounded-xl bg-zinc-100 px-4 py-3 text-sm">{notice}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
